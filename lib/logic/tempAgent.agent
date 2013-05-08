@@ -1,0 +1,23 @@
+% Saved automatically by the Wizard
+Goals:
+plantOK:low(waterPressure)->try(pump, on), check(pipeRupture)
+try(V1,V2):value(V1, unknown)->check(V1)
+try(V1,V2):value(V1, V2)->doNothing
+try(V1,V2):set(V1,V2)
+plantOK:doNothing
+
+Belief Updates:
+set(V1,V2):1:  retractall(value(V1,_)), assert(value(V1,V2))
+check(V1):Value:   retractall(value(V1,_)), assert(value(V1,Value))
+
+Constants:
+value(Field,Value):value(waterPressure,30)
+acceptable(F,Low,High):acceptable(waterPressure,45,125)
+
+Clauses:
+low(V1):value(V1,V),acceptable(V1,Low,High),V < Low
+
+Rules:
+
+BaseRules:
+mailType(ID,Type)@1mailType(ID,Type)@1mailType(ID,Type)@1mailType(ID,Type)@1mailType(ID,Type)@1mailType(ID,Type)@1mailType(ID,Type)@1

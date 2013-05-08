@@ -1,0 +1,51 @@
+#-------------------------------------------------------------------------------
+# Copyright University of Southern California
+#-------------------------------------------------------------------------------
+LAV_RULES:
+
+SourceDescription(`summary`,`facilitylist/facilitylist_type`,`subject`,`icn`,`in
+cident_date`,`location_region`,`multiple_days`,`location_country`,`id`,`ied`,`ap
+proximate_date`,`assassination`,`suicide`) ->
+`ont0:Event`(uri(`icn`))
+ ^ `DovetailOntoExt:hasId`(uri(`icn`),`id`)
+ ^ `DovetailOntoExt:hasSubject`(uri(`icn`),`subject`)
+ ^ `DovetailOntoExt:isEventExtended`(uri(`icn`),`multiple_days`)
+ ^ `DovetailOntoExt:isEventIedUsed`(uri(`icn`),`ied`)
+ ^ `DovetailOntoExt:isEventTimeApproximate`(uri(`icn`),`approximate_date`)
+ ^ `ont0:hasEventDamageSummary`(uri(`icn`),`summary`)
+ ^ `ont0:hasEventICN`(uri(`icn`),`icn`)
+ ^ `ont0:hasEventRelation`(uri(`icn`),uri(0)) ^ `ont0:Nation`(uri(0))
+ ^ `ont0:label`(uri(0),`location_country`)
+ ^ `ont0:hasEventRelation`(uri(`icn`),uri(1)) ^ `ont0:Facility`(uri(1))
+ ^ `ont0:hasType`(uri(1),`facilitylist/facilitylist_type`)
+ ^ `ont0:hasEventRelation`(uri(`icn`),uri(`location_region`)) ^ `ont0:GeneralReg
+ion`(uri(`location_region`))
+ ^ `ont0:label`(uri(`location_region`),`location_region`)
+ ^ `ont0:hasEventTime`(uri(`icn`),`incident_date`)
+ ^ `ont0:isAssassination`(uri(`icn`),`assassination`)
+ ^ `ont0:isSuicide`(uri(`icn`),`suicide`)
+
+
+LAV_RULES:
+
+SourceDescription(`summary`,`facilitylist/facilitylist_type`,`subject`,`icn`,`in
+cident_date`,`location_region`,`multiple_days`,`location_country`,`id`,`ied`,`ap
+proximate_date`,`assassination`,`suicide`) ->
+`ont0:Event`(uri(`icn`))
+ ^ `DovetailOntoExt:hasId`(uri(`icn`),`id`)
+ ^ `DovetailOntoExt:hasSubject`(uri(`icn`),`subject`)
+ ^ `DovetailOntoExt:isEventExtended`(uri(`icn`),`multiple_days`)
+ ^ `DovetailOntoExt:isEventIedUsed`(uri(`icn`),`ied`)
+ ^ `DovetailOntoExt:isEventTimeApproximate`(uri(`icn`),`approximate_date`)
+ ^ `ont0:hasEventDamageSummary`(uri(`icn`),`summary`)
+ ^ `ont0:hasEventICN`(uri(`icn`),`icn`)
+ ^ `ont0:hasEventRelation`(uri(`icn`),uri(0)) ^ `ont0:Nation`(uri(0))
+ ^ `ont0:label`(uri(0),`location_country`)
+ ^ `ont0:hasEventRelation`(uri(`icn`),uri(1)) ^ `ont0:Facility`(uri(1))
+ ^ `ont0:hasType`(uri(1),`facilitylist/facilitylist_type`)
+ ^ `ont0:hasEventRelation`(uri(`icn`),uri(`location_region`)) ^ `ont0:GeneralReg
+ion`(uri(`location_region`))
+ ^ `ont0:label`(uri(`location_region`),`location_region`)
+ ^ `ont0:hasEventTime`(uri(`icn`),`incident_date`)
+ ^ `ont0:isAssassination`(uri(`icn`),`assassination`)
+ ^ `ont0:isSuicide`(uri(`icn`),`suicide`)

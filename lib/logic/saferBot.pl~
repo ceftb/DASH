@@ -1,0 +1,96 @@
+% -*- Mode: Prolog -*-
+
+% Simple bot to go through the workflow stages outlined in messages
+% from 3/16/12.
+
+:-style_check(-singleton).
+:-style_check(-discontiguous).
+
+:-dynamic(messageToSend/1).     % M is a message to be sent privately
+:-dynamic(softwareInstalled/1). % S has been installed in the agent's
+				% environment
+:-dynamic(haveMetaData/1).      % Have the metadata required for some
+				% privacy process.
+
+goalRequirements(doWork,[sendPrivateMessage(M)])
+  :- messageToSend(M), !.
+
+goalRequirements(doWork, [doNothing]).
+
+% For a more general approach, should have a subgoal to secure
+% a private line of communication, and Tor would be one way to
+% achieve that subgoal.
+
+subGoal(sendPrivateMessage(_)).
+
+goalRequirements(sendPrivateMessage(M), [acquireSoftware(S), installSoftware(S)])
+  :- privacyTool(S), not(softwareInstalled(S)), !.
+
+goalRequirements(sendPrivateMessage(M), [acquireMetaData(S)])
+  :- privacyTool(S), softwareInstalled(S), not(haveMetaData(S)), !.
+
+goalRequirements(sendPrivateMessage(M), [sendMessage(M)])
+  :- privacyTool(S), softwareInstalled(S), haveMetaData(S).  % Don't worry about
+						 % running it for now
+
+subGoal(acquireSoftware(_)).
+
+goalRequirements(acquireSoftware(S), [visitUrl(GoogleS), visitUrl(S), visitUrl(DownloadS)])
+ :- sformat(GoogleS, 'http://www.google.com/search?q=~w', [S]),
+    sformat(DownloadS, 'http://~w/download', [S]).
+
+subGoal(acquireMetaData(_)).
+
+% Just download metadata from the software site if you feel safe.
+% Emphasis on 'feel'.
+goalRequirements(acquireMetaData(S), [visitUrl(MetaDataS), addPredicate(haveMetaData(S))])
+  :- system1Fact(feelSafe, Degree), Degree > 0.5, sformat(MetaDataS, 'http://~w/metadata', [S]).
+
+% If not, try the email channel or hope someone sends you the needed data
+goalRequirements(acquireMetaData(S), [sendMail(EmailForS), addPredicate(haveMetaData(S))])
+  :- emailFor(S,EmailForS).
+
+
+% Feedback from primitive actions
+
+updateBeliefs(_,_).
+
+% Model acquiring software and sending messages as easy for now.
+
+executable(installSoftware(_)).
+execute(installSoftware(S))
+  :- format('installing software ~w\n', [S]),
+     myAssert(softwareInstalled(S)).
+
+%executable(acquireMetaData(_)).
+%execute(acquireMetaData(S))
+%  :- format('acquiring meta data ~w\n', [S]),
+%     myAssert(haveMetaData(S)).
+
+executable(sendMessage(_)).
+execute(sendMessage(M))
+  :- format('Sending message ~w\n', [M]),
+     myRetract(messageToSend(M)),
+     myAssert(messageSent(M)).
+
+executable(sendMail(_)).
+execute(sendMail(S)) :- format('Sending email to ~w\n', [S]).
+
+% Primitive actions are sent from the agent 'mind' to the agent 'body'
+% which typically handles accessing other software in the environment
+% such as browsers or sending traffic directly.
+primitiveAction(visitUrl(_)).
+
+% Agent data
+
+messageToSend('Hi Jim!').
+
+goal(doWork).
+goalWeight(doWork,1).
+
+id(101).
+
+privacyTool(tor).
+emailFor(tor, 'bridges@torproject.org').
+
+system1Fact(feelSafe, 0.8).  % Not aware of censorship in agent's locale.

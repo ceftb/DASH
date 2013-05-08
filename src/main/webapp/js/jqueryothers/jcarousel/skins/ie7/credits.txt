@@ -1,0 +1,4 @@
+#-------------------------------------------------------------------------------
+# Copyright University of Southern California
+#-------------------------------------------------------------------------------
+Button images copyright by Microsoft Corporation (http://microsoft.com)

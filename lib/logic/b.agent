@@ -1,0 +1,22 @@
+% Saved automatically by the Wizard
+Goals:
+plantOK:low(wp)->try(pump, on), check(rupture)
+try(V1,V2):value(V1,unknown)->check(V1)
+try(V1,V2):value(V1,V2)->doNothing
+try(V1,V2):set(V1,V2)
+
+Belief Updates:
+set(V1,V2):1: retractall(value(V1,_)), assert(value(V1,V2))
+check(V1):V: retractall(value(V1,_)), assert(value(V1,V))
+
+Constants:
+value(V1,V2):value(wp,50)
+acceptable(V1,L,H):acceptable(wp,40,80)
+
+Clauses:
+low(V1):[value(V1,V),acceptable(V1,L,H),V < L]
+
+Rules:
+
+BaseRules:
+

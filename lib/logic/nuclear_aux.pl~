@@ -1,0 +1,5 @@
+low(Object)  :- value(Object,X), acceptableRange(Object,Min,_), X < Min.
+high(Object) :- value(Object,X), acceptableRange(Object,_,Max), X < Max.
+ok(Object)   :- value(Object,X), acceptableRange(Object,Min,Max), X >= Min, X =< Max.
+
+acceptableRange(waterPressure, 10, 15).

@@ -1,0 +1,40 @@
+% Hand-written attempt at a high-level agent definition that would be used
+% and created by the wizard.
+
+Goals:
+doMail:mail(From,To,Subject,Text,Url,Type,DoNotRespond,Name)->respondToMessage(mail(From,To,Subject,Text,Url,Type,DoNotRespond,Name))
+doMail:email(ID),mailRead(ID,false)->processNextEmail(ID)
+doMail:report,doNothing
+respondToMessage(mail(From,To,Subject,Text,Url,Type,DoNotRespond,Name)):executeAddEmail(From,To,Subject,Text,Url,Type,DoNotRespond,Name)
+processNextEmail(ID):system2Fact(ok(read(ID)))->printMessage('reading ~w ~w from ~w\n', [Type, ID, From]),readEmail(ID), decide(followLink(ID))|mailType(ID,Type), from(ID,From)
+readEmail(ID)*:myRetractall(mailRead(ID,_)), myAssert(mailRead(ID,true)), incr(numberRead)
+executeAddEmail(From,To,Subject,Text,Url,Type,DoNotRespond,Name)*:<code>
+
+MentalModels:virus(mischief)
+
+MentalModelAdd:
+followlink(ID):*:0.5,followedLink(ID):0.5,followedLink(ID),compromised(ID)
+
+MentalModelTrigger:
+hacker(burglar)|virus(crime):compromised(_)::stolen(id)
+hacker(vandal)|virus(mischief):compromised(_),!backedup(files),!deleted(files)::deleted(files)
+
+MentalModelUtility:
+stolen(_):-1
+deleted(files),!backedUp:-2
+followedLink(_):0.5
+
+% The rules don't include attention stuff
+Rules:
+ok(read(ID)):mailType(ID,_):1
+ok(followLink(ID)):mailType(ID,ham):1
+ok(followLink(ID)):url(ID,_):-0.5
+ok(followLink(ID)):useService(Service) and recognizeService(Service, ID):0.8
+ok(followLink(ID)):url(ID,Url) and short(Url):0.4
+ok(followLink(ID)):doNotReply(ID):-0.6
+ok(followLink(ID)):nameAppears(ID,_):0.4
+ok(followLink(ID)):goodWord(Word) and hasString(ID, Word):0.5
+
+% Base system 1 rules:
+BaseRules:mailType(ID,Type)@1,...
+

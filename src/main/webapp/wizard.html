@@ -1,0 +1,189 @@
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>DASH - Agent Wizard</title>
+<link href="js/jquery-ui-1.10.2.custom/css/ui-lightness/jquery-ui-1.10.2.custom.css" rel="stylesheet"/>
+<script src="js/jquery-ui-1.10.2.custom/js/jquery-1.9.1.js"></script>
+<script src="js/jquery-ui-1.10.2.custom/js/jquery-ui-1.10.2.custom.js"></script>
+	<!-- JSTree plugin files -->
+	<script type="text/javascript" src="js/jqueryothers/jstree-a11y/jsTree.v.1.0rc2/lib/jquery.cookie.js"></script>
+	<script type="text/javascript" src="js/jqueryothers/jstree-a11y/jsTree.v.1.0rc2/lib/jquery.hotkeys.js"></script>
+	<script type="text/javascript" src="js/jqueryothers/jstree-a11y/jsTree.v.1.0rc2/jquery.jstree.js"></script>
+	<script type="text/javascript" src="js/jquery.fileupload.js"></script>
+	
+	<script type="text/javascript" src="js/wizard.js"></script>
+<script>
+
+$(function() {
+$( "#tabs" ).tabs();
+$('#addB').button()
+.click(function(){
+alert('b1');
+$("#goalstree").jstree("create", $("#goalsid"), "inside",  { "data" : "child2" },
+                          function() { alert("added"); }, true);
+    
+});
+
+$("#goalstree").jstree({ 
+            "json_data" : {
+                "data" : [
+                    { 
+                        "data" : "goals", 
+                        "attr" : { "id" : "goalsid", "type":"Root" },
+                        "children" : [ { "data" : "plantOK",
+                                         "attr" : { "id" : "plantokid","type":"Goal","primitive":"false","executable":"false" },
+                                         "children" : [ { "data" : "low(waterPressure) ? try(pump,on),check(pipeReturn)",
+                                         "attr" : { "id" : "lowid","type":"GoalLink" },
+                                         "children" : [ ] }] }
+                                     ]
+                    },
+                ]
+            },
+            "plugins" : [ "themes", "json_data", "ui", "crrm", "contextmenu" ],
+	    'contextmenu' : { 'items' : customMenu }
+  }).bind("rename.jstree", function (event, data) {
+	alert("rename");
+	alert(data.rslt.new_name);
+	renameNode(data.rslt.obj.attr("id"),data.rslt.new_name);
+}).bind("select_node.jstree", function (event, data) {
+	            // `data.rslt.obj` is the jquery extended node that was clicked
+	            //alert(data.rslt.obj.data);
+	            //alert("rename");
+	            //rename happens here
+	            //alert(data.rslt.obj.attr("id"));
+	            var id = data.rslt.obj.attr("id");
+	            
+		    //$("#goalstree").jstree("rename",'#child1id');
+		    //$("#goalstree").jstree("rename");
+		    $(this).jstree("rename");
+			//alert("rename it");
+});
+
+
+//the end of function()
+})
+
+</script>
+
+</head>
+	<style>
+	body{
+		font: 80% "Trebuchet MS", sans-serif;
+		margin: 50px;
+	}
+	</style>
+<body>
+
+<h2><font color="#1c94c4">Agent Wizard for agent <span id="newAgentName"></span></font></h2>
+<script>
+$("#newAgentName").text('NewAgent');
+</script>
+
+<div id="tabs">
+<ul>
+<li><a href="#tabs-1">Rational goals</a></li>
+<li><a href="#tabs-2">Mental models</a></li>
+<li><a href="#tabs-3">Instinctive rules</a></li>
+</ul>
+<div id="tabs-1">
+
+<div id="goalstree">
+</div>
+</div>
+
+
+<div id="tabs-2">
+<p>Morbi tincidunt, dui sit amet facilisis feugiat, odio metus gravida ante, ut pharetra massa metus id nunc. Duis scelerisque molestie turpis. Sed fringilla,</p>
+</div>
+<div id="tabs-3">
+<p>Mauris eleifend est et turpis. Duis id erat. Suspendisse potenti. Aliquam vulputate, pede vel vehicula accumsan, mi neque rutrum erat, eu congue orci lorem eget lorem. Vestibulum non ante. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Fusce sodales. Quisque eu urna vel enim commodo pellentesque. Praesent eu risus hendrerit ligula tempus pretium. Curabitur lorem enim, pretium nec, feugiat nec, luctus a, lacus.</p>
+</div>
+
+<div style="display: none">
+<button id="addB">add</button>
+</div>
+
+<button id='newB'>new</button>
+<script>
+$('#newB').button()
+.click(function(){
+	newAgent();
+});
+</script>
+
+<!-- Start Open button -->
+<button id='openB'>open</button>
+<script>
+$('#openB').button()
+.click(function(){
+document.getElementById("loadFile").click();
+});
+</script>
+
+<div style="display: none">
+<input id="loadFile" type="file"/>
+</div>
+<script>	                            
+$('#loadFile').fileupload({
+	dataType: 'json',
+    url: "RequestController?command=OpenCommand",
+    add: function (e, data) {
+         	var fileName = data.files[0].name;
+         	alert(fileName);
+         	if(fileName.endsWith(".agent")){
+         	data.submit();
+	        }
+        	else{
+        		alert("Choose an agent file (extention '.agent')");
+        	}
+    },
+    done: function(e, data) {
+    	//this is the json_tree returned (equivalent to goals tree)
+    	alert(data.result.json_tree);
+    	var jsTreeSettings = $("#goalstree").jstree("get_settings");
+		jsTreeSettings.json_data.data = data.result.json_tree;
+		$.jstree._reference("goalstree")._set_settings(jsTreeSettings);
+		// Refresh whole tree (-1 means root of tree)
+		$.jstree._reference("goalstree").refresh(-1);
+	},
+    fail: function (e, data) {
+		alert("File upload failed!");
+	}
+});
+</script>
+<!-- end Open button -->
+
+<!-- For Save button -->
+<button id='saveB'>save</button>
+<div id="AgentNameDialog" style="display: none">
+			<span class="smallSizedFont">
+			<table>
+			<tr>
+			<td>Agent name:</td>
+			<td><input type="text" id="agentName" value="NewAgent" maxlength="100" size="25"/></td>
+			</tr>
+			</table>
+</div>
+<script>
+$('#saveB').button()
+.click(function(){
+var rdfDialogBox = $("div#AgentNameDialog");
+// Show the dialog box
+rdfDialogBox.dialog({width: 300
+, buttons: { "Cancel": function() { $(this).dialog("close"); }, "OK": saveAgent } 
+});
+});
+</script>
+<!-- end Save button -->
+
+<button id='runB'>run</button>
+<script>
+$('#runB').button()
+.click(function(){
+	runAgent();});
+</script>
+
+</div>
+
+</body>
+</html>

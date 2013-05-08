@@ -1,0 +1,15 @@
+% Saved automatically by the Wizard
+Goals:
+top:ms(M)->sm(M)
+top:not(ms(M))->doNothing
+sm(V1):privacyTool(T), installed(T)->sendMessage(V1,T)
+sm(V1):privacyTool(T), not(installed(T))->install(T), sendMessage(V1,T)
+install(V1):visitUrl(V1), downloadSoftware(V1)
+
+Belief Updates:
+downloadSoftware(V1):1:assert(installed(V1))
+
+Rules:
+
+BaseRules:
+mailType(ID,Type)@1mailType(ID,Type)@1mailType(ID,Type)@1mailType(ID,Type)@1

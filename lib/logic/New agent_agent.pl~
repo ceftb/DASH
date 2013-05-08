@@ -1,0 +1,15 @@
+% -*- Mode: Prolog -*-
+% Agent file created automatically by the wizard.
+goalRequirements(top,[sm(M)]) :- ms(M).
+goalRequirements(top,[doNothing]) :- not(ms(M)).
+goalRequirements(sm(V1),[sendMessage(M,T)]) :- privacyTool(T), installed(T).
+goalRequirements(sm(V1),[install(T), sendMessage(V1,T)]) :- privacyTool(T), not(installed(T)).
+goalRequirements(install(V1),[visitUrl(V1), downloadSoftware(V1)]).
+goal(top).
+goalWeight(top, 1).
+primitiveAction(downloadSoftware(V1)).
+subgoal(install(V1)).
+subgoal(sm(V1)).
+primitiveAction(sendMessage(V1,V2)).
+primitiveAction(doNothing).
+primitiveAction(visitUrl(V1)).

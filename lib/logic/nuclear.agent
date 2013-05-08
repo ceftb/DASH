@@ -1,0 +1,25 @@
+% Saved automatically by the Wizard
+Goals:
+plantOk:ok(waterPressure)->doNothing
+plantOk:low(waterPressure)->fixLowPressure(waterPressure)
+fixLowPressure(V1):try(feedwaterPump, V1, on), check(pipeRupture), try(bypassValve, V1, closed), try(emergencySealantSpray, V1, on)
+try(V1,V2,V3):value(V1,V3)->check(V2)
+try(V1,V2,V3):relevant(V1), value(V1, unknown)->check(V1), try2(V1,V2,V3)
+try(V1,V2,V3):not(relevant(V1))->doNothing
+try2(V1,V2,V3):set(V1,V3), check(V2)
+
+Belief Updates:
+set(V1,V2):1: retractall(value(V1,_)), assert(value(V1,V2))
+check(V1):ue: retractall(value(V1,_)), assert(value(V1,Value))
+
+Constants:
+value(V1,V3):value(waterPressure,-2)
+value(V1,V3):value(feedwaterPump,unknown)
+value(V1,V3):value(bypassValve,unknown)
+value(V1,V3):value(emergencySealantSpray,unknown)
+relevant(V1):relevant(feedwaterPump)
+
+Rules:
+
+BaseRules:
+mailType(ID,Type)@1
