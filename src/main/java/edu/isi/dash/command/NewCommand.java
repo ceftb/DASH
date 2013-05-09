@@ -20,8 +20,12 @@ public class NewCommand extends Command{
 		
 		//save agent on server
 		wizard.newDomain();
+		String jsonTree = wizard.getJsonTree();
 		
-		return "{ \"command_name\":\""+ request.getParameter("command")+"\"}";
+		System.out.println("JT="+ "{ \"json_tree\" : "+ jsonTree+"}");
+		
+		//return JSON
+		return "{ \"json_tree\" : "+ jsonTree+"}";
 	}
 
 }

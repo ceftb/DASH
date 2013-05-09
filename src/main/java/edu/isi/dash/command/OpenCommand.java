@@ -16,7 +16,6 @@ public class OpenCommand extends Command{
 	File uploadedFile;
 	public OpenCommand(HttpServletRequest request, Wizard wizard){
 		super(request);
-		System.out.println("open cmd");
 		this.wizard=wizard;
 		this.uploadedFile=FileUtil.downloadFileFromHTTPRequest(request);
 		this.fileName = uploadedFile.getName();

@@ -1,24 +1,24 @@
 //info is a JSON object (new Object())
+//for communication with server
 function requestController(info, commandName)
 {
-
-  alert('in func');
+//  alert('in func');
 
 info["command"] = commandName;
-
 var result="";
 
-return $.ajax({
-type: "POST",
-url: "RequestController",
-data: info,
-dataType: "json",
-async: false,  
-success:function(data) {
-  result = data; 
-},
-error: function(err) { alert(err.status); }
+$.ajax({
+	type: "POST",
+	url: "RequestController",
+	data: info,
+	dataType: "json",
+	async: false,  
+	success:function(data) {
+  		result = data; 
+	},
+	error: function(err) { alert(err.status); }
 });
+
 return result;
 }
 
@@ -36,169 +36,134 @@ function saveAgent(){
 		//var prolog_text = json.prolog;
 }
 
-//not used
-function openAgent(filename){
-		alert(filename);
-		var info = new Object();
-		info["fileName"] = $filename;
-		var result = requestController(info,'OpenCommand');
-}
-
 function runAgent(){
-		//$("div#AgentNameDialog").dialog("close");
-
 		var info = new Object();
 		var result = requestController(info,'RunCommand');
 		var json = $.parseJSON(result.responseText);
 		var run_result = json.run_result;
+		//show result from run command
+}
+
+function createEmptyTree(){
+$("#goalstree").jstree({ 
+            "json_data" : {
+                "data" : [
+                    { 
+                        "data" : "goals", 
+                        "attr" : { "id" : "goalsid", "type":"Root" },
+                        "children" : []
+                    },
+                ]
+            },
+            "plugins" : [ "themes", "json_data", "ui", "crrm", "contextmenu" ],
+	        'contextmenu' : { 'items' : customMenu }
+  }).bind("rename.jstree", function (event, data) {
+		renameNode(data.rslt.obj.attr("id"),data.rslt.new_name);
+  }).bind("select_node.jstree", function (event, data) {
+	    $(this).jstree("rename");
+});
 }
 
 function newAgent(){
+  $("span#newAgentName").text($("NewAgent").val());
 
-		var info = new Object();
-		$("span#newAgentName").text($("NewAgent").val());
-		var result = requestController(info,'NewCommand');
-		//empty tree
-		var jsonTree="{\"data\":\"goals\",\"children\":[],\"attr\":{\"type\":\"Goal\",\"primitive\":\"false\"}}";
-		var json = $.parseJSON(jsonTree);
-		var jsTreeSettings = $("#goalstree").jstree("get_settings");
-		jsTreeSettings.json_data.data = json;
-		$.jstree._reference("goalstree")._set_settings(jsTreeSettings);
-		// Refresh whole tree (-1 means root of tree)
-		$.jstree._reference("goalstree").refresh(-1);
+  $("#goalstree").jstree({ 
+     "json_data": {
+     "ajax": {
+            "type": "POST",
+            "url": "RequestController?command=NewCommand",
+            "dataType": "json",
+            "success": function (data) { return data.json_tree; }
+     }
+     },
+     "plugins" : [ "themes", "json_data", "ui", "crrm", "contextmenu" ],
+     'contextmenu' : { 'items' : customMenu }
+  }).bind("rename.jstree", function (event, data) {
+	renameNode(data.rslt.obj.attr("id"),data.rslt.new_name);
+  }).bind("select_node.jstree", function (event, data) {
+    $(this).jstree("rename");
+  });
+}
+
+function refreshTree(commandName, nodeId){
+	//alert("refresh "+commandName);
+
+  $("#goalstree").jstree({ 
+     "json_data": {
+     "ajax": {
+            "type": "POST",
+            "url": "RequestController?command="+commandName+"&nodeId="+nodeId,
+            "dataType": "json",
+            "success": function (data) { return data.json_tree; }
+     }
+     },
+     "plugins" : [ "themes", "json_data", "ui", "crrm", "contextmenu" ],
+     'contextmenu' : { 'items' : customMenu }
+  }).bind("rename.jstree", function (event, data) {
+	renameNode(data.rslt.obj.attr("id"),data.rslt.new_name);
+  }).bind("select_node.jstree", function (event, data) {
+    $(this).jstree("rename");
+  });
 }
 
 function addGoal(node){
-		var info = new Object();
 		var nodeId = $(node).attr("id");
-		alert(nodeId);
-		info["nodeId"] = nodeId;
-		var result = requestController(info,'AddGoalCommand');
-		var json = $.parseJSON(result.responseText);
-		var jsTreeSettings = $("#goalstree").jstree("get_settings");
-		jsTreeSettings.json_data.data = json.json_tree;
-		$.jstree._reference("goalstree")._set_settings(jsTreeSettings);
-		// Refresh whole tree (-1 means root of tree)
-		$.jstree._reference("goalstree").refresh(-1);
+		refreshTree('AddGoalCommand', nodeId)
 }
 
+
 function removeNode(node){
-		var info = new Object();
 		var nodeId = $(node).attr("id");
-		alert(nodeId);
-		info["nodeId"] = nodeId;
-		var result = requestController(info,'RemoveNodeCommand');
-		var json = $.parseJSON(result.responseText);
-		//if I don't clean it the refresh doesn't work properly
-		//$("#goalstree").empty();
-		var jsTreeSettings = $("#goalstree").jstree("get_settings");
-		jsTreeSettings.json_data.data = json.json_tree;
-		$.jstree._reference("goalstree")._set_settings(jsTreeSettings);
-		// Refresh whole tree (-1 means root of tree)
-		$.jstree._reference("goalstree").refresh(-1);
+		refreshTree('RemoveNodeCommand', nodeId)
 }
 
 function makePrimitive(node){
-		var info = new Object();
 		var nodeId = $(node).attr("id");
-		alert(nodeId);
-		info["nodeId"] = nodeId;
-		var result = requestController(info,'MakePrimitiveCommand');
-		var json = $.parseJSON(result.responseText);
-		//if I don't clean it the refresh doesn't work properly
-		//$("#goalstree").empty();
-		var jsTreeSettings = $("#goalstree").jstree("get_settings");
-		jsTreeSettings.json_data.data = json.json_tree;
-		$.jstree._reference("goalstree")._set_settings(jsTreeSettings);
-		// Refresh whole tree (-1 means root of tree)
-		$.jstree._reference("goalstree").refresh(-1);
+		refreshTree('MakePrimitiveCommand', nodeId)
 }
 
 function makeExecutable(node){
-		var info = new Object();
 		var nodeId = $(node).attr("id");
-		alert(nodeId);
-		info["nodeId"] = nodeId;
-		var result = requestController(info,'MakeExecutableCommand');
-		var json = $.parseJSON(result.responseText);
-		//if I don't clean it the refresh doesn't work properly
-		//$("#goalstree").empty();
-		var jsTreeSettings = $("#goalstree").jstree("get_settings");
-		jsTreeSettings.json_data.data = json.json_tree;
-		$.jstree._reference("goalstree")._set_settings(jsTreeSettings);
-		// Refresh whole tree (-1 means root of tree)
-		$.jstree._reference("goalstree").refresh(-1);
+		refreshTree('MakeExecutableCommand', nodeId)
 }
 
 function addUpdateRule(node){
-		var info = new Object();
 		var nodeId = $(node).attr("id");
-		alert(nodeId);
-		info["nodeId"] = nodeId;
-		var result = requestController(info,'AddUpdateRuleCommand');
-		var json = $.parseJSON(result.responseText);
-		//if I don't clean it the refresh doesn't work properly
-		//$("#goalstree").empty();
-		var jsTreeSettings = $("#goalstree").jstree("get_settings");
-		jsTreeSettings.json_data.data = json.json_tree;
-		$.jstree._reference("goalstree")._set_settings(jsTreeSettings);
-		// Refresh whole tree (-1 means root of tree)
-		$.jstree._reference("goalstree").refresh(-1);
+		refreshTree('AddUpdateRuleCommand', nodeId)
 }
 
 function addConstant(node){
-		var info = new Object();
 		var nodeId = $(node).attr("id");
-		alert(nodeId);
-		info["nodeId"] = nodeId;
-		var result = requestController(info,'AddConstantCommand');
-		var json = $.parseJSON(result.responseText);
-		//if I don't clean it the refresh doesn't work properly
-		//$("#goalstree").empty();
-		var jsTreeSettings = $("#goalstree").jstree("get_settings");
-		jsTreeSettings.json_data.data = json.json_tree;
-		$.jstree._reference("goalstree")._set_settings(jsTreeSettings);
-		// Refresh whole tree (-1 means root of tree)
-		$.jstree._reference("goalstree").refresh(-1);
+		refreshTree('AddConstantCommand', nodeId)
 }
 function addClause(node){
-		var info = new Object();
 		var nodeId = $(node).attr("id");
-		alert(nodeId);
-		info["nodeId"] = nodeId;
-		var result = requestController(info,'AddClauseCommand');
-		var json = $.parseJSON(result.responseText);
-		//if I don't clean it the refresh doesn't work properly
-		//$("#goalstree").empty();
-		var jsTreeSettings = $("#goalstree").jstree("get_settings");
-		jsTreeSettings.json_data.data = json.json_tree;
-		$.jstree._reference("goalstree")._set_settings(jsTreeSettings);
-		// Refresh whole tree (-1 means root of tree)
-		$.jstree._reference("goalstree").refresh(-1);
+		refreshTree('AddConstantCommand', nodeId)
 }
 
 function renameNode(id, newName){
-		var info = new Object();
-		info["nodeId"] = id;
-		info["newName"] = newName;
-		var result = requestController(info,'RenameCommand');
-		var json = $.parseJSON(result.responseText);
-		//if I don't clean it the refresh doesn't work properly
-		//$("#goalstree").empty();
-		var jsTreeSettings = $("#goalstree").jstree("get_settings");
-		jsTreeSettings.json_data.data = json.json_tree;
-		$.jstree._reference("goalstree")._set_settings(jsTreeSettings);
-		// Refresh whole tree (-1 means root of tree)
-		$.jstree._reference("goalstree").refresh(-1);
-}
+	//alert("rename node");
 
-function testF(){
-  //alert('test');
+$("#goalstree").jstree({ 
+     "json_data": {
+     "ajax": {
+            "type": "POST",
+            "url": "RequestController?command=RenameCommand&nodeId="+id+"&newName="+newName,
+            "dataType": "json",
+            "success": function (data) { return data.json_tree; }
+     }
+     },
+     "plugins" : [ "themes", "json_data", "ui", "crrm", "contextmenu" ],
+     'contextmenu' : { 'items' : customMenu }
+}).bind("rename.jstree", function (event, data) {
+	renameNode(data.rslt.obj.attr("id"),data.rslt.new_name);
+}).bind("select_node.jstree", function (event, data) {
+    $(this).jstree("rename");
+});
 }
 
 
 function customMenu(node) {
-  //alert('bubu');
 var items = {
 
                       addGoalItem: { 
@@ -266,8 +231,9 @@ var items = {
         }
         delete items.addConstantItem;
         delete items.addClauseItem;
+        delete items.renameItem;
     }
-    else if ($(node).attr("type")=="GoalLink" || $(node).attr("type")=="OtherType") {
+    else if ($(node).attr("type")=="GoalLink") {
         delete items.addGoalItem;
         delete items.addMethodItem;
         delete items.addRuleItem;
@@ -275,6 +241,17 @@ var items = {
         delete items.makeExeItem;
         delete items.addConstantItem;
         delete items.addClauseItem;
+        delete items.renameItem;
+    }
+    else if ($(node).attr("type")=="OtherType") {
+        delete items.addGoalItem;
+        delete items.addMethodItem;
+        delete items.addRuleItem;
+        delete items.makePrimitiveItem;
+        delete items.makeExeItem;
+        delete items.addConstantItem;
+        delete items.addClauseItem;
+        delete items.renameItem;
     }
     else if ($(node).attr("type")=="PrologGoal") {
         delete items.addMethodItem;
@@ -282,6 +259,7 @@ var items = {
         delete items.addRuleItem;
         delete items.makePrimitiveItem;
         delete items.makeExeItem;
+        delete items.renameItem;
     }
 
     return items;

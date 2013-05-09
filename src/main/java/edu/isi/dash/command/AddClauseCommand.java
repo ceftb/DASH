@@ -27,7 +27,6 @@ public class AddClauseCommand extends Command{
 		
 		//return JSON
 		return "{ \"json_tree\" : "+ jsonTree+"}";
-		//return "{ \"message\":\""+ "mes"+"\"}";
 
 	}
 

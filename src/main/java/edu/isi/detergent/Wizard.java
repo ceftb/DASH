@@ -65,45 +65,7 @@ public class Wizard {
 	List<ModelOperator>operators = null;
 	private Detergent agent = null;
 	
-	public void addGoal(String id){
-		System.out.println("wiz.addGoal");
-		goalTree.nodeAdded(id);
-	}
 	
-	public void removeNode(String id){
-		System.out.println("removeNode");
-		goalTree.removeNode(id);
-	}
-
-	public void makePrimitive(String id){
-		System.out.println("removeNode");
-		goalTree.makePrimitive(id);
-	}
-
-	public void makeExecutable(String id){
-		System.out.println("removeNode");
-		goalTree.makePrimitive(id);
-	}
-
-	public void addUpdateRule(String id){
-		System.out.println("removeNode");
-		goalTree.addUpdateRule(id);
-	}
-
-	public void addConstant(String id){
-		System.out.println("removeNode");
-		goalTree.addConstant(id);
-	}
-
-	public void addClause(String id){
-		System.out.println("removeNode");
-		goalTree.addConstant(id);
-	}
-	public void renameNode(String id, String newName){
-		System.out.println("removeNode");
-		goalTree.nodeChanged(id, newName);
-	}
-
 	class Goal {
 		String name = null;
 		int arity = 0;
@@ -264,13 +226,10 @@ public class Wizard {
 	
 	public Wizard(String name) {
 		this.name = name;
-		loadAgentFile(prologRoot + "/" + name + ".agent");
+		if(!name.isEmpty())
+			loadAgentFile(prologRoot + "/" + name + ".agent");
 		makeWidgets();
 		//setVisible(true);
-	}
-	
-	public String getJsonTree(){
-		return goalTree.getJson(goalTree.rootNode).toString();
 	}
 	
 	void makeWidgets() {
@@ -379,6 +338,7 @@ public class Wizard {
 				goals.add(gl.goal);
 		}
 		goalTree = new GoalTree("goals", this);
+
 		GoalTreeCellRenderer r = new GoalTreeCellRenderer();
 		goalTree.setTreeCellRenderer(r);
 		for (Goal goal: goals) {
@@ -415,86 +375,9 @@ public class Wizard {
 				for (Term constant: prologGoal.constants)
 					goalTree.addObject(prologGoal.goalTreeNode, constant);
 		}
+		
 	}
 
-	/*
-	protected String jsonGoalTree() {
-		JSONObject jsonGoals = new JSONObject();
-		addToJSONObject(jsonGoals,"data", "goals");
-		JSONObject jsonAttr = new JSONObject();
-		addToJSONObject(jsonGoals,"attr", jsonAttr);
-		addToJSONObject(jsonAttr,"type", "Goal");
-
-		JSONArray jsonChildren = new JSONArray();
-		addToJSONObject(jsonGoals,"children", jsonChildren);
-
-		List<Goal>goals = new LinkedList<Goal>();  // preserve the order of appearance in the file
-		for (GoalLink gl: goalLinks) {
-			if (!goals.contains(gl.goal))
-				goals.add(gl.goal);
-		}
-		goalTree = new GoalTree("goals", this);
-		GoalTreeCellRenderer r = new GoalTreeCellRenderer();
-		goalTree.setTreeCellRenderer(r);
-		
-		for (Goal goal: goals) {
-			if (goal.name != null && !goal.name.equals("doNothing")) {
-				//add a new goal
-				JSONObject childGoal = new JSONObject();
-				addToJSONObject(childGoal,"data", goal.name);
-				JSONObject childAttr = new JSONObject();
-				addToJSONObject(childGoal,"attr", childAttr);
-				addToJSONObject(childAttr,"type", "Goal");
-				addToJSONObject(childAttr,"primitive", new Boolean(goal.primitive).toString());
-				JSONArray childGoalChildren = new JSONArray();
-				addToJSONObject(childGoal,"children", childGoalChildren);
-				jsonChildren.put(childGoal);
-				
-				DefaultMutableTreeNode goalNode = goalTree.addObject(null, goal);
-				// quadratic time complexity when it could be linear, but initially there won't be many decompositions.
-				for (GoalLink gl: goalLinks) {
-					if (gl.goal.equals(goal)) {
-						//add a new goal
-						JSONObject childLink = new JSONObject();
-						addToJSONObject(childLink,"data", gl.toString());
-						JSONObject childLinkAttr = new JSONObject();
-						addToJSONObject(childLink,"attr", childLinkAttr);
-						addToJSONObject(childLinkAttr,"type", "GoalLink");
-						JSONArray childLinkChildren = new JSONArray();
-						addToJSONObject(childLink,"children", childLinkChildren);
-						childGoalChildren.put(childLink);
-						
-						goalTree.addObject(goalNode, gl);
-						goalTree.addPrimitivesForGoalLink(gl);
-					}
-				}
-			}
-		}
-		
-		// Add belief update nodes for primitive goals.
-		for (String goalName: this.goals.keySet()) {
-			Goal goal = this.goals.get(goalName);
-			if ((goal.primitive || goal.links.isEmpty()) && goal.beliefUpdateRules != null) {
-				for (BeliefUpdateRule bur: goal.beliefUpdateRules) {
-					DefaultMutableTreeNode n = goalTree.addObject(goalTree.rootNode, goal);
-					goalTree.addObject(n, bur);
-				}
-			}
-		}
-		
-		// Add nodes for prolog goals where facts or code can be stored. Should be in a different tree.
-		for (PrologGoal prologGoal: computePrologGoalsUsed()) {
-			prologGoal.goalTreeNode = goalTree.addObject(null, prologGoal);
-			if (prologGoal.clauses != null)
-				for (List<Term> body: prologGoal.clauses)
-					goalTree.addObject(prologGoal.goalTreeNode, body);
-			if (prologGoal.constants != null)
-				for (Term constant: prologGoal.constants)
-					goalTree.addObject(prologGoal.goalTreeNode, constant);
-		}
-		return "";
-	}
-*/
 	
 	protected void updateRuleTree() {
 		List<String>conclusions = new LinkedList<String>();  // preserve the order of appearance in the file
@@ -570,8 +453,7 @@ public class Wizard {
 		loadAgentFile(new File(filename));
 	}
 	
-	//returns JSON representation of Agent
-	String loadAgentFile(File file) {
+	void loadAgentFile(File file) {
 		try {
 			BufferedReader br = new BufferedReader(new FileReader(file));
 			int state = -1;
@@ -641,7 +523,6 @@ public class Wizard {
 			System.out.println(e); 
 		}
 		System.out.println("Loaded " + goalLinks.size() + " goal decompositions and " + rules.size() + " rules.");
-		return "";
 	}
 	
 
@@ -704,6 +585,7 @@ public class Wizard {
 		goals.clear();
 		goalLinks.clear();
 		rules.clear();
+		prologGoals.clear();
 		name = "New agent";
 		makeWidgets();
 		getNameToSave = true;  // ask for a new name before saving.
@@ -748,28 +630,160 @@ public class Wizard {
 		}
 	}
 	
-	public void loadDomain(String filename) {
-		int returnVal=0;
-		//int returnVal = fc.showDialog(this, "Open agent file");
-		if (returnVal == JFileChooser.APPROVE_OPTION) {
-			goals.clear();
-			goalLinks.clear();
-			rules.clear();
-			prologGoals.clear();
-			loadAgentFile(prologRoot+"/"+filename);
-			name = filename;
-			if (name.contains("."))
-				name = name.substring(0,name.indexOf("."));   // set agent name to the file name without the extension
-			getNameToSave = false;
-			makeWidgets();
-		} else {
-			System.out.println("Load cancelled");
-		}
-	}
-
 	boolean getNameToSave = false;
 	
 	
+
+	List<PrologGoal>computePrologGoalsUsed() {
+		HashSet<String>signatures = new HashSet<String>();  // keep track of signatures so we don't count goals twice. Used separately from the prologGoals map for when goals are removed.
+		List<PrologGoal>result = new LinkedList<PrologGoal>();
+		for (GoalLink gl: goalLinks) {
+			if (!gl.goal.executable) {
+				addPrologGoalsUsed(result, signatures, gl.condition);
+			} else {
+				addPrologGoalsUsed(result, signatures, gl.subGoals);
+			}
+		}			
+		for (String goalName: goals.keySet()) {
+			Goal goal = goals.get(goalName);
+			if (goal.beliefUpdateRules != null && !goal.beliefUpdateRules.isEmpty()) {
+				for (BeliefUpdateRule bur: goal.beliefUpdateRules)
+					addPrologGoalsUsed(result, signatures, bur.code);
+			}
+		}
+		for (String pgName: new LinkedList<String>(prologGoals.keySet())) {  // create a new list to avoid concurrent modification issues. The new clauses won't have clauses of their own.
+			PrologGoal pg = prologGoals.get(pgName);
+			if (pg.clauses != null) {
+				for (List<Term>body: pg.clauses) {
+					for (Term el: body)
+						addPrologGoalUsed(result, signatures, el);
+				}
+			}
+		}
+		return result;
+	}
+	
+	void addPrologGoalsUsed(List<PrologGoal>goals, HashSet<String>signatures, String code) {
+		List<Term>conditions = Term.parseTerms(code);
+		for (Term condition: conditions)
+			addPrologGoalUsed(goals, signatures, condition);
+	}
+	
+	private void addPrologGoalUsed(List<PrologGoal> goals, HashSet<String> signatures, Term condition) {
+		// Don't add goals for unary terms, i.e. free variables or constants in the expression
+		if (condition.arity == 0)
+			return;
+		boolean builtin = false;
+		for (String name: new String[]{"assert","retract","not","retractall"})
+			if (name.equals(condition.predicate))
+				builtin = true;
+		if (!builtin && !signatures.contains(condition.signature())) {  // ignore builtins
+			String signature = condition.signature();
+			signatures.add(signature);
+			if (!prologGoals.containsKey(signature)) {
+				prologGoals.put(signature, new PrologGoal(condition));
+			}
+			goals.add(prologGoals.get(signature));
+		}
+		// recursively add goals for any subterms
+		if (condition.subTerms != null)
+			for (Term sub: condition.subTerms)
+				addPrologGoalUsed(goals, signatures, sub);
+	}
+
+	public static void main(String[] args) {
+		String name = "NewAgent";
+		if (args != null && args.length > 0)
+			name = args[0];
+		Wizard w = new Wizard(name);
+		w.loadAgentFile("C:\\Documents and Settings\\mariam\\My Documents\\Dash\\lib\\logic\\NewAgent.agent");
+		String json = w.getJsonTree();
+		System.out.println("JSON="+json);
+	}
+
+	public void runAgentOrig() {
+		JFrame frame = new JFrame();
+		final JTextArea jt = new JTextArea(10,20); 
+		frame.add(jt);
+		frame.setVisible(true);
+		String[] tmp = {"-maxSteps", "10", "agentGeneral.pl", name + "_agent.pl"};
+		agent = new Detergent(tmp) {
+			void printOut(String s) {
+				jt.append(s + "\n");
+			}
+		};
+		agent.run();
+	}
+
+	public Term addConstant(PrologGoal pg) {
+		return pg.addConstant();
+	}
+
+	public List<Term> addClause(PrologGoal pg) {
+		return pg.addClause();
+	}
+
+	//MariaM
+	public void addGoal(String id){
+		goalTree.nodeAdded(id);
+	}
+	
+	public void removeNode(String id){
+		goalTree.removeNode(id);
+	}
+
+	public void makePrimitive(String id){
+		goalTree.makePrimitive(id);
+	}
+
+	public void makeExecutable(String id){
+		goalTree.makePrimitive(id);
+	}
+
+	public void addUpdateRule(String id){
+		goalTree.addUpdateRule(id);
+	}
+
+	public void addConstant(String id){
+		goalTree.addConstant(id);
+	}
+
+	public void addClause(String id){
+		goalTree.addConstant(id);
+	}
+	public void renameNode(String id, String newName){
+		goalTree.nodeChanged(id, newName);
+	}
+
+	public String getJsonTree(){
+		return goalTree.getJson(goalTree.rootNode).toString();
+	}
+	
+	public void loadDomain(String filename) {
+		goals.clear();
+		goalLinks.clear();
+		rules.clear();
+		prologGoals.clear();
+		loadAgentFile(prologRoot+"/"+filename);
+		name = filename;
+		if (name.contains("."))
+			name = name.substring(0,name.indexOf("."));   // set agent name to the file name without the extension
+		getNameToSave = false;
+		makeWidgets();
+	}
+
+	public String runAgent() {
+		String[] tmp = {"-maxSteps", "10", "agentGeneral.pl", name + "_agent.pl"};
+		final StringBuffer jt = new StringBuffer();
+		agent = new Detergent(tmp) {
+			void printOut(String s) {
+				jt.append(s + "\n");
+			}
+		};
+		agent.run();
+		return jt.toString();
+	}
+
 	public void saveData(String agentName) {
 		System.out.println("In save data. " + agentName);
 		name=agentName;
@@ -890,105 +904,6 @@ public class Wizard {
 		
 	}
 
-	List<PrologGoal>computePrologGoalsUsed() {
-		HashSet<String>signatures = new HashSet<String>();  // keep track of signatures so we don't count goals twice. Used separately from the prologGoals map for when goals are removed.
-		List<PrologGoal>result = new LinkedList<PrologGoal>();
-		for (GoalLink gl: goalLinks) {
-			if (!gl.goal.executable) {
-				addPrologGoalsUsed(result, signatures, gl.condition);
-			} else {
-				addPrologGoalsUsed(result, signatures, gl.subGoals);
-			}
-		}			
-		for (String goalName: goals.keySet()) {
-			Goal goal = goals.get(goalName);
-			if (goal.beliefUpdateRules != null && !goal.beliefUpdateRules.isEmpty()) {
-				for (BeliefUpdateRule bur: goal.beliefUpdateRules)
-					addPrologGoalsUsed(result, signatures, bur.code);
-			}
-		}
-		for (String pgName: new LinkedList<String>(prologGoals.keySet())) {  // create a new list to avoid concurrent modification issues. The new clauses won't have clauses of their own.
-			PrologGoal pg = prologGoals.get(pgName);
-			if (pg.clauses != null) {
-				for (List<Term>body: pg.clauses) {
-					for (Term el: body)
-						addPrologGoalUsed(result, signatures, el);
-				}
-			}
-		}
-		return result;
-	}
-	
-	void addPrologGoalsUsed(List<PrologGoal>goals, HashSet<String>signatures, String code) {
-		List<Term>conditions = Term.parseTerms(code);
-		for (Term condition: conditions)
-			addPrologGoalUsed(goals, signatures, condition);
-	}
-	
-	private void addPrologGoalUsed(List<PrologGoal> goals, HashSet<String> signatures, Term condition) {
-		// Don't add goals for unary terms, i.e. free variables or constants in the expression
-		if (condition.arity == 0)
-			return;
-		boolean builtin = false;
-		for (String name: new String[]{"assert","retract","not","retractall"})
-			if (name.equals(condition.predicate))
-				builtin = true;
-		if (!builtin && !signatures.contains(condition.signature())) {  // ignore builtins
-			String signature = condition.signature();
-			signatures.add(signature);
-			if (!prologGoals.containsKey(signature)) {
-				prologGoals.put(signature, new PrologGoal(condition));
-			}
-			goals.add(prologGoals.get(signature));
-		}
-		// recursively add goals for any subterms
-		if (condition.subTerms != null)
-			for (Term sub: condition.subTerms)
-				addPrologGoalUsed(goals, signatures, sub);
-	}
-
-	public static void main(String[] args) {
-		String name = "NewAgent";
-		if (args != null && args.length > 0)
-			name = args[0];
-		Wizard w = new Wizard(name);
-		w.loadAgentFile("C:\\Documents and Settings\\mariam\\My Documents\\Dash\\lib\\logic\\NewAgent.agent");
-		String json = w.getJsonTree();
-		System.out.println("JSON="+json);
-	}
-
-	public void runAgentOrig() {
-		JFrame frame = new JFrame();
-		final JTextArea jt = new JTextArea(10,20); 
-		frame.add(jt);
-		frame.setVisible(true);
-		String[] tmp = {"-maxSteps", "10", "agentGeneral.pl", name + "_agent.pl"};
-		agent = new Detergent(tmp) {
-			void printOut(String s) {
-				jt.append(s + "\n");
-			}
-		};
-		agent.run();
-	}
-
-	public String runAgent() {
-		String[] tmp = {"-maxSteps", "10", "agentGeneral.pl", name + "_agent.pl"};
-		final StringBuffer jt = new StringBuffer();
-		agent = new Detergent(tmp) {
-			void printOut(String s) {
-				jt.append(s + "\n");
-			}
-		};
-		agent.run();
-		return jt.toString();
-	}
-
-	public Term addConstant(PrologGoal pg) {
-		return pg.addConstant();
-	}
-
-	public List<Term> addClause(PrologGoal pg) {
-		return pg.addClause();
-	}
+	//End MariaM
 
 }

@@ -112,23 +112,6 @@ public class DynamicTree extends JPanel implements ActionListener {
         treeModel.reload();
     }
 
-	void getNode(DefaultMutableTreeNode n, String nodeId, List<DefaultMutableTreeNode> foundNode){
-		int id = Integer.valueOf(nodeId).intValue();
-		System.out.println("find node");
-		if(n.hashCode()==id){
-			foundNode.add(n);
-			System.out.println("found");
-			return;
-		}
-		else{
-			Enumeration<DefaultMutableTreeNode> children = n.children();
-			while(children.hasMoreElements() && foundNode.isEmpty()){
-				DefaultMutableTreeNode child = children.nextElement();
-				getNode(child,nodeId,foundNode);
-			}
-		}
-	}
-
 	
     /** Remove the currently selected node. */
     public void removeCurrentNode() {
@@ -145,19 +128,6 @@ public class DynamicTree extends JPanel implements ActionListener {
 
         // Either there was no selection, or the root was selected.
         toolkit.beep();
-    }
-
-    public void removeNode(String id) {
-		List<DefaultMutableTreeNode> removeThis=new ArrayList<DefaultMutableTreeNode>();
-		getNode(rootNode,id,removeThis);
-		
-		DefaultMutableTreeNode removeThisNode = removeThis.get(0);
-
-        MutableTreeNode parent = (MutableTreeNode)(removeThisNode.getParent());
-        if (parent != null) {
-                treeModel.removeNodeFromParent(removeThisNode);
-                return;
-        }
     }
 
     /** Add child to the currently selected node. */
@@ -268,4 +238,56 @@ public class DynamicTree extends JPanel implements ActionListener {
 	public void setTreeCellRenderer(TreeCellRenderer r) {
 		tree.setCellRenderer(r);
 	}
+	
+    //MariaM
+	/**
+	 * Returns the node identified by nodeId
+	 * @param nodeId
+	 * 		the node id (hashCode())
+	 */
+	DefaultMutableTreeNode getNode(String nodeId){
+		List<DefaultMutableTreeNode> n =new ArrayList<DefaultMutableTreeNode>();
+		getNode(rootNode,nodeId,n);
+		
+		DefaultMutableTreeNode foundNode = n.get(0);
+		return foundNode;
+	}
+
+	/**
+	 * Returns the node identified by nodeId
+	 * @param n
+	 * 		start from the root "rootNode"
+	 * @param nodeId
+	 * 		the node id (hashCode())
+	 * @param foundNode
+	 * 		the node with id=nodeId
+	 */
+	private void getNode(DefaultMutableTreeNode n, String nodeId, List<DefaultMutableTreeNode> foundNode){
+		int id = Integer.valueOf(nodeId).intValue();
+		//System.out.println("find node");
+		if(n.hashCode()==id){
+			foundNode.add(n);
+			//System.out.println("found");
+			return;
+		}
+		else{
+			Enumeration<DefaultMutableTreeNode> children = n.children();
+			while(children.hasMoreElements() && foundNode.isEmpty()){
+				DefaultMutableTreeNode child = children.nextElement();
+				getNode(child,nodeId,foundNode);
+			}
+		}
+	}
+
+    public void removeNode(String id) {
+		
+		DefaultMutableTreeNode removeThisNode = getNode(id);
+
+        MutableTreeNode parent = (MutableTreeNode)(removeThisNode.getParent());
+        if (parent != null) {
+                treeModel.removeNodeFromParent(removeThisNode);
+                return;
+        }
+    }
+    //End MariaM
 }

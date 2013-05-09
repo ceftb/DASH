@@ -34,165 +34,7 @@ public class GoalTree extends DynamicTree {
 		super(rootName, wizard);
 	}
 
-	private void addToJSONObject(JSONObject obj, String key, Object value){
-		try{
-			obj.put(key, value);
-		}catch(Exception e){
-			System.out.println("Error occured while adding to a JSON object." + e);
-		}
-	}
-/*
-	private void addToJSONObject(JSONObject obj, String key, String value){
-		try{
-			obj.put(key, value);
-		}catch(Exception e){
-			System.out.println("Error occured while adding to a JSON object." + e);
-		}
-	}
-
-	private void addToJSONObject(JSONObject obj, String key, JSONObject value){
-		try{
-			obj.put(key, value);
-		}catch(Exception e){
-			System.out.println("Error occured while adding to a JSON object." + e);
-		}
-	}
-
-	private void addToJSONObject(JSONObject obj, String key, JSONArray value){
-		try{
-			obj.put(key, value);
-		}catch(Exception e){
-			System.out.println("Error occured while adding to a JSON object." + e);
-		}
-	}
-*/
-
-	String getJson(){
-		JSONObject jsonGoals = new JSONObject();
-		addToJSONObject(jsonGoals,"data", "goals");
-		JSONObject jsonAttr = new JSONObject();
-		addToJSONObject(jsonGoals,"attr", jsonAttr);
-		addToJSONObject(jsonAttr,"type", "Goal");
-		JSONArray jsonChildren = new JSONArray();
-		addToJSONObject(jsonGoals,"children", jsonChildren);
-
-		Enumeration<DefaultMutableTreeNode> children = rootNode.children();
-		while(children.hasMoreElements()){
-			DefaultMutableTreeNode child = children.nextElement();
-			JSONObject childJson = getJson(child);
-			jsonChildren.put(childJson);
-		}
-		
-		return jsonGoals.toString();
-	}
 	
-	JSONObject getJson(DefaultMutableTreeNode n){
-		Object userObject = n.getUserObject();
-		JSONObject childGoal = new JSONObject();
-		JSONObject childAttr = new JSONObject();
-		addToJSONObject(childGoal,"attr", childAttr);
-		JSONArray childGoalChildren = new JSONArray();
-		addToJSONObject(childGoal,"children", childGoalChildren);
-
-		addToJSONObject(childGoal,"data", n.toString());
-		addToJSONObject(childAttr,"id", String.valueOf(n.hashCode()));
-	
-		//System.out.println("ON1:" + n.getUserObject().getClass());
-		
-	   	if (userObject instanceof Wizard.Goal) {
-    		Wizard.Goal g = (Wizard.Goal)userObject;
-			addToJSONObject(childAttr,"type", "Goal");
-			addToJSONObject(childAttr,"primitive", new Boolean(g.primitive).toString());
-			addToJSONObject(childAttr,"executable", new Boolean(g.executable).toString());
-    	} else if (userObject instanceof Wizard.GoalLink) {
-			addToJSONObject(childAttr,"type", "GoalLink");
-    	} else if (userObject instanceof Wizard.PrologGoal) {
-    		Wizard.PrologGoal g = (Wizard.PrologGoal)userObject;
-			addToJSONObject(childAttr,"type", "PrologGoal");
-    	} else if (n.toString().equals("goals")) {
-			addToJSONObject(childAttr,"type", "Root");
-    	} else{
-    		//System.out.println("ON:" + n.toString());
-			addToJSONObject(childAttr,"type", "OtherNode");    		
-    	}
-
-			Enumeration<DefaultMutableTreeNode> children = n.children();
-			while(children.hasMoreElements()){
-				DefaultMutableTreeNode child = children.nextElement();
-				JSONObject childJson = getJson(child);
-				childGoalChildren.put(childJson);
-			}
-			
-			return childGoal;
-		}
-
-	public void makePrimitive(String id){
-		List<DefaultMutableTreeNode> foundNode=new ArrayList<DefaultMutableTreeNode>();
-		getNode(rootNode,id,foundNode);
-		
-		DefaultMutableTreeNode n = foundNode.get(0);
-		
-		Object o = n.getUserObject();
-		if(o instanceof Goal){
-			((Goal) o).primitive=true;
-		}
-	}
-
-	public void makeExecutable(String id){
-		List<DefaultMutableTreeNode> foundNode=new ArrayList<DefaultMutableTreeNode>();
-		getNode(rootNode,id,foundNode);
-		
-		DefaultMutableTreeNode n = foundNode.get(0);
-		
-		Object o = n.getUserObject();
-		if(o instanceof Goal){
-			((Goal) o).executable=true;
-		}
-	}
-
-	public void addUpdateRule(String id){
-		List<DefaultMutableTreeNode> foundNode=new ArrayList<DefaultMutableTreeNode>();
-		getNode(rootNode,id,foundNode);
-		
-		DefaultMutableTreeNode n = foundNode.get(0);
-		
-		Object o = n.getUserObject();
-		if(o instanceof Goal){
-			Goal g = (Goal) o;
-    		Wizard.BeliefUpdateRule gur = wizard.new BeliefUpdateRule(g, "1", "");
-    		g.beliefUpdateRules.add(gur);
-    		addObject(gur);
-		}
-	}
-
-	public void addConstant(String id){
-		List<DefaultMutableTreeNode> foundNode=new ArrayList<DefaultMutableTreeNode>();
-		getNode(rootNode,id,foundNode);
-		
-		DefaultMutableTreeNode n = foundNode.get(0);
-		
-		Object o = n.getUserObject();
-		if(o instanceof Wizard.PrologGoal){
-			Wizard.PrologGoal g = (Wizard.PrologGoal) o;
-	   		Term newConstant = wizard.addConstant(g);
-    		addObject(newConstant);
- 		}
-	}
-
-	public void addClause(String id){
-		List<DefaultMutableTreeNode> foundNode=new ArrayList<DefaultMutableTreeNode>();
-		getNode(rootNode,id,foundNode);
-		
-		DefaultMutableTreeNode n = foundNode.get(0);
-		
-		Object o = n.getUserObject();
-		if(o instanceof Wizard.PrologGoal){
-			Wizard.PrologGoal g = (Wizard.PrologGoal) o;
-	   		List<Term> clause = wizard.addClause(g);
-    		addObject(clause);
- 		}
-	}
-
 	void nodeAdded() {
 		DefaultMutableTreeNode parentNode = null;
 		TreePath parentPath = tree.getSelectionPath();
@@ -215,86 +57,6 @@ public class GoalTree extends DynamicTree {
 			((Goal)userObject).primitive = false; // would be primitive by default if added by the wizard.
 		}
 		// Nothing gets added below that level.
-	}
-	
-	void nodeAdded(String id) {
-		List<DefaultMutableTreeNode> addToThis=new ArrayList<DefaultMutableTreeNode>();
-		getNode(rootNode,id,addToThis);
-		
-		DefaultMutableTreeNode parentNode = addToThis.get(0);
-		
-		System.out.println("ADd to this:"+addToThis.get(0).toString());
-		
-		Object userObject = parentNode.getUserObject();
-		
-		// Create the template based on the parent node
-		if (parentNode == rootNode)
-			addObject(parentNode, wizard.findOrCreateGoal("New goal " + newNodeSuffix++, 0), true);
-		else if (userObject instanceof Goal) {
-			Wizard.GoalLink goalLink = wizard.new GoalLink((Goal)userObject);
-			addObject(parentNode, goalLink, true);
-			wizard.goalLinks.add(goalLink);
-			((Goal)userObject).primitive = false; // would be primitive by default if added by the wizard.
-		}	 
-	}
-
-	void nodeChanged(String id, String newName) {
-		List<DefaultMutableTreeNode> foundNode=new ArrayList<DefaultMutableTreeNode>();
-		getNode(rootNode,id,foundNode);
-		
-		DefaultMutableTreeNode n = foundNode.get(0);
-		// We lost the original user object. Recover it from the node
-		Object oldObject = n.getUserObject();
-		if (oldObject instanceof Wizard.Goal) {  // modify the goal with the string and replace it as the object
-			System.out.println("Goal ...");
-			Goal goal= (Goal)oldObject;
-			goal.name = newName;
-			n.setUserObject(goal);
-		} else if (oldObject instanceof Wizard.GoalLink) {  // create a new link with the new information
-			System.out.println("GoalLink ...");
-			Wizard.GoalLink goalLink = (Wizard.GoalLink)oldObject;
-			String line = newName;
-			if (line.contains(" ? ")) {
-				String[]data = line.split(" \\? ");
-				System.out.println("Data has length " + data.length);
-				for(String s: data)
-					System.out.println(" > " + s);
-				goalLink.condition = data[0];
-				goalLink.subGoals = data[1];
-			} else {
-				goalLink.condition = null;
-				goalLink.subGoals = line;
-			}
-			addPrimitivesForGoalLink(goalLink);
-			addPrologGoalsForGoalLink(goalLink);
-			n.setUserObject(goalLink);
-		} else if (oldObject instanceof Wizard.BeliefUpdateRule) {
-			Wizard.BeliefUpdateRule b = (Wizard.BeliefUpdateRule)oldObject;
-			String parts[] = newName.split(":");
-			if (parts[0].equals("On success"))
-				b.value = 1;
-			else if (parts[0].equals("On failure"))
-				b.value = 0;
-			else
-				b.value = parts[0].substring(3);
-			b.code = parts[1];
-		} else if (n.getParent() != null && ((DefaultMutableTreeNode)n.getParent()).getUserObject() instanceof Wizard.PrologGoal) {
-			DefaultMutableTreeNode parent = (DefaultMutableTreeNode)n.getParent();
-			Wizard.PrologGoal pg = (Wizard.PrologGoal)parent.getUserObject();
-			// Figure out which child this is. Assume we show clauses first, then constants
-			int i = 0;
-			for (; i < parent.getChildCount(); i++)
-				if (parent.getChildAt(i).equals(n))
-					break;
-			if (i < parent.getChildCount() && i < pg.clauses.size())
-				pg.clauses.set(i, Term.parseTerms(newName));
-			else if (i < parent.getChildCount() && i < pg.clauses.size() + pg.constants.size()) {
-				pg.constants.set(i - pg.clauses.size(), Term.parseTerm(newName));
-			}
-		} else {
-			n.setUserObject(newName);
-			System.out.println("Left as string: " + n.getUserObject());
-		}
 	}
 
 	void nodeChanged(DefaultMutableTreeNode node) {
@@ -428,5 +190,187 @@ public class GoalTree extends DynamicTree {
     		super.actionPerformed(e);
     	}
     }
+
+	//MariaM
+	private void addToJSONObject(JSONObject obj, String key, Object value){
+		try{
+			obj.put(key, value);
+		}catch(Exception e){
+			System.out.println("Error occured while adding to a JSON object." + e);
+		}
+	}
+
+	/**
+	 * Returns this GoalTree as JSON object
+	 * @param n 
+	 * 		start with the root of the tree
+	 * @return this tree as JSON object
+	 */
+	/**
+	 * @return
+	 */
+	JSONObject getJson(DefaultMutableTreeNode n){
+		Object userObject = n.getUserObject();
+		JSONObject childGoal = new JSONObject();
+		JSONObject childAttr = new JSONObject();
+		addToJSONObject(childGoal,"attr", childAttr);
+		JSONArray childGoalChildren = new JSONArray();
+		addToJSONObject(childGoal,"children", childGoalChildren);
+
+		addToJSONObject(childGoal,"data", n.toString());
+		addToJSONObject(childAttr,"id", String.valueOf(n.hashCode()));
+	
+		//System.out.println("ON1:" + n.getUserObject().getClass());
+		
+	   	if (userObject instanceof Wizard.Goal) {
+    		Wizard.Goal g = (Wizard.Goal)userObject;
+			addToJSONObject(childAttr,"type", "Goal");
+			addToJSONObject(childAttr,"primitive", new Boolean(g.primitive).toString());
+			addToJSONObject(childAttr,"executable", new Boolean(g.executable).toString());
+    	} else if (userObject instanceof Wizard.GoalLink) {
+			addToJSONObject(childAttr,"type", "GoalLink");
+    	} else if (userObject instanceof Wizard.PrologGoal) {
+    		Wizard.PrologGoal g = (Wizard.PrologGoal)userObject;
+			addToJSONObject(childAttr,"type", "PrologGoal");
+    	} else if (n.toString().equals("goals")) {
+			addToJSONObject(childAttr,"type", "Root");
+    	} else{
+    		//System.out.println("ON:" + n.toString());
+			addToJSONObject(childAttr,"type", "OtherNode");    		
+    	}
+
+			Enumeration<DefaultMutableTreeNode> children = n.children();
+			while(children.hasMoreElements()){
+				DefaultMutableTreeNode child = children.nextElement();
+				JSONObject childJson = getJson(child);
+				childGoalChildren.put(childJson);
+			}
+			
+			return childGoal;
+		}
+
+	public void makePrimitive(String id){
+		DefaultMutableTreeNode n = getNode(id);
+		
+		Object o = n.getUserObject();
+		if(o instanceof Goal){
+			((Goal) o).primitive=true;
+		}
+	}
+
+	public void makeExecutable(String id){
+		DefaultMutableTreeNode n = getNode(id);
+		
+		Object o = n.getUserObject();
+		if(o instanceof Goal){
+			((Goal) o).executable=true;
+		}
+	}
+
+	public void addUpdateRule(String id){
+		DefaultMutableTreeNode n = getNode(id);
+		
+		Object o = n.getUserObject();
+		if(o instanceof Goal){
+			Goal g = (Goal) o;
+    		Wizard.BeliefUpdateRule gur = wizard.new BeliefUpdateRule(g, "1", "");
+    		g.beliefUpdateRules.add(gur);
+    		addObject(gur);
+		}
+	}
+
+	public void addConstant(String id){
+		DefaultMutableTreeNode n = getNode(id);
+		
+		Object o = n.getUserObject();
+		if(o instanceof Wizard.PrologGoal){
+			Wizard.PrologGoal g = (Wizard.PrologGoal) o;
+	   		Term newConstant = wizard.addConstant(g);
+    		addObject(newConstant);
+ 		}
+	}
+
+	public void addClause(String id){
+		DefaultMutableTreeNode n = getNode(id);
+		
+		Object o = n.getUserObject();
+		if(o instanceof Wizard.PrologGoal){
+			Wizard.PrologGoal g = (Wizard.PrologGoal) o;
+	   		List<Term> clause = wizard.addClause(g);
+    		addObject(clause);
+ 		}
+	}
+	
+	void nodeAdded(String id) {
+		DefaultMutableTreeNode parentNode = getNode(id);
+				
+		Object userObject = parentNode.getUserObject();
+		
+		// Create the template based on the parent node
+		if (parentNode == rootNode)
+			addObject(parentNode, wizard.findOrCreateGoal("New goal " + newNodeSuffix++, 0), true);
+		else if (userObject instanceof Goal) {
+			Wizard.GoalLink goalLink = wizard.new GoalLink((Goal)userObject);
+			addObject(parentNode, goalLink, true);
+			wizard.goalLinks.add(goalLink);
+			((Goal)userObject).primitive = false; // would be primitive by default if added by the wizard.
+		}	 
+	}
+
+	void nodeChanged(String id, String newName) {
+		DefaultMutableTreeNode n = getNode(id);
+		Object oldObject = n.getUserObject();
+		if (oldObject instanceof Wizard.Goal) {  // modify the goal with the string and replace it as the object
+			System.out.println("Goal ...");
+			Goal goal= (Goal)oldObject;
+			goal.name = newName;
+			n.setUserObject(goal);
+		} else if (oldObject instanceof Wizard.GoalLink) {  // create a new link with the new information
+			System.out.println("GoalLink ...");
+			Wizard.GoalLink goalLink = (Wizard.GoalLink)oldObject;
+			String line = newName;
+			if (line.contains(" ? ")) {
+				String[]data = line.split(" \\? ");
+				System.out.println("Data has length " + data.length);
+				for(String s: data)
+					System.out.println(" > " + s);
+				goalLink.condition = data[0];
+				goalLink.subGoals = data[1];
+			} else {
+				goalLink.condition = null;
+				goalLink.subGoals = line;
+			}
+			addPrimitivesForGoalLink(goalLink);
+			addPrologGoalsForGoalLink(goalLink);
+			n.setUserObject(goalLink);
+		} else if (oldObject instanceof Wizard.BeliefUpdateRule) {
+			Wizard.BeliefUpdateRule b = (Wizard.BeliefUpdateRule)oldObject;
+			String parts[] = newName.split(":");
+			if (parts[0].equals("On success"))
+				b.value = 1;
+			else if (parts[0].equals("On failure"))
+				b.value = 0;
+			else
+				b.value = parts[0].substring(3);
+			b.code = parts[1];
+		} else if (n.getParent() != null && ((DefaultMutableTreeNode)n.getParent()).getUserObject() instanceof Wizard.PrologGoal) {
+			DefaultMutableTreeNode parent = (DefaultMutableTreeNode)n.getParent();
+			Wizard.PrologGoal pg = (Wizard.PrologGoal)parent.getUserObject();
+			// Figure out which child this is. Assume we show clauses first, then constants
+			int i = 0;
+			for (; i < parent.getChildCount(); i++)
+				if (parent.getChildAt(i).equals(n))
+					break;
+			if (i < parent.getChildCount() && i < pg.clauses.size())
+				pg.clauses.set(i, Term.parseTerms(newName));
+			else if (i < parent.getChildCount() && i < pg.clauses.size() + pg.constants.size()) {
+				pg.constants.set(i - pg.clauses.size(), Term.parseTerm(newName));
+			}
+		} else {
+			n.setUserObject(newName);
+			System.out.println("Left as string: " + n.getUserObject());
+		}
+	}
+	//End MariaM
 
 }
