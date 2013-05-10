@@ -103,6 +103,8 @@ function refreshTree(commandName, nodeId){
 	renameNode(data.rslt.obj.attr("id"),data.rslt.new_name);
   }).bind("select_node.jstree", function (event, data) {
     $(this).jstree("rename");
+  }).bind("loaded.jstree", function (event, data) {
+        $(this).jstree("open_all");
   });
 }
 
@@ -138,7 +140,7 @@ function addConstant(node){
 }
 function addClause(node){
 		var nodeId = $(node).attr("id");
-		refreshTree('AddConstantCommand', nodeId)
+		refreshTree('AddClauseCommand', nodeId)
 }
 
 function renameNode(id, newName){
@@ -159,7 +161,9 @@ $("#goalstree").jstree({
 	renameNode(data.rslt.obj.attr("id"),data.rslt.new_name);
 }).bind("select_node.jstree", function (event, data) {
     $(this).jstree("rename");
-});
+}).bind("loaded.jstree", function (event, data) {
+        $(this).jstree("open_all");
+  });
 }
 
 
@@ -243,7 +247,7 @@ var items = {
         delete items.addClauseItem;
         delete items.renameItem;
     }
-    else if ($(node).attr("type")=="OtherType") {
+    else if ($(node).attr("type")=="OtherNode") {
         delete items.addGoalItem;
         delete items.addMethodItem;
         delete items.addRuleItem;

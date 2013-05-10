@@ -749,7 +749,7 @@ public class Wizard {
 	}
 
 	public void addClause(String id){
-		goalTree.addConstant(id);
+		goalTree.addClause(id);
 	}
 	public void renameNode(String id, String newName){
 		goalTree.nodeChanged(id, newName);

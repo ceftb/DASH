@@ -273,6 +273,7 @@ public class GoalTree extends DynamicTree {
 		Object o = n.getUserObject();
 		if(o instanceof Goal){
 			Goal g = (Goal) o;
+			System.out.println("add rule to:"+g.name);
     		Wizard.BeliefUpdateRule gur = wizard.new BeliefUpdateRule(g, "1", "");
     		g.beliefUpdateRules.add(gur);
     		addObject(gur, n);
@@ -318,6 +319,7 @@ public class GoalTree extends DynamicTree {
 	}
 
 	void nodeChanged(String id, String newName) {
+		System.out.println("node changed .....");
 		DefaultMutableTreeNode n = getNode(id);
 		Object oldObject = n.getUserObject();
 		if (oldObject instanceof Wizard.Goal) {  // modify the goal with the string and replace it as the object
@@ -344,6 +346,7 @@ public class GoalTree extends DynamicTree {
 			addPrologGoalsForGoalLink(goalLink);
 			n.setUserObject(goalLink);
 		} else if (oldObject instanceof Wizard.BeliefUpdateRule) {
+			System.out.println("BeliefUpdateRule ...");
 			Wizard.BeliefUpdateRule b = (Wizard.BeliefUpdateRule)oldObject;
 			String parts[] = newName.split(":");
 			if (parts[0].equals("On success"))
@@ -354,6 +357,7 @@ public class GoalTree extends DynamicTree {
 				b.value = parts[0].substring(3);
 			b.code = parts[1];
 		} else if (n.getParent() != null && ((DefaultMutableTreeNode)n.getParent()).getUserObject() instanceof Wizard.PrologGoal) {
+			System.out.println(" PrologGoal...");
 			DefaultMutableTreeNode parent = (DefaultMutableTreeNode)n.getParent();
 			Wizard.PrologGoal pg = (Wizard.PrologGoal)parent.getUserObject();
 			// Figure out which child this is. Assume we show clauses first, then constants
@@ -366,6 +370,7 @@ public class GoalTree extends DynamicTree {
 			else if (i < parent.getChildCount() && i < pg.clauses.size() + pg.constants.size()) {
 				pg.constants.set(i - pg.clauses.size(), Term.parseTerm(newName));
 			}
+			n.setUserObject(newName);
 		} else {
 			n.setUserObject(newName);
 			System.out.println("Left as string: " + n.getUserObject());
