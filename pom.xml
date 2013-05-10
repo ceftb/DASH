@@ -5,7 +5,7 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>edu.isi</groupId>
-  <artifactId>Dash</artifactId>
+  <artifactId>WebDash</artifactId>
   <packaging>war</packaging>
   <version>0.0.1-SNAPSHOT</version>
   <name>Dash Webapp</name>
@@ -19,9 +19,6 @@
     <project.reporting.outputEncoding>  
       UTF-8
     </project.reporting.outputEncoding>
-    <geotools.version>
-    	9.0-M0
-    </geotools.version>
   </properties>
   
   <dependencies>
@@ -94,6 +91,8 @@
 	          <target>1.6</target>
 	        </configuration>
 	    </plugin>
+    <plugin>        <groupId>org.apache.maven.plugins</groupId>        <artifactId>maven-surefire-plugin</artifactId>        <version>2.14.1</version>        <configuration>          <systemPropertyVariables>		<argLine> -Djava.library.path=/opt/local/lib/swipl-6.2.2/lib/i386-darwin11.3.0</argLine> 
+         </systemPropertyVariables>        </configuration>      </plugin>  
     </plugins>
   </build>
   
