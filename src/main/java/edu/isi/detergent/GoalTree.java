@@ -275,7 +275,7 @@ public class GoalTree extends DynamicTree {
 			Goal g = (Goal) o;
     		Wizard.BeliefUpdateRule gur = wizard.new BeliefUpdateRule(g, "1", "");
     		g.beliefUpdateRules.add(gur);
-    		addObject(gur);
+    		addObject(gur, n);
 		}
 	}
 

@@ -240,6 +240,19 @@ public class DynamicTree extends JPanel implements ActionListener {
 	}
 	
     //MariaM
+    public DefaultMutableTreeNode addObject(Object child, DefaultMutableTreeNode parentNode) {
+        TreePath parentPath = tree.getSelectionPath();
+
+        if (parentPath == null) {
+            parentNode = rootNode;
+        } else {
+            parentNode = (DefaultMutableTreeNode)
+                         (parentPath.getLastPathComponent());
+        }
+
+        return addObject(parentNode, child, true);
+    }
+
 	/**
 	 * Returns the node identified by nodeId
 	 * @param nodeId
