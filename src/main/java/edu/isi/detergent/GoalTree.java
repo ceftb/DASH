@@ -286,7 +286,7 @@ public class GoalTree extends DynamicTree {
 		if(o instanceof Wizard.PrologGoal){
 			Wizard.PrologGoal g = (Wizard.PrologGoal) o;
 	   		Term newConstant = wizard.addConstant(g);
-    		addObject(newConstant);
+    		addObject(newConstant, n);
  		}
 	}
 
@@ -297,7 +297,7 @@ public class GoalTree extends DynamicTree {
 		if(o instanceof Wizard.PrologGoal){
 			Wizard.PrologGoal g = (Wizard.PrologGoal) o;
 	   		List<Term> clause = wizard.addClause(g);
-    		addObject(clause);
+    		addObject(clause, n);
  		}
 	}
 	
