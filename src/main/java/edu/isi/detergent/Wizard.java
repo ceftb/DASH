@@ -737,7 +737,7 @@ public class Wizard {
 	}
 
 	public void makeExecutable(String id){
-		goalTree.makePrimitive(id);
+		goalTree.makeExecutable(id);
 	}
 
 	public void addUpdateRule(String id){

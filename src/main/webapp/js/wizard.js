@@ -97,6 +97,9 @@ function refreshTree(commandName, nodeId){
             "success": function (data) { return data.json_tree; }
      }
      },
+     "crrm":{
+        "input_width_limit":2000
+     },
      "plugins" : [ "themes", "json_data", "ui", "crrm", "contextmenu" ],
      'contextmenu' : { 'items' : customMenu }
   }).bind("rename.jstree", function (event, data) {
@@ -154,6 +157,9 @@ $("#goalstree").jstree({
             "dataType": "json",
             "success": function (data) { return data.json_tree; }
      }
+     },
+     "crrm":{
+        "input_width_limit":2000
      },
      "plugins" : [ "themes", "json_data", "ui", "crrm", "contextmenu" ],
      'contextmenu' : { 'items' : customMenu }
