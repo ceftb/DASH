@@ -58,7 +58,9 @@ $("#goalstree").jstree({
             "plugins" : [ "themes", "json_data", "ui", "crrm", "contextmenu" ],
 	        'contextmenu' : { 'items' : customMenu }
   }).bind("rename.jstree", function (event, data) {
+    if(data.rslt.new_name!=data.rslt.old_name){
 		renameNode(data.rslt.obj.attr("id"),data.rslt.new_name);
+	}
   }).bind("select_node.jstree", function (event, data) {
 	    $(this).jstree("rename");
 });
@@ -103,7 +105,8 @@ function refreshTree(commandName, nodeId){
      "plugins" : [ "themes", "json_data", "ui", "crrm", "contextmenu" ],
      'contextmenu' : { 'items' : customMenu }
   }).bind("rename.jstree", function (event, data) {
-	renameNode(data.rslt.obj.attr("id"),data.rslt.new_name);
+    if(data.rslt.new_name!=data.rslt.old_name)
+		renameNode(data.rslt.obj.attr("id"),data.rslt.new_name);
   }).bind("select_node.jstree", function (event, data) {
     $(this).jstree("rename");
   }).bind("loaded.jstree", function (event, data) {
@@ -164,7 +167,8 @@ $("#goalstree").jstree({
      "plugins" : [ "themes", "json_data", "ui", "crrm", "contextmenu" ],
      'contextmenu' : { 'items' : customMenu }
 }).bind("rename.jstree", function (event, data) {
-	renameNode(data.rslt.obj.attr("id"),data.rslt.new_name);
+    if(data.rslt.new_name!=data.rslt.old_name)
+		renameNode(data.rslt.obj.attr("id"),data.rslt.new_name);
 }).bind("select_node.jstree", function (event, data) {
     $(this).jstree("rename");
 }).bind("loaded.jstree", function (event, data) {

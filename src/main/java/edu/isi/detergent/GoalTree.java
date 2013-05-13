@@ -334,6 +334,9 @@ public class GoalTree extends DynamicTree {
 		System.out.println("node changed .....");
 		DefaultMutableTreeNode n = getNode(id);
 		Object oldObject = n.getUserObject();
+		if(newName.equals(oldObject.toString())){
+			//do nothing, the name didn't change
+		}
 		if (oldObject instanceof Wizard.Goal) {  // modify the goal with the string and replace it as the object
 			System.out.println("Goal ...");
 			Goal goal= (Goal)oldObject;
@@ -369,7 +372,6 @@ public class GoalTree extends DynamicTree {
 				b.value = parts[0].substring(3);
 			b.code = parts[1];
 		} else if (n.getParent() != null && ((DefaultMutableTreeNode)n.getParent()).getUserObject() instanceof Wizard.PrologGoal) {
-			System.out.println(" PrologGoal...");
 			DefaultMutableTreeNode parent = (DefaultMutableTreeNode)n.getParent();
 			Wizard.PrologGoal pg = (Wizard.PrologGoal)parent.getUserObject();
 			// Figure out which child this is. Assume we show clauses first, then constants
@@ -383,8 +385,10 @@ public class GoalTree extends DynamicTree {
 				pg.constants.set(i - pg.clauses.size(), Term.parseTerm(newName));
 			}
 			n.setUserObject(newName);
+		} else if (oldObject instanceof Wizard.PrologGoal) {
+			//do nothing - don't allow changes on PrologGoals
 		} else {
-			n.setUserObject(newName);
+			//if it's a constant or clause it is handles above (the parent is a PrologGoal)
 			System.out.println("Left as string: " + n.getUserObject());
 		}
 	}
