@@ -35,7 +35,7 @@ public class RequestController extends HttpServlet{
 	Wizard wizard;
 	
 	public void init() throws ServletException {
-		wizard = new Wizard("NewAgent");
+		wizard = new Wizard("");
 	}		
 
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {

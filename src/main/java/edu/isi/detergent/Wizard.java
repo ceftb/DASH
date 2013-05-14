@@ -118,7 +118,7 @@ public class Wizard {
 			value = v;
 			code = r;
 		}
-		public String toString() { return "On " + (value.equals("1") ? "success" : (value.equals("0") ? "failure" : value)) + ": " + code; }
+		public String toString() { return "On " + (value.toString().equals("1") ? "success" : (value.toString().equals("0") ? "failure" : value)) + ": " + code; }
 		public String toData() { return goal + ":" + value + ":" + code; }
 	}
 	
