@@ -901,7 +901,7 @@ public class Wizard {
 		} catch (IOException ioe) {
 			System.out.println(ioe);
 		}
-		
+		System.out.println("End save data.");
 	}
 
 	//End MariaM

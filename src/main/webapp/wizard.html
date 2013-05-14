@@ -91,6 +91,7 @@ $('#loadFile').fileupload({
          	  var i = fileName.indexOf(".agent");
          	  var agName = fileName.substring(0, i);
          	  $("span#newAgentName").text(agName);
+         	  $("input#agentName").val(agName); 
          	  data.submit();
 	        }
         	else{
