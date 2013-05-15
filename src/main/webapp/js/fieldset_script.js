@@ -9,8 +9,9 @@ function constructCollapsableFieldsets() {
 	var fset = null;
 	for (var i= 0; i<allFsets.length; i++){
 		fset = allFsets[i];
-		if(fset.getElementsByTagName('div')[0].className == 'hide')
+		if(fset.getElementsByTagName('div')[0].className == 'hide'){
 			fset.getElementsByTagName('div')[0].style.display="none";
+		}
 		//construct each fieldset with icon +/- and legend text
 		constructCollapsableFieldset(fset, 'true');
 	}
@@ -43,6 +44,9 @@ function toggleFieldset(fset){
 	if (div.style.display != "none"){
 		ahref.innerHTML=getExpanderItem('true');
 		div.style.display = 'none';
+		//hide the entire div
+		$("div#runOutputDiv").hide();
+		
 	}else{
 		ahref.innerHTML=getExpanderItem('false');
 		div.style.display = 'block';
