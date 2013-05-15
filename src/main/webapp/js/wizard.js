@@ -14,11 +14,17 @@ $.ajax({
 	dataType: "json",
 	async: false,  
 	success:function(data) {
+		//this is parsed json
   		result = data; 
 	},
-	error: function(err) { alert(err.status); }
+	error: function (request, status, error) {
+		alert("error "+status + "  " + error);
+        alert(request.responseText);
+    }
+	
 });
 
+//this is parsed json
 return result;
 }
 
@@ -39,9 +45,12 @@ function saveAgent(){
 function runAgent(){
 		var info = new Object();
 		var result = requestController(info,'RunCommand');
-		var json = $.parseJSON(result.responseText);
-		var run_result = json.run_result;
+		var addNL = result.run_result.replace(/@@@/g, "\n");
 		//show result from run command
+		//$("span#runOutputSpan").text(addNL);
+		$("textarea#runText").text(addNL);
+		$("div#runOutputDiv").show();
+		
 }
 
 function createEmptyTree(){

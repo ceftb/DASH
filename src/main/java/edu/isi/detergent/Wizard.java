@@ -777,10 +777,12 @@ public class Wizard {
 		final StringBuffer jt = new StringBuffer();
 		agent = new Detergent(tmp) {
 			void printOut(String s) {
-				jt.append(s + "\n");
+				//use @@@ instead of newline, so json doesn't complain
+				jt.append(s + "@@@");
 			}
 		};
 		agent.run();
+		//System.out.println("end agent run");
 		return jt.toString();
 	}
 

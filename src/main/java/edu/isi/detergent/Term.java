@@ -45,6 +45,10 @@ public class Term {
 	
 	static SubParse parseTermListInt(String data, String indent) {
 		// recursively call parseTermInt on a list of terms separated by commas and string together
+		//MariaM
+		if(data!=null && data.startsWith("["))
+			data = data.substring(1, data.length()-1);
+		////////////////		
 		//System.out.println(indent + "Parsing list " + data);
 		SubParse result = new SubParse(0,new LinkedList<Term>()), sub = parseTermInt(data, indent + "  ");
 		//String original = data;

@@ -3,6 +3,7 @@
 <meta charset="utf-8" />
 <title>DASH - Agent Wizard</title>
 <link href="js/jquery-ui-1.10.2.custom/css/ui-lightness/jquery-ui-1.10.2.custom.css" rel="stylesheet"/>
+<link href="css/fieldset_style.css" rel="stylesheet"/>
 <script src="js/jquery-ui-1.10.2.custom/js/jquery-1.9.1.js"></script>
 <script src="js/jquery-ui-1.10.2.custom/js/jquery-ui-1.10.2.custom.js"></script>
 <!-- JSTree plugin files -->
@@ -12,6 +13,7 @@
 <script type="text/javascript" src="js/jquery.fileupload.js"></script>
 	
 <script type="text/javascript" src="js/wizard.js"></script>
+<script type="text/javascript" src="js/fieldset_script.js"></script>
 <script>
 
 $(function() {
@@ -35,7 +37,13 @@ newAgent();
 		.jstree li.Executable > a { color:rgb(255,0,0) !important; }
 		.jstree li.Primitive > a { color:rgb(34,139,34) !important; }
     </style>
-<body>
+    <style>
+    	.spanClass
+	{
+		display:black;
+	}
+    </style>
+<body onload="init_fieldset()">
 
 <h2><font color="#1c94c4">Agent Wizard for agent <span id="newAgentName"></span></font></h2>
 <script>
@@ -143,7 +151,13 @@ $('#runB').button()
 .click(function(){
 	runAgent();});
 </script>
-
+<div id="runOutputDiv" style="display:none">
+<fieldset class="fieldset"><legend>Run Output:</legend>
+<div class="show">
+	<textarea id="runText" rows="20" cols="125" style="background-color: #e8e8e8"></textarea>
+</div>
+</fieldset>
+</div>
 </div>
 
 </body>
