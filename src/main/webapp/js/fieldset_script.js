@@ -45,7 +45,7 @@ function toggleFieldset(fset){
 		ahref.innerHTML=getExpanderItem('true');
 		div.style.display = 'none';
 		//hide the entire div
-		$("div#runOutputDiv").hide();
+		//$("div#runOutputDiv").hide();
 		
 	}else{
 		ahref.innerHTML=getExpanderItem('false');
