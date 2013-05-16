@@ -227,10 +227,16 @@ public class GoalTree extends DynamicTree {
 			addToJSONObject(childAttr,"type", "Goal");
 			addToJSONObject(childAttr,"primitive", new Boolean(g.primitive).toString());
 			addToJSONObject(childAttr,"executable", new Boolean(g.executable).toString());
+			//System.out.println("for " + g.name + "links= " + g.links.isEmpty() + " rules= " + g.beliefUpdateRules);
 			if(g.executable)
 				addToJSONObject(childAttr,"class", "Executable");
-			else if(g.primitive)
+			else if(g.primitive){
 				addToJSONObject(childAttr,"class", "Primitive");
+			}
+			else if (g.links.isEmpty() && !g.beliefUpdateRules.isEmpty()){
+				addToJSONObject(childAttr,"class", "Primitive");
+			}
+			
     	} else if (userObject instanceof Wizard.GoalLink) {
     		Wizard.Goal g = ((Wizard.GoalLink)userObject).goal;
 			addToJSONObject(childAttr,"type", "GoalLink");
