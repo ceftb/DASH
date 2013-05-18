@@ -1,0 +1,18 @@
+% Saved automatically by the Wizard
+Goals:
+deliverMeds(Patient):onRoster(Patient), not(delivered(Patient)), protocol(Patient,[A|Rest])->decide(performInPlan(A,[A|Rest]))
+performInPlan(Action,Plan):format('considering ~w in plan ~w\n',[Action,Plan])->Action
+
+Belief Updates:
+
+Constants:
+protocol(Patient,V2):protocol(a,1)
+onRoster(Patient):onRoster(johnDoe)
+
+Clauses:
+protocol(Patient,V2):requiredMeds(Patient,Meds),createProtocol(Patient,Meds,V2)
+
+Rules:
+
+BaseRules:
+

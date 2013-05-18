@@ -16,8 +16,8 @@ MentalModelAdd:
 followlink(ID):*:0.5,followedLink(ID):0.5,followedLink(ID),compromised(ID)
 
 MentalModelTrigger:
-hacker(burglar)|virus(crime):compromised(_)::stolen(id)
-hacker(vandal)|virus(mischief):compromised(_),!backedup(files),!deleted(files)::deleted(files)
+hacker(burglar)|virus(crime):compromised(_):1.0,stolen(id)
+hacker(vandal)|virus(mischief):compromised(_),!backedup(files),!deleted(files):1.0,deleted(files)
 
 MentalModelUtility:
 stolen(_):-1

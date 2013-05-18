@@ -7,7 +7,6 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.GridLayout;
-import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.BufferedReader;
 import java.io.File;
@@ -16,18 +15,17 @@ import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
-import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
@@ -37,6 +35,7 @@ import javax.swing.event.TreeModelListener;
 import javax.swing.filechooser.FileFilter;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeCellRenderer;
+import javax.swing.tree.TreeNode;
 
 
 
@@ -57,12 +56,12 @@ public class Wizard {
 	List<Rule>rules = new LinkedList<Rule>();
 	JPanel goalPanel = null, rulePanel = null, modelPanel = null;
 	GoalTree goalTree = null;
-	DynamicTree ruleTree = null;
+	DynamicTree ruleTree = null, modelTree = null;
 	String baseRules = "";  // not processed yet, so a string
 	HashMap<String,Goal>goals = new HashMap<String,Goal>();
 	HashMap<String,PrologGoal>prologGoals = new HashMap<String,PrologGoal>();
 	String[] mentalModels = null;
-	List<ModelOperator>operators = null;
+	HashMap<String, List<ModelOperator>>addSets = new HashMap<String, List<ModelOperator>>();
 	private Detergent agent = null;
 	
 	
@@ -202,7 +201,7 @@ public class Wizard {
 			this.models = models;
 			parseNext(next, nextOffset);
 		}
-		public ModelOperator(List<Term>precond, String[] models, String[] next, int nextOffset) {  // an 'addset'
+		public ModelOperator(List<Term>precond, String[] models, String[] next, int nextOffset) {  // a trigger
 			this.precondition = precond;
 			this.models = models;
 			parseNext(next, nextOffset);
@@ -221,6 +220,15 @@ public class Wizard {
 				}
 				next.add(new Pair(p, Term.parseTerm(alternative)));
 			}
+		}
+		// Should distinguish whether the action should be shown
+		public String toString() {
+			String res = "";
+			if (next != null)
+				for (Pair pair: next) {
+					res += pair.p + ": " + pair.t + ", ";
+				}
+			return precondition + ": " + res;
 		}
 	}
 	
@@ -245,6 +253,7 @@ public class Wizard {
 		goalPanel = new ButtonedPanel(goalTree);
 		tabbedPane.addTab("Rational goals", goalPanel);
 		updateRuleTree();
+		updateModelTree();
 		modelPanel = new ButtonedPanel(new DynamicTree("model", null));
 		tabbedPane.addTab("Mental models", modelPanel);
 		//rulePanel = new JPanel(new BorderLayout());
@@ -397,6 +406,29 @@ public class Wizard {
 		}
 	}
 	
+	protected void updateModelTree() {
+		modelTree = new DynamicTree("mental models", this);
+		for (String action: addSets.keySet()) {
+			DefaultMutableTreeNode actionNode = modelTree.addObject(null, action);
+			for (ModelOperator o: addSets.get(action)) {
+				modelTree.addObject(actionNode, o);
+			}
+		}
+		// Print out to test
+		printDynamicTree(modelTree.rootNode, "");
+	}
+
+	private void printDynamicTree(TreeNode node, String indent) {
+		System.out.println(indent + node);
+		try {
+			TreeNode child = ((DefaultMutableTreeNode) node).getFirstChild();
+			while (child != null) {
+				printDynamicTree(child, "  " + indent);
+				child = ((DefaultMutableTreeNode) child).getNextSibling();
+			}
+		} catch (NoSuchElementException e) {}
+	}
+
 	class MyTreeModelListener implements TreeModelListener {
 
 		@Override
@@ -507,10 +539,10 @@ public class Wizard {
 					pg.clauses.add(tl);
 				} else if (state == readingMentalModelAdd && line.contains(":")) {
 					String[] data = line.split(":");
-					operators.add(new ModelOperator(data[0], data[1].split("|"), data, 2));
+					storeAddSet(new ModelOperator(data[0], data[1].split("|"), data, 2));
 				} else if (state == readingMentalModelTrigger && line.contains(":")) {
 					String[] data = line.split(":");
-					operators.add(new ModelOperator(Term.parseTerms(data[1]), data[0].split("|"), data, 2));
+					storeAddSet(new ModelOperator(Term.parseTerms(data[1]), data[0].split("|"), data, 2));
 				} else if (state == readingMentalModelUtility && line.contains(":")) {
 					
 				}
@@ -525,6 +557,15 @@ public class Wizard {
 		System.out.println("Loaded " + goalLinks.size() + " goal decompositions and " + rules.size() + " rules.");
 	}
 	
+
+	private void storeAddSet(ModelOperator modelOperator) {
+		String action = modelOperator.action;
+		if (action == null || "".equals(action))  // an empty action signifies a trigger
+			action = "trigger";
+		if (!addSets.containsKey(action))
+			addSets.put(action, new LinkedList<ModelOperator>());
+		addSets.get(action).add(modelOperator);
+	}
 
 	private void addRule(String line) {
 		Rule r = new Rule();
