@@ -239,7 +239,19 @@ public class DynamicTree extends JPanel implements ActionListener {
 		tree.setCellRenderer(r);
 	}
 	
-    //MariaM
+	public String toString() {
+		return nodeAndChildrenToString(rootNode);
+	}
+	
+    private String nodeAndChildrenToString(DefaultMutableTreeNode n) {
+    	String result = "";
+    	Enumeration<DefaultMutableTreeNode> children = n.children();
+    	while (children.hasMoreElements())
+    		result += nodeAndChildrenToString(children.nextElement()) + ", ";
+    	return n + "{" + result + "}";
+	}
+
+	//MariaM
     public DefaultMutableTreeNode addObject(Object child, DefaultMutableTreeNode parentNode) {
 
         return addObject(parentNode, child, true);

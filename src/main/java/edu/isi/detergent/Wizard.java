@@ -221,7 +221,7 @@ public class Wizard {
 				next.add(new Pair(p, Term.parseTerm(alternative)));
 			}
 		}
-		// Should distinguish whether the action should be shown
+		// Should distinguish whether the action should be shown. Doesn't show the model, since in the modelTree that is the parent node.
 		public String toString() {
 			String res = "";
 			if (next != null)
@@ -410,12 +410,25 @@ public class Wizard {
 		modelTree = new DynamicTree("mental models", this);
 		for (String action: addSets.keySet()) {
 			DefaultMutableTreeNode actionNode = modelTree.addObject(null, action);
+			HashMap<String,DefaultMutableTreeNode>modelNodes = new HashMap<String,DefaultMutableTreeNode>();
 			for (ModelOperator o: addSets.get(action)) {
-				modelTree.addObject(actionNode, o);
+				if (o.models == null) {
+					addNodeToModelNode("*", modelNodes, actionNode, o);
+				} else {
+					for (String model: o.models)
+						addNodeToModelNode(model, modelNodes, actionNode, o);
+				}
 			}
 		}
 		// Print out to test
 		printDynamicTree(modelTree.rootNode, "");
+	}
+	
+	protected void addNodeToModelNode(String modelNodeName, HashMap<String,DefaultMutableTreeNode>modelNodeMap, DefaultMutableTreeNode actionNode, ModelOperator operator) {
+		if (!modelNodeMap.containsKey(modelNodeName))
+			modelNodeMap.put(modelNodeName, modelTree.addObject(actionNode, modelNodeName));
+		DefaultMutableTreeNode modelNode = modelNodeMap.get(modelNodeName);
+		modelTree.addObject(modelNode, operator);
 	}
 
 	private void printDynamicTree(TreeNode node, String indent) {
@@ -539,10 +552,10 @@ public class Wizard {
 					pg.clauses.add(tl);
 				} else if (state == readingMentalModelAdd && line.contains(":")) {
 					String[] data = line.split(":");
-					storeAddSet(new ModelOperator(data[0], data[1].split("|"), data, 2));
+					storeAddSet(new ModelOperator(data[0], data[1].split("\\|"), data, 2));
 				} else if (state == readingMentalModelTrigger && line.contains(":")) {
 					String[] data = line.split(":");
-					storeAddSet(new ModelOperator(Term.parseTerms(data[1]), data[0].split("|"), data, 2));
+					storeAddSet(new ModelOperator(Term.parseTerms(data[1]), data[0].split("\\|"), data, 2));
 				} else if (state == readingMentalModelUtility && line.contains(":")) {
 					
 				}
@@ -733,13 +746,16 @@ public class Wizard {
 	}
 
 	public static void main(String[] args) {
-		String name = "NewAgent";
+		String name = "NewAgent", loadFile = "C:\\Documents and Settings\\mariam\\My Documents\\Dash\\lib\\logic\\NewAgent.agent";
 		if (args != null && args.length > 0)
 			name = args[0];
+		if (args != null && args.length > 1)
+			loadFile = args[1];
 		Wizard w = new Wizard(name);
-		w.loadAgentFile("C:\\Documents and Settings\\mariam\\My Documents\\Dash\\lib\\logic\\NewAgent.agent");
+		w.loadAgentFile(loadFile);
 		String json = w.getJsonTree();
 		System.out.println("JSON="+json);
+		System.out.println("Model tree: " + w.modelTree);
 	}
 
 	public void runAgentOrig() {
