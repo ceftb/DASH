@@ -63,6 +63,9 @@ import javax.swing.tree.TreeSelectionModel;
 import javax.swing.event.TreeModelEvent;
 import javax.swing.event.TreeModelListener;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
 public class DynamicTree extends JPanel implements ActionListener {
     /**
 	 * 
@@ -306,5 +309,44 @@ public class DynamicTree extends JPanel implements ActionListener {
                 return;
         }
     }
+    
+	protected void addToJSONObject(JSONObject obj, String key, Object value){
+		try{
+			obj.put(key, value);
+		}catch(Exception e){
+			System.out.println("Error occured while adding to a JSON object." + e);
+		}
+	}
+
+	/**
+	 * Returns this GoalTree as JSON object
+	 * @param n 
+	 * 		start with the root of the tree
+	 * @return this tree as JSON object
+	 */
+	JSONObject getJsonForMentalTree(DefaultMutableTreeNode n){
+		Object userObject = n.getUserObject();
+		JSONObject childGoal = new JSONObject();
+		JSONObject childAttr = new JSONObject();
+		addToJSONObject(childGoal,"attr", childAttr);
+		JSONArray childGoalChildren = new JSONArray();
+		addToJSONObject(childGoal,"children", childGoalChildren);
+
+		addToJSONObject(childGoal,"data", n.toString());
+		addToJSONObject(childAttr,"id", String.valueOf(n.hashCode()));
+	
+		//System.out.println("ON1:" + n.getUserObject().getClass());
+		addToJSONObject(childAttr,"type", "OtherNode");    		
+
+	   	Enumeration<DefaultMutableTreeNode> children = n.children();
+	   	while(children.hasMoreElements()){
+	   		DefaultMutableTreeNode child = children.nextElement();
+	   		JSONObject childJson = getJsonForMentalTree(child);
+	   		childGoalChildren.put(childJson);
+	   	}
+
+	   	return childGoal;
+	}
+
     //End MariaM
 }

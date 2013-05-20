@@ -53,13 +53,35 @@ function runAgent(){
 		
 }
 
-function createEmptyTree(){
+function createEmptyGoalsTree(){
 $("#goalstree").jstree({ 
             "json_data" : {
                 "data" : [
                     { 
                         "data" : "goals", 
                         "attr" : { "id" : "goalsid", "type":"Root" },
+                        "children" : []
+                    },
+                ]
+            },
+            "plugins" : [ "themes", "json_data", "ui", "crrm", "contextmenu" ],
+	        'contextmenu' : { 'items' : customMenu }
+  }).bind("rename.jstree", function (event, data) {
+    if(data.rslt.new_name!=data.rslt.old_name){
+		renameNode(data.rslt.obj.attr("id"),data.rslt.new_name);
+	}
+  }).bind("select_node.jstree", function (event, data) {
+	    $(this).jstree("rename");
+});
+}
+
+function createEmptyMentalTree(){
+$("#mentalmodelstree").jstree({ 
+            "json_data" : {
+                "data" : [
+                    { 
+                        "data" : "mental models", 
+                        "attr" : { "id" : "mentalid", "type":"Root" },
                         "children" : []
                     },
                 ]
@@ -85,6 +107,23 @@ function newAgent(){
             "url": "RequestController?command=NewCommand",
             "dataType": "json",
             "success": function (data) { return data.json_tree; }
+     }
+     },
+     "plugins" : [ "themes", "json_data", "ui", "crrm", "contextmenu" ],
+     'contextmenu' : { 'items' : customMenu }
+  }).bind("rename.jstree", function (event, data) {
+	renameNode(data.rslt.obj.attr("id"),data.rslt.new_name);
+  }).bind("select_node.jstree", function (event, data) {
+    $(this).jstree("rename");
+  });
+
+  $("#mentalmodelstree").jstree({ 
+     "json_data": {
+     "ajax": {
+            "type": "POST",
+            "url": "RequestController?command=NewCommand",
+            "dataType": "json",
+            "success": function (data) { return data.json_mental_tree; }
      }
      },
      "plugins" : [ "themes", "json_data", "ui", "crrm", "contextmenu" ],

@@ -21,11 +21,12 @@ public class NewCommand extends Command{
 		//save agent on server
 		wizard.newDomain();
 		String jsonTree = wizard.getJsonTree();
-		
-		System.out.println("JT="+ "{ \"json_tree\" : "+ jsonTree+"}");
+		String jsonMentalTree = wizard.getJsonForMentalTree();
+				
+		System.out.println("JT="+ "{ \"json_tree\" : "+ jsonTree+ ",\"json_mental_tree\" : "+ jsonMentalTree+"}");
 		
 		//return JSON
-		return "{ \"json_tree\" : "+ jsonTree+"}";
+		return "{ \"json_tree\" : "+ jsonTree+ ",\"json_mental_tree\" : "+ jsonMentalTree+"}";
 	}
 
 }

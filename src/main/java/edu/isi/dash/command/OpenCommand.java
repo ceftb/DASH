@@ -27,11 +27,12 @@ public class OpenCommand extends Command{
 		wizard.newDomain();
 		wizard.loadDomain(fileName);
 		String jsonTree = wizard.getJsonTree();
+		String jsonMentalTree = wizard.getJsonForMentalTree();
 		
-		System.out.println("JT="+ "{ \"json_tree\" : "+ jsonTree+"}");
+		System.out.println("JT="+ "{ \"json_tree\" : "+ jsonTree+ ",\"json_mental_tree\" : "+ jsonMentalTree+"}");
 		
 		//return JSON
-		return "{ \"json_tree\" : "+ jsonTree+"}";
+		return "{ \"json_tree\" : "+ jsonTree+ ",\"json_mental_tree\" : "+ jsonMentalTree+"}";
 		//return "{ \"message\":\""+ "mes"+"\"}";
 	}
 

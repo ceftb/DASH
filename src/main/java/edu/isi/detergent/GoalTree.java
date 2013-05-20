@@ -192,22 +192,12 @@ public class GoalTree extends DynamicTree {
     }
 
 	//MariaM
-	private void addToJSONObject(JSONObject obj, String key, Object value){
-		try{
-			obj.put(key, value);
-		}catch(Exception e){
-			System.out.println("Error occured while adding to a JSON object." + e);
-		}
-	}
 
 	/**
 	 * Returns this GoalTree as JSON object
 	 * @param n 
 	 * 		start with the root of the tree
 	 * @return this tree as JSON object
-	 */
-	/**
-	 * @return
 	 */
 	JSONObject getJson(DefaultMutableTreeNode n){
 		Object userObject = n.getUserObject();

@@ -816,6 +816,10 @@ public class Wizard {
 		return goalTree.getJson(goalTree.rootNode).toString();
 	}
 	
+	public String getJsonForMentalTree(){
+		return goalTree.getJsonForMentalTree(modelTree.rootNode).toString();
+	}
+
 	public void loadDomain(String filename) {
 		goals.clear();
 		goalLinks.clear();

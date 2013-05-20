@@ -63,6 +63,8 @@ $("#newAgentName").text('NewAgent');
 
 
 <div id="tabs-2">
+<div id="mentalmodelstree">
+</div>
 </div>
 <div id="tabs-3">
 </div>
@@ -108,12 +110,19 @@ $('#loadFile').fileupload({
     },
     done: function(e, data) {
     	//this is the json_tree returned (equivalent to goals tree)
-    	createEmptyTree();
+    	createEmptyGoalsTree();
     	var jsTreeSettings = $("#goalstree").jstree("get_settings");
 		jsTreeSettings.json_data.data = data.result.json_tree;
 		$.jstree._reference("goalstree")._set_settings(jsTreeSettings);
 		// Refresh whole tree (-1 means root of tree)
 		$.jstree._reference("goalstree").refresh(-1);
+
+    	createEmptyMentalTree();
+    	var jsMentalTreeSettings = $("#mentalmodelstree").jstree("get_settings");
+		jsMentalTreeSettings.json_data.data = data.result.json_mental_tree;
+		$.jstree._reference("mentalmodelstree")._set_settings(jsMentalTreeSettings);
+		// Refresh whole tree (-1 means root of tree)
+		$.jstree._reference("mentalmodelstree").refresh(-1);
 	},
     fail: function (e, data) {
 		alert("File upload failed!");
