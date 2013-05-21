@@ -62,6 +62,7 @@ public class Wizard {
 	HashMap<String,PrologGoal>prologGoals = new HashMap<String,PrologGoal>();
 	String[] mentalModels = null;
 	HashMap<String, List<ModelOperator>>addSets = new HashMap<String, List<ModelOperator>>();
+	List<UtilityRule>utilityRules = new LinkedList<UtilityRule>();
 	private Detergent agent = null;
 	
 	
@@ -224,11 +225,34 @@ public class Wizard {
 		// Should distinguish whether the action should be shown. Doesn't show the model, since in the modelTree that is the parent node.
 		public String toString() {
 			String res = "";
+			if (precondition != null && !precondition.isEmpty()) {
+				for (Term t: precondition)
+					res += (res == "" ? "" : ", ") + t;
+				res += ": ";
+			}
 			if (next != null)
 				for (Pair pair: next) {
 					res += pair.p + ": " + pair.t + ", ";
 				}
-			return precondition + ": " + res;
+			return res;
+		}
+	}
+	
+	class UtilityRule {
+		public UtilityRule(List<Term> terms, String utilityString) {
+			precondition = terms;
+			utility = Double.parseDouble(utilityString);
+		}
+		List<Term>precondition = null;
+		double utility = 0;
+		public String toString() {
+			String res = "";
+			if (precondition != null && !precondition.isEmpty()) {
+				for (Term t: precondition)
+					res += (res == "" ? "" : ", ") + t;
+				res += ": ";
+			}
+			return res + utility;
 		}
 	}
 	
@@ -420,6 +444,12 @@ public class Wizard {
 				}
 			}
 		}
+		DefaultMutableTreeNode utility = null;
+		if (utilityRules != null && !utilityRules.isEmpty())
+			utility = modelTree.addObject(null, "utilities");
+		for (UtilityRule uRule: utilityRules) {
+			modelTree.addObject(utility, uRule);
+		}
 		// Print out to test
 		printDynamicTree(modelTree.rootNode, "");
 	}
@@ -502,6 +532,7 @@ public class Wizard {
 			BufferedReader br = new BufferedReader(new FileReader(file));
 			int state = -1;
 			goalLinks.clear();
+			utilityRules.clear();
 			for (String line = br.readLine(); line != null; line = br.readLine()) {
 				if (line.contains("%"))
 					line = line.substring(0,line.indexOf("%"));
@@ -556,7 +587,8 @@ public class Wizard {
 					String[] data = line.split(":");
 					storeAddSet(new ModelOperator(Term.parseTerms(data[1]), data[0].split("\\|"), data, 2));
 				} else if (state == readingMentalModelUtility && line.contains(":")) {
-					
+					String[] data = line.split(":");
+					utilityRules.add(new UtilityRule(Term.parseTerms(data[0]), data[1]));
 				}
 			}
 		}
