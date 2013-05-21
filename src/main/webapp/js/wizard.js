@@ -87,7 +87,7 @@ $("#mentalmodelstree").jstree({
                 ]
             },
             "plugins" : [ "themes", "json_data", "ui", "crrm", "contextmenu" ],
-	        'contextmenu' : { 'items' : customMenu }
+	        'contextmenu' : { 'items' : customMenuMental }
   }).bind("rename.jstree", function (event, data) {
     if(data.rslt.new_name!=data.rslt.old_name){
 		renameNode(data.rslt.obj.attr("id"),data.rslt.new_name);
@@ -127,7 +127,7 @@ function newAgent(){
      }
      },
      "plugins" : [ "themes", "json_data", "ui", "crrm", "contextmenu" ],
-     'contextmenu' : { 'items' : customMenu }
+     'contextmenu' : { 'items' : customMenuMental }
   }).bind("rename.jstree", function (event, data) {
 	renameNode(data.rslt.obj.attr("id"),data.rslt.new_name);
   }).bind("select_node.jstree", function (event, data) {
@@ -322,6 +322,74 @@ var items = {
         delete items.makePrimitiveItem;
         delete items.makeExeItem;
         delete items.renameItem;
+    }
+
+    return items;
+
+}
+
+function customMenuMental(node) {
+var items = {
+
+                      addAction: { 
+                    label: "Add action",
+                    action: function (node) {  addGoal(node); return; }
+                },
+
+                      addTrigger: { 
+                    label: "Add trigger",
+                    action: function (node) {  addClause(node); return;  }
+                },
+                      addUtility: { 
+                    label: "Add utility",
+                    action: function (node) {   addConstant(node); return; }
+                },
+                      addModel: { 
+                    label: "Add model",
+                    action: function (node) {   makeExecutable(node); return; }
+                },
+                
+                      addOperator: { 
+                    label: "Add operator",
+                    action: function (node) {  makePrimitive(node); return; }
+                },
+                        deleteItem: { 
+                    label: "Remove node",
+                    action: function (node) {  removeNode(node); return; }
+                }
+};
+ //alert($(node).attr("id"));
+ //alert($(node).attr("type"));
+
+    if ($(node).attr("type")=="Root") {
+        delete items.addModel;
+        delete items.addOperator;
+        delete items.deleteItem;
+    }
+    else if ($(node).attr("type")=="Trigger" || $(node).attr("type")=="Utility" || $(node).attr("type")=="Action") {
+        delete items.addAction
+        delete items.addTrigger;
+        delete items.addUtility;
+    }
+    else if ($(node).attr("type")=="Model") {
+        delete items.addModel;
+        delete items.addAction
+        delete items.addTrigger;
+        delete items.addUtility;
+    }
+    else if ($(node).attr("type")=="Operator") {
+        delete items.addModel;
+        delete items.addAction
+        delete items.addTrigger;
+        delete items.addUtility;
+        delete items.addOperator;
+    }
+    else if ($(node).attr("type")=="UtilityRule") {
+        delete items.addModel;
+        delete items.addAction
+        delete items.addTrigger;
+        delete items.addUtility;
+        delete items.addOperator;
     }
 
     return items;
