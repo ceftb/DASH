@@ -14,8 +14,6 @@ import org.apache.commons.fileupload.FileUploadException;
 import org.apache.commons.fileupload.disk.DiskFileItemFactory;
 import org.apache.commons.fileupload.servlet.ServletFileUpload;
 
-//import edu.isi.karma.webserver.ServletContextParameterMap;
-//import edu.isi.karma.webserver.ServletContextParameterMap.ContextParameter;
 
 public class FileUtil {
 	private static String DESTINATION_DIR_PATH = "lib/logic/";

@@ -444,8 +444,7 @@ public class Wizard {
 
 	class MyTreeModelListener implements TreeModelListener {
 
-		@Override
-		public void treeNodesChanged(TreeModelEvent e) {
+	public void treeNodesChanged(TreeModelEvent e) {
 			DefaultMutableTreeNode node;
 	        node = (DefaultMutableTreeNode)
 	                 (e.getTreePath().getLastPathComponent());
