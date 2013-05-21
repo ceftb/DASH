@@ -348,6 +348,10 @@ var items = {
                     label: "Add model",
                     action: function (node) {   makeExecutable(node); return; }
                 },
+                      addOutcome: { 
+                    label: "Add outcome",
+                    action: function (node) {   makeExecutable(node); return; }
+                },
                 
                       addOperator: { 
                     label: "Add operator",
@@ -365,17 +369,27 @@ var items = {
         delete items.addModel;
         delete items.addOperator;
         delete items.deleteItem;
+        delete items.addOutcome;
     }
-    else if ($(node).attr("type")=="Trigger" || $(node).attr("type")=="Utility" || $(node).attr("type")=="Action") {
+    else if ($(node).attr("type")=="Trigger" || $(node).attr("type")=="Action") {
         delete items.addAction
         delete items.addTrigger;
         delete items.addUtility;
+        delete items.addOutcome;
+    }
+    else if ($(node).attr("type")=="Utility") {
+        delete items.addModel;
+        delete items.addAction
+        delete items.addTrigger;
+        delete items.addUtility;
+        delete items.addOperator;
     }
     else if ($(node).attr("type")=="Model") {
         delete items.addModel;
         delete items.addAction
         delete items.addTrigger;
         delete items.addUtility;
+        delete items.addOutcome;
     }
     else if ($(node).attr("type")=="Operator") {
         delete items.addModel;
@@ -383,6 +397,7 @@ var items = {
         delete items.addTrigger;
         delete items.addUtility;
         delete items.addOperator;
+        delete items.addOutcome;
     }
     else if ($(node).attr("type")=="UtilityRule") {
         delete items.addModel;
@@ -390,6 +405,7 @@ var items = {
         delete items.addTrigger;
         delete items.addUtility;
         delete items.addOperator;
+        delete items.addOutcome;
     }
 
     return items;
