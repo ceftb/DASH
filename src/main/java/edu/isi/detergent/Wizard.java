@@ -21,6 +21,7 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Set;
 
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
@@ -877,6 +878,8 @@ public class Wizard {
 		//System.out.println("end agent run");
 		return jt.toString();
 	}
+	
+	// end mariam
 
 	public void saveData(String agentName) {
 		System.out.println("In save data. " + agentName);
@@ -989,6 +992,9 @@ public class Wizard {
 					}
 			}
 			
+			// Mental models
+			saveMentalModels(prolog);
+			
 			// Should probably be updated by the developer, or we need a simple protocol to negotiate the id
 			prolog.println("id(1).");
 			prolog.close();
@@ -998,6 +1004,71 @@ public class Wizard {
 		System.out.println("End save data.");
 	}
 
-	//End MariaM
+	private void saveMentalModels(PrintStream ps) {
+		// Every mental model in use appears in some operator or in the declared models (though I don't think this line is important in the agent file).
+		Set<String>models = new HashSet<String>();
+		if (mentalModels != null)
+			for (String model: mentalModels)
+				models.add(model);
+		for (String action: addSets.keySet()) {
+			for (ModelOperator om: addSets.get(action)) {
+				if (om.models != null)
+					for (String model: om.models)
+						models.add(model);
+			}
+		}
+		ps.print("MentalModels:");
+		boolean first = true;
+		for (String model: models) {
+			ps.print((first ? "" : ",") + model);
+			first = false;
+		}
+		ps.println();
+		
+		// Adds
+		ps.println("MentalModelAdd:");
+		for (String action: addSets.keySet()) {
+			if (!"trigger".equals(action)) {
+				for (ModelOperator mo: addSets.get(action)) {
+					String modelString = "*";
+					if (mo.models != null && mo.models.length != 0) {
+						modelString = "";
+						for (String model: mo.models) {
+							if (!model.equals(mo.models[0]))
+								modelString += "|";
+							modelString += model;
+						}
+					}
+					ps.println(action + ":" + modelString + ":" + mo);
+				}
+			}
+		}
+		
+		// Triggers
+		if (addSets.containsKey("trigger")) {
+			ps.println("MentalModelTrigger:");
+			for (ModelOperator mo: addSets.get("trigger")) {
+				String modelString = "*";
+				if (mo.models != null && mo.models.length != 0) {
+					modelString = "";
+					for (String model: mo.models) {
+						if (!model.equals(mo.models[0]))
+							modelString += "|";
+						modelString += model;
+					}
+				}
+				ps.println(modelString + ":" + mo);
+			}
+		}
+		
+		// Utilities
+		if (utilityRules != null && !utilityRules.isEmpty()) {
+			ps.println("MentalModelUtility:");
+			for (UtilityRule u: utilityRules)
+				ps.println(u);
+		}
+		
+	}
+
 
 }
