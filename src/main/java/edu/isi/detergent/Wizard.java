@@ -246,6 +246,9 @@ public class Wizard {
 		List<Term>precondition = null;
 		double utility = 0;
 		public String toString() {
+			if(precondition==null){
+				return "New utility rule";
+			}
 			String res = "";
 			if (precondition != null && !precondition.isEmpty()) {
 				for (Term t: precondition)
@@ -265,32 +268,12 @@ public class Wizard {
 	}
 	
 	void makeWidgets() {
-		//getContentPane().removeAll();
-		//setTitle("Agent wizard for agent '" + name + "'");
-		JTabbedPane tabbedPane = new JTabbedPane();
 		updateGoalTree();
-		//goalPanel = new JPanel(new BorderLayout());
-		//goalPanel.add(goalTree, BorderLayout.CENTER);
-		//JPanel buttonPanel = new JPanel();
-		//makeButtons(commands, buttonPanel, goalTree);
-		//goalPanel.add(buttonPanel, BorderLayout.SOUTH);
-		goalPanel = new ButtonedPanel(goalTree);
-		tabbedPane.addTab("Rational goals", goalPanel);
 		updateRuleTree();
 		updateModelTree();
-		modelPanel = new ButtonedPanel(new DynamicTree("model", null));
-		tabbedPane.addTab("Mental models", modelPanel);
-		//rulePanel = new JPanel(new BorderLayout());
-		//rulePanel.add(ruleTree, BorderLayout.CENTER);
-		//buttonPanel = new JPanel();
-		//makeButtons(commands, buttonPanel, ruleTree);
-		//rulePanel.add(buttonPanel, BorderLayout.SOUTH);
-		rulePanel = new ButtonedPanel(ruleTree);
-		tabbedPane.addTab("Instinctive rules", rulePanel);
-		//add(tabbedPane);
-		//pack();
 	}
 	
+
 	public class ButtonedPanel extends JPanel {
 		private static final long serialVersionUID = 1L;
 		String commands[] = {"add", "remove", "new", "open", "save", "save & run"};
@@ -432,21 +415,34 @@ public class Wizard {
 	
 	protected void updateModelTree() {
 		modelTree = new DynamicTree("mental models", this);
+		System.out.println("addSets " + addSets);
+		if(addSets.isEmpty()){
+			//add empty trigger node by default
+			modelTree.addObject(null, "trigger");
+		}
 		for (String action: addSets.keySet()) {
 			DefaultMutableTreeNode actionNode = modelTree.addObject(null, action);
+			System.out.println("Add " + action);
 			HashMap<String,DefaultMutableTreeNode>modelNodes = new HashMap<String,DefaultMutableTreeNode>();
 			for (ModelOperator o: addSets.get(action)) {
+				System.out.println("operator " + o.toString());
+
 				if (o.models == null) {
 					addNodeToModelNode("*", modelNodes, actionNode, o);
+					System.out.println("Add *");
 				} else {
-					for (String model: o.models)
+					for (String model: o.models){
 						addNodeToModelNode(model, modelNodes, actionNode, o);
+						System.out.println("Add model" + model);
+					}
 				}
 			}
 		}
 		DefaultMutableTreeNode utility = null;
-		if (utilityRules != null && !utilityRules.isEmpty())
-			utility = modelTree.addObject(null, "utilities");
+		//create utilities node even if it remains empty
+		//if (utilityRules != null && !utilityRules.isEmpty())
+		System.out.println("Add utilities...");
+		utility = modelTree.addObject(null, "utilities");
 		for (UtilityRule uRule: utilityRules) {
 			modelTree.addObject(utility, uRule);
 		}
@@ -666,16 +662,28 @@ public class Wizard {
 		return prologGoals.get(sig);
 	}
 	
+	//this is for goals
 	public void newDomain() {
 		goals.clear();
 		goalLinks.clear();
 		rules.clear();
 		prologGoals.clear();
 		name = "New agent";
-		makeWidgets();
+		//makeWidgets();
+		updateGoalTree();
 		getNameToSave = true;  // ask for a new name before saving.
 	}
 	
+	//this is for mental model
+	public void newMentalDomain() {
+		utilityRules.clear();
+		addSets.clear();
+		mentalModels=null;
+		name = "New agent";
+		updateModelTree();
+		getNameToSave = true;  // ask for a new name before saving.
+	}
+
 	public void loadDomain() {
 		JFileChooser fc = new JFileChooser(prologRoot);
 		fc.setFileFilter(new FileFilter() {
@@ -812,7 +820,27 @@ public class Wizard {
 	}
 
 	//MariaM
-	public void addGoal(String id){
+
+    public void addOutcome(String id){
+    	System.out.println("get node"+id);
+ 		DefaultMutableTreeNode parentNode = modelTree.getNode(id);
+ 		//create UtilityRule
+ 		UtilityRule u = new UtilityRule(null,"0");
+		modelTree.addObject(parentNode, u);
+    }
+
+    public void renameMentalNode(String id, String newName){
+    	DefaultMutableTreeNode n = modelTree.getNode(id);
+		Object oldObject = n.getUserObject();
+		if(oldObject instanceof UtilityRule){
+			String[] data = newName.split(":");
+			UtilityRule u = new UtilityRule(Term.parseTerms(data[0]), data[1]);
+			utilityRules.add(u);
+			n.setUserObject(u);
+		}
+	}
+
+    public void addGoal(String id){
 		goalTree.nodeAdded(id);
 	}
 	

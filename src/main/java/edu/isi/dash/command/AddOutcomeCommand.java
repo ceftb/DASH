@@ -7,25 +7,27 @@ import javax.servlet.http.HttpServletRequest;
 
 import edu.isi.detergent.Wizard;
 
-public class NewCommand extends Command{
+public class AddOutcomeCommand extends Command{
 
 	Wizard wizard;
-	public NewCommand(HttpServletRequest request, Wizard wizard){
+	String nodeId;
+	public AddOutcomeCommand(HttpServletRequest request, Wizard wizard){
 		super(request);
 		this.wizard=wizard;
+		this.nodeId=request.getParameter("nodeId");
 	}
 
 	@Override
 	public String invoke() {
 		
-		//save agent on server
-		wizard.newDomain();
-		String jsonTree = wizard.getJsonTree();
-				
-		System.out.println("JT="+ "{ \"json_tree\" : "+ jsonTree+"}");
+		wizard.addOutcome(nodeId);
+    	String jsonMentalTree = wizard.getJsonForMentalTree();
+		
+		System.out.println("JT="+ "{ \"json_tree\" : "+ jsonMentalTree+"}");
 		
 		//return JSON
-		return "{ \"json_tree\" : "+ jsonTree+ "}";
+		return "{ \"json_mental_tree\" : "+ jsonMentalTree+"}";
+
 	}
 
 }

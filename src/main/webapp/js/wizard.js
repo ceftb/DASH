@@ -82,7 +82,11 @@ $("#mentalmodelstree").jstree({
                     { 
                         "data" : "mental models", 
                         "attr" : { "id" : "mentalid", "type":"Root" },
-                        "children" : []
+                        "children" : [{"data" : "trigger", 
+                        "attr" : { "id" : "triggerid", "type":"Trigger" },
+                        "children" : []},{"data" : "utilities", 
+                        "attr" : { "id" : "utilityid", "type":"Utility" },
+                        "children" : []}]
                     },
                 ]
             },
@@ -90,7 +94,7 @@ $("#mentalmodelstree").jstree({
 	        'contextmenu' : { 'items' : customMenuMental }
   }).bind("rename.jstree", function (event, data) {
     if(data.rslt.new_name!=data.rslt.old_name){
-		renameNode(data.rslt.obj.attr("id"),data.rslt.new_name);
+		renameMentalNode(data.rslt.obj.attr("id"),data.rslt.new_name);
 	}
   }).bind("select_node.jstree", function (event, data) {
 	    $(this).jstree("rename");
@@ -121,7 +125,7 @@ function newAgent(){
      "json_data": {
      "ajax": {
             "type": "POST",
-            "url": "RequestController?command=NewCommand",
+            "url": "RequestController?command=NewMentalCommand",
             "dataType": "json",
             "success": function (data) { return data.json_mental_tree; }
      }
@@ -129,7 +133,7 @@ function newAgent(){
      "plugins" : [ "themes", "json_data", "ui", "crrm", "contextmenu" ],
      'contextmenu' : { 'items' : customMenuMental }
   }).bind("rename.jstree", function (event, data) {
-	renameNode(data.rslt.obj.attr("id"),data.rslt.new_name);
+	renameMentalNode(data.rslt.obj.attr("id"),data.rslt.new_name);
   }).bind("select_node.jstree", function (event, data) {
     $(this).jstree("rename");
   });
@@ -160,6 +164,39 @@ function refreshTree(commandName, nodeId){
   }).bind("loaded.jstree", function (event, data) {
         $(this).jstree("open_all");
   });
+}
+
+function refreshMentalTree(commandName, nodeId){
+	//alert("refresh "+commandName);
+
+  $("#mentalmodelstree").jstree({ 
+     "json_data": {
+     "ajax": {
+            "type": "POST",
+            "url": "RequestController?command="+commandName+"&nodeId="+nodeId,
+            "dataType": "json",
+            "success": function (data) { return data.json_mental_tree; }
+     }
+     },
+     "crrm":{
+        "input_width_limit":2000
+     },
+     "plugins" : [ "themes", "json_data", "ui", "crrm", "contextmenu" ],
+     'contextmenu' : { 'items' : customMenuMental }
+  }).bind("rename.jstree", function (event, data) {
+    if(data.rslt.new_name!=data.rslt.old_name)
+		renameMentalNode(data.rslt.obj.attr("id"),data.rslt.new_name);
+  }).bind("select_node.jstree", function (event, data) {
+    $(this).jstree("rename");
+  }).bind("loaded.jstree", function (event, data) {
+        $(this).jstree("open_all");
+  });
+}
+
+
+function addOutcome(node){
+		var nodeId = $(node).attr("id");
+		refreshMentalTree('AddOutcomeCommand', nodeId)
 }
 
 function addGoal(node){
@@ -224,6 +261,32 @@ $("#goalstree").jstree({
   });
 }
 
+function renameMentalNode(id, newName){
+	//alert("rename node");
+
+$("#mentalmodelstree").jstree({ 
+     "json_data": {
+     "ajax": {
+            "type": "POST",
+            "url": "RequestController?command=RenameMentalNodeCommand&nodeId="+id+"&newName="+newName,
+            "dataType": "json",
+            "success": function (data) { return data.json_mental_tree; }
+     }
+     },
+     "crrm":{
+        "input_width_limit":2000
+     },
+     "plugins" : [ "themes", "json_data", "ui", "crrm", "contextmenu" ],
+     'contextmenu' : { 'items' : customMenuMental }
+}).bind("rename.jstree", function (event, data) {
+    if(data.rslt.new_name!=data.rslt.old_name)
+		renameMentalNode(data.rslt.obj.attr("id"),data.rslt.new_name);
+}).bind("select_node.jstree", function (event, data) {
+    $(this).jstree("rename");
+}).bind("loaded.jstree", function (event, data) {
+        $(this).jstree("open_all");
+  });
+}
 
 function customMenu(node) {
 var items = {
@@ -336,21 +399,13 @@ var items = {
                     action: function (node) {  addGoal(node); return; }
                 },
 
-                      addTrigger: { 
-                    label: "Add trigger",
-                    action: function (node) {  addClause(node); return;  }
-                },
-                      addUtility: { 
-                    label: "Add utility",
-                    action: function (node) {   addConstant(node); return; }
-                },
                       addModel: { 
                     label: "Add model",
                     action: function (node) {   makeExecutable(node); return; }
                 },
                       addOutcome: { 
                     label: "Add outcome",
-                    action: function (node) {   makeExecutable(node); return; }
+                    action: function (node) {   addOutcome(node); return; }
                 },
                 
                       addOperator: { 
@@ -373,37 +428,27 @@ var items = {
     }
     else if ($(node).attr("type")=="Trigger" || $(node).attr("type")=="Action") {
         delete items.addAction
-        delete items.addTrigger;
-        delete items.addUtility;
         delete items.addOutcome;
     }
     else if ($(node).attr("type")=="Utility") {
         delete items.addModel;
         delete items.addAction
-        delete items.addTrigger;
-        delete items.addUtility;
         delete items.addOperator;
     }
     else if ($(node).attr("type")=="Model") {
         delete items.addModel;
         delete items.addAction
-        delete items.addTrigger;
-        delete items.addUtility;
         delete items.addOutcome;
     }
     else if ($(node).attr("type")=="Operator") {
         delete items.addModel;
         delete items.addAction
-        delete items.addTrigger;
-        delete items.addUtility;
         delete items.addOperator;
         delete items.addOutcome;
     }
     else if ($(node).attr("type")=="UtilityRule") {
         delete items.addModel;
         delete items.addAction
-        delete items.addTrigger;
-        delete items.addUtility;
         delete items.addOperator;
         delete items.addOutcome;
     }

@@ -4,9 +4,7 @@
 package edu.isi.dash.webserver;
 
 import java.io.IOException;
-import java.util.Enumeration;
 
-import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -15,14 +13,17 @@ import javax.servlet.http.HttpServletResponse;
 import edu.isi.dash.command.AddClauseCommand;
 import edu.isi.dash.command.AddConstantCommand;
 import edu.isi.dash.command.AddGoalCommand;
+import edu.isi.dash.command.AddOutcomeCommand;
 import edu.isi.dash.command.AddUpdateRuleCommand;
 import edu.isi.dash.command.Command;
 import edu.isi.dash.command.MakeExecutableCommand;
 import edu.isi.dash.command.MakePrimitiveCommand;
 import edu.isi.dash.command.NewCommand;
+import edu.isi.dash.command.NewMentalCommand;
 import edu.isi.dash.command.OpenCommand;
 import edu.isi.dash.command.RemoveNodeCommand;
 import edu.isi.dash.command.RenameCommand;
+import edu.isi.dash.command.RenameMentalNodeCommand;
 import edu.isi.dash.command.RunCommand;
 import edu.isi.dash.command.SaveCommand;
 import edu.isi.detergent.Wizard;
@@ -79,8 +80,14 @@ public class RequestController extends HttpServlet{
 			cmd = new OpenCommand(request, wizard);
 		if(commandName.equals("NewCommand"))
 			cmd = new NewCommand(request, wizard);
+		if(commandName.equals("NewMentalCommand"))
+			cmd = new NewMentalCommand(request, wizard);
 		if(commandName.equals("RunCommand"))
 			cmd = new RunCommand(request, wizard);
+		if(commandName.equals("RenameMentalNodeCommand"))
+			cmd = new RenameMentalNodeCommand(request,wizard);
+		if(commandName.equals("AddOutcomeCommand"))
+			cmd = new AddOutcomeCommand(request, wizard);
 		
 		return cmd.invoke();
 	}

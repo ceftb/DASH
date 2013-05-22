@@ -258,6 +258,7 @@ public class DynamicTree extends JPanel implements ActionListener {
 	}
 
 	//MariaM
+        
     public DefaultMutableTreeNode addObject(Object child, DefaultMutableTreeNode parentNode) {
 
         return addObject(parentNode, child, true);
@@ -271,7 +272,9 @@ public class DynamicTree extends JPanel implements ActionListener {
 	DefaultMutableTreeNode getNode(String nodeId){
 		List<DefaultMutableTreeNode> n =new ArrayList<DefaultMutableTreeNode>();
 		getNode(rootNode,nodeId,n);
-		
+		if(n.isEmpty()){
+			System.err.println("Node not found: "+ nodeId);
+		}
 		DefaultMutableTreeNode foundNode = n.get(0);
 		return foundNode;
 	}
@@ -287,7 +290,7 @@ public class DynamicTree extends JPanel implements ActionListener {
 	 */
 	private void getNode(DefaultMutableTreeNode n, String nodeId, List<DefaultMutableTreeNode> foundNode){
 		int id = Integer.valueOf(nodeId).intValue();
-		//System.out.println("find node");
+		System.out.println("find node:"+nodeId + " currentNode="+n.hashCode());
 		if(n.hashCode()==id){
 			foundNode.add(n);
 			//System.out.println("found");
