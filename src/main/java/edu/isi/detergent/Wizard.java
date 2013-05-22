@@ -38,6 +38,8 @@ import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeCellRenderer;
 import javax.swing.tree.TreeNode;
 
+import edu.isi.detergent.Wizard.ModelOperator.Pair;
+
 
 
 /**
@@ -919,6 +921,7 @@ public class Wizard {
 						ps.println();
 					}
 			}
+			saveMentalModels(ps);
 			ps.println("\nRules:");
 			for (Rule r: rules)
 				ps.println(r);
@@ -993,7 +996,7 @@ public class Wizard {
 			}
 			
 			// Mental models
-			saveMentalModels(prolog);
+			saveMentalModelsProlog(prolog);
 			
 			// Should probably be updated by the developer, or we need a simple protocol to negotiate the id
 			prolog.println("id(1).");
@@ -1002,6 +1005,71 @@ public class Wizard {
 			System.out.println(ioe);
 		}
 		System.out.println("End save data.");
+	}
+
+	private void saveMentalModelsProlog(PrintStream prolog) {
+		// Declaring mental models
+		Set<String>models = new HashSet<String>();
+		if (mentalModels != null)
+			for (String model: mentalModels)
+				models.add(model);
+		for (String action: addSets.keySet()) {
+			for (ModelOperator om: addSets.get(action)) {
+				if (om.models != null)
+					for (String model: om.models)
+						models.add(model);
+			}
+		}
+		prolog.print("mentalModel([");
+		boolean first = true;
+		for (String model: models) {
+			prolog.print((first ? "" : ",") + model);
+			first = false;
+		}
+		prolog.println("]).");
+		
+		// addsets
+		for (String action: addSets.keySet()) {
+			if (!"trigger".equals(action)) {
+				for (ModelOperator mo: addSets.get(action)) {
+					String outcomes = "";
+					if (mo.next != null && !mo.next.isEmpty()) {
+						for (Pair p: mo.next) {
+							outcomes += "[" + p.p + ", " + p.t + "]";
+						}
+					}
+					if (mo.models != null && mo.models.length > 0) {
+						for (String model: mo.models)
+							// Warning: not writing preconditions yet.
+							prolog.print("addSets(" + action + "," + model + ", [" + outcomes + "]).");
+					} else {
+						prolog.print("addSets(" + action + ",*, [" + outcomes + "]).");
+					}
+				}
+			}
+		}
+		
+		// triggers
+		if (addSets.containsKey("trigger")) {
+			for (ModelOperator mo: addSets.get("trigger")) {
+				String outcomes = "";
+				if (mo.next != null && !mo.next.isEmpty()) {
+					// triggers still use a slightly weird representation with no probabilities and an explicit
+					// inclusion of the World (which is more flexible than addSets). Need to merge these two.
+					for (Pair p: mo.next) {
+						outcomes += "[" + p.t + "|World]";
+					}
+				}
+				if (mo.models != null && mo.models.length > 0) {
+					for (String model: mo.models)
+						// Warning: not writing preconditions yet.
+						prolog.print("trigger(World," + model + ", [" + outcomes + "]).");
+				} else {
+					prolog.print("trigger(World,*,[" + outcomes + "]).");
+				}
+			}
+		}
+		
 	}
 
 	private void saveMentalModels(PrintStream ps) {
