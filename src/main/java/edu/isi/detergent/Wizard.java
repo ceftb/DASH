@@ -843,7 +843,16 @@ public class Wizard {
 		}
 	}
 
-    public void addGoal(String id){
+	public void removeMentalNode(String id){
+		DefaultMutableTreeNode n = modelTree.removeNode(id);
+		Object o = n.getUserObject();
+		if(o instanceof UtilityRule){
+			UtilityRule u = (UtilityRule)o;
+			utilityRules.remove(u);
+		}
+	}
+
+	public void addGoal(String id){
 		goalTree.nodeAdded(id);
 	}
 	

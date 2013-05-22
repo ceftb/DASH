@@ -210,6 +210,10 @@ function removeNode(node){
 		refreshTree('RemoveNodeCommand', nodeId)
 }
 
+function removeMentalNode(node){
+		var nodeId = $(node).attr("id");
+		refreshMentalTree('RemoveMentalNodeCommand', nodeId)
+}
 function makePrimitive(node){
 		var nodeId = $(node).attr("id");
 		refreshTree('MakePrimitiveCommand', nodeId)
@@ -414,7 +418,7 @@ var items = {
                 },
                         deleteItem: { 
                     label: "Remove node",
-                    action: function (node) {  removeNode(node); return; }
+                    action: function (node) {  removeMentalNode(node); return; }
                 }
 };
  //alert($(node).attr("id"));
@@ -429,11 +433,13 @@ var items = {
     else if ($(node).attr("type")=="Trigger" || $(node).attr("type")=="Action") {
         delete items.addAction
         delete items.addOutcome;
+        delete items.deleteItem;
     }
     else if ($(node).attr("type")=="Utility") {
         delete items.addModel;
         delete items.addAction
         delete items.addOperator;
+        delete items.deleteItem;
     }
     else if ($(node).attr("type")=="Model") {
         delete items.addModel;

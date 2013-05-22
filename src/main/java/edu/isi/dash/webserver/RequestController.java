@@ -21,6 +21,7 @@ import edu.isi.dash.command.MakePrimitiveCommand;
 import edu.isi.dash.command.NewCommand;
 import edu.isi.dash.command.NewMentalCommand;
 import edu.isi.dash.command.OpenCommand;
+import edu.isi.dash.command.RemoveMentalNodeCommand;
 import edu.isi.dash.command.RemoveNodeCommand;
 import edu.isi.dash.command.RenameCommand;
 import edu.isi.dash.command.RenameMentalNodeCommand;
@@ -70,6 +71,8 @@ public class RequestController extends HttpServlet{
 			cmd = new RenameCommand(request,wizard);
 		if(commandName.equals("RemoveNodeCommand"))
 			cmd = new RemoveNodeCommand(request,wizard);
+		if(commandName.equals("RemoveMentalNodeCommand"))
+			cmd = new RemoveMentalNodeCommand(request,wizard);
 		if(commandName.equals("MakePrimitiveCommand"))
 			cmd = new MakePrimitiveCommand(request,wizard);
 		if(commandName.equals("MakeExecutableCommand"))
