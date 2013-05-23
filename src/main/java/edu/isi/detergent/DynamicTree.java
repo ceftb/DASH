@@ -305,15 +305,16 @@ public class DynamicTree extends JPanel implements ActionListener {
 		}
 	}
 
-    public void removeNode(String id) {
+    public DefaultMutableTreeNode removeNode(String id) {
 		
 		DefaultMutableTreeNode removeThisNode = getNode(id);
 
         MutableTreeNode parent = (MutableTreeNode)(removeThisNode.getParent());
         if (parent != null) {
                 treeModel.removeNodeFromParent(removeThisNode);
-                return;
+                return removeThisNode;
         }
+        return null;
     }
     
 	protected void addToJSONObject(JSONObject obj, String key, Object value){
