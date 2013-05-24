@@ -194,9 +194,24 @@ function refreshMentalTree(commandName, nodeId){
 }
 
 
+function addAction(node){
+		var nodeId = $(node).attr("id");
+		refreshMentalTree('AddActionCommand', nodeId)
+}
+
 function addOutcome(node){
 		var nodeId = $(node).attr("id");
 		refreshMentalTree('AddOutcomeCommand', nodeId)
+}
+
+function addModel(node){
+		var nodeId = $(node).attr("id");
+		refreshMentalTree('AddModelCommand', nodeId)
+}
+
+function addOperator(node){
+		var nodeId = $(node).attr("id");
+		refreshMentalTree('AddOperatorCommand', nodeId)
 }
 
 function addGoal(node){
@@ -400,12 +415,12 @@ var items = {
 
                       addAction: { 
                     label: "Add action",
-                    action: function (node) {  addGoal(node); return; }
+                    action: function (node) {  addAction(node); return; }
                 },
 
                       addModel: { 
                     label: "Add model",
-                    action: function (node) {   makeExecutable(node); return; }
+                    action: function (node) {   addModel(node); return; }
                 },
                       addOutcome: { 
                     label: "Add outcome",
@@ -414,7 +429,7 @@ var items = {
                 
                       addOperator: { 
                     label: "Add operator",
-                    action: function (node) {  makePrimitive(node); return; }
+                    action: function (node) {  addOperator(node); return; }
                 },
                         deleteItem: { 
                     label: "Remove node",
@@ -430,10 +445,14 @@ var items = {
         delete items.deleteItem;
         delete items.addOutcome;
     }
-    else if ($(node).attr("type")=="Trigger" || $(node).attr("type")=="Action") {
+    else if ($(node).attr("type")=="Trigger") {
         delete items.addAction
         delete items.addOutcome;
         delete items.deleteItem;
+    }
+   else if ($(node).attr("type")=="Action") {
+        delete items.addAction
+        delete items.addOutcome;
     }
     else if ($(node).attr("type")=="Utility") {
         delete items.addModel;

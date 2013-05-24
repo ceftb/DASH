@@ -66,6 +66,7 @@ import javax.swing.event.TreeModelListener;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import edu.isi.detergent.Wizard.MentalNode;
 import edu.isi.detergent.Wizard.ModelOperator;
 import edu.isi.detergent.Wizard.UtilityRule;
 
@@ -290,7 +291,7 @@ public class DynamicTree extends JPanel implements ActionListener {
 	 */
 	private void getNode(DefaultMutableTreeNode n, String nodeId, List<DefaultMutableTreeNode> foundNode){
 		int id = Integer.valueOf(nodeId).intValue();
-		System.out.println("find node:"+nodeId + " currentNode="+n.hashCode());
+		//System.out.println("find node:"+nodeId + " currentNode="+n.hashCode());
 		if(n.hashCode()==id){
 			foundNode.add(n);
 			//System.out.println("found");
@@ -305,19 +306,25 @@ public class DynamicTree extends JPanel implements ActionListener {
 		}
 	}
 
-    public DefaultMutableTreeNode removeNode(String id) {
+    public void removeNode(String id) {
 		
 		DefaultMutableTreeNode removeThisNode = getNode(id);
 
         MutableTreeNode parent = (MutableTreeNode)(removeThisNode.getParent());
         if (parent != null) {
                 treeModel.removeNodeFromParent(removeThisNode);
-                return removeThisNode;
         }
-        return null;
     }
     
-	protected void addToJSONObject(JSONObject obj, String key, Object value){
+    public void removeNode(DefaultMutableTreeNode removeThisNode) {
+		
+        MutableTreeNode parent = (MutableTreeNode)(removeThisNode.getParent());
+        if (parent != null) {
+                treeModel.removeNodeFromParent(removeThisNode);
+        }
+    }
+
+    protected void addToJSONObject(JSONObject obj, String key, Object value){
 		try{
 			obj.put(key, value);
 		}catch(Exception e){
@@ -342,8 +349,8 @@ public class DynamicTree extends JPanel implements ActionListener {
 		addToJSONObject(childGoal,"data", n.toString());
 		addToJSONObject(childAttr,"id", String.valueOf(n.hashCode()));
 	
-		System.out.println(n.toString() + " " + n.getUserObject().getClass());
-		System.out.println("level="+level);
+		//System.out.println(n.toString() + " " + n.getUserObject().getClass());
+		//System.out.println("level="+level);
 
 		if(n.toString().equals("mental models")){
 			addToJSONObject(childAttr,"type", "Root");    					
@@ -369,6 +376,15 @@ public class DynamicTree extends JPanel implements ActionListener {
 		else if((n.getUserObject() instanceof UtilityRule)){
 			//this is an action; first level in the tree
 			addToJSONObject(childAttr,"type", "UtilityRule");    					
+		}
+		else if((n.getUserObject() instanceof MentalNode)){
+			MentalNode m = (MentalNode)n.getUserObject();
+			if(m.type.equals(MentalNode.Operator))
+				addToJSONObject(childAttr,"type", "Operator");    					
+			if(m.type.equals(MentalNode.Model))
+				addToJSONObject(childAttr,"type", "Model");    					
+			if(m.type.equals(MentalNode.Action))
+				addToJSONObject(childAttr,"type", "Action");    					
 		}
 		else{
 			addToJSONObject(childAttr,"type", "OtherNode");   

@@ -16,6 +16,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -37,6 +38,8 @@ import javax.swing.filechooser.FileFilter;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeCellRenderer;
 import javax.swing.tree.TreeNode;
+
+import org.json.JSONObject;
 
 import edu.isi.detergent.Wizard.ModelOperator.Pair;
 
@@ -188,9 +191,9 @@ public class Wizard {
 	/**
 	 * Encodes either an add-delete rule for an action taken or a trigger based on a precondition.
 	 * @author blythe
-	 *
 	 */
 	class ModelOperator {
+		//if models==null; applies to all models
 		String[] models = null; // the models this operator is appropriate for
 		List<Term>precondition = null;  // currently addsets  have actions and triggers have preconditions, although I guess both could have both
 		String action = null;
@@ -211,9 +214,11 @@ public class Wizard {
 			parseNext(next, nextOffset);
 		}
 		void parseNext(String[] nextData, int nextOffset) {
+			if(nextData==null) return;
 			next = new LinkedList<Pair>();
 			for (int i = nextOffset; i < nextData.length; i++) {
 				String alternative = nextData[i];
+				//System.out.println("alt="+alternative);
 				String first = alternative.split(",")[0];
 				Double p = null;
 				try {
@@ -223,11 +228,19 @@ public class Wizard {
 					alternative = alternative.substring(alternative.indexOf(",")+1);
 				}
 				next.add(new Pair(p, Term.parseTerm(alternative)));
+				//System.out.println("after next " + this.toString());
 			}
 		}
 		// Should distinguish whether the action should be shown. Doesn't show the model, since in the modelTree that is the parent node.
 		public String toString() {
 			String res = "";
+			//MariaM - for testing
+			/*
+			if(models!=null)
+				for(String m: models)
+					res += m + "|";
+			*/
+			/////////////
 			if (precondition != null && !precondition.isEmpty()) {
 				for (Term t: precondition)
 					res += (res == "" ? "" : ", ") + t;
@@ -418,25 +431,25 @@ public class Wizard {
 	
 	protected void updateModelTree() {
 		modelTree = new DynamicTree("mental models", this);
-		System.out.println("addSets " + addSets);
+		//System.out.println("addSets " + addSets);
 		if(addSets.isEmpty()){
 			//add empty trigger node by default
 			modelTree.addObject(null, "trigger");
 		}
 		for (String action: addSets.keySet()) {
 			DefaultMutableTreeNode actionNode = modelTree.addObject(null, action);
-			System.out.println("Add " + action);
+			//System.out.println("Add " + action);
 			HashMap<String,DefaultMutableTreeNode>modelNodes = new HashMap<String,DefaultMutableTreeNode>();
 			for (ModelOperator o: addSets.get(action)) {
-				System.out.println("operator " + o.toString());
+				//System.out.println("operator " + o.toString());
 
 				if (o.models == null) {
 					addNodeToModelNode("*", modelNodes, actionNode, o);
-					System.out.println("Add *");
+					//System.out.println("Add *");
 				} else {
 					for (String model: o.models){
 						addNodeToModelNode(model, modelNodes, actionNode, o);
-						System.out.println("Add model" + model);
+						//System.out.println("Add model" + model);
 					}
 				}
 			}
@@ -444,7 +457,7 @@ public class Wizard {
 		DefaultMutableTreeNode utility = null;
 		//create utilities node even if it remains empty
 		//if (utilityRules != null && !utilityRules.isEmpty())
-		System.out.println("Add utilities...");
+		//System.out.println("utilities...");
 		utility = modelTree.addObject(null, "utilities");
 		for (UtilityRule uRule: utilityRules) {
 			modelTree.addObject(utility, uRule);
@@ -824,7 +837,82 @@ public class Wizard {
 
 	//MariaM
 
-    public void addOutcome(String id){
+	class MentalNode{
+		
+		public static final String Operator = "operator";
+		public static final String Model = "model";
+		public static final String Action = "action";
+		public static final String Trigger = "trigger";
+		String name;
+		String type;
+		//USED FOR REMOVING NODES
+		//for operators it specifies the action or trigger that is can be found under in addSets
+		//can be Action or Trigger
+		String parentType;
+		//can be "trigger" or the action name
+		String parentName;
+		//the ModelOperator that we construct for this node
+		ModelOperator modelOp;
+		
+		public MentalNode(String name, String type, String parentType){
+			this.name=name;
+			this.type=type;
+			this.parentType=parentType;
+		}
+		public MentalNode(String name, String type){
+			this.name=name;
+			this.type=type;
+		}
+		public String toString(){
+			return name;
+		}
+	}
+	
+	public void addModel(String id){
+		//see if the parent is the trigger
+		DefaultMutableTreeNode parentNode = modelTree.getNode(id);
+		MentalNode n;
+		if(parentNode.toString().equals("trigger")){
+			n = new MentalNode("New model", MentalNode.Model, MentalNode.Trigger);
+			n.parentName="trigger";
+		}
+		else{
+			n = new MentalNode("New model", MentalNode.Model, MentalNode.Action);
+			n.parentName=parentNode.toString();
+		}
+		modelTree.addObject(parentNode, n);
+	}
+	
+	public void addAction(String id){
+		//see if the parent is the trigger
+		DefaultMutableTreeNode parentNode = modelTree.getNode(id);
+		MentalNode n = new MentalNode("New action", MentalNode.Action);
+		modelTree.addObject(parentNode, n);
+	}
+
+	public void addOperator(String id){
+		//see if the parent is the trigger
+		DefaultMutableTreeNode parentNode = modelTree.getNode(id);
+		MentalNode n = new MentalNode("New operator", MentalNode.Operator);
+		modelTree.addObject(parentNode, n);
+		if(parentNode.toString().equals("trigger")){
+			n.parentType=MentalNode.Trigger;
+			n.parentName="trigger";
+		}
+		else{
+			MentalNode parentMentalNode = (MentalNode)parentNode.getUserObject();
+			if(parentMentalNode.type==MentalNode.Action){
+				n.parentType=MentalNode.Action;
+				n.parentName=parentMentalNode.name;
+			}
+			else if(parentMentalNode.type==MentalNode.Model){
+				n.parentType=parentMentalNode.parentType;
+				n.parentName=parentMentalNode.parentName;
+			}
+		}
+	}
+
+	public void addOutcome(String id){
     	System.out.println("get node"+id);
  		DefaultMutableTreeNode parentNode = modelTree.getNode(id);
  		//create UtilityRule
@@ -841,17 +929,120 @@ public class Wizard {
 			utilityRules.add(u);
 			n.setUserObject(u);
 		}
+		else if(oldObject instanceof MentalNode){
+			MentalNode m = (MentalNode)oldObject;
+			m.name=newName;
+			//RENAME A MODEL
+			if(m.type.equals(MentalNode.Model) && m.parentType.equals(MentalNode.Trigger)){
+				//we need to create a ModelOperator with no operator just in case
+				//we have Operators that apply to all models
+				//parent must be a model
+				String[] models = new String[1];
+				models[0]=newName;
+				ModelOperator mo = new ModelOperator(new ArrayList(), models, null, 0);
+				m.modelOp=mo;
+				storeAddSet(mo);				
+			}
+			else if(m.type.equals(MentalNode.Model) && m.parentType.equals(MentalNode.Action)){
+				String[] models = new String[1];
+				models[0]=newName;
+				DefaultMutableTreeNode parent = (DefaultMutableTreeNode)n.getParent();
+				String action = parent.toString();
+				ModelOperator mo = new ModelOperator(action, models, null, 0);
+				m.modelOp=mo;
+				storeAddSet(mo);				
+			}
+			else if(m.type.equals(MentalNode.Action)){
+				//an action has to have a model or operator "attached"
+				//so, do nothing at this time
+			}
+			//RENAME OPERATOR
+			else if(m.type.equals(MentalNode.Operator)){
+				//it's an Operator
+				//the parent is a trigger, a model or an action
+				
+				DefaultMutableTreeNode parent = (DefaultMutableTreeNode)n.getParent();
+				if(parent.toString().equals("trigger")){
+					//construct ModelOperator
+					if(newName.contains(":")){
+						String[] data = newName.split(":");
+						//data contains no models so nextOffset=0
+						ModelOperator mo = new ModelOperator(Term.parseTerms(data[0]), null, data, 1);
+						m.modelOp=mo;
+						storeAddSet(mo);
+					}
+				}else if(parent.getUserObject() instanceof MentalNode){
+					MentalNode mn = (MentalNode)parent.getUserObject();
+					if(mn.type.equals(MentalNode.Model)){
+						//we have to do different things depending if it is a model of a trigger
+						//or model of an action
+						//we would need some more concrete data structures so that we don't have to make all these tests
+						String[] data = newName.split(":");
+						String[] models = new String[1];
+						models[0]=((MentalNode)(parent.getUserObject())).name;
+						if(((DefaultMutableTreeNode)parent.getParent()).getUserObject().toString().equals("trigger")){
+							//data contains no models so nextOffset=0
+							ModelOperator mo = new ModelOperator(Term.parseTerms(data[0]), models, data, 1);
+							m.modelOp=mo;
+							storeAddSet(mo);
+						}
+						else{
+							//the parent is an action
+							String action=((DefaultMutableTreeNode)parent.getParent()).getUserObject().toString();
+							ModelOperator mo = new ModelOperator(action, models, data, 0);
+							m.modelOp=mo;
+							storeAddSet(mo);							
+						}
+					}
+					else if(mn.type.equals(MentalNode.Action)){
+						//parent is an action
+						String[] data = newName.split(":");
+						String action=((MentalNode)(parent.getUserObject())).name;
+						ModelOperator mo = new ModelOperator(action, null, data, 0);
+						m.modelOp=mo;
+						storeAddSet(mo);
+					}
+				}
+			}
+		}
+		System.out.println("addSets="+addSets);
 	}
 
 	public void removeMentalNode(String id){
-		DefaultMutableTreeNode n = modelTree.removeNode(id);
+		DefaultMutableTreeNode n = modelTree.getNode(id);
 		Object o = n.getUserObject();
+		modelTree.removeNode(n);
 		if(o instanceof UtilityRule){
 			UtilityRule u = (UtilityRule)o;
 			utilityRules.remove(u);
 		}
+		else if(o instanceof MentalNode){
+			removeModelOperators(n);
+		}
+		System.out.println("addSets="+addSets);
 	}
 
+	public void removeModelOperators(DefaultMutableTreeNode n){
+	
+		MentalNode mn = (MentalNode)n.getUserObject();
+		//remove from addSets
+		if(mn.type==MentalNode.Action){
+			addSets.remove(mn.name);
+		}
+		else{
+			//it's a model or operator
+			List<ModelOperator> lmo = addSets.get(mn.parentName);
+			if(lmo!=null)
+				lmo.remove(mn.modelOp);
+		}
+		Enumeration<DefaultMutableTreeNode> children = n.children();
+		while(children.hasMoreElements()){
+			DefaultMutableTreeNode child = children.nextElement();
+			removeModelOperators(child);
+		}
+
+	}
+	
 	public void addGoal(String id){
 		goalTree.nodeAdded(id);
 	}

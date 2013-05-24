@@ -10,9 +10,12 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import edu.isi.dash.command.AddActionCommand;
 import edu.isi.dash.command.AddClauseCommand;
 import edu.isi.dash.command.AddConstantCommand;
 import edu.isi.dash.command.AddGoalCommand;
+import edu.isi.dash.command.AddModelCommand;
+import edu.isi.dash.command.AddOperatorCommand;
 import edu.isi.dash.command.AddOutcomeCommand;
 import edu.isi.dash.command.AddUpdateRuleCommand;
 import edu.isi.dash.command.Command;
@@ -91,6 +94,12 @@ public class RequestController extends HttpServlet{
 			cmd = new RenameMentalNodeCommand(request,wizard);
 		if(commandName.equals("AddOutcomeCommand"))
 			cmd = new AddOutcomeCommand(request, wizard);
+		if(commandName.equals("AddModelCommand"))
+			cmd = new AddModelCommand(request, wizard);
+		if(commandName.equals("AddOperatorCommand"))
+			cmd = new AddOperatorCommand(request, wizard);
+		if(commandName.equals("AddActionCommand"))
+			cmd = new AddActionCommand(request, wizard);
 		
 		return cmd.invoke();
 	}
