@@ -16,6 +16,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -66,7 +67,7 @@ public class Wizard {
 	String baseRules = "";  // not processed yet, so a string
 	HashMap<String,Goal>goals = new HashMap<String,Goal>();
 	HashMap<String,PrologGoal>prologGoals = new HashMap<String,PrologGoal>();
-	String[] mentalModels = null;
+	Set<String> mentalModels = new HashSet<String>();
 	HashMap<String, List<ModelOperator>>addSets = new HashMap<String, List<ModelOperator>>();
 	List<UtilityRule>utilityRules = new LinkedList<UtilityRule>();
 	private Detergent agent = null;
@@ -193,7 +194,7 @@ public class Wizard {
 	 * @author blythe
 	 */
 	class ModelOperator {
-		//if models==null; applies to all models
+		//if models==*; applies to all models
 		String[] models = null; // the models this operator is appropriate for
 		List<Term>precondition = null;  // currently addsets  have actions and triggers have preconditions, although I guess both could have both
 		String action = null;
@@ -203,15 +204,17 @@ public class Wizard {
 			}
 		Double p;Term t;};
 		List<Pair>next = null;
-		public ModelOperator(String action, String[] models, String[] next, int nextOffset) {  // an 'addset'
+		public ModelOperator(String action, List<Term>precond, String[] models, String[] next, int nextOffset) {  // an 'addset'
+			this.precondition = precond;
 			this.action = action;
 			this.models = models;
 			parseNext(next, nextOffset);
 		}
-		public ModelOperator(List<Term>precond, String[] models, String[] next, int nextOffset) {  // a trigger
-			this.precondition = precond;
-			this.models = models;
-			parseNext(next, nextOffset);
+		
+		boolean isEmpty(){
+			if(precondition.isEmpty() && next==null)
+				return true;
+			return false;
 		}
 		void parseNext(String[] nextData, int nextOffset) {
 			if(nextData==null) return;
@@ -248,7 +251,7 @@ public class Wizard {
 			}
 			if (next != null)
 				for (Pair pair: next) {
-					res += pair.p + ": " + pair.t + ", ";
+					res += pair.p + ", " + pair.t + ": ";
 				}
 			return res;
 		}
@@ -561,7 +564,7 @@ public class Wizard {
 				} else if (line.startsWith("Clauses:")) {
 					state = readingClauses;
 				} else if (line.startsWith("MentalModels:")) {
-					mentalModels = line.substring(line.indexOf(":")+1).split(":");
+					mentalModels = new HashSet<String>(Arrays.asList(line.substring(line.indexOf(":")+1).split(":")));
 				} else if (line.startsWith("MentalModelAdd:")) {
 					state = readingMentalModelAdd;
 				} else if (line.startsWith("MentalModelTrigger:")) {
@@ -594,10 +597,10 @@ public class Wizard {
 					pg.clauses.add(tl);
 				} else if (state == readingMentalModelAdd && line.contains(":")) {
 					String[] data = line.split(":");
-					storeAddSet(new ModelOperator(data[0], data[1].split("\\|"), data, 2));
+					storeAddSet(new ModelOperator(data[0], Term.parseTerms(data[2]), data[1].split("\\|"), data, 3));
 				} else if (state == readingMentalModelTrigger && line.contains(":")) {
 					String[] data = line.split(":");
-					storeAddSet(new ModelOperator(Term.parseTerms(data[1]), data[0].split("\\|"), data, 2));
+					storeAddSet(new ModelOperator("trigger", Term.parseTerms(data[1]), data[0].split("\\|"), data, 2));
 				} else if (state == readingMentalModelUtility && line.contains(":")) {
 					String[] data = line.split(":");
 					utilityRules.add(new UtilityRule(Term.parseTerms(data[0]), data[1]));
@@ -867,7 +870,37 @@ public class Wizard {
 			return name;
 		}
 	}
+
+	private void removeFromAddSets(String action, ModelOperator mo){
+		List<ModelOperator> lmo = addSets.get(action);
+		if(lmo!=null)
+			lmo.remove(mo);
+	}
 	
+	//sets the member "mentalModels" and returns a set of empty models
+	//these are the models that we shouldn't save to the .agent file from empty ModelOperators
+	private Set<String> getEmptyModelsAndSetMentalModels(){
+		Set<String> emptyModels = new HashSet();
+		for (String action: addSets.keySet()) {
+			for (ModelOperator om: addSets.get(action)) {
+				if(om.isEmpty() && om.models != null){
+					for (String model: om.models){
+						emptyModels.add(model);
+					}
+				}else{
+					//remove this model from emptyModels
+					if (om.models != null){
+						for (String model: om.models){
+							emptyModels.remove(model);
+						}
+					}
+				}
+			}
+		}
+		System.out.println("Empty Models"+emptyModels);
+		return emptyModels;
+	}
+
 	public void addModel(String id){
 		//see if the parent is the trigger
 		DefaultMutableTreeNode parentNode = modelTree.getNode(id);
@@ -920,7 +953,31 @@ public class Wizard {
 		modelTree.addObject(parentNode, u);
     }
 
-    public void renameMentalNode(String id, String newName){
+	//rename an operator defined for a model
+	public void renameModelOperator(String newName, String modelName, MentalNode thisOperator){
+		//we have to do different things depending if it is a model of a trigger
+		//or model of an action
+		//we would need some more concrete data structures so that we don't have to make all these tests
+		String[] data = newName.split(":");
+		String[] models = new String[1];
+		models[0]=modelName;
+		String action = "";
+		if(thisOperator.parentType==MentalNode.Trigger){
+			action="trigger";
+		}
+		else{
+			action=thisOperator.parentName;
+		}
+		ModelOperator mo = new ModelOperator(action, Term.parseTerms(data[0]), models, data, 1);
+		if(thisOperator.modelOp!=null)
+			removeFromAddSets(action, thisOperator.modelOp);
+		thisOperator.modelOp=mo;
+		storeAddSet(mo);
+
+
+	}
+	
+	public void renameMentalNode(String id, String newName){
     	DefaultMutableTreeNode n = modelTree.getNode(id);
 		Object oldObject = n.getUserObject();
 		if(oldObject instanceof UtilityRule){
@@ -939,16 +996,21 @@ public class Wizard {
 				//parent must be a model
 				String[] models = new String[1];
 				models[0]=newName;
-				ModelOperator mo = new ModelOperator(new ArrayList(), models, null, 0);
+				ModelOperator mo = new ModelOperator("trigger", new ArrayList(), models, null, 0);
+				//remove the old one if exists
+				if(m.modelOp!=null)
+					removeFromAddSets("trigger", m.modelOp);
 				m.modelOp=mo;
-				storeAddSet(mo);				
+				storeAddSet(mo);
 			}
 			else if(m.type.equals(MentalNode.Model) && m.parentType.equals(MentalNode.Action)){
 				String[] models = new String[1];
 				models[0]=newName;
 				DefaultMutableTreeNode parent = (DefaultMutableTreeNode)n.getParent();
 				String action = parent.toString();
-				ModelOperator mo = new ModelOperator(action, models, null, 0);
+				ModelOperator mo = new ModelOperator(action, new ArrayList(), models, null, 0);
+				if(m.modelOp!=null)
+					removeFromAddSets(action, m.modelOp);
 				m.modelOp=mo;
 				storeAddSet(mo);				
 			}
@@ -964,41 +1026,26 @@ public class Wizard {
 				DefaultMutableTreeNode parent = (DefaultMutableTreeNode)n.getParent();
 				if(parent.toString().equals("trigger")){
 					//construct ModelOperator
-					if(newName.contains(":")){
-						String[] data = newName.split(":");
-						//data contains no models so nextOffset=0
-						ModelOperator mo = new ModelOperator(Term.parseTerms(data[0]), null, data, 1);
-						m.modelOp=mo;
-						storeAddSet(mo);
-					}
+					String[] data = newName.split(":");
+					String models[]={"*"};
+					ModelOperator mo = new ModelOperator("trigger", Term.parseTerms(data[0]), models, data, 1);
+					if(m.modelOp!=null)
+						removeFromAddSets("trigger", m.modelOp);
+					m.modelOp=mo;
+					storeAddSet(mo);
 				}else if(parent.getUserObject() instanceof MentalNode){
 					MentalNode mn = (MentalNode)parent.getUserObject();
 					if(mn.type.equals(MentalNode.Model)){
-						//we have to do different things depending if it is a model of a trigger
-						//or model of an action
-						//we would need some more concrete data structures so that we don't have to make all these tests
-						String[] data = newName.split(":");
-						String[] models = new String[1];
-						models[0]=((MentalNode)(parent.getUserObject())).name;
-						if(((DefaultMutableTreeNode)parent.getParent()).getUserObject().toString().equals("trigger")){
-							//data contains no models so nextOffset=0
-							ModelOperator mo = new ModelOperator(Term.parseTerms(data[0]), models, data, 1);
-							m.modelOp=mo;
-							storeAddSet(mo);
-						}
-						else{
-							//the parent is an action
-							String action=((DefaultMutableTreeNode)parent.getParent()).getUserObject().toString();
-							ModelOperator mo = new ModelOperator(action, models, data, 0);
-							m.modelOp=mo;
-							storeAddSet(mo);							
-						}
+						renameModelOperator(newName, ((MentalNode)(parent.getUserObject())).name, m);
 					}
 					else if(mn.type.equals(MentalNode.Action)){
 						//parent is an action
 						String[] data = newName.split(":");
+						String models[]={"*"};
 						String action=((MentalNode)(parent.getUserObject())).name;
-						ModelOperator mo = new ModelOperator(action, null, data, 0);
+						ModelOperator mo = new ModelOperator(action, Term.parseTerms(data[0]), models, data, 1);
+						if(m.modelOp!=null)
+							removeFromAddSets(action, m.modelOp);
 						m.modelOp=mo;
 						storeAddSet(mo);
 					}
@@ -1008,6 +1055,7 @@ public class Wizard {
 		System.out.println("addSets="+addSets);
 	}
 
+    //remove subtree starting from node with id
 	public void removeMentalNode(String id){
 		DefaultMutableTreeNode n = modelTree.getNode(id);
 		Object o = n.getUserObject();
@@ -1022,6 +1070,7 @@ public class Wizard {
 		System.out.println("addSets="+addSets);
 	}
 
+	//remove subtree starting from n
 	public void removeModelOperators(DefaultMutableTreeNode n){
 	
 		MentalNode mn = (MentalNode)n.getUserObject();
@@ -1031,9 +1080,7 @@ public class Wizard {
 		}
 		else{
 			//it's a model or operator
-			List<ModelOperator> lmo = addSets.get(mn.parentName);
-			if(lmo!=null)
-				lmo.remove(mn.modelOp);
+			removeFromAddSets(mn.parentName,mn.modelOp);
 		}
 		Enumeration<DefaultMutableTreeNode> children = n.children();
 		while(children.hasMoreElements()){
@@ -1301,6 +1348,9 @@ public class Wizard {
 	}
 
 	private void saveMentalModels(PrintStream ps) {
+		
+		Set<String> emptyModels = getEmptyModelsAndSetMentalModels();
+		
 		// Every mental model in use appears in some operator or in the declared models (though I don't think this line is important in the agent file).
 		Set<String>models = new HashSet<String>();
 		if (mentalModels != null)
@@ -1332,10 +1382,13 @@ public class Wizard {
 						for (String model: mo.models) {
 							if (!model.equals(mo.models[0]))
 								modelString += "|";
-							modelString += model;
+							//if I don't do this test some extra models with empty operators will be printed in file
+							if(!mo.isEmpty() || (mo.isEmpty() && emptyModels.contains(model)))
+								modelString += model;
 						}
 					}
-					ps.println(action + ":" + modelString + ":" + mo);
+					if(!modelString.isEmpty())
+						ps.println(action + ":" + modelString + ":" + mo);
 				}
 			}
 		}
@@ -1350,10 +1403,12 @@ public class Wizard {
 					for (String model: mo.models) {
 						if (!model.equals(mo.models[0]))
 							modelString += "|";
-						modelString += model;
+						if(!mo.isEmpty() || (mo.isEmpty() && emptyModels.contains(model)))
+							modelString += model;
 					}
 				}
-				ps.println(modelString + ":" + mo);
+				if(!modelString.isEmpty())
+					ps.println(modelString + ":" + mo);
 			}
 		}
 		

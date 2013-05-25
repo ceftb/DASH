@@ -25,6 +25,7 @@ public class OpenCommand extends Command{
 	public String invoke() {
 		
 		wizard.newDomain();
+		wizard.newMentalDomain();
 		wizard.loadDomain(fileName);
 		String jsonTree = wizard.getJsonTree();
 		String jsonMentalTree = wizard.getJsonForMentalTree();
