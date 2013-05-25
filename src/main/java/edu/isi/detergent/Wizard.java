@@ -70,6 +70,9 @@ public class Wizard {
 	Set<String> mentalModels = new HashSet<String>();
 	HashMap<String, List<ModelOperator>>addSets = new HashMap<String, List<ModelOperator>>();
 	List<UtilityRule>utilityRules = new LinkedList<UtilityRule>();
+	//a list of models that do not have an operator attached
+	//these models should be saved as model without operator 
+	Set<String> emptyModels = null;
 	private Detergent agent = null;
 	
 	
@@ -1160,6 +1163,9 @@ public class Wizard {
 
 	public void saveData(String agentName) {
 		System.out.println("In save data. " + agentName);
+
+		emptyModels = getEmptyModelsAndSetMentalModels();
+		
 		name=agentName;
 		try {
 			PrintStream ps = new PrintStream(new FileOutputStream(prologRoot + "/" + name + ".agent", false));
@@ -1314,11 +1320,13 @@ public class Wizard {
 						}
 					}
 					if (mo.models != null && mo.models.length > 0) {
-						for (String model: mo.models)
+						for (String model: mo.models){
 							// Warning: not writing preconditions yet.
-							prolog.print("addSets(" + action + "," + model + ", [" + outcomes + "]).");
+							if(!mo.isEmpty() || (mo.isEmpty() && emptyModels.contains(model)))
+								prolog.println("addSets(" + action + "," + model + ", [" + outcomes + "]).");
+						}
 					} else {
-						prolog.print("addSets(" + action + ",*, [" + outcomes + "]).");
+						prolog.println("addSets(" + action + ",*, [" + outcomes + "]).");
 					}
 				}
 			}
@@ -1336,11 +1344,13 @@ public class Wizard {
 					}
 				}
 				if (mo.models != null && mo.models.length > 0) {
-					for (String model: mo.models)
+					for (String model: mo.models){
 						// Warning: not writing preconditions yet.
-						prolog.print("trigger(World," + model + ", [" + outcomes + "]).");
+						if(!mo.isEmpty() || (mo.isEmpty() && emptyModels.contains(model)))
+							prolog.println("trigger(World," + model + ", [" + outcomes + "]).");
+					}
 				} else {
-					prolog.print("trigger(World,*,[" + outcomes + "]).");
+					prolog.println("trigger(World,*,[" + outcomes + "]).");
 				}
 			}
 		}
@@ -1348,8 +1358,6 @@ public class Wizard {
 	}
 
 	private void saveMentalModels(PrintStream ps) {
-		
-		Set<String> emptyModels = getEmptyModelsAndSetMentalModels();
 		
 		// Every mental model in use appears in some operator or in the declared models (though I don't think this line is important in the agent file).
 		Set<String>models = new HashSet<String>();
