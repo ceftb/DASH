@@ -22,7 +22,7 @@ public class RenameMentalNodeCommand extends Command{
 	@Override
 	public String invoke() {
 		
-		wizard.renameMentalNode(nodeId, newName);
+		wizard.renameMentalModelNode(nodeId, newName);
     	String jsonMentalTree = wizard.getJsonForMentalTree();
 		
 		System.out.println("JT="+ "{ \"json_tree\" : "+ jsonMentalTree+"}");
