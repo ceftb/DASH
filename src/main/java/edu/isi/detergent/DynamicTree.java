@@ -338,7 +338,7 @@ public class DynamicTree extends JPanel implements ActionListener {
 	 * 		start with the root of the tree
 	 * @return this tree as JSON object
 	 */
-	JSONObject getJsonForMentalTree(DefaultMutableTreeNode n, int level){
+	JSONObject getJsonForMentalTree(DefaultMutableTreeNode n){
 		Object userObject = n.getUserObject();
 		JSONObject childGoal = new JSONObject();
 		JSONObject childAttr = new JSONObject();
@@ -351,7 +351,6 @@ public class DynamicTree extends JPanel implements ActionListener {
 	
 		//System.out.println(n.toString() + " " + n.getUserObject().getClass());
 		//System.out.println("level="+level);
-
 		if(n.toString().equals("mental models")){
 			addToJSONObject(childAttr,"type", "Root");    					
 		}
@@ -361,23 +360,11 @@ public class DynamicTree extends JPanel implements ActionListener {
 		else if(n.toString().equals("utilities")){
 			addToJSONObject(childAttr,"type", "Utility");    					
 		}
-		else if((n.getUserObject() instanceof String) && level==1){
-			//this is an action; first level in the tree
-			addToJSONObject(childAttr,"type", "Action");    					
-		}
-		else if((n.getUserObject() instanceof String) && level>1){
-			//this is a model; something under trigger, utility or action
-			addToJSONObject(childAttr,"type", "Model");    					
-		}
-		else if((n.getUserObject() instanceof ModelOperator)){
-			//this is an action; first level in the tree
-			addToJSONObject(childAttr,"type", "Operator");    					
-		}
-		else if((n.getUserObject() instanceof UtilityRule)){
+		else if(userObject instanceof UtilityRule){
 			//this is an action; first level in the tree
 			addToJSONObject(childAttr,"type", "UtilityRule");    					
 		}
-		else if((n.getUserObject() instanceof MentalNode)){
+		else if(userObject instanceof MentalNode){
 			MentalNode m = (MentalNode)n.getUserObject();
 			if(m.type.equals(MentalNode.Operator))
 				addToJSONObject(childAttr,"type", "Operator");    					
@@ -390,13 +377,10 @@ public class DynamicTree extends JPanel implements ActionListener {
 			addToJSONObject(childAttr,"type", "OtherNode");   
 		}
 		
-		//I use level to distinguish between actions and models within triggers
-		//they are defined just as String; but actions are at the top level
-		++level;
 	   	Enumeration<DefaultMutableTreeNode> children = n.children();
 	   	while(children.hasMoreElements()){
 	   		DefaultMutableTreeNode child = children.nextElement();
-	   		JSONObject childJson = getJsonForMentalTree(child, level);
+	   		JSONObject childJson = getJsonForMentalTree(child);
 	   		childGoalChildren.put(childJson);
 	   	}
 

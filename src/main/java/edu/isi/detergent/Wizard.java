@@ -213,6 +213,12 @@ public class Wizard {
 			this.models = models;
 			parseNext(next, nextOffset);
 		}
+		public void setModelName(String newName){
+			//there should be only one model name
+			if(models!=null && !models[0].equals("*")){
+				models[0]=newName;
+			}				
+		}
 		
 		boolean isEmpty(){
 			if(precondition.isEmpty() && next==null)
@@ -438,45 +444,83 @@ public class Wizard {
 	protected void updateModelTree() {
 		modelTree = new DynamicTree("mental models", this);
 		//System.out.println("addSets " + addSets);
+		//I have to add new MO as I go, but I don't want to modify the initial addSets
+		List<ModelOperator> newModelOp = new ArrayList<ModelOperator>();
 		if(addSets.isEmpty()){
 			//add empty trigger node by default
 			modelTree.addObject(null, "trigger");
 		}
 		for (String action: addSets.keySet()) {
-			DefaultMutableTreeNode actionNode = modelTree.addObject(null, action);
+			//create a MentalNode for this action
+			MentalNode n;
+			if(action==MentalNode.Trigger){
+				n = new MentalNode(action, MentalNode.Trigger);
+			}
+			else n = new MentalNode(action, MentalNode.Action);
+			DefaultMutableTreeNode actionNode = modelTree.addObject(null, n);
 			//System.out.println("Add " + action);
 			HashMap<String,DefaultMutableTreeNode>modelNodes = new HashMap<String,DefaultMutableTreeNode>();
 			for (ModelOperator o: addSets.get(action)) {
 				//System.out.println("operator " + o.toString());
 
 				if (o.models == null) {
-					addNodeToModelNode("*", modelNodes, actionNode, o);
+					addNodeToModelNode("*", modelNodes, actionNode, o, newModelOp);
 					//System.out.println("Add *");
 				} else {
 					for (String model: o.models){
-						addNodeToModelNode(model, modelNodes, actionNode, o);
+						addNodeToModelNode(model, modelNodes, actionNode, o, newModelOp);
 						//System.out.println("Add model" + model);
 					}
 				}
 			}
 		}
+		//add newModelOp to addSets; these MO are created in addNodeToModelNode
+		for(ModelOperator mo: newModelOp){
+			storeAddSet(mo);
+		}
 		DefaultMutableTreeNode utility = null;
 		//create utilities node even if it remains empty
-		//if (utilityRules != null && !utilityRules.isEmpty())
-		//System.out.println("utilities...");
 		utility = modelTree.addObject(null, "utilities");
 		for (UtilityRule uRule: utilityRules) {
+			//System.out.println("add utilities...");
 			modelTree.addObject(utility, uRule);
 		}
 		// Print out to test
 		printDynamicTree(modelTree.rootNode, "");
 	}
 	
-	protected void addNodeToModelNode(String modelNodeName, HashMap<String,DefaultMutableTreeNode>modelNodeMap, DefaultMutableTreeNode actionNode, ModelOperator operator) {
-		if (!modelNodeMap.containsKey(modelNodeName))
-			modelNodeMap.put(modelNodeName, modelTree.addObject(actionNode, modelNodeName));
-		DefaultMutableTreeNode modelNode = modelNodeMap.get(modelNodeName);
-		modelTree.addObject(modelNode, operator);
+	//adds in tree nodes for models and operators
+	//for models creates empty ModelOperators (necessary for the remove operation)
+	//for models and operators creates MentalNodes that are the tree node userObject
+	protected void addNodeToModelNode(String modelNodeName, HashMap<String,DefaultMutableTreeNode>modelNodeMap, 
+			DefaultMutableTreeNode actionNode, ModelOperator operator,
+			List<ModelOperator> newModelOp) {
+		MentalNode actionMentalNode = (MentalNode)actionNode.getUserObject();
+		//don't add a node in the tree for model=*
+		if (!modelNodeMap.containsKey(modelNodeName) && !modelNodeName.equals("*")){
+			//create MentalNode for this model
+			MentalNode n = new MentalNode(modelNodeName, MentalNode.Model);
+			n.parentName=actionMentalNode.name;
+			n.parentType=actionMentalNode.type;
+			//create MO for the model
+			String[] models = {modelNodeName};
+			ModelOperator mo = new ModelOperator(n.parentName, new ArrayList(), models, null, 0);
+			n.modelOp=mo;
+			newModelOp.add(mo);
+			DefaultMutableTreeNode treeNode = modelTree.addObject(actionNode, n);
+			modelNodeMap.put(modelNodeName, treeNode);
+		}
+		//create MentalNode for operator
+		MentalNode n = new MentalNode(operator.toString(),MentalNode.Operator);
+		n.parentName=actionMentalNode.name;
+		n.parentType=actionMentalNode.type;
+		n.modelOp=operator;
+		DefaultMutableTreeNode operatorParentNode=actionNode;
+		if(!modelNodeName.equals("*")){
+			//if model is not *, the parentNode is the model node
+			operatorParentNode = modelNodeMap.get(modelNodeName);
+		}
+		modelTree.addObject(operatorParentNode, n);
 	}
 
 	private void printDynamicTree(TreeNode node, String indent) {
@@ -600,10 +644,22 @@ public class Wizard {
 					pg.clauses.add(tl);
 				} else if (state == readingMentalModelAdd && line.contains(":")) {
 					String[] data = line.split(":");
-					storeAddSet(new ModelOperator(data[0], Term.parseTerms(data[2]), data[1].split("\\|"), data, 3));
+					String[] models = data[1].split("\\|");
+					//create MO for each model
+					for(String model: models){
+						String[] oneModel = {model}; 
+						ModelOperator mo = new ModelOperator(data[0], Term.parseTerms(data[2]), oneModel, data, 3);
+						storeAddSet(mo);
+					}
 				} else if (state == readingMentalModelTrigger && line.contains(":")) {
 					String[] data = line.split(":");
-					storeAddSet(new ModelOperator("trigger", Term.parseTerms(data[1]), data[0].split("\\|"), data, 2));
+					String[] models = data[0].split("\\|");
+					//create MO for each model
+					for(String model: models){
+						String[] oneModel = {model}; 
+						ModelOperator mo = new ModelOperator("trigger", Term.parseTerms(data[1]), oneModel, data, 2);
+						storeAddSet(mo);
+					}
 				} else if (state == readingMentalModelUtility && line.contains(":")) {
 					String[] data = line.split(":");
 					utilityRules.add(new UtilityRule(Term.parseTerms(data[0]), data[1]));
@@ -884,23 +940,31 @@ public class Wizard {
 	//these are the models that we shouldn't save to the .agent file from empty ModelOperators
 	private Set<String> getEmptyModelsAndSetMentalModels(){
 		Set<String> emptyModels = new HashSet();
+		//first add all empty models
 		for (String action: addSets.keySet()) {
 			for (ModelOperator om: addSets.get(action)) {
 				if(om.isEmpty() && om.models != null){
 					for (String model: om.models){
+						//System.out.println("add empty model"+ model);
 						emptyModels.add(model);
-					}
-				}else{
-					//remove this model from emptyModels
-					if (om.models != null){
-						for (String model: om.models){
-							emptyModels.remove(model);
-						}
+						mentalModels.add(model);
 					}
 				}
 			}
 		}
-		System.out.println("Empty Models"+emptyModels);
+		//now remove from emptyModels the models that do have operators
+		for (String action: addSets.keySet()) {
+			for (ModelOperator om: addSets.get(action)) {
+				if(!om.isEmpty() && om.models != null){
+					for (String model: om.models){
+						//System.out.println("remove empty model"+ model);
+						emptyModels.remove(model);
+						mentalModels.add(model);
+					}
+				}
+			}
+		}
+		//System.out.println("Empty Models"+emptyModels);
 		return emptyModels;
 	}
 
@@ -957,13 +1021,9 @@ public class Wizard {
     }
 
 	//rename an operator defined for a model
-	public void renameModelOperator(String newName, String modelName, MentalNode thisOperator){
+	public void renameModelOperatorNode(String newName, String modelName, MentalNode thisOperator){
 		//we have to do different things depending if it is a model of a trigger
 		//or model of an action
-		//we would need some more concrete data structures so that we don't have to make all these tests
-		String[] data = newName.split(":");
-		String[] models = new String[1];
-		models[0]=modelName;
 		String action = "";
 		if(thisOperator.parentType==MentalNode.Trigger){
 			action="trigger";
@@ -971,6 +1031,9 @@ public class Wizard {
 		else{
 			action=thisOperator.parentName;
 		}
+		String[] data = newName.split(":");
+		String[] models = new String[1];
+		models[0]=modelName;
 		ModelOperator mo = new ModelOperator(action, Term.parseTerms(data[0]), models, data, 1);
 		if(thisOperator.modelOp!=null)
 			removeFromAddSets(action, thisOperator.modelOp);
@@ -980,53 +1043,65 @@ public class Wizard {
 
 	}
 	
-	public void renameMentalNode(String id, String newName){
-    	DefaultMutableTreeNode n = modelTree.getNode(id);
-		Object oldObject = n.getUserObject();
+	private void renameModelNode(MentalNode modelMentalNode, DefaultMutableTreeNode modelTreeNode, String newName){
+		//we need to create a ModelOperator with no operator just in case
+		//we have Operators that apply to all models
+		String action = "trigger";
+		if(modelMentalNode.parentType.equals(MentalNode.Action)){
+			DefaultMutableTreeNode parent = (DefaultMutableTreeNode)modelTreeNode.getParent();
+			action = parent.toString();
+		}
+		String[] models = new String[1];
+		models[0]=newName;
+		ModelOperator mo = new ModelOperator(action, new ArrayList(), models, null, 0);
+		//remove the old one if exists
+		if(modelMentalNode.modelOp!=null)
+			removeFromAddSets(action, modelMentalNode.modelOp);
+		modelMentalNode.modelOp=mo;
+		storeAddSet(mo);			
+		//rename the model for all operators children of this model node
+	   	Enumeration<DefaultMutableTreeNode> children = modelTreeNode.children();
+	   	while(children.hasMoreElements()){
+	   		DefaultMutableTreeNode child = children.nextElement();
+	   		MentalNode childMentalNode = (MentalNode)child.getUserObject();
+	   		ModelOperator childMo = childMentalNode.modelOp;
+	   		childMo.setModelName(newName);
+	   	}
+
+	}
+
+	public void renameMentalModelNode(String id, String newName){
+    	DefaultMutableTreeNode treeNodeToRename = modelTree.getNode(id);
+		Object oldObject = treeNodeToRename.getUserObject();
 		if(oldObject instanceof UtilityRule){
-			String[] data = newName.split(":");
-			UtilityRule u = new UtilityRule(Term.parseTerms(data[0]), data[1]);
-			utilityRules.add(u);
-			n.setUserObject(u);
+			if(newName.contains(":")){
+				//remove old UtilityRule
+				utilityRules.remove((UtilityRule)oldObject);
+				String[] data = newName.split(":");
+				UtilityRule u = new UtilityRule(Term.parseTerms(data[0]), data[1]);
+				utilityRules.add(u);
+				treeNodeToRename.setUserObject(u);
+			}
 		}
 		else if(oldObject instanceof MentalNode){
 			MentalNode m = (MentalNode)oldObject;
+			String oldNodeName=m.name;
 			m.name=newName;
 			//RENAME A MODEL
-			if(m.type.equals(MentalNode.Model) && m.parentType.equals(MentalNode.Trigger)){
-				//we need to create a ModelOperator with no operator just in case
-				//we have Operators that apply to all models
-				//parent must be a model
-				String[] models = new String[1];
-				models[0]=newName;
-				ModelOperator mo = new ModelOperator("trigger", new ArrayList(), models, null, 0);
-				//remove the old one if exists
-				if(m.modelOp!=null)
-					removeFromAddSets("trigger", m.modelOp);
-				m.modelOp=mo;
-				storeAddSet(mo);
-			}
-			else if(m.type.equals(MentalNode.Model) && m.parentType.equals(MentalNode.Action)){
-				String[] models = new String[1];
-				models[0]=newName;
-				DefaultMutableTreeNode parent = (DefaultMutableTreeNode)n.getParent();
-				String action = parent.toString();
-				ModelOperator mo = new ModelOperator(action, new ArrayList(), models, null, 0);
-				if(m.modelOp!=null)
-					removeFromAddSets(action, m.modelOp);
-				m.modelOp=mo;
-				storeAddSet(mo);				
-			}
+			if(m.type.equals(MentalNode.Model))
+				renameModelNode(m, treeNodeToRename, newName);
 			else if(m.type.equals(MentalNode.Action)){
-				//an action has to have a model or operator "attached"
-				//so, do nothing at this time
+				List<ModelOperator> moForAction = addSets.get(oldNodeName);
+				//remove old entry
+				addSets.remove(oldNodeName);
+				//add it with the new key
+				addSets.put(m.name, moForAction);
 			}
 			//RENAME OPERATOR
 			else if(m.type.equals(MentalNode.Operator)){
 				//it's an Operator
 				//the parent is a trigger, a model or an action
-				
-				DefaultMutableTreeNode parent = (DefaultMutableTreeNode)n.getParent();
+				DefaultMutableTreeNode parent = (DefaultMutableTreeNode)treeNodeToRename.getParent();
 				if(parent.toString().equals("trigger")){
 					//construct ModelOperator
 					String[] data = newName.split(":");
@@ -1037,9 +1112,10 @@ public class Wizard {
 					m.modelOp=mo;
 					storeAddSet(mo);
 				}else if(parent.getUserObject() instanceof MentalNode){
+					//parent is a model or an action
 					MentalNode mn = (MentalNode)parent.getUserObject();
 					if(mn.type.equals(MentalNode.Model)){
-						renameModelOperator(newName, ((MentalNode)(parent.getUserObject())).name, m);
+						renameModelOperatorNode(newName, ((MentalNode)(parent.getUserObject())).name, m);
 					}
 					else if(mn.type.equals(MentalNode.Action)){
 						//parent is an action
@@ -1129,7 +1205,7 @@ public class Wizard {
 	}
 	
 	public String getJsonForMentalTree(){
-		return goalTree.getJsonForMentalTree(modelTree.rootNode,0).toString();
+		return goalTree.getJsonForMentalTree(modelTree.rootNode).toString();
 	}
 
 	public void loadDomain(String filename) {
