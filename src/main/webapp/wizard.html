@@ -13,6 +13,8 @@
 <script type="text/javascript" src="js/jquery.fileupload.js"></script>
 	
 <script type="text/javascript" src="js/wizard.js"></script>
+<script type="text/javascript" src="js/wizard_goals.js"></script>
+<script type="text/javascript" src="js/wizard_mental_model.js"></script>
 <script type="text/javascript" src="js/fieldset_script.js"></script>
 <script>
 
@@ -148,11 +150,17 @@ $('#saveB').button()
 var rdfDialogBox = $("div#AgentNameDialog");
 // Show the dialog box
 rdfDialogBox.dialog({width: 300
-, buttons: { "Cancel": function() { $(this).dialog("close"); }, "OK": saveAgent } 
+, buttons: { "Cancel": function() { $(this).dialog("close"); }, "OK": saveAgent }
 });
+});
+//save the agent on Enter key
+$('#AgentNameDialog').keypress(function(e) {
+    if (e.keyCode == $.ui.keyCode.ENTER) {
+		saveAgent();
+    }
 });
 </script>
-<!-- end Save button -->
+<!-- End Save button -->
 
 <button id='runB'>run</button>
 <script>
