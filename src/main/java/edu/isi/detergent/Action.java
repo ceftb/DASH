@@ -3,6 +3,8 @@
  ******************************************************************************/
 package edu.isi.detergent;
 
+import jpl.Atom;
+import jpl.Compound;
 import jpl.Term;
 
 /**
@@ -53,12 +55,36 @@ public class Action {
 				lastActionName = "computer_applicationOpen";
 				return 0;
 			}
+		}  else if ("check".equals(name)) {
+			return simulatorStub();
+		} else if ("checkSystem1".equals(name)) {
+			return emoCogStub();
 		} else {
 			detergent.printOut("Performing " + this);
 		}
 		lastActionName = name;
 		return successValue();
 	}
+	
+	public Object simulatorStub() {
+		System.out.println("Running stub code to check a value from the simulator");
+		// Index into a set of pre-stored values
+		Object[][] values = {{"coolantTemperature", 800},
+							 {"waterPressure", 8},
+		};
+		for (Object[] pair: values)
+			if (pair[0].equals(arguments[0]))
+				return pair[1];
+		return -1;
+	}
+	
+	private Object emoCogStub() {
+		// For now, emoCog ignores the input (which will be a goal but is not yet) and returns a list of 'node' terms
+		Term fact = new Atom("pipeRupture"), node = new Compound("node", new Term[]{fact, new jpl.Float(0.6)});
+		return new Term[]{fact};
+	}
+
+
 	
 	/**
 	 * If we are running this action as a stub, compute whether it succeeds. This allows testing random or other failures and testing
