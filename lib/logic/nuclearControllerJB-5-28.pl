@@ -33,6 +33,7 @@
 :-dynamic(utility/2).
 :-dynamic(targetField/1).
 :-dynamic(relevant/1).
+:-dynamic(needCheckSystem1/0).
 
 
 % Definitions for objects (note the consequences belong in the world simulator, a different program in this model).
@@ -53,10 +54,10 @@ relevant(coolantMakeupFlow) :- value(coolantLeak, yes).
 
 % Some initial states
 
-value(coolantTemperature, 810).  % high.
+value(coolantTemperature, unknown).  % was 810 (high). Now the value is to be given from the simulator via the java shell.
 value(reactorCoolantPump, unknown).  % Could have the unknown values be derived from having no declared value.
 
-value(waterPressure, 8).  % low
+value(waterPressure, unknown).  % was 8 (low). Now comes from simulator.
 value(waterPump, unknown).
 value(reliefValve, unknown).
 value(emergencyPipeRerouting, unknown).
@@ -127,13 +128,14 @@ subGoal(try(_,_)).
 subGoal(try2(_,_)).
 
 % If there are no known problems, the plant is ok.
+goalRequirements(plantOk, [check(coolantTemperature)]) :- value(coolantTemperature, unknown), !.
 goalRequirements(plantOk, [doNothing]) :- ok(coolantTemperature).
-
 goalRequirements(plantOk, [fixCoolantTemperature]) :- high(coolantTemperature), assert(targetField(coolantTemperature)).
 
 % This is the main plan for high coolant temperature 
 %% JB: The goalRequirements term links the goal to the plan substeps. Do you mean here to make the goal active 
 %% under these circumstances or to specify substeps? 
+goalRequirements(fixCoolantTemperature, [check(waterPressure)]) :- value(waterPressure, unknown), !.
 goalRequirements(fixCoolantTemperature, [fixWaterPressure]) :- low(waterPressure).
 goalRequirements(fixCoolantTemperature) :- high(containmentTemperature), assert(targetField(containmentTemperature)).
 goalRequirements(fixCoolantTemperature) :- high(coreExitTemperature), assert(targetField(coreExitTemperature)).
@@ -152,6 +154,7 @@ goalRequirements(fixCoreExitTemperature) :- [try(deployAuxiliaryCoolantRods, on)
 %   check(coreExitTemperature), check(coolantTemperature) emergencyShutdown].
 
 % New version that uses model envisionment
+goalRequirements(fixWaterPressure, [checkSystem1]) :- needCheckSystem1.  % Creates a dummy call out to emocog
 goalRequirements(fixWaterPressure, [emergencyBypassPump]) :- preferPlan([emergencyBypassPump],[emergencyPump], []), !.
 goalRequirements(fixWaterPressure, [emergencyPump]).
    
@@ -186,8 +189,17 @@ goalRequirements(try2(Object,Value), [set(Object,Value), check(TargetField)]) :-
 % Note that beliefs for check(Field) also need a belief rate (believability function)
 % *Could also be used to update emotion-based values
 
-updateBeliefs(check(Field),Value) :- !, retractall(value(Field,_)), assert(value(Field,Value)).
-updateBeliefs(set(Field,Value),1) :- !, retractall(value(Field,_)), assert(value(Field,Value)).  % Note success of setting a value
+% New 6/10/13: every other action leads to needCheckSystem1 being asserted, to force the system to check with 
+% emoCog before doing the next thing.
+
+updateBeliefs(check(Field),Value) :- !, retractall(value(Field,_)), assert(value(Field,Value)), assert(needCheckSystem1).
+updateBeliefs(set(Field,Value),1) :- !, retractall(value(Field,_)), assert(value(Field,Value)), assert(needCheckSystem1).  % Note success of setting a value
+
+% checkSystem1 returns a list of nodes and strengths which are asserted to system1
+updateBeliefs(checkSystem1, []) :- retract(needCheckSystem1).  % will be re-asserted after taking another primitive action
+updateBeliefs(checkSystem1, [(Node,Strength)|Rest]) :- 
+  retractall(system1Fact(Node,_)), assert(system1Fact(Node,Strength)), updateBeliefs(checkSystem1, Rest).
+
 updateBeliefs(_,_).  % Do nothing with any other action result pair
 
 %%% -----------------------------------------------------------------------
@@ -323,6 +335,8 @@ takeAction(set(_,_)) :- preferPlan([Action],[],[buildWorld]).
 % These are the output functions to Java perceive or execute.
 primitiveAction(check(_)). % Checking a value is a primitive action, so it gets sent to the 'body' and will yield a return result.
 primitiveAction(set(_,_)). % likewise setting a value
+
+primitiveAction(checkSystem1).  % Dummy primitive action that gets intercepted and sent to emocog to create an external system 1
 
 % These are for the new test
 primitiveAction(emergencyBypassPump).
