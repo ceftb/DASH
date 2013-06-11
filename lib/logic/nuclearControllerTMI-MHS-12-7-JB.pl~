@@ -38,7 +38,7 @@
 % Definitions for objects (note the consequences belong in the world simulator, a different program in this model).
 
 low(Object)  :- value(Object,X), acceptableRange(Object,Min,_), X < Min.
-high(Object) :- value(Object,X), acceptableRange(Object,_,Max), X > Max.
+high(Object) :- value(Object,X), acceptableRange(Object,_,Max), X < Max.
 ok(Object)   :- value(Object,X), acceptableRange(Object,Min,Max), X >= Min, X =< Max.
 
 acceptableRange(coolantTemperature, 275, 475).
@@ -53,10 +53,10 @@ relevant(coolantMakeupFlow) :- value(coolantLeak, yes).
 
 % Some initial states
 
-value(coolantTemperature, 810).  % high.
+value(coolantTemperature, 405).
 value(reactorCoolantPump, unknown).  % Could have the unknown values be derived from having no declared value.
 
-value(waterPressure, 8).  % low
+value(waterPressure, 15).
 value(waterPump, unknown).
 value(reliefValve, unknown).
 value(emergencyPipeRerouting, unknown).
@@ -100,7 +100,7 @@ subGoal(openReliefValve).
 subGoal(emergencyPipeRerouting).
 subGoal(emergencyWaterRelease).
 subGoal(emergencySteamRelease).
-%subGoal(emergencyPump).  % Made primitive for test
+subGoal(emergencyPump).
 
 subGoal(fixCoreExitTemperature).
 subGoal(deployAuxiliaryCoolingRods).
@@ -134,7 +134,6 @@ goalRequirements(plantOk, [fixCoolantTemperature]) :- high(coolantTemperature), 
 % This is the main plan for high coolant temperature 
 %% JB: The goalRequirements term links the goal to the plan substeps. Do you mean here to make the goal active 
 %% under these circumstances or to specify substeps? 
-goalRequirements(fixCoolantTemperature, [fixWaterPressure]) :- low(waterPressure).
 goalRequirements(fixCoolantTemperature) :- high(containmentTemperature), assert(targetField(containmentTemperature)).
 goalRequirements(fixCoolantTemperature) :- high(coreExitTemperature), assert(targetField(coreExitTemperature)).
 goalRequirements(fixCoolantTemperature) :- high(waterPressure), assert(targetField(waterPressure)).
@@ -150,12 +149,8 @@ goalRequirements(fixContainmentTemperature) :-
 goalRequirements(fixCoreExitTemperature) :- [try(deployAuxiliaryCoolantRods, on), check(coreExitTemperature), check(coolantTemperature)]. 
 %   try(unscheduledFuelAddition, on), 
 %   check(coreExitTemperature), check(coolantTemperature) emergencyShutdown].
-
-% New version that uses model envisionment
-goalRequirements(fixWaterPressure, [emergencyBypassPump]) :- preferPlan([emergencyBypassPump],[emergencyPump], []), !.
-goalRequirements(fixWaterPressure, [emergencyPump]).
    
-%goalRequirements(fixWaterPressure) :- [try(turnPumpOn, on), check(waterPressure), check(coolantTemperature)].
+goalRequirements(fixWaterPressure) :- [try(turnPumpOn, on), check(waterPressure), check(coolantTemperature)].
 %   , try(openReliefValve, on), 
 %   check(waterPressure), check(coolantTemperature), try(emergencyPipeRerouting, on),
 %   check(waterPressure), check(coolantTemperature), try(emergencyWaterRelease, on),
@@ -227,20 +222,6 @@ mentalModel([correct]).
 % I'm thinking these should actually all be addSets, since they all discuss direct consequences of an action and few
 % effects are shared across actions. See below.
 
-% Ok, these are the addSets for the alternate beliefs. Baby steps.
-
-addSets(emergencyBypassPump, _, [[1.0, emergencyBypassPump]]) :- system1(pipeRupture), !.
-addSets(emergencyBypassPump, _, [[1.0, emergencyBypassPump, bad]]).
-
-addSets(emergencyPump, _, [[1.0, emergencyPump, bad]]) :- system1(pipeRupture), !.
-addSets(emergencyPump, _, [[1.0, emergencyPump]]).
-
-% Test subconcious beliefs within consciousness.
-% If this is true, selects emergencyBypassPump, otherwise selects emergencyPump, based on projection.
-%system1(pipeRupture).
-
-system1(nothing).  % There has to be something, otherwise there's an error.
-
 % In a world where all readings are correct, we shut down the reactor.  
 %   Projected result: 100% chance of scrammed.
 %trigger(World, correct, [[scrammed|World]], 1) :- wasSet(SCRAMButton)]).
@@ -304,11 +285,6 @@ decisionTheoretic. % Have to say so.
 
 % Utility of various worlds under any model. I will assume one model at a time here.
 % mentalModel probability and trigger - state probability need to be associated with these utility functions too
-
-utility(World, -10) :- member(bad, World), !.
-utility(World, 5) :- member(emergencyBypassPump, World), !.
-utility(World, 5) :- member(emergencyPump, World), !.
-
 utility(World, -10) :- member(meltdown, World), !.
 utility(World, -5) :- member(irradiation, World), !.
 utility(World, -1) :- member(scrammed, World), !.
@@ -324,9 +300,5 @@ takeAction(set(_,_)) :- preferPlan([Action],[],[buildWorld]).
 % These are the output functions to Java perceive or execute.
 primitiveAction(check(_)). % Checking a value is a primitive action, so it gets sent to the 'body' and will yield a return result.
 primitiveAction(set(_,_)). % likewise setting a value
-
-% These are for the new test
-primitiveAction(emergencyBypassPump).
-primitiveAction(emergencyPump).
 
 

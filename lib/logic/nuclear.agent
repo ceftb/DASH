@@ -10,7 +10,7 @@ try2(V1,V2,V3):set(V1,V3), check(V2)
 
 Belief Updates:
 set(V1,V2):1: retractall(value(V1,_)), assert(value(V1,V2))
-check(V1):ue: retractall(value(V1,_)), assert(value(V1,Value))
+check(V1):Value: retractall(value(V1,_)), assert(value(V1,Value))
 
 Constants:
 value(V1,V3):value(waterPressure,-2)
