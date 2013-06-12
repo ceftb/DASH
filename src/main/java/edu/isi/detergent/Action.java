@@ -101,7 +101,7 @@ public class Action {
 	}
 	
 	private List<Object> emoCogStub() {
-		// For now, emoCog ignores the input (which will be a goal but is not yet) and returns a list of 'node' terms
+		// The current goal is available as arguments[0]. Emocog should return a list of alternating terms and strengths.
 		List<Object>result = new LinkedList<Object>();
 		result.add(new Atom("pipeRupture"));
 		result.add(0.4);    // try 0.6 to get different behavior from the cognitive part.

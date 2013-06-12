@@ -157,7 +157,7 @@ goalRequirements(fixCoreExitTemperature) :- [try(deployAuxiliaryCoolantRods, on)
 % New version that uses model envisionment
 goalRequirements(fixWaterPressure, [doNothing]) :- value(emergencyBypassPump,on), !.
 goalRequirements(fixWaterPressure, [doNothing]) :- value(emergencyPump,on), !.
-goalRequirements(fixWaterPressure, [checkSystem1]) :- needCheckSystem1.  % Creates a dummy call out to emocog
+goalRequirements(fixWaterPressure, [checkSystem1(fixWaterPressure)]) :- needCheckSystem1.  % Creates a dummy call out to emocog
 goalRequirements(fixWaterPressure, [set(emergencyBypassPump,on)]) :- preferPlan([emergencyBypassPump],[emergencyPump], []), !.
 goalRequirements(fixWaterPressure, [set(emergencyPump,on)]).
 
@@ -200,11 +200,11 @@ updateBeliefs(check(Field),Value) :- !, retractall(value(Field,_)), assert(value
 updateBeliefs(set(Field,Value),1) :- !, retractall(value(Field,_)), assert(value(Field,Value)), assert(needCheckSystem1).  % Note success of setting a value
 
 % checkSystem1 returns a list of nodes and strengths which are asserted to system1
-updateBeliefs(checkSystem1, end) :- !, retractall(needCheckSystem1).  % will be re-asserted after taking another primitive action
-updateBeliefs(checkSystem1, nodeList(Node,Strength,Rest)) :- 
+updateBeliefs(checkSystem1(_), end) :- !, retractall(needCheckSystem1).  % will be re-asserted after taking another primitive action
+updateBeliefs(checkSystem1(Goal), nodeList(Node,Strength,Rest)) :- 
   !, format('asserting ~w\n', [system1Fact(Node,Strength)]),
-  retractall(system1Fact(Node,_)), assert(system1Fact(Node,Strength)), updateBeliefs(checkSystem1, Rest).
-updateBeliefs(checkSystem1, X) :- format('unrecognized format in system 1 result: ~w\n', [X]).
+  retractall(system1Fact(Node,_)), assert(system1Fact(Node,Strength)), updateBeliefs(checkSystem1(Goal), Rest).
+updateBeliefs(checkSystem1(_), X) :- format('unrecognized format in system 1 result: ~w\n', [X]).
 
 updateBeliefs(_,_).  % Do nothing with any other action result pair
 
@@ -342,7 +342,7 @@ takeAction(set(_,_)) :- preferPlan([Action],[],[buildWorld]).
 primitiveAction(check(_)). % Checking a value is a primitive action, so it gets sent to the 'body' and will yield a return result.
 primitiveAction(set(_,_)). % likewise setting a value
 
-primitiveAction(checkSystem1).  % Dummy primitive action that gets intercepted and sent to emocog to create an external system 1
+primitiveAction(checkSystem1(_)).  % Dummy primitive action that gets intercepted and sent to emocog to create an external system 1
 
 
 
