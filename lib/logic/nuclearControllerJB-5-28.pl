@@ -196,9 +196,11 @@ updateBeliefs(check(Field),Value) :- !, retractall(value(Field,_)), assert(value
 updateBeliefs(set(Field,Value),1) :- !, retractall(value(Field,_)), assert(value(Field,Value)), assert(needCheckSystem1).  % Note success of setting a value
 
 % checkSystem1 returns a list of nodes and strengths which are asserted to system1
-updateBeliefs(checkSystem1, []) :- retractall(needCheckSystem1).  % will be re-asserted after taking another primitive action
+updateBeliefs(checkSystem1, []) :- !, retractall(needCheckSystem1).  % will be re-asserted after taking another primitive action
 updateBeliefs(checkSystem1, [node(Node,Strength)|Rest]) :- 
+  !, format('asserting ~w\n', [system1Fact(Node,Strength)]),
   retractall(system1Fact(Node,_)), assert(system1Fact(Node,Strength)), updateBeliefs(checkSystem1, Rest).
+updateBeliefs(checkSystem1, X) :- format('unrecognized format in system 1 result: ~w\n', [X]).
 
 updateBeliefs(_,_).  % Do nothing with any other action result pair
 
