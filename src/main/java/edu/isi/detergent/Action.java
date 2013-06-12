@@ -3,6 +3,9 @@
  ******************************************************************************/
 package edu.isi.detergent;
 
+import java.util.LinkedList;
+import java.util.List;
+
 import jpl.Atom;
 import jpl.Compound;
 import jpl.Term;
@@ -56,9 +59,11 @@ public class Action {
 				return 0;
 			}
 		}  else if ("check".equals(name)) {
-			return simulatorStub();
+			return simulatorCheckStub();
+		} else if ("set".equals(name)) {
+			return simulatorSetStub();
 		} else if ("checkSystem1".equals(name)) {
-			return emoCogStub();
+			return emoCogWrapper();
 		} else {
 			detergent.printOut("Performing " + this);
 		}
@@ -66,7 +71,7 @@ public class Action {
 		return successValue();
 	}
 	
-	public Object simulatorStub() {
+	public Object simulatorCheckStub() {
 		System.out.println("Running stub code to check a value from the simulator");
 		// Index into a set of pre-stored values
 		Object[][] values = {{"coolantTemperature", 800},
@@ -78,10 +83,29 @@ public class Action {
 		return -1;
 	}
 	
-	private Object emoCogStub() {
+	public int simulatorSetStub() {
+		System.out.println("Running stub code to set a value in the simulator");
+		// 1 means success, 0 means failure. The object being set is given by the string arguments[0].
+		return 1;
+	}
+	
+	private Term emoCogWrapper() {
+		// emo Cog returns an alternating list of terms and strengths as java doubles. This wrapper
+		// packages them into a linked-list-structured prolog predicate, because I'm having trouble passing prolog lists.
+		List<Object>wms = emoCogStub();
+		Term result = new Atom("end");
+		if (wms != null)
+			for (int i = 0;	 i < wms.size(); i += 2)
+				result = new Compound("nodeList", new Term[]{(Term)wms.get(i), new jpl.Float((Double) wms.get(i+1)), result});
+		return result;
+	}
+	
+	private List<Object> emoCogStub() {
 		// For now, emoCog ignores the input (which will be a goal but is not yet) and returns a list of 'node' terms
-		Term fact = new Atom("pipeRupture"), node = new Compound("node", new Term[]{fact, new jpl.Float(0.6)});
-		return new Term[]{fact};
+		List<Object>result = new LinkedList<Object>();
+		result.add(new Atom("pipeRupture"));
+		result.add(0.4);    // try 0.6 to get different behavior from the cognitive part.
+		return result;
 	}
 
 

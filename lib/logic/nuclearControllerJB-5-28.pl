@@ -64,6 +64,7 @@ value(emergencyPipeRerouting, unknown).
 value(emergencyWaterRelease, unknown).
 value(emergencySteamRelease, unknown).
 value(emergencyPump, unknown).
+value(emergencyBypassPump, unknown).  % Added for test 6/12/13
 
 value(coreExitTemperature, 375).
 value(auxiliaryCoolingRods, unknown).
@@ -154,9 +155,12 @@ goalRequirements(fixCoreExitTemperature) :- [try(deployAuxiliaryCoolantRods, on)
 %   check(coreExitTemperature), check(coolantTemperature) emergencyShutdown].
 
 % New version that uses model envisionment
+goalRequirements(fixWaterPressure, [doNothing]) :- value(emergencyBypassPump,on), !.
+goalRequirements(fixWaterPressure, [doNothing]) :- value(emergencyPump,on), !.
 goalRequirements(fixWaterPressure, [checkSystem1]) :- needCheckSystem1.  % Creates a dummy call out to emocog
-goalRequirements(fixWaterPressure, [emergencyBypassPump]) :- preferPlan([emergencyBypassPump],[emergencyPump], []), !.
-goalRequirements(fixWaterPressure, [emergencyPump]).
+goalRequirements(fixWaterPressure, [set(emergencyBypassPump,on)]) :- preferPlan([emergencyBypassPump],[emergencyPump], []), !.
+goalRequirements(fixWaterPressure, [set(emergencyPump,on)]).
+
    
 %goalRequirements(fixWaterPressure) :- [try(turnPumpOn, on), check(waterPressure), check(coolantTemperature)].
 %   , try(openReliefValve, on), 
@@ -196,8 +200,8 @@ updateBeliefs(check(Field),Value) :- !, retractall(value(Field,_)), assert(value
 updateBeliefs(set(Field,Value),1) :- !, retractall(value(Field,_)), assert(value(Field,Value)), assert(needCheckSystem1).  % Note success of setting a value
 
 % checkSystem1 returns a list of nodes and strengths which are asserted to system1
-updateBeliefs(checkSystem1, []) :- !, retractall(needCheckSystem1).  % will be re-asserted after taking another primitive action
-updateBeliefs(checkSystem1, [node(Node,Strength)|Rest]) :- 
+updateBeliefs(checkSystem1, end) :- !, retractall(needCheckSystem1).  % will be re-asserted after taking another primitive action
+updateBeliefs(checkSystem1, nodeList(Node,Strength,Rest)) :- 
   !, format('asserting ~w\n', [system1Fact(Node,Strength)]),
   retractall(system1Fact(Node,_)), assert(system1Fact(Node,Strength)), updateBeliefs(checkSystem1, Rest).
 updateBeliefs(checkSystem1, X) :- format('unrecognized format in system 1 result: ~w\n', [X]).
@@ -340,8 +344,5 @@ primitiveAction(set(_,_)). % likewise setting a value
 
 primitiveAction(checkSystem1).  % Dummy primitive action that gets intercepted and sent to emocog to create an external system 1
 
-% These are for the new test
-primitiveAction(emergencyBypassPump).
-primitiveAction(emergencyPump).
 
 
