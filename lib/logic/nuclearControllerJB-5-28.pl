@@ -206,6 +206,11 @@ updateBeliefs(checkSystem1(Goal), nodeList(Node,Strength,Rest)) :-
   retractall(system1Fact(Node,_)), assert(system1Fact(Node,Strength)), updateBeliefs(checkSystem1(Goal), Rest).
 updateBeliefs(checkSystem1(_), X) :- format('unrecognized format in system 1 result: ~w\n', [X]).
 
+% Values degrade when the agent does nothing
+updateBeliefs(doNothing,_) :- retractall(value(coolantTemperature,_)), assert(value(coolantTemperature,unknown)),
+	retractall(value(waterPressure,_)), assert(value(waterPressure,unknown)).
+
+
 updateBeliefs(_,_).  % Do nothing with any other action result pair
 
 %%% -----------------------------------------------------------------------
