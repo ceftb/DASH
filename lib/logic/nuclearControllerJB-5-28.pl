@@ -42,7 +42,7 @@ low(Object)  :- value(Object,X), acceptableRange(Object,Min,_), X < Min.
 high(Object) :- value(Object,X), acceptableRange(Object,_,Max), X > Max.
 ok(Object)   :- value(Object,X), acceptableRange(Object,Min,Max), X >= Min, X =< Max.
 
-acceptableRange(coolantTemperature, 275, 475).
+acceptableRange(coolantTemperature, -460, 475).
 acceptableRange(waterPressure, 10, 20).
 acceptableRange(coreExitTemperature, 275, 475).
 acceptableRange(containmentTemperature, 400, 800).
