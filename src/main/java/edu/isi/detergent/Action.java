@@ -3,6 +3,7 @@
  ******************************************************************************/
 package edu.isi.detergent;
 
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -71,22 +72,43 @@ public class Action {
 		return successValue();
 	}
 	
+	Object[][] values = {{"coolantTemperature", 800},
+			 {"waterPressure", 8},
+			 {"emergencySealantSpray", "off"}
+	};
+	static HashMap<String,Object> simulatorValue = new HashMap<String,Object>();
+	
 	public Object simulatorCheckStub() {
-		System.out.println("Running stub code to check a value from the simulator");
+		//System.out.println("Running stub code to check a value from the simulator");
 		// Index into a set of pre-stored values
-		Object[][] values = {{"coolantTemperature", 800},
-							 {"waterPressure", 8},
-		};
-		for (Object[] pair: values)
-			if (pair[0].equals(arguments[0]))
-				return pair[1];
+		runSimulatorStub();
+		if (simulatorValue.containsKey(arguments[0]))
+			return simulatorValue.get(arguments[0]);
 		return -1;
 	}
 	
 	public int simulatorSetStub() {
-		System.out.println("Running stub code to set a value in the simulator");
+		//System.out.println("Running stub code to set a value in the simulator");
+		runSimulatorStub();
+		simulatorValue.put(arguments[0], arguments[1]);  // WARNING - THIS WILL ALWAYS SET THE VALUE AS A STRING
 		// 1 means success, 0 means failure. The object being set is given by the string arguments[0].
 		return 1;
+	}
+	
+	/**
+	 * Gets called once for every set or check action and maintains some basic evolution.
+	 */
+	public void runSimulatorStub() {
+		// Initialize the values if necessary
+		if (simulatorValue.isEmpty())
+			for (Object[] pair: values)	
+				simulatorValue.put((String)pair[0], pair[1]);
+		else
+			simulatorValue.put("empty", "no");
+		// If the temperature is high but either the emergency pump or the emergency bypass pump are on, set the temperature to normal.
+		if ("on".equals(simulatorValue.get("emergencyBypassPump")) ||  "on".equals(simulatorValue.get("emergencyPump")))
+			simulatorValue.put("coolantTemperature", 375);
+		System.out.println("Stub simulator values are " + simulatorValue);
 	}
 	
 	private Term emoCogWrapper() {
@@ -104,7 +126,7 @@ public class Action {
 		// The current goal is available as arguments[0]. Emocog should return a list of alternating terms and strengths.
 		List<Object>result = new LinkedList<Object>();
 		result.add(new Atom("pipeRupture"));
-		result.add(0.4);    // try 0.6 to get different behavior from the cognitive part.
+		result.add(0.6);    // try 0.4 to get different behavior from the cognitive part.
 		return result;
 	}
 

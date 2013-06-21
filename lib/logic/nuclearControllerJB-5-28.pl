@@ -127,6 +127,7 @@ subGoal(SCRAMButton).
 
 subGoal(try(_,_)).
 subGoal(try2(_,_)).
+subgoal(try(_,_,_)).
 
 % If there are no known problems, the plant is ok.
 goalRequirements(plantOk, [check(coolantTemperature)]) :- value(coolantTemperature, unknown), !.
@@ -138,10 +139,10 @@ goalRequirements(plantOk, [fixCoolantTemperature]) :- high(coolantTemperature), 
 %% under these circumstances or to specify substeps? 
 goalRequirements(fixCoolantTemperature, [check(waterPressure)]) :- value(waterPressure, unknown), !.
 goalRequirements(fixCoolantTemperature, [fixWaterPressure]) :- low(waterPressure).
-goalRequirements(fixCoolantTemperature) :- high(containmentTemperature), assert(targetField(containmentTemperature)).
-goalRequirements(fixCoolantTemperature) :- high(coreExitTemperature), assert(targetField(coreExitTemperature)).
-goalRequirements(fixCoolantTemperature) :- high(waterPressure), assert(targetField(waterPressure)).
-goalRequirements(fixCoolantTemperature) :- emergencyShutdown.
+%goalRequirements(fixCoolantTemperature) :- high(containmentTemperature), assert(targetField(containmentTemperature)).
+%goalRequirements(fixCoolantTemperature) :- high(coreExitTemperature), assert(targetField(coreExitTemperature)).
+%goalRequirements(fixCoolantTemperature) :- high(waterPressure), assert(targetField(waterPressure)).
+%goalRequirements(fixCoolantTemperature) :- emergencyShutdown.
 
 % Followup plans (simplified to one step for now)
 goalRequirements(fixContainmentTemperature) :- 
@@ -158,10 +159,11 @@ goalRequirements(fixCoreExitTemperature) :- [try(deployAuxiliaryCoolantRods, on)
 goalRequirements(fixWaterPressure, [doNothing]) :- value(emergencyBypassPump,on), !.
 goalRequirements(fixWaterPressure, [doNothing]) :- value(emergencyPump,on), !.
 goalRequirements(fixWaterPressure, [checkSystem1(fixWaterPressure)]) :- needCheckSystem1.  % Creates a dummy call out to emocog
-goalRequirements(fixWaterPressure, [set(emergencyBypassPump,on)]) :- preferPlan([emergencyBypassPump],[emergencyPump], []), !.
+goalRequirements(fixWaterPressure, [try(emergencySealantSpray,on,emergencySealantSpray),set(emergencyBypassPump,on)]) 
+    :- preferPlan([emergencyBypassPump],[emergencyPump], []), !.
 goalRequirements(fixWaterPressure, [set(emergencyPump,on)]).
 
-   
+
 %goalRequirements(fixWaterPressure) :- [try(turnPumpOn, on), check(waterPressure), check(coolantTemperature)].
 %   , try(openReliefValve, on), 
 %   check(waterPressure), check(coolantTemperature), try(emergencyPipeRerouting, on),
@@ -182,6 +184,11 @@ goalRequirements(try(Object,Value), []). % Do nothing if the object isn't releva
 
 % If known but not the try value, set it and re-test the target field.
 goalRequirements(try2(Object,Value), [set(Object,Value), check(TargetField)]) :- targetField(TargetField).
+
+% Use try with three arguments to pass the targetfield (and also to avoid using the version above that seems to have bitrot).
+goalRequirements(try(Object,Value,Targetfield),[]) :- value(Targetfield,Value), !.
+goalRequirements(try(Object,Value,Targetfield),[check(Targetfield)]) :- value(Targetfield,unknown), !.
+goalRequirements(try(Object,Value,Targetfield),[set(Object,Value)]).
 
 %%% -----------------------------------------------------------------------
 
@@ -207,6 +214,7 @@ updateBeliefs(checkSystem1(Goal), nodeList(Node,Strength,Rest)) :-
 updateBeliefs(checkSystem1(_), X) :- format('unrecognized format in system 1 result: ~w\n', [X]).
 
 % Values degrade when the agent does nothing
+% (Turn off to have the agent slow down when there is nothing to do)
 updateBeliefs(doNothing,_) :- retractall(value(coolantTemperature,_)), assert(value(coolantTemperature,unknown)),
 	retractall(value(waterPressure,_)), assert(value(waterPressure,unknown)).
 
