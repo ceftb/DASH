@@ -1,0 +1,40 @@
+% Saved automatically by the Wizard
+Goals:
+doMail:mail(From,To,Subject,Text,Url,Type,DoNotRespond,Name)->respondToMessage(mail(From,To,Subject,Text,Url,Type,DoNotRespond,Name))
+doMail:email(ID),mailRead(ID,false)->processNextEmail(ID)
+doMail:report,doNothing
+respondToMessage(V1):executeAddEmail(From,To,Subject,Text,Url,Type,DoNotRespond,Name)
+processNextEmail(V1):system2Fact(ok(read(ID)))->printMessage('reading ~w ~w from ~w\n', [Type, ID, From]),readEmail(ID), decide(followLink(ID))|mailType(ID,Type), from(ID,From)
+readEmail(V1):myRetractall(mailRead(ID,_)), myAssert(mailRead(ID,true)), incr(numberRead)
+executeAddEmail(V1,V2,V3,V4,V5,V6,V7,V8):<code>
+
+Belief Updates:
+
+Constants:
+
+Clauses:
+MentalModels:hacker(burglar),hacker(vandal),virus(mischief),*,virus(crime)
+MentalModelAdd:
+followlink(ID):*:*: 0.5: followedLink(ID), 0.5: followedLink(ID), 
+MentalModelTrigger:
+hacker(burglar):compromised(_): 1.0: stolen(id), 
+hacker(vandal):compromised(_), !backedup(files), !deleted(files): 1.0: deleted(files), 
+virus(crime):compromised(_): 1.0: stolen(id), 
+virus(mischief):compromised(_), !backedup(files), !deleted(files): 1.0: deleted(files), 
+MentalModelUtility:
+stolen(_): -1.0
+deleted(files), !backedUp: -2.0
+followedLink(_): 0.5
+
+Rules:
+ok(read(ID)):mailType(ID,_):1.0
+ok(followLink(ID)):mailType(ID,ham):1.0
+ok(followLink(ID)):url(ID,_):-0.5
+ok(followLink(ID)):useService(Service) and recognizeService(Service, ID):0.8
+ok(followLink(ID)):url(ID,Url) and short(Url):0.4
+ok(followLink(ID)):doNotReply(ID):-0.6
+ok(followLink(ID)):nameAppears(ID,_):0.4
+ok(followLink(ID)):goodWord(Word) and hasString(ID, Word):0.5
+
+BaseRules:
+
