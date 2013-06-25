@@ -3,6 +3,12 @@
  ******************************************************************************/
 package edu.isi.detergent;
 
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+
+import jpl.Atom;
+import jpl.Compound;
 import jpl.Term;
 
 /**
@@ -53,12 +59,78 @@ public class Action {
 				lastActionName = "computer_applicationOpen";
 				return 0;
 			}
+		}  else if ("check".equals(name)) {
+			return simulatorCheckStub();
+		} else if ("set".equals(name)) {
+			return simulatorSetStub();
+		} else if ("checkSystem1".equals(name)) {
+			return emoCogWrapper();
 		} else {
 			detergent.printOut("Performing " + this);
 		}
 		lastActionName = name;
 		return successValue();
 	}
+	
+	Object[][] values = {{"coolantTemperature", 800},
+			 {"waterPressure", 8},
+			 {"emergencySealantSpray", "off"}
+	};
+	static HashMap<String,Object> simulatorValue = new HashMap<String,Object>();
+	
+	public Object simulatorCheckStub() {
+		//System.out.println("Running stub code to check a value from the simulator");
+		// Index into a set of pre-stored values
+		runSimulatorStub();
+		if (simulatorValue.containsKey(arguments[0]))
+			return simulatorValue.get(arguments[0]);
+		return -1;
+	}
+	
+	public int simulatorSetStub() {
+		//System.out.println("Running stub code to set a value in the simulator");
+		runSimulatorStub();
+		simulatorValue.put(arguments[0], arguments[1]);  // WARNING - THIS WILL ALWAYS SET THE VALUE AS A STRING
+		// 1 means success, 0 means failure. The object being set is given by the string arguments[0].
+		return 1;
+	}
+	
+	/**
+	 * Gets called once for every set or check action and maintains some basic evolution.
+	 */
+	public void runSimulatorStub() {
+		// Initialize the values if necessary
+		if (simulatorValue.isEmpty())
+			for (Object[] pair: values)	
+				simulatorValue.put((String)pair[0], pair[1]);
+		else
+			simulatorValue.put("empty", "no");
+		// If the temperature is high but either the emergency pump or the emergency bypass pump are on, set the temperature to normal.
+		if ("on".equals(simulatorValue.get("emergencyBypassPump")) ||  "on".equals(simulatorValue.get("emergencyPump")))
+			simulatorValue.put("coolantTemperature", 375);
+		System.out.println("Stub simulator values are " + simulatorValue);
+	}
+	
+	private Term emoCogWrapper() {
+		// emo Cog returns an alternating list of terms and strengths as java doubles. This wrapper
+		// packages them into a linked-list-structured prolog predicate, because I'm having trouble passing prolog lists.
+		List<Object>wms = emoCogStub();
+		Term result = new Atom("end");
+		if (wms != null)
+			for (int i = 0;	 i < wms.size(); i += 2)
+				result = new Compound("nodeList", new Term[]{(Term)wms.get(i), new jpl.Float((Double) wms.get(i+1)), result});
+		return result;
+	}
+	
+	private List<Object> emoCogStub() {
+		// The current goal is available as arguments[0]. Emocog should return a list of alternating terms and strengths.
+		List<Object>result = new LinkedList<Object>();
+		result.add(new Atom("pipeRupture"));
+		result.add(0.6);    // try 0.4 to get different behavior from the cognitive part.
+		return result;
+	}
+
+
 	
 	/**
 	 * If we are running this action as a stub, compute whether it succeeds. This allows testing random or other failures and testing
