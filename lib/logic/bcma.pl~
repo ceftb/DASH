@@ -34,8 +34,8 @@ protocol(Patient,
 % 'decide(A)' is a built-in goal that performs action A if 'ok(A)' is true.
 
 % If system 1 doesn't make a decision about whether an action is ok,
-% use envisionment (projection) to see if we prefer the plan.
-% WARNING: CURRENTLY ONLY WORKS WHEN THE ACTION IS THE FIRST STEP IN THE PLAN.
+% envision and see if we prefer the plan.
+% WARNING: ONLY WORKS WHEN THE ACTION IS THE FIRST STEP IN THE PLAN.
 system2Fact(ok(performInPlan(Action,[Action|Rest]))) :- 
 	incr(envision), preferPlan([Action|Rest],Rest,[]).
 

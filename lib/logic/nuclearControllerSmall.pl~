@@ -130,17 +130,14 @@ subGoal(try2(_,_)).
 subgoal(try(_,_,_)).
 
 % If there are no known problems, the plant is ok.
-goalRequirements(plantOk, [check(coolantTemperature)]) 
-    :- value(coolantTemperature, unknown), !.
+goalRequirements(plantOk, [check(coolantTemperature)]) :- value(coolantTemperature, unknown), !.
 goalRequirements(plantOk, [doNothing]) :- ok(coolantTemperature).
-goalRequirements(plantOk, [fixCoolantTemperature]) 
-    :- high(coolantTemperature), assert(targetField(coolantTemperature)).
+goalRequirements(plantOk, [fixCoolantTemperature]) :- high(coolantTemperature), assert(targetField(coolantTemperature)).
 
 % This is the main plan for high coolant temperature 
 %% JB: The goalRequirements term links the goal to the plan substeps. Do you mean here to make the goal active 
 %% under these circumstances or to specify substeps? 
-goalRequirements(fixCoolantTemperature, [check(waterPressure)]) 
-    :- value(waterPressure, unknown), !.
+goalRequirements(fixCoolantTemperature, [check(waterPressure)]) :- value(waterPressure, unknown), !.
 goalRequirements(fixCoolantTemperature, [fixWaterPressure]) :- low(waterPressure).
 
 % New version that uses model envisionment
