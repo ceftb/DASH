@@ -52,7 +52,7 @@ envisionOutcomes([Action|RestOfPlan], Model, World, Outcomes) :-
 
 % How to project an action from a list of sets of adds with weights.
 project(Action,Model,World,NextWorlds) :-
-  addSets(Action, Model, AddSets), 
+  addSets(Action, Model, World, AddSets), 
   combineAdds(World, AddSets, ActionWorlds),
   sformat(String, 'Project ~w on ~w to ~w', [Action, World, ActionWorlds]),
   retractall(modelSummary(_)),
