@@ -10,6 +10,7 @@
 
 :- dynamic(delivered/1).
 :- dynamic(field/2).
+:- dynamic(eMAR_Reviewed/1).
 
 goal(deliverMeds(_)).
 goalWeight(deliverMeds(_), 1).
@@ -52,7 +53,7 @@ primitiveAction(deliver(M,P)).
 primitiveAction(document(M,P)).
 
 
-mentalModel([nurse]).   % nurse or official
+mentalModel([official]).   % nurse or official
 
 % We need adds and deletes for each step in the plan and a utility model
 % for final outcomes.
@@ -114,6 +115,11 @@ trigger(World, _, [World], 0).  % by default, nothing happens
 % This means the agent chooses between alternate outcomes by which has the higher utility score.
 % At the moment there is no alternative.
 decisionTheoretic.
+
+
+% Changing beliefs based on reports about attempted actions
+updateBeliefs(eMAR_Review(Patient), 1) :- assert(eMAR_Reviewed(Patient)).
+updateBeliefs(_,_).
 
 
 % Copied from mailReader.pl
