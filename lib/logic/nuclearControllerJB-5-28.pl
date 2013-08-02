@@ -38,9 +38,9 @@
 
 % Definitions for objects (note the consequences belong in the world simulator, a different program in this model).
 
-low(Object)  :- value(Object,X), acceptableRange(Object,Min,_), X < Min.
-high(Object) :- value(Object,X), acceptableRange(Object,_,Max), X > Max.
-ok(Object)   :- value(Object,X), acceptableRange(Object,Min,Max), X >= Min, X =< Max.
+low(Attribute)  :- value(Attribute,X), acceptableRange(Attribute,Min,_), X < Min.
+high(Attribute) :- value(Attribute,X), acceptableRange(Attribute,_,Max), X > Max.
+ok(Attribute)   :- value(Attribute,X), acceptableRange(Attribute,Min,Max), X >= Min, X =< Max.
 
 acceptableRange(coolantTemperature, -460, 475).
 acceptableRange(waterPressure, 10, 20).

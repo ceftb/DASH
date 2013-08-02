@@ -16,12 +16,15 @@ goalWeight(deliverMeds(_), 1).
 
 % For now this will just consider the utility of performing the first
 % step. Will code later for all steps sequentially.
-goalRequirements(deliverMeds(Patient), [decide(performFirstStep(Plan))])
+goalRequirements(deliverMeds(Patient), 
+                 [decide(performFirstStep(Plan)),decidePerformRest(Plan)])
   :- onRoster(Patient), not(delivered(Patient)), protocol(Patient,Plan).
 
-goalRequirements(performFirstStep([Action|Rest]), 
-                 [Action,decide(performFirstStep(Rest))])
-  :- format('considering ~w in plan ~w\n',[Action,[Action|Rest]]).
+goalRequirements(performFirstStep([Action|Rest]), [Action,decide(performFirstStep(Rest))]).
+%  :- format('considering ~w in plan ~w\n',[Action,[Action|Rest]]).
+
+goalRequirements(decidePerformRest([]), [doNothing]).
+goalRequirements(decidePerformRest([H|R]),[decide(performFirstStep(R)),decidePerformRest(R)]).
 
 protocol(Patient, 
 	[eMAR_Review(Patient),
@@ -41,6 +44,7 @@ system2Fact(ok(performFirstStep([Action|Rest]))) :-
 	incr(envision), preferPlan([Action|Rest],Rest,[]).
 
 subGoal(performFirstStep(P)).
+subGoal(decidePerformRest(P)).
 primitiveAction(eMAR_Review(P)).
 primitiveAction(retrieveMeds(P,M)).
 primitiveAction(scan(X)).
@@ -48,7 +52,7 @@ primitiveAction(deliver(M,P)).
 primitiveAction(document(M,P)).
 
 
-mentalModel([official]).
+mentalModel([nurse]).   % nurse or official
 
 % We need adds and deletes for each step in the plan and a utility model
 % for final outcomes.

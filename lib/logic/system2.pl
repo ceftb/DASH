@@ -20,7 +20,8 @@ system2Fact(Fact) :-
 %% through the 'decide' goal. Should this be more explicitly BDI?
 goalRequirements(decide(Action), [Action])
   :- system2Fact(ok(Action)), !.
-goalRequirements(decide(Action), [doNothing]) :- format('Action ~w not chosen\n', [Action]).
+% this was doNothing, but I want to skip to the next step in the plan.
+goalRequirements(decide(Action), []) :- format('Action ~w not chosen\n', [Action]).
 
 subGoal(decide(_)).
 
@@ -34,7 +35,7 @@ subGoal(decide(_)).
 preferPlan(Plan1, Plan2, Initial) :-
   assert(modelSummary('')),
   mentalModel([Model|_]),
-  format('comparing ~w and ~w in model ~w\n', [Plan1, Plan2, Model]),
+  format('comparing ~w\n and ~w\n in model ~w\n', [Plan1, Plan2, Model]),
   envisionOutcomes(Plan1, Model, Initial, Outcomes1), 
   envisionOutcomes(Plan2, Model, Initial, Outcomes2), !,
   prefer(Outcomes1, Outcomes2).
@@ -57,7 +58,7 @@ project(Action,Model,World,NextWorlds) :-
   sformat(String, 'Project ~w on ~w to ~w', [Action, World, ActionWorlds]),
   retractall(modelSummary(_)),
   assert(modelSummary(String)),
-  format(String),
+%  format(String),
   triggerWorlds(ActionWorlds, Model, NextWorlds, 1).    % last arg is the max number of steps to model.
 % Warning: currently dies for maxSteps > 1.
 
@@ -87,19 +88,21 @@ combineWeights(_,[],[]).
 % possible outcomes, treating the weight as a probability.
 prefer(O1, O2) :-
   decisionTheoretic, expectedUtility(O1, U1), expectedUtility(O2, U2), 
-  ((U1 > U2, format('Prefer ~w over ~w since ~w > ~w\n', [O1, O2, U1, U2])) ; 
-   (format('Prefer ~w over ~w since ~w <= ~w\n', [O2, O1, U1, U2]), fail)).
+  ((U1 > U2, format('Prefer ~w\n over ~w\n since ~w > ~w\n', [O1, O2, U1, U2])) ; 
+   (format('Prefer ~w\n over ~w\n since ~w <= ~w\n', [O2, O1, U1, U2]), fail)).
 
 expectedUtility([],0).
 expectedUtility([[Weight,World]|Rest],U) :- 
-  utility(World,FirstU), format('Utility of ~w is ~w\n', [World, FirstU]), expectedUtility(Rest,RestU), U is Weight * FirstU + RestU.
+  utility(World,FirstU), 
+  %format('Utility of ~w is ~w\n', [World, FirstU]), 
+  expectedUtility(Rest,RestU), U is Weight * FirstU + RestU.
 
 % Triggers store beliefs about exogenous acts during projection
 
 % Model n steps forward through triggers, or until the triggers come to a halt
 triggerWorlds(Worlds, Model, FinalWorlds, MaxSteps) :- 
   triggerAndCount(Worlds, Model, FinalWorlds, MaxSteps, NewWorldCount),
-  format('~w new worlds created in simulation\n', [NewWorldCount]).
+  (NewWorldCount is 0 ; format('~w new worlds created in simulation\n', [NewWorldCount])).
 
 % Trigger one step looks for triggers for each world in the set. The fourth
 % argument is a count of the number of new worlds created.
@@ -113,7 +116,7 @@ triggerAndCount([[Weight,World]|T],Model,Worlds,MaxSteps,NewCount) :-
   retract(modelSummary(Old)),
   sformat(New, '~w|~w', [String, Old]),
   assert(modelSummary(New)),
-  format(String),
+  %format(String),
   append(TriggeredWorlds, Rest, Worlds),
   NewCount is OneNewCount + RestNewCount.
 
