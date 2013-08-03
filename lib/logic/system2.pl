@@ -37,7 +37,10 @@ preferPlan(Plan1, Plan2, Initial) :-
   mentalModel([Model|_]),
   format('comparing ~w\n and ~w\n in model ~w\n', [Plan1, Plan2, Model]),
   envisionOutcomes(Plan1, Model, Initial, Outcomes1), 
-  envisionOutcomes(Plan2, Model, Initial, Outcomes2), !,
+%  format('~w leads to ~w\n', [Plan1, Outcomes1]),
+  envisionOutcomes(Plan2, Model, Initial, Outcomes2), 
+%  format('~w leads to ~w\n', [Plan2, Outcomes2]),
+  !,
   prefer(Outcomes1, Outcomes2).
 
 % The envisioned outcomes are a weighted set of possible outcomes. Each possible outcome
@@ -102,7 +105,7 @@ expectedUtility([[Weight,World]|Rest],U) :-
 % Model n steps forward through triggers, or until the triggers come to a halt
 triggerWorlds(Worlds, Model, FinalWorlds, MaxSteps) :- 
   triggerAndCount(Worlds, Model, FinalWorlds, MaxSteps, NewWorldCount),
-  (NewWorldCount is 0 ; format('~w new worlds created in simulation\n', [NewWorldCount])).
+  (NewWorldCount is 0, ! ; format('~w new worlds created in simulation\n', [NewWorldCount])).
 
 % Trigger one step looks for triggers for each world in the set. The fourth
 % argument is a count of the number of new worlds created.

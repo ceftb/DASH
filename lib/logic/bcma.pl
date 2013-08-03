@@ -8,9 +8,8 @@
 :- style_check(-singleton).
 :- style_check(-discontiguous).
 
-:- dynamic(delivered/1).
 :- dynamic(field/2).
-:- dynamic(eMAR_Reviewed/1).
+:- dynamic(initialWorld/1).
 
 goal(deliverMeds(_)).
 goalWeight(deliverMeds(_), 1).
@@ -19,9 +18,10 @@ goalWeight(deliverMeds(_), 1).
 % step. Will code later for all steps sequentially.
 goalRequirements(deliverMeds(Patient), 
                  [decide(performFirstStep(Plan)),decidePerformRest(Plan)])
-  :- onRoster(Patient), not(delivered(Patient)), protocol(Patient,Plan).
+  :- onRoster(Patient), initialWorld(World), not(inWorld(deliver(_,Patient),World)), protocol(Patient,Plan), !.
+goalRequirements(deliverMeds(_),[doNothing]).
 
-goalRequirements(performFirstStep([Action|Rest]), [Action,decide(performFirstStep(Rest))]).
+goalRequirements(performFirstStep([Action|Rest]), [Action]). %,decide(performFirstStep(Rest))]).
 %  :- format('considering ~w in plan ~w\n',[Action,[Action|Rest]]).
 
 goalRequirements(decidePerformRest([]), [doNothing]).
@@ -42,7 +42,11 @@ protocol(Patient,
 % use envisionment (projection) to see if we prefer the plan.
 % WARNING: CURRENTLY ONLY WORKS WHEN THE ACTION IS THE FIRST STEP IN THE PLAN.
 system2Fact(ok(performFirstStep([Action|Rest]))) :- 
-	incr(envision), preferPlan([Action|Rest],Rest,[]).
+	incr(envision), initialWorld(I), preferPlan([Action|Rest],Rest,I).
+
+% Begin with just an empty initial world. As we get the reports of actions
+% we fill the world so that actions don't get repeated.
+initialWorld([]).
 
 subGoal(performFirstStep(P)).
 subGoal(decidePerformRest(P)).
@@ -53,7 +57,7 @@ primitiveAction(deliver(M,P)).
 primitiveAction(document(M,P)).
 
 
-mentalModel([official]).   % nurse or official
+mentalModel([nurse]).   % nurse or official
 
 % We need adds and deletes for each step in the plan and a utility model
 % for final outcomes.
@@ -63,44 +67,44 @@ mentalModel([official]).   % nurse or official
 
 % In the 'official' model, everything happens as per the manual.
 
-addSets(eMAR_Review(Patient), official, _,
-	[[1.0, eMAR_Reviewed(Patient)]]).
-
-addSets(retrieveMeds(Patient,Meds), official, _,
-        [[1.0, haveMeds(Patient,Meds)]]).
-
-addSets(scan(X), official, _, [[1.0, scanned(X)]]).
-
-% projecting through deliver() will fail if haveMeds() is not true
-addSets(deliver(Meds,Patient),   official, World, [[1.0, delivered(Meds, Patient)]])
-  :- member(haveMeds(Patient,Meds), World).
+% projecting through deliver() will have no effect if haveMeds() is not true
+addSets(deliver(Meds,Patient),   official, World, 
+                                 [[1.0, performed(deliver(Meds, Patient))]])
+  :- inWorld(retrieveMeds(Patient,Meds), World), !.
+addSets(deliver(Meds,Patient),   official, World, [[1.0]]) :- !.  % otherwise nothing happens
 
 % In the 'official' model, must have scanned in the appropriate place etc. to document.
-addSets(document(Meds, Patient), official, World, [[1.0, documented(Meds, Patient)]]) 
-  :- member(eMAR_Reviewed(Patient), World),
-     member(scanned(Patient), World),
-     member(scanned(Meds), World), !.
+addSets(document(Meds, Patient), official, World, [[1.0, performed(document(Meds, Patient))]]) 
+  :- inWorld(eMAR_Review(Patient), World),
+     inWorld(scan(Patient), World),
+     inWorld(scan(Meds), World), !.
 % Otherwise, projection should not fail, or so will comparing the plans
-addSets(document(Meds, Patient), official, World, [[1.0]]).
+addSets(document(Meds, Patient), official, World, [[1.0]]) :- !.
 
 
 % Differences for the individual's model: documenting does not require the eMAR review (or scanning).
 % Leaving scanning in for now because I want to alter the probabilities of the different outcomes for that.
 
-addSets(document(Meds, Patient), nurse, World, [[1.0, documented(Meds, Patient)]]) 
-  :- member(scanned(Patient), World),
-     member(scanned(Meds), World), !.
+addSets(document(Meds, Patient), nurse, World, [[1.0, performed(document(Meds, Patient))]]) 
+  :- inWorld(scan(Patient), World),
+     inWorld(scan(Meds), World), !.
 
 % Otherwise, the nurse model performs like the official one
-addSets(Action, nurse, World, Sets) :- addSets(Action, official, World, Sets).
+addSets(Action, nurse, World, Sets) :- addSets(Action, official, World, Sets), !.
 
+
+% By default we simply add the fact that the action was performed. A default is needed for simulation
+% to work and this setting is used in most of the cases.
+addSets(Action,_,_,[[1.0, performed(Action)]]).
 
 % We don't currently check which patient meds were delivered to, since
 % the scenario only deals with one. Since the utility predicate doesn't
 % test this we will need to maintain the current patient on focus as the
 % goal tree builds up.
-utility(W,U) :- member(delivered(M,P),W), member(documented(M,P),W), !, sumActionCost(W,Cost), U is 100 - Cost.
+utility(W,U) :- inWorld(deliver(M,P),W), inWorld(document(M,P),W), !, sumActionCost(W,Cost), U is 100 - Cost.
 utility(W,U) :- sumActionCost(W,Cost), U is 0 - Cost.
+
+inWorld(Action, World) :- member(performed(Action), World).
 
 sumActionCost([],0).
 sumActionCost([performed(A)|R],S) :- !, cost(A,C), sumActionCost(R,O), S is C + O.
@@ -110,7 +114,7 @@ sumActionCost([H|R],S) :- sumActionCost(R,S).
 cost(_,5).
 
 % Similarly you must have a trigger to avoid a crash.
-trigger(World, _, [World], 0).  % by default, nothing happens
+trigger(World, _, [World], 0).  % by default, nothing happens when a world enters a particular state.
 
 % This means the agent chooses between alternate outcomes by which has the higher utility score.
 % At the moment there is no alternative.
@@ -118,14 +122,20 @@ decisionTheoretic.
 
 
 % Changing beliefs based on reports about attempted actions
-updateBeliefs(eMAR_Review(Patient), 1) :- assert(eMAR_Reviewed(Patient)).
+%updateBeliefs(eMAR_Review(Patient), 1) :- addToWorld(eMAR_Reviewed(Patient)), !.
+%updateBeliefs(retrieveMeds(Patient, Meds), 1) :- addToWorld(haveMeds(Patient, Meds)), !.
+%updateBeliefs(scan(X), 1) :- addToWorld(scanned(X)), !.
+% Tell the agent the action was already performed in the initial state so that utility analysis will work.
+updateBeliefs(Action,1) :- addToWorld(performed(Action)), !.
 updateBeliefs(_,_).
 
+addToWorld(Fact) :- initialWorld(I), retract(initialWorld(I)), assert(initialWorld([Fact|I])), assert(Fact).
 
 % Copied from mailReader.pl
 incr(Fieldname) :- field(Fieldname,N), New is N + 1, retractall(field(Fieldname,_)), assert(field(Fieldname,New)).
 
 field(envision, 0).
 
+% Initial goals
 onRoster(joe).
 requiredMeds(joe, [percocet]).

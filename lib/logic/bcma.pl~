@@ -10,17 +10,22 @@
 
 :- dynamic(delivered/1).
 :- dynamic(field/2).
+:- dynamic(eMAR_Reviewed/1).
 
 goal(deliverMeds(_)).
 goalWeight(deliverMeds(_), 1).
 
 % For now this will just consider the utility of performing the first
 % step. Will code later for all steps sequentially.
-goalRequirements(deliverMeds(Patient), [decide(performInPlan(A,[A|Rest]))])
-  :- onRoster(Patient), not(delivered(Patient)), protocol(Patient,[A|Rest]).
+goalRequirements(deliverMeds(Patient), 
+                 [decide(performFirstStep(Plan)),decidePerformRest(Plan)])
+  :- onRoster(Patient), not(delivered(Patient)), protocol(Patient,Plan).
 
-goalRequirements(performInPlan(Action,Plan), [Action])
-  :- format('considering ~w in plan ~w\n',[Action,Plan]).
+goalRequirements(performFirstStep([Action|Rest]), [Action,decide(performFirstStep(Rest))]).
+%  :- format('considering ~w in plan ~w\n',[Action,[Action|Rest]]).
+
+goalRequirements(decidePerformRest([]), [doNothing]).
+goalRequirements(decidePerformRest([H|R]),[decide(performFirstStep(R)),decidePerformRest(R)]).
 
 protocol(Patient, 
 	[eMAR_Review(Patient),
@@ -34,12 +39,13 @@ protocol(Patient,
 % 'decide(A)' is a built-in goal that performs action A if 'ok(A)' is true.
 
 % If system 1 doesn't make a decision about whether an action is ok,
-% envision and see if we prefer the plan.
-% WARNING: ONLY WORKS WHEN THE ACTION IS THE FIRST STEP IN THE PLAN.
-system2Fact(ok(performInPlan(Action,[Action|Rest]))) :- 
+% use envisionment (projection) to see if we prefer the plan.
+% WARNING: CURRENTLY ONLY WORKS WHEN THE ACTION IS THE FIRST STEP IN THE PLAN.
+system2Fact(ok(performFirstStep([Action|Rest]))) :- 
 	incr(envision), preferPlan([Action|Rest],Rest,[]).
 
-subGoal(performInPlan(A,P)).
+subGoal(performFirstStep(P)).
+subGoal(decidePerformRest(P)).
 primitiveAction(eMAR_Review(P)).
 primitiveAction(retrieveMeds(P,M)).
 primitiveAction(scan(X)).
@@ -47,7 +53,7 @@ primitiveAction(deliver(M,P)).
 primitiveAction(document(M,P)).
 
 
-mentalModel([nurse]).
+mentalModel([official]).   % nurse or official
 
 % We need adds and deletes for each step in the plan and a utility model
 % for final outcomes.
@@ -109,6 +115,11 @@ trigger(World, _, [World], 0).  % by default, nothing happens
 % This means the agent chooses between alternate outcomes by which has the higher utility score.
 % At the moment there is no alternative.
 decisionTheoretic.
+
+
+% Changing beliefs based on reports about attempted actions
+updateBeliefs(eMAR_Review(Patient), 1) :- assert(eMAR_Reviewed(Patient)).
+updateBeliefs(_,_).
 
 
 % Copied from mailReader.pl
