@@ -5,11 +5,28 @@
 % protocol, while the agent makes modifications according to its
 % personal utility structure.
 
+% Current status: considers dropping individual steps in sequence.
+% Want to consider substituting steps, re-ordering steps, particularly in
+% sequences of plans, (somehow) modifying steps to remove preconditions
+% or effects and adding (some kind of) step to defeat bad things or add good things.
+
+% In the current agent, the nurse skips scanning when p(document| no scan) >= 0.95
+
 :- style_check(-singleton).
 :- style_check(-discontiguous).
 
 :- dynamic(field/2).
 :- dynamic(initialWorld/1).
+
+:-consult('agentGeneral').
+
+% I use this as a goal to set on the command line so I can test the model repeatedly with one keystroke.
+toplevel :- testAgent(Plan, 7), format('~w\n', [Plan]).
+
+% Test a sequence of actions by mimicking the top-level agent - choosing an action, performing it and repeating.
+% BUG: DOESN'T SHOW THE LAST ACTION ALTHOUGH IT IS CONSIDERED IN THE COMPUTATION FOR ALL THE OTHER ACTIONS.
+testAgent([],0).
+testAgent([A|R],N) :- do(A), updateBeliefs(A,1), M is N - 1, testAgent(R,M).
 
 goal(deliverMeds(_)).
 goalWeight(deliverMeds(_), 1).
@@ -48,6 +65,8 @@ system2Fact(ok(performFirstStep([Action|Rest]))) :-
 % we fill the world so that actions don't get repeated.
 initialWorld([]).
 
+reset :- assert(initialWorld([])).
+
 subGoal(performFirstStep(P)).
 subGoal(decidePerformRest(P)).
 primitiveAction(eMAR_Review(P)).
@@ -78,16 +97,20 @@ addSets(document(Meds, Patient), official, World, [[1.0, performed(document(Meds
   :- inWorld(eMAR_Review(Patient), World),
      inWorld(scan(Patient), World),
      inWorld(scan(Meds), World), !.
+
 % Otherwise, projection should not fail, or so will comparing the plans
 addSets(document(Meds, Patient), official, World, [[1.0]]) :- !.
 
 
 % Differences for the individual's model: documenting does not require the eMAR review (or scanning).
-% Leaving scanning in for now because I want to alter the probabilities of the different outcomes for that.
+% The probability of successfully performing the task are higher with the scans, though.
 
 addSets(document(Meds, Patient), nurse, World, [[1.0, performed(document(Meds, Patient))]]) 
   :- inWorld(scan(Patient), World),
      inWorld(scan(Meds), World), !.
+
+addSets(document(Meds, Patient), nurse, World, [[0.95, performed(document(Meds, Patient))],[0.05]]).
+
 
 % Otherwise, the nurse model performs like the official one
 addSets(Action, nurse, World, Sets) :- addSets(Action, official, World, Sets), !.
