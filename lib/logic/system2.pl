@@ -21,7 +21,8 @@ system2Fact(Fact) :-
 goalRequirements(decide(Action), [Action])
   :- system2Fact(ok(Action)), !.
 % this was doNothing, but I want to skip to the next step in the plan.
-goalRequirements(decide(Action), []) :- format('Action ~w not chosen\n', [Action]).
+%goalRequirements(decide(Action), []) :- format('Action ~w not chosen\n', [Action]).
+goalRequirements(decide(Action), []).
 
 subGoal(decide(_)).
 
@@ -35,7 +36,7 @@ subGoal(decide(_)).
 preferPlan(Plan1, Plan2, Initial) :-
   assert(modelSummary('')),
   mentalModel([Model|_]),
-  format('comparing ~w\n and ~w\n in model ~w\n', [Plan1, Plan2, Model]),
+%  format('\ncomparing ~w\n and ~w\n in model ~w\n', [Plan1, Plan2, Model]),
   envisionOutcomes(Plan1, Model, Initial, Outcomes1), 
 %  format('~w leads to ~w\n', [Plan1, Outcomes1]),
   envisionOutcomes(Plan2, Model, Initial, Outcomes2), 
@@ -91,8 +92,9 @@ combineWeights(_,[],[]).
 % possible outcomes, treating the weight as a probability.
 prefer(O1, O2) :-
   decisionTheoretic, expectedUtility(O1, U1), expectedUtility(O2, U2), 
-  ((U1 > U2, format('Prefer ~w\n over ~w\n since ~w > ~w\n', [O1, O2, U1, U2])) ; 
-   (format('Prefer ~w\n over ~w\n since ~w <= ~w\n', [O2, O1, U1, U2]), fail)).
+%  ((U1 > U2, format('Prefer ~w\n over ~w\n since ~w > ~w\n', [O1, O2, U1, U2])) ; 
+%   (format('Prefer ~w\n over ~w\n since ~w <= ~w\n', [O2, O1, U1, U2]), fail)).
+  U1 > U2.
 
 expectedUtility([],0).
 expectedUtility([[Weight,World]|Rest],U) :- 

@@ -10,6 +10,7 @@ import java.util.List;
 import jpl.Atom;
 import jpl.Compound;
 import jpl.Term;
+import jpl.Util;
 
 /**
  * An action that the agent can take
@@ -65,12 +66,22 @@ public class Action {
 			return simulatorSetStub();
 		} else if ("checkSystem1".equals(name)) {
 			return emoCogWrapper();
+		} else if ("logIn".equals(name)) {
+			return 1;   // avoid the generic result to delete 'loggedIn'.
 		} else {
 			detergent.printOut("Performing " + this);
 		}
 		lastActionName = name;
-		return successValue();
+		//return successValue();
+		// Test out adding changes to the world by returning a list of commands including to delete that the agent is logged in. 
+		// This is currently specific to the 
+		// BCMA agent and we either need a way to either test for the agent involved or should make this the general approach
+		return Util.termArrayToList(new Term[]{new Compound("del", new Term[]{new Atom("loggedIn")})});
+		// can we return the empty list? Yup.
+		//return Util.termArrayToList(new Term[]{});
 	}
+	
+	
 	
 	Object[][] values = {{"coolantTemperature", 800},
 			 {"waterPressure", 8},

@@ -19,6 +19,7 @@ public class CommServer {
 	public static int port = 4789;
 	public static boolean listening = true;
 	static HashMap<Integer,List<String>>messages = new HashMap<Integer,List<String>>();
+	static HashMap<String,String>variables = new HashMap<String,String>();
 	static long startTime = System.currentTimeMillis();
 	
 	/**
@@ -86,6 +87,16 @@ public class CommServer {
 				}
 			} else if (inputLine.equals("getTime")) {
 				return "" + (System.currentTimeMillis() - startTime);
+			} else if (inputLine.startsWith("set")) {    // The next two commands implement a variable where agents can communicate behavior
+				String[] words = inputLine.split(" ");
+				variables.put(words[1], words[2]);
+				return "1";
+			} else if (inputLine.startsWith("get")) {
+				String[] words = inputLine.split(" ");
+				if (variables.containsKey(words[1]))
+					return variables.get(words[1]);
+				else
+					return "NoVal";
 			} else
 				return "what?";
 		}
