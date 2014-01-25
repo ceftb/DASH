@@ -25,3 +25,20 @@ argsEqual(A, B, K)
 
 argsEqual(A, B, 0)
     :- functor(A, X, N), functor(B, Y, N).
+
+%%%% generates 1 with provided probability
+
+chooseWithProbability(P, 1)
+    :- X is random_float, X < P, !.
+
+chooseWithProbability(P, 0).
+
+%%%% choose an integer in a given range with pseudo-uniform distribution
+
+%%%% this is a bit flawed... e.g.: if Min = 0, Max = 2, 0 will appear with prob 1/4, 1 will appear with prob 1/2, 2 will appear with prob 1/4
+% chooseInRange(Min, Max, Result)
+% :- Difference is Max - Min, X is random_float, Offset is round(X * Difference), Result is Min + Offset.
+
+%%%% fixed version
+chooseInRange(Min, Max, Result)
+:- Min =< Max, DifferencePlusOne is Max - Min + 1, X is random_float, Offset is floor(X * DifferencePlusOne), Result is Min + Offset.
