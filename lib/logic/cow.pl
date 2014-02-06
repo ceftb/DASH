@@ -1,6 +1,12 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+% IMPORTANT additions that need to be made:
+
+% - allow for actions to be interruptible
+% - make time continuous (can give actions non-integer durations and invoke global actions at any time-- e.g. power outage-- that leads agents to reasses actions... this would work in conjunction with interruptibly of actions)
+% - add more depth to users via attributes
+
 % Workaround Prediction in a Medical Setting
 
 % brief usage notes:
@@ -25,6 +31,7 @@
 % knowledge of workaround is acquired by seeing others employ it
 % likelihood of employing workaround is affected by the number of other users who employ it
 % scout's good/bad user idea... related: "good" users may log out other users. bad users may not.
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -75,7 +82,7 @@ runUserIteration(User) :- setUser(User), time(Time), completionTime(User, Comple
 
 %%%% set current user
 setUser(User)
-    :- retractall(runningUser(_)), assert(runningUser(User)).
+:- retractall(runningUser(_)), assert(runningUser(User)).
 
 %%%% update peak frustration
 updatePeakFrustration(User) :- peakFrustration(User, X), frustration(User, Y), Y > X, !, retract(peakFrustration(User, X)), assert(peakFrustration(User, Y)).
@@ -105,21 +112,6 @@ updateCOW(COW) :- sCupPlaced(COW), isLoggedInto(User, COW), not(isInteractingWit
 updateCOW(COW) :- isLoggedInto(User, COW), not(isInteractingWith(User, COW)), inactivityDuration(COW, Time), NewTime is Time + 1, timeoutDuration(Timeout), not(NewTime is Timeout), retract(inactivityDuration(COW, Time)), assert(inactivityDuration(COW, NewTime)), retract(netExposure(NetExposure)), NewNetExposure is NetExposure + 1, assert(netExposure(NewNetExposure)), ansi_format([fg(blue)], 'Incremented net exposure for COW ~w.\n', [COW]), !.
 updateCOW(COW) :- format('Trying to update COW ~w: we should not be here.\n', COW).
 
-%%%% one iteration - OLD
-%oneIteration :- time(Time), completionTime(CompletionTime), Time is CompletionTime + 1, format('updating beliefs.\n'), updateBeliefs, format('engaging system1.\n'), system1, format('choosing action.\n'), chooseAction(Action), updateFrustration(Action), incrementTime(1), actionTime(Action, ActionTime), incrementCompletionTime(User, ActionTime), completionTime(NewCompletionTime), format('performed action ~w with result 1 starting at time ~w. Will complete action at time ~w.\n', [Action, Time, NewCompletionTime]), updateSCup(Action), format('setting inactivity duration.\n'), setInactivityDuration(Action, ActionTime), format('adding action to world.\n'), addToWorld(Action), !.
-%oneIteration :- time(Time), completionTime(CompletionTime), Time =< CompletionTime, format('Still in process of carrying out last action.\n'), incrementTime(1), !.
-%oneIteration :- time(Time), completionTime(CompletionTime), Time >= CompletionTime, format('Idling.\n'), incrementTime(1), !.
-
-%%%% multiple iterations - OLD
-% kIterations(K) :- integer(K), K > 1, oneIteration, KMinusOne is K - 1, kIterations(KMinusOne).
-% kIterations(1) :- oneIteration.
-
-%%%% one iteration - OLD
-% oneIteration :- time(Time), completionTime(CompletionTime), Time is CompletionTime + 1, format('updating beliefs.\n'), updateBeliefs, format('engaging system1.\n'), system1, format('choosing action.\n'), chooseAction(Action), updateFrustration(Action), incrementTime(1), actionTime(Action, ActionTime), incrementCompletionTime(ActionTime), completionTime(NewCompletionTime), format('performed action ~w with result 1 starting at time ~w. Will complete action at time ~w.\n', [Action, Time, NewCompletionTime]), updateSCup(Action), format('setting inactivity duration.\n'), setInactivityDuration(Action, ActionTime), addToWorld(Action), !.
-% oneIteration :- time(Time), completionTime(CompletionTime), Time =< CompletionTime, format('Still in process of carrying out last action.\n'), incrementTime(1), !.
-% oneIteration :- time(Time), completionTime(CompletionTime), Time >= CompletionTime, format('Idling.\n'), incrementTime(1), !.
-% oneIteration :- format('Error: This statement should never appear.\n').
-
 %%%% update world based on the action.
 actionUpdate(logIntoCOW(User, COW)) :- retractall(isLoggedInto(User, COW)), assert(isLoggedInto(User, COW)), assert(isInteractingWith(User, COW)), retractall(inactivityDuration(COW, Time)), assert(inactivityDuration(COW, 0)).
 
@@ -145,10 +137,10 @@ actionUpdate(Action) :- format('could not update world with action because actio
 
 %%%% add action to world
 addToWorld(Action)
-    :- worldState(Current), retract(worldState(Current)), addToEnd(Current, performed(Action), NewWorld), assert(worldState(NewWorld)).
+:- worldState(Current), retract(worldState(Current)), addToEnd(Current, performed(Action), NewWorld), assert(worldState(NewWorld)).
 
 addToEnd([H|R], Item, [H|NewList])
-    :- addToEnd(R, Item, NewList).
+:- addToEnd(R, Item, NewList).
 
 addToEnd([], Item, [Item]).
 
@@ -159,20 +151,18 @@ netExposure(0).                 % net exposure (total time units that a user was
 
 % increment time by 1
 incrementTime(Amount)
-    :- time(Time), NewTime is Time + Amount, retract(time(X)), assert(time(NewTime)).
+:- time(Time), NewTime is Time + Amount, retract(time(X)), assert(time(NewTime)).
 
 % increment completion time
 incrementCompletionTime(User, IncrementTime)
 :- completionTime(User, CompletionTime), NewCompletionTime is CompletionTime + IncrementTime, retract(completionTime(User, X)), assert(completionTime(User, NewCompletionTime)).
 
-%incrementCompletionTime(IncrementTime)
-%:- completionTime(CompletionTime), NewCompletionTime is CompletionTime + IncrementTime, retract(completionTime(X)), assert(completionTime(NewCompletionTime)).
 
 % set the amount of time that the COW has been unattended
 setInactivityDuration(Action, ActionTime)
-    :- member(Action, [logIntoCOW(User, COW), useCOWAfterLogIn(User, COW), useCOWAfterMove(User, COW), useCOWAfterLeave(User, COW), useCOWAfterMoveSCup(User, COW), useCOWAfterLeaveSCup(User, COW)]), format('resetting inactivity duration.\n'), retract(inactivityDuration(Old)), assert(inactivityDuration(0)), !.
+:- member(Action, [logIntoCOW(User, COW), useCOWAfterLogIn(User, COW), useCOWAfterMove(User, COW), useCOWAfterLeave(User, COW), useCOWAfterMoveSCup(User, COW), useCOWAfterLeaveSCup(User, COW)]), format('resetting inactivity duration.\n'), retract(inactivityDuration(Old)), assert(inactivityDuration(0)), !.
 setInactivityDuration(Action, ActionTime)
-    :- retract(inactivityDuration(Old)), format('adding to inactivity duration for action ~w.\n', [Action]), NewDuration is Old  + ActionTime, assert(inactivityDuration(NewDuration)).
+:- retract(inactivityDuration(Old)), format('adding to inactivity duration for action ~w.\n', [Action]), NewDuration is Old  + ActionTime, assert(inactivityDuration(NewDuration)).
 
 % length of time it takes to carry out various actions
 actionTime(logIntoCOW(User, COW), ActionTime) :- ActionTime is 2.
@@ -194,14 +184,11 @@ inactivityIncrement(logOut(User, COW), Timeout) :- timeoutDuration(Timeout).
 
 %%%% relating to styrofoam cup placement
 
-%updateSCup(placeSCup(User, COW)) :- not(sCupPlaced(COW)), assert(sCupPlaced(COW)), !.
-%updateSCup(Action).
-
 updatePlan(Plan, NewPlan)
-    :- substituteOccurrences(useCOWAfterMove, useCOWAfterMoveSCup, Plan, NewPlan0), substituteOccurrences(useCOWAfterLeave, useCOWAfterLeaveSCup, NewPlan0, NewPlan).
+:- substituteOccurrences(useCOWAfterMove, useCOWAfterMoveSCup, Plan, NewPlan0), substituteOccurrences(useCOWAfterLeave, useCOWAfterLeaveSCup, NewPlan0, NewPlan).
 
 updateFrustration(User, Action)
-    :- actionFrustration(Action, ActionFrustration), !, modifyFrustration(User, ActionFrustration).
+:- actionFrustration(Action, ActionFrustration), !, modifyFrustration(User, ActionFrustration).
 
 actionFrustration(logIntoCOW(User, COW), 5).
 actionFrustration(useCOWAfterLogIn(User, COW), 2).
@@ -220,9 +207,6 @@ actionFrustration(useCOWAfterLeaveSCup(User, COW), 0).
 
 actionFrustration(takeBreak(User), 5).
 
-% frustration is initially 0. Certain actions may increase or decrease it.
-% frustration can never go below 0.
-%frustration(0).
 modifyFrustration(User, X) :- frustration(User, Y), Z is X + Y, Z < 0, !, retract(frustration(User, Y)), assert(frustration(User, 0)), format('changed frustration for user ~w from ~w to 0.\n', [User, Y, 0]).
 modifyFrustration(User, X) :- frustration(User, Y), Z is X + Y, !, retract(frustration(User, Y)), assert(frustration(User, Z)), format('changed frustration for user ~w from ~w to ~w.\n', [User, Y, Z]).
 
@@ -235,11 +219,11 @@ modifyFrustration(User, X) :- frustration(User, Y), Z is X + Y, !, retract(frust
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 createEnvironment(K, L, M)
-    :- createUsers(K),
-    createCOWs(L),
-    assert(numUsers(K)),
-    assert(numCOWs(L)),
-    assert(timeoutDuration(M)).  % duration of time before an automatic timeout occurs
+:- createUsers(K),
+createCOWs(L),
+assert(numUsers(K)),
+assert(numCOWs(L)),
+assert(timeoutDuration(M)).  % duration of time before an automatic timeout occurs
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -267,23 +251,10 @@ probabilityWorkaroundKnowledge(1).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 createUsers(K)
-    :- K > 1, KMinusOne is K - 1, createUser(KMinusOne), createUsers(KMinusOne).
+:- K > 1, KMinusOne is K - 1, createUser(KMinusOne), createUsers(KMinusOne).
+
 createUsers(1)
-    :- createUser(0).
-
-%createUser(0)
-%    :- assert(user(0)),                                 % create user
-%    assert(frustration(0, 0)),                          % user is not frustrated initially
-%    assert(sCupWorkaroundKnowledge(0)),                 % the 0th user is the only one who knows about the workaround
-%    assert(completionTime(User, -1)),                   % completion time of last action is -1
-%    assert(frustrationThreshold(User, 50)), !.          % when user frustration exceeds this, workaround will be employed
-
-% createUser(User)
-%    :- assert(user(User)),                              % create user
-%    assert(frustration(User, 0)),                       % initially, user is not frustrated
-%    assert(sCupWorkaroundKnowledge(User)),              % all users know about the workaround
-%    assert(completionTime(User, -1)),                   % completion time of latest action
-%    assert(frustrationThreshold(User, 50)).             % when user frustration exceeds this, workaround will be employed
+:- createUser(0).
 
 createUser(User)
 :- assert(user(User)),
@@ -314,14 +285,14 @@ initFrustrationThreshold(User) :- frustrationThresholdRange(Min, Max), chooseInR
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 createCOWs(K)
-    :- K > 1, KMinusOne is K - 1, createCOW(KMinusOne), createCOWs(KMinusOne).
+:- K > 1, KMinusOne is K - 1, createCOW(KMinusOne), createCOWs(KMinusOne).
 createCOWs(1)
-    :- createCOW(0).
+:- createCOW(0).
 
 createCOW(COW)
-    :- assert(cow(COW)),                   % create cow
-    assert(inactivityDuration(COW, 0)),    % how long the cow has been inactive
-    assert(charge(COW, 100)).              % how much charge the cow carries
+:- assert(cow(COW)),                   % create cow
+assert(inactivityDuration(COW, 0)),    % how long the cow has been inactive
+assert(charge(COW, 100)).              % how much charge the cow carries
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -341,12 +312,6 @@ createCOW(COW)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % goals
-
-% to do
-% add primitive actions:
-%    interact with patient
-%    plug COW battery charger into wall outlet
-%    incorporate spread of workaround knowledge... certain actions should provide knowledge of a workaround if it is seen
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -371,7 +336,7 @@ primitiveAction(moveCOW(User, COW)) :- runningUser(User).
 primitiveAction(useCOWAfterMove(User, COW)) :- runningUser(User).
 primitiveAction(leaveCOWUnattended(User, COW)) :- runningUser(User).
 primitiveAction(useCOWAfterLeave(User, COW)) :- runningUser(User).
-primitiveAction(logOut(User, COW)) :- runningUser(User).
+primitiveAction(logOut(User, COW)) :- runningUser(User), isLoggedInto(User, COW).
 
 primitiveAction(placeSCup(User, COW)) :- runningUser(User).
 
@@ -389,72 +354,29 @@ findCOW(I, COW) :- numCOWs(K), I < K, IPlusOne is I + 1, findCOW(IPlusOne, COW),
 % the work plan
 plan(User, [logIntoCOW(User, COW), useCOWAfterLogIn(User, COW), moveCOW(User, COW), useCOWAfterMove(User, COW), moveCOW(User, COW), useCOWAfterMove(User, COW), moveCOW(User, COW), useCOWAfterMove(User, COW), leaveCOWUnattended(User, COW), useCOWAfterLeave(User, COW), moveCOW(User, COW), useCOWAfterMove(User, COW),leaveCOWUnattended(User, COW), useCOWAfterLeave(User, COW), logOut(User, COW), takeBreak(User), logIntoCOW(User, COWB), useCOWAfterLogIn(User, COWB), moveCOW(User, COWB), useCOWAfterMove(User, COWB), moveCOW(User, COWB), useCOWAfterMove(User, COWB), moveCOW(User, COWB), useCOWAfterMove(User, COWB), leaveCOWUnattended(User, COWB), useCOWAfterLeave(User, COWB), moveCOW(User, COWB), useCOWAfterMove(User, COWB), logOut(User, COWB)]).
 
-%%%% use something besides preferPlan here
-
-% originally I used preferPlan... I decided to do something simpler for the time being (self note: I should get some feedback from Jim about what he thinks would be appropriate here)
-%goalRequirements(myDecide(performFirstStep([Action|Rest])), [placeSCup(User, COW), Action])
-%    :- runningUser(User), isLoggedInto(User, COW), not(sCupPlaced(COW)), sCupWorkaroundKnowledge(User), worldState(I), !, format('determining whether to place styrofoam cup before action ~w...\n', [Action]), updatePlan(Rest, UpdatedRest), preferPlan([placeSCup(User, COW), Action | UpdatedRest], [Action | Rest], I), ansi_format([fg(red)], 'I am frustrated and so I will place a styrofoam cup over the proximity sensor as my next action.\n', []).
-
 goalRequirements(myDecide(performFirstStep([Action|Rest])), [placeSCup(User, COW), Action])
-    :- runningUser(User), isLoggedInto(User, COW), not(sCupPlaced(COW)), sCupWorkaroundKnowledge(User), format('determining whether to place styrofoam cup before action ~w...\n', [Action]), frustration(User, Frustration), frustrationThreshold(User, Threshold), Frustration > Threshold, ansi_format([fg(red)], 'I am frustrated and so I will place a styrofoam cup over the proximity sensor as my next action.\n', []).
+:- runningUser(User), isLoggedInto(User, COW), not(sCupPlaced(COW)), sCupWorkaroundKnowledge(User), format('determining whether to place styrofoam cup before action ~w...\n', [Action]), frustration(User, Frustration), frustrationThreshold(User, Threshold), Frustration > Threshold, ansi_format([fg(red)], 'I am frustrated and so I will place a styrofoam cup over the proximity sensor as my next action.\n', []).
 
 goalRequirements(myDecide(performFirstStep([Action|Rest])), [Action]).
 
-%goalRequirements(myDecide(performFirstStep([Action|Rest])), [Action]).
-%    :- worldState(I), format('calling preferPlan starting with action ~w.\n', [Action]), preferPlan([Action|Rest], Rest, I), format('finished calling preferPlan\n').
-
-%goalRequirements(myDecide(Action), [])
-%    :- format('Action ~W not chosen and no other action chosen.\n', Action).
-
-% to do work we attempt to carry out the plan.
 goalRequirements(doWork, [myDecide(performFirstStep(Plan)), decidePerformRest(Plan)])
 :- format('checking plan...\n'), runningUser(User), !, plan(User, Plan), format('expanding goal requirements of doWork.\n').
 
-goalRequirements(doWork, [doNothing]). % i do not think we need this
-
-% perform first step of plan
 goalRequirements(performFirstStep([Action|Rest]), [Action])
-    :- format('expanding goal requirements for performFirstStep(~w|Rest) in plan ~w.\n', [Action,[Action|Rest]]).
-
-% if there are no more steps required to carry out the plan, we need not do anything.
-% else, we should decide whether or not to carry out the remaining steps.
-goalRequirements(decidePerformRest([]), [doNothing]).
-% goalRequirements(decidePerformRest([H|R]), [decide(performFirstStep(R)), decidePerformRest(R)]).
-
-
-% this is what i had before... but it was causing me issues with idling at the end
-% however, I reworked other parts of code and found these multitutde of goal reqs to be unnecssary.
-% so, i now reverted back to something more similar to the code that Jim imported-- decidePerformRest code.
-
-%goalRequirements(decidePerformRest([H|R]), [myDecide(performFirstStep(S)), decidePerformRest(S)])
-%    :- runningUser(User), isLoggedInto(User, COW), sCupPlaced(COW), updatePlan(R, S), !.
-%goalRequirements(decidePerformRest([H|R]), [myDecide(performFirstStep(R)), decidePerformRest(R)])
-%    :- runningUser(User), not(isLoggedInto(User, COW)).
-%goalRequirements(decidePerformRest([H|R]), [myDecide(performFirstStep(R)), decidePerformRest(R)])
-%    :- runningUser(User), isLoggedInto(User, COW), not(sCupPlaced(COW)).
+:- format('expanding goal requirements for performFirstStep(~w|Rest) in plan ~w.\n', [Action,[Action|Rest]]).
 
 goalRequirements(decidePerformRest([H|R]), [myDecide(performFirstStep(R)), decidePerformRest(R)]).
+goalRequirements(decidePerformRest([]), [doNothing]).
 
-% recall that decide(X) carries out the action X iff ok(X) is a fact
-% so, here, we are saying that system 2 tells us to perform an action if we prefer performing the action
-% to not performing the action. 
-%system2Fact(ok(performFirstStep([Action|Rest])))
-%		 :- initialWorld(I), format('calling preferPlan starting with action ~w.\n', [Action]), preferPlan([Action|Rest], Rest, I), format('finished calling preferPlan\n').
-%		 :- incr(envision), initialWorld(I), preferPlan([Action|Rest], Rest, I).
-
-% addSets... these specify what facts are added to the world
-% upon completion of actions. I do not completely understand how this works yet.
-% update... I moved the frustration modification in the result portion
-% addSets(Action, _, _, [[1.0, performed(Action)]]) :- format('addSets called with action ~w\n', [Action]).
 addSets(Action, _, _, [[1.0, performed(Action)]]).
 
 % utility measure... similar to regular utility measure but we also subtract off the frustration
 
 utility(World, Utility) :- runningUser(User), sumUtility(World, NetActionUtility), frustration(User, UserFrustration), Utility is NetActionUtility - UserFrustration.
 
-% placing a strofoam cup costs 60 
+% placing a strofoam cup costs 60
 actionCost(placeSCup(User, COW), 40)
-    :- !.
+:- !.
 
 % every other action costs 10
 actionCost(_, 10).
@@ -476,10 +398,3 @@ worldState([]).
 trigger(World, _, [World], 0).  % by default, nothing happens when a world enters a particular state.
 
 inWorld(Action, World) :- member(performed(Action), World).
-
-% cost is really frustration + cost
-sumUtility([], 0).
-%sumUtility([performed(A)|Rest], Utility) :- format('called recursive sum utility with head ~w, action ~w... utility at this depth is ~w.\n', [Head, Action, V - C - F + URest]), actionCost(A, C), actionFrustration(A, F), actionValue(A, V), !, sumUtility(Rest, URest), Utility is V - C - F + URest.
-%sumUtility([H|R],S) :- !, sumUtility(R, S), format('called recursive sum utility with head ~w but could not identify action at this depth... utility at this depth is ~w.\n', [H, S]).
-sumUtility([performed(A)|Rest], Utility) :- actionCost(A, C), actionFrustration(A, F), actionValue(A, V), !, sumUtility(Rest, URest), Utility is V - C - F + URest.
-sumUtility([H|R],S) :- !, sumUtility(R, S).

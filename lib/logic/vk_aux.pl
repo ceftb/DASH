@@ -42,3 +42,10 @@ chooseWithProbability(P, 0).
 %%%% fixed version
 chooseInRange(Min, Max, Result)
 :- Min =< Max, DifferencePlusOne is Max - Min + 1, X is random_float, Offset is floor(X * DifferencePlusOne), Result is Min + Offset.
+
+
+%%%% used to add an element to the end of a list
+addToEnd([H|R], Item, [H|NewList])
+:- addToEnd(R, Item, NewList).
+
+addToEnd([], Item, [Item]).
