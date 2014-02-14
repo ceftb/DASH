@@ -81,7 +81,7 @@ public class Detergent {
 	void run() {
 		id = -1;
 		try {
-			cognition.getInt("id");
+			id = cognition.getInt("id");
 		} catch (Exception pe) {
 			printOut("Agent prolog does not specify an id. Using " + id);
 		}

@@ -58,6 +58,10 @@ goalWeight(doWork, 1) :- started.
 goalWeight(waiting, 1).
 sent(0).
 
+% Writing this into the mail Sender to demo without the graphics
+started.
+
+
 %messages([m('co-worker 1','meeting at 2pm','blah blah'),
 %	              m('co-worker 2','re: meeting at 2pm', 'gesundheit'),
 %		      m('amazon', 'buy this new toaster!', 'blah blah'),

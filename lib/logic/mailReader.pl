@@ -58,6 +58,9 @@ goal(doMail).
 goalWeight(doMail,1) :- started.
 goalWeight(waiting,1).
 
+% Writing this in for the demo without graphic
+started.
+
 % General version for belief - see if system 1 has already produced a
 % belief (positive or negative) that passes threshold and if not, for
 % an action, do envisionment. This is coded in system2.pl
