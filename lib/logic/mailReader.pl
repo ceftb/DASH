@@ -152,7 +152,7 @@ mentalModel([virus(mischief)]). % virus can be bad, buggy, mischief or crime.
 
 % For now, say it's 50/50 whether we are successfully attacked if we click a link in an email.
 % This holds for all current mental models.
-addSets(followLink(ID), _, [[0.5, followedLink(ID)], [0.5, followedLink(ID), compromised(ID)]]).
+addSets(followLink(ID), _, _, [[0.5, followedLink(ID)], [0.5, followedLink(ID), compromised(ID)]]).
 
 % If the hacker is a burglar, he may take ID information
 % Will generalize this once I have a handle on it.
