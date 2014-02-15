@@ -84,7 +84,7 @@ goalRequirements(ensureLoggedIn, [doNothing]) :- inCurrentWorld(loggedIn), !.
 goalRequirements(ensureLoggedIn, [logIn]) :- not(inCurrentWorld(loggedIn)), !.
 
 % To log in, the agent must retrieve their password and enter it.
-goalRequirements(logIn, [retrievePassword, enterPassword]).
+goalRequirements(logIn, [commSet("login",1), retrievePassword, enterPassword]).
 
 % There may be many ways to retrieve a password. Here we expect to remember it.
 goalRequirements(retrievePassword, [rememberPassword]).
@@ -106,6 +106,7 @@ protocol(Patient,
 %updateBeliefs(scan(X), 1) :- addToWorld(scanned(X)), !.
 % Tell the agent the action was already performed in the initial state so that utility analysis will work.
 updateBeliefs(logIn,1) :- addToWorld(performed(logIn)), addToWorld(loggedIn), !.
+updateBeliefs(enterPassword,1) :- addToWorld(performed(logIn)), addToWorld(loggedIn), !.
 updateBeliefs(Action,1) :- addToWorld(performed(Action)), !.
 % Allow other facts that become true to be communicated from the model, so that changes in the world
 % that are concurrent with the agent's actions can be noticed
@@ -165,6 +166,7 @@ addSets(document(Meds, Patient), official, World, [[1.0, performed(document(Meds
      performed(scan(Meds), World), 
      format('World is ~w\n', [World]),
 %     performed(enterPassword, World),
+     member(loggedIn, World),
      !.
 
 %     member(loggedIn, World),  % No longer a primitive action
@@ -231,8 +233,12 @@ incr(Fieldname) :- field(Fieldname,N), New is N + 1, retractall(field(Fieldname,
 field(envision, 0).
 
 % Initial goals
-roster([joe,brian]).
+%roster([joe,brian]).
+% Just one for testing
+roster([joe]).
 
 requiredMeds(joe, [percocet]).
 requiredMeds(brian, [codeine]).
 
+% Set a default id for communication
+id(7).

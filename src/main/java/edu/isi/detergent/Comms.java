@@ -54,8 +54,23 @@ public class Comms {
 
 	}
 	
+	/**
+	 * Sends a message to another agent with the given id. This is logged
+	 * in the server and picked up when the recipient does a 'check'.
+	 * @param id
+	 * @param message
+	 * @return
+	 */
 	public String sendMessage(int id, String message) {
 		return sendAndRead("send " + id + " " + message);
+	}
+	
+	public String getValue(String variable) {
+		return sendAndRead("get " + variable);
+	}
+	
+	public String setValue(String variable, String value) {
+		return sendAndRead("set " + variable + " " + value);
 	}
 	
 	private String sendAndRead(String message) {

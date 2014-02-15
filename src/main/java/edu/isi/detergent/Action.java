@@ -49,6 +49,13 @@ public class Action {
 				return 1;
 			else
 				return 0;
+		} else if (name.equals("commGet")) {
+			String value = detergent.comms.getValue(arguments[0]);
+			detergent.printOut("Querying shared variable " + arguments[0] + ": value is " + value);
+			return value;
+		} else if (name.equals("commSet")) {
+			detergent.printOut("Setting shared variable " + arguments[0] + " to " + arguments[1]);
+			return detergent.comms.setValue(arguments[0], arguments[1]);
 		} else if ("doNothing".equals(name)) {
 			detergent.printOut(".");
 		} else if ("computer_applicationOpen".equals(name)) {  // make this fail the first time to test the resilience of the planning code
@@ -66,7 +73,7 @@ public class Action {
 			return simulatorSetStub();
 		} else if ("checkSystem1".equals(name)) {
 			return emoCogWrapper();
-		} else if ("logIn".equals(name)) {
+		} else if ("logIn".equals(name) || (name != null && name.contains("Password"))) {  // dumb hack
 			return 1;   // avoid the generic result to delete 'loggedIn'.
 		} else {
 			detergent.printOut("Performing " + this);
@@ -82,7 +89,9 @@ public class Action {
 	}
 	
 	
-	
+	/**
+	 * This stub simulator has values specific to Spraragen's nuclear plant example.
+	 */
 	Object[][] values = {{"coolantTemperature", 800},
 			 {"waterPressure", 8},
 			 {"emergencySealantSpray", "off"}

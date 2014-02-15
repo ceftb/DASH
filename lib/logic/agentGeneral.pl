@@ -127,6 +127,12 @@ updateBeliefs :- findall([A,T],result(A,_,T),[]).
 updateBeliefs(commPhone_outCall(Agent, Message), ReturnValue)
   :- !, updateBeliefs(callPerson(Agent, Message), ReturnValue).
 
+updateBeliefs(commSet(Variable, Value), 1)
+  :- !, myAssert(sharedValue(Variable, Value)).
+updateBeliefs(commSet(Variable, Value), _).
+
+updateBeliefs(commGet(Variable), Value) :- myAssert(sharedValue(Variable, Value)).
+
 
 %------------------
 % Utility predicates
@@ -324,6 +330,12 @@ primitiveAction(startAgent(AgentFileName)).
 
 primitiveAction(commPhone_outCall(ID, Message)).
 
+primitiveAction(commGet(Variable)).
+primitiveAction(commSet(Variable,Value)).
+
+% These are from an older implementation of using a computer from NCR.
+% I want to implement this more generally by setting and getting state
+% on the comms server. See commSet and commGet above.
 primitiveAction(computer_using(ID)).
 
 primitiveAction(computer_login).
@@ -377,6 +389,7 @@ commsHost('localhost').
 :-dynamic(id/1).
 
 :-dynamic(commPhone_outCall/3).
+:-dynamic(sharedValue/2).
 :-dynamic(computer_using/2).
 :-dynamic(computer_login/1).
 :-dynamic(computer_logout/1).
