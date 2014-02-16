@@ -29,7 +29,7 @@
 
 % This is at the level of receiving the agent-to-agent message
 % and registering it as mail
-goalRequirements(doMail, [respondToMessage(mail(F,To,S,Te,U,Ty,D,N))]) 
+goalRequirements(doMail, [commGet(message,M),respondToMessage(mail(F,To,S,Te,U,Ty,D,N))]) 
   :- mail(F,To,S,Te,U,Ty,D,N), !.
 
 goalRequirements(respondToMessage(mail(From,To,Subject,Text,Url,Type,DoNotReply,Name)),
@@ -43,7 +43,7 @@ goalRequirements(doMail, [report, doNothing]).
 
 % The 'decide(A)' subgoal picks the action if 'ok(A)' is true, otherwise picks doNothing.
 goalRequirements(processNextEmail(ID), 
-	         [printMessage('reading ~w ~w from ~w\n', [Type, ID, From]),
+	         [commGet(message,M),printMessage('reading ~w ~w from ~w\n', [Type, ID, From]),
 		  readEmail(ID), decide(followLink(ID))])
   :- system2Fact(ok(read(ID))), !, mailType(ID,Type), from(ID,From).
 

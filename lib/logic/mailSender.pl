@@ -23,12 +23,12 @@ goalRequirements(sendEmail, Goals)
 
 processMessages([],[]).
 % No attachment is empty set by default
-processMessages([m(From,To,Subject,Text)|T],[callPerson(R,mail(From,To,Subject,Text,[],Type,Name))|GoalTail])
+processMessages([m(From,To,Subject,Text)|T],[commSet(message,5),callPerson(R,mail(From,To,Subject,Text,[],Type,Name))|GoalTail])
   :- recipientIDs([R|IT]), processMessages(T,GoalTail).
 % For now, send ham to someone else
-processMessages([m(From,To,Subject,Text,Url,ham,DoNotReply,Name)|T],[callPerson(99,mail(From,To,Subject,Text,Url,ham,DoNotReply,Name))|GoalTail])
+processMessages([m(From,To,Subject,Text,Url,ham,DoNotReply,Name)|T],[commSet(message,5),callPerson(99,mail(From,To,Subject,Text,Url,ham,DoNotReply,Name))|GoalTail])
   :- processMessages(T,GoalTail), !.
-processMessages([m(From,To,Subject,Text,Url,Type,DoNotReply,Name)|T],[callPerson(R,mail(From,To,Subject,Text,Url,Type,DoNotReply,Name))|GoalTail])
+processMessages([m(From,To,Subject,Text,Url,Type,DoNotReply,Name)|T],[commSet(message,5),callPerson(R,mail(From,To,Subject,Text,Url,Type,DoNotReply,Name))|GoalTail])
   :- recipientIDs([R|IT]), processMessages(T,GoalTail).
 
 

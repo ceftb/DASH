@@ -330,7 +330,7 @@ primitiveAction(startAgent(AgentFileName)).
 
 primitiveAction(commPhone_outCall(ID, Message)).
 
-primitiveAction(commGet(Variable)).
+primitiveAction(commGet(Variable,Value)).
 primitiveAction(commSet(Variable,Value)).
 
 % These are from an older implementation of using a computer from NCR.
