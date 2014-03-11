@@ -5,100 +5,125 @@
 
 :- dynamic(field/2).
 :- dynamic(initialWorld/1).
-:- dynamic(loggedIn/0).
+:- dynamic(signedIn/0).
+:- dynamic(requirementsSet/1).
+:- dynamic(userInitialized/0).
+:- consult('agentGeneral').
 
-:-consult('agentGeneral').
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-% environment variables
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% basic resource stuff
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 numResources(2).
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% the id's of the resources
+resourceIDs([100, 101]).
 
-% I use this as a goal to set on the command line so I can test the model repeatedly with one keystroke.
-toplevel :- testAgent(Plan, 20), format('~w\n', [Plan]).
+resourceExists(Resource) :- numResources(NumResources), 0 =< Resource, Resource < NumResources, !.
 
-% Test a sequence of actions by mimicking the top-level agent - choosing an action, performing it and repeating.
-testAgent([],0).  % Stop when fixed plan length is exceeded
-testAgent([],_) :- format('could do nothing', []), do(doNothing).  % Stop with an empty plan when the agent could do nothing
-% Otherwise find the first action, assume it succeeded, repeat.
-testAgent([A|R],N) :- do(A), updateBeliefs(A,1), initialWorld(World), M is N - 1, testAgent(R,M).
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% iteration stuff
+% ...for testing in isolation
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% These are the possible goals and primitive actions of the agent.
-subGoal(performFirstStep(P)).
-subGoal(decidePerformRest(P)).
-subGoal(createAccount(Resource)) :- numResources(NumResources), 0 =< Resource, Resource < NumResources.
-subGoal(ensureLoggedIn(Resource)) :- numResources(NumResources), 0 =< Resource, Resource < NumResources.
-subGoal(ensureLoggedOut(Resource)) :- numResources(NumResources), 0 =< Resource, Resource < NumResources.
-subGoal(logIn(Resource)) :- numResources(NumResources), 0 =< Resource, Resource < NumResources.
-subGoal(retrieveAccountInformation(Resource)) :- numResources(NumResources), 0 =< Resource, Resource < NumResources.
-%subGoal(retrievePassword(Resource)) :- numResources(NumResources), 0 =< Resource, Resource < NumResources.
+% iterations of loop
+run :- kIterations(50).
+kIterations(K) :- integer(K), K > 1, oneIteration, KMinusOne is K - 1, kIterations(KMinusOne).
+kIterations(1) :- oneIteration.
 
-primitiveAction(createUsername(Resource)) :- numResources(NumResources), 0 =< Resource, Resource < NumResources.
-primitiveAction(createPassword(Resource)) :- numResources(NumResources), 0 =< Resource, Resource < NumResources.
-primitiveAction(clickCreateAccountButton(Resource)) :- numResources(NumResources), 0 =< Resource, Resource < NumResources.
-primitiveAction(rememberUsername(Resource)) :- numResources(NumResources), 0 =< Resource, Resource < NumResources.
-primitiveAction(rememberPassword(Resource)) :- numResources(NumResources), 0 =< Resource, Resource < NumResources.
-primitiveAction(enterUsername(Resource)) :- numResources(NumResources), 0 =< Resource, Resource < NumResources.
-primitiveAction(enterPassword(Resource)) :- numResources(NumResources), 0 =< Resource, Resource < NumResources.
-primitiveAction(clickLogInButton(Resource)) :- numResources(NumResources), 0 =< Resource, Resource < NumResources.
-primitiveAction(logOut(Resource)) :- numResources(NumResources), 0 =< Resource, Resource < NumResources.
+oneIteration :- format('\n\nchoosing action...\n'), system1, do(X), format('chose action ~w\n', X), updateBeliefs(X, 1), system1.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% goal stuff
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% depth 0 goal
 goal(doWork).
 goalWeight(doWork, 1).
 
-% If there is a roster, deliver meds.
-%goalRequirements(doWork, [createAccount(0), ensureLoggedIn(0), createAccount(1), ensureLoggedIn(1), ensureLoggedOut(0), ensureLoggedOut(1)]).
-goalRequirements(doWork, [createAccount(0), ensureLoggedIn(0), ensureLoggedOut(0), ensureLoggedIn(0), ensureLoggedOut(0)]).
+% depth 1 goals
+subGoal(createAccount(Resource)) :- resourceExists(Resource).
+subGoal(ensureSignedIn(Resource)) :- resourceExists(Resource).
+subGoal(ensureSignedOut(Resource)) :- resourceExists(Resource).
 
-%goalRequirements(doWork, Requirements) :- numResources(NumResources), Resource is random(NumResources), determineRequirements(Resource, Requirements).
-%goalRequirements(doWork, [doNothing]).
-%determineRequirements(Resource, ensureLoggedIn(Resource)) :-
-%determineRequirements(Resource, Requirements) :- inCurrentWorld(loggedIn).
+% depth 2 goals
+subGoal(attemptCreateAccount(Resource)) :- resourceExists(Resource).
+subGoal(attemptSignIn(Resource)) :- resourceExists(Resource).
+subGoal(attemptSignOut(Resource)) :- resourceExists(Resource).
 
-goalRequirements(performFirstStep([Action|Rest]), [Action]). %,decide(performFirstStep(Rest))]).
-%  :- format('considering ~w in plan ~w\n',[Action,[Action|Rest]]).
+% depth 3 goals
+subGoal(retrieveAccountInformation(Resource)) :- resourceExists(Resource).
 
-% Deciding to perform a list of steps by deciding each step in turn.
-goalRequirements(decidePerformRest([]), [doNothing]).
-goalRequirements(decidePerformRest([H|R]),[decide(performFirstStep(R)),decidePerformRest(R)]).
+% only done once to initialize user state
+executable(initializeUser).
 
-% Agent must execute the logIn step if not currently logged in to satisfy goal ensureLoggedIn
-goalRequirements(createAccount(Resource), [createUsername(Resource), createPassword(Resource), clickCreateAccountButton(Resource)]) :- not(inCurrentWorld(createdAccount(Resource))), !.
-goalRequirements(createAccount(Resource), [doNothing]) :- inCurrentWorld(createdAccount(Resource)), !.
+% primitive actions and executables associated with creating account
+executable(comeUpWithUsername(Resource)) :- resourceExists(Resource).
+executable(comeUpWithPassword(Resource)) :- resourceExists(Resource).
+primitiveAction(clickCreateAccountButton(Resource)) :- resourceExists(Resource).
+primitiveAction(recognizeAccountCreated(Resource)) :- resourceExists(Resource).
 
-goalRequirements(ensureLoggedIn(Resource), [logIn(Resource)]) :- not(inCurrentWorld(loggedIn(Resource))), inCurrentWorld(createdAccount(Resource)), !.
-goalRequirements(ensureLoggedIn(Resource), [doNothing]) :- inCurrentWorld(loggedIn(Resource)), inCurrentWorld(createdAccount(Resource)), !.
+% primitive actions and executables associated with signing in
+executable(rememberUsername(Resource)) :- resourceExists(Resource).
+executable(rememberPassword(Resource)) :- resourceExists(Resource).
+primitiveAction(enterUsername(Resource)) :- resourceExists(Resource).
+primitiveAction(enterPassword(Resource)) :- resourceExists(Resource).
+primitiveAction(clickSignInButton(Resource)) :- resourceExists(Resource).
+primitiveAction(recognizeSignedIn(Resource)) :- resourceExists(Resource).
 
-goalRequirements(ensureLoggedOut(Resource), [logOut(Resource)]) :- inCurrentWorld(loggedIn(Resource)), inCurrentWorld(createdAccount(Resource)), !.
-goalRequirements(ensureLoggedOut(Resource), [doNothing]) :- not(inCurrentWorld(loggedIn(Resource))), inCurrentWorld(createdAccount(Resource)), !.
+% primitive actions and executables associated with signing out
+primitiveAction(clickSignOutButton(Resource)) :- resourceExists(Resource).
+primitiveAction(recognizeSignedOut(Resource)) :- resourceExists(Resource).
 
-% To log in, the agent must retrieve their accountinformation and enter it.
-goalRequirements(logIn(Resource), [retrieveAccountInformation(Resource), enterUsername(Resource), enterPassword(Resource), clickLogInButton(Resource)]).
+
+% goal requirements for various goals and subgoals
+goalRequirements(doWork, Requirements) :- requirementsSet(Requirements), !.
+goalRequirements(doWork, [initializeUser]) :- not(requirementsSet(X)), not(userInitialized), assert(userInitialized), !.
+goalRequirements(doWork, Requirements) :- not(requirementsSet(X)), numResources(NumResources), Resource is random(NumResources), determineRequirements(Resource, Requirements), assert(requirementsSet(Requirements)), ansi_format([fg(blue)], 'new requirements set: ~w\n', [Requirements]), !.
+
+determineRequirements(Resource, [createAccount(Resource)]) :- not(inCurrentWorld(createdAccount(Resource))), !.
+determineRequirements(Resource, [ensureSignedIn(Resource)]) :- R is random(2), R is 0, !.
+determineRequirements(Resource, [ensureSignedOut(Resource)]) :- !.
+
+goalRequirements(createAccount(Resource), [attemptCreateAccount(Resource), recognizeAccountCreated(Resource)]) :- not(inCurrentWorld(createdAccount(Resource))), !.
+goalRequirements(createAccount(Resource), [recognizeAccountCreated(Resource)]) :- inCurrentWorld(createdAccount(Resource)), !.
+
+goalRequirements(attemptCreateAccount(Resource), [comeUpWithUsername(Resource), comeUpWithPassword(Resource), clickCreateAccountButton(Resource)]).
+
+goalRequirements(ensureSignedIn(Resource), [attemptSignIn(Resource), recognizeSignedIn(Resource)]) :- inCurrentWorld(createdAccount(Resource)), not(inCurrentWorld(signedIn(Resource))), !.
+goalRequirements(ensureSignedIn(Resource), [recognizeSignedIn(Resource)]) :- inCurrentWorld(createdAccount(Resource)), inCurrentWorld(signedIn(Resource)), !.
+
+goalRequirements(ensureSignedOut(Resource), [clickSignOutButton(Resource), recognizeSignedOut(Resource)]) :- inCurrentWorld(createdAccount(Resource)), inCurrentWorld(signedIn(Resource)), !.
+goalRequirements(ensureSignedOut(Resource), [recognizeSignedOut(Resource)]) :- inCurrentWorld(createdAccount(Resource)), not(inCurrentWorld(signedIn(Resource))), !.
+
+% To sign in, the agent must retrieve their accountinformation and enter it.
+goalRequirements(attemptSignIn(Resource), [retrieveAccountInformation(Resource), enterUsername(Resource), enterPassword(Resource), clickSignInButton(Resource)]).
 
 % There may be many ways to retrieve a password. Here we expect to remember it. (other ideas-- read from post it note, read from text document on computer, ask spouse, call help desk, request password be sent to email address, guess?... the appropriate action could be based on beliefs)
 goalRequirements(retrieveAccountInformation(Resource), [rememberUsername(Resource), rememberPassword(Resource)]).
+
+% executes!
+execute(initializeUser) :- format('executing ~w.\n', initializeUser).
+execute(comeUpWithUsername(Resource)) :- format('executing ~w.\n', comeUpWithUsername(Resource)).
+execute(comeUpWithPassword(Resource)) :- format('executing ~w.\n', comeUpWithUserPassword(Resource)).
+execute(rememberUsername(Resource)) :- format('executing ~w.\n', rememberUsername(Resource)).
+execute(rememberPassword(Resource)) :- format('executing ~w.\n', rememberPassword(Resource)).
+
 
 % Update rules for primitive actions
 % Changing beliefs based on reports about attempted actions
 
 % Tell the agent the action was already performed in the initial state so that utility analysis will work.
-updateBeliefs(createAccount(Resource), 1) :- addToWorld(performed(createAccount(Resource))), addToWorld(createdAccount(Resource)), !.
-updateBeliefs(logIn(Resource), 1) :- addToWorld(performed(logIn(Resource))), addToWorld(loggedIn(Resource)), !.
-updateBeliefs(logOut(Resource), 1) :- addToWorld(performed(logOut(Resource))), removeFromWorld(loggedIn(Resource)), !.
 
-updateBeliefs(clickCreateAccountButton(Resource), 1) :- addToWorld(performed(clickCreateAccountButton(Resource))), addToWorld(createdAccount(Resource)), !.
-updateBeliefs(clickLogInButton(Resource), 1) :- addToWorld(performed(clickLogInButton(Resource))), addToWorld(loggedIn(Resource)), !.
-updateBeliefs(logOut(Resource), 1) :- addToWorld(performed(logOut(Resource))), removeFromWorld(loggedIn(Resource)), !.
+updateBeliefs(clickCreateAccountButton(Resource), _) :- ansi_format([fg(red)], 'update beliefs called with clickCreateAccountButton\n', []), addToWorld(performed(clickCreateAccountButton(Resource))), addToWorld(createdAccount(Resource)), !.
+updateBeliefs(clickSignInButton(Resource), _) :- ansi_format([fg(red)], 'update beliefs called with clickSignInButton\n', []), addToWorld(performed(clickSignInButton(Resource))), addToWorld(signedIn(Resource)), !.
+updateBeliefs(clickSignOutButton(Resource), _) :- ansi_format([fg(red)], 'update beliefs called with clickSignOutButton\n', []), addToWorld(performed(clickSignOutButton(Resource))), removeFromWorld(signedIn(Resource)), !.
 
-updateBeliefs(Action,1) :- addToWorld(performed(Action)), !.
+updateBeliefs(recognizeAccountCreated(Resource), _) :- addToWorld(performed(recognizeAccountCreated(Resource))), retract(requirementsSet(Requirements)), !.
+updateBeliefs(recognizeSignedIn(Resource), _) :- addToWorld(performed(recognizeSignedIn(Resource))), retract(requirementsSet(Requirements)), !.
+updateBeliefs(recognizeSignedOut(Resource), _) :- addToWorld(performed(recognizeSignedOut(Resource))), retract(requirementsSet(Requirements)), !.
+
+updateBeliefs(Action, _) :- addToWorld(performed(Action)), !.
 
 % Allow other facts that become true to be communicated from the model, so that changes in the world
 % that are concurrent with the agent's actions can be noticed
@@ -116,31 +141,48 @@ removeFromWorld(Fact) :- initialWorld(I), retract(initialWorld(I)), delete(I,Fac
 % we fill the world so that actions don't get repeated.
 initialWorld([]).
 
-reset :- assert(initialWorld([])).
-
 % The set of mental models determines how the agent estimates the consequences of an action.
 mentalModel([user]).
 
-addSets(createAccount(Resource), user, World, [[1.0, createdAccount(Resource)]]).
-addSets(ensureLoggedIn(Resource), user, World, [[1.0, loggedIn(Resource)]]).
-
-% By default we simply add the fact that the action was performed. A default is needed for simulation
-% to work and this setting is used in most of the cases.
-addSets(Action,_,_,[[1.0, performed(Action)]]).
+% catch all addSets used for projection
+addSets(Action, _, _, [[1.0, performed(Action)]]).
 
 % Short-hand
 performed(Action, World) :- member(performed(Action), World).
 
 inCurrentWorld(Fact) :- initialWorld(World), member(Fact, World).
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% regarding account creation
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%generateUsernname(Resource) :- addToWorld(generatedUsername(Resource, )).
+%generatePassword(Resource) :- firstName(F), lastName(L), addToWorld(generatedUsername().
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% account information retrieval
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % I don't believe we're using the following currently
-% but expansion of the model may make use of it.
+% but expansion of the model may very well make use of it.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%subGoal(performFirstStep(P)).
+%subGoal(decidePerformRest(P)).
+
+%goalRequirements(performFirstStep([Action|Rest]), [Action]). %,decide(performFirstStep(Rest))]).
+%  :- format('considering ~w in plan ~w\n',[Action,[Action|Rest]]).
+
+%goalRequirements(decidePerformRest([]), [doNothing]).
+%goalRequirements(decidePerformRest([H|R]),[decide(performFirstStep(R)),decidePerformRest(R)]).
 
 %addAuxiliaryFacts([]).
 %addAuxiliaryFacts([add(Fact)|R]) :- addToWorld(Fact), format('Added concurrent change ~w\n', [Fact]), addAuxiliaryFacts(R).
