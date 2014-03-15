@@ -40,6 +40,7 @@
 \begin{document}
 
 \title{Agent-Based Modeling of User Circumvention of Security}
+\subtitle{Position Paper}
 %\date{}
 
 \maketitle
@@ -95,14 +96,26 @@ forced to change a critical password, some users will change passwords
 for other accounts (outside the officer's purview) to be the
 same---thus increasing both risk {\em and} consequence of compromise.
 
-%\textcolor{red}{what is the curve here? if it's just a general security vs knob curve, why assume it's a \textbf{\em linear} curve?}
+\textcolor{red}{Thus, we see an uncanny descent: places where implementing more 
+stringent security mechanism reduces overall security posture.}
 
-Thus, what seems to be a simple monotonic relationship may in fact harbor
+\ignore{Thus, what seems to be a simple monotonic relationship may in fact harbor
 what graphics specialists call {\em uncanny valleys}: places where
-dialing up the controls actually decreases overall security posture.
+dialing up the controls actually decreases overall security posture.}
 
-Solving this problem requires understanding how and why user behavior
-differs from ``optimal.''
+\textcolor{red}{We could perhaps include a small graph here that shows 
+predicted security and aggregate security as a function of security features. 
+I don't think it's necessary, but I'm just tossing the idea out there.}
+
+Solving this problem \textcolor{red}{*I don't know if I'd classify this as a problem in itself-- 
+I consider it more of a paradox... maybe we can start with ``Addressing this paradox''?*} requires understanding how and why user behavior
+differs from \ignore{``optimal.''} \textcolor{red}{`optimum.'' (I don't know if this 
+optimal->optimum change is necessary... in some fields optimum refers to
+the unique best solution whereas optimal refers to one of potentially multiple 
+``locally best'' solutions). In this 
+statement it sounded like we were assuming the former with the optimum 
+being the way system designers believe users will behave-- complaining but 
+following the rules.}
 
 People behave differently for a number of reasons: (1) they have a
 different model of their environment from the security designers, with
@@ -111,6 +124,51 @@ different model of the security risks. The designer may typically have
 a more accurate model but this is not always true, (3) even with
 correct models, humans often make suboptimal choices, for example due
 to biases in decision making, distractions, emotion and fatigue.
+
+\textcolor{red}{The literature provides valuable insights. Adams and Sasse 
+\cite{adams1999users} challenged the belief that users 
+are averse to engaging in secure behaviors and motivated the need for 
+``user-centered design in security mechanisms.'' 
+Through interviews, Beautement et al  \cite{beautement2009compliance} discovered that ``the key factors in 
+the compliance decision are the actual and anticipated cost and benefits of 
+compliance to the individual employee, and perceived cost and benefits to 
+the organization.'' They also identified:
+\begin{itemize}
+\item perceived costs of compliance: increased physical load, increased cognitive load, embarrassment, missed opportunities, the `hassle factor'
+\item perceived benefits of compliance: avoiding the consequences of a security breach, protection from sanctions
+\item external factors of compliance: design, awareness, training, and education, the culture of the organization, monitoring, sanctions
+\end{itemize}
+Furthermore, they postulated that users will comply when the task cost of 
+compliance (individual cost - benefits) does not exceed the compliance threshold.
+}
+
+\textcolor{red}{Many computer security problems, especially those regarding 
+circumvention, may be classified as wicked problems-- problems that are 
+extraordinarily difficult, requiring novel ideas and techniques to 
+address. [*** this is a very imprecise definition... fully defining 
+wicked problems would take up a lot of space... also, citation needed!***]. 
+We argue that agent-based modeling can provide tremendous value here. 
+Even when it is impossible to define, a priori, how users will circumvent, 
+agent-based simulations may be able to tell us whether users would be 
+inclined to circumvent if given the opportunity, e.g. by identifying frustration levels.
+[*** citations? ***] 
+In some situations, we may be able to address sources of frustration, 
+and, in doing so, address the problem of circumvention, without even identifying a 
+particular instance of circumvention. In other situations, where we can identify, a posteriori, 
+instances of circumvention, agent-based modeling may provide a deeper 
+understanding of the factors conducive to circumvention. If we 
+think about circumvention as a contagion, it may be possible to identify how workaround
+knowledge spreads, which population groups are most susceptible to engaging in workarounds, 
+and where the tipping point is between between the occasional workaround and ubiquitous circumvention. 
+Using this information, it may be possible to shift users from one group to another, and 
+reduce the prevalence of workarounds, e.g. by educating them about the 
+organizational threats that are mitigated by the enactment of security mechanisms.
+Additionally, employing agent-based simulations would allow us to predict 
+the efficacy of countermeasures to circumvention without having to expend the resources 
+and expose the risks associated with implementing such countermeasures in practice.}
+
+\textcolor{red}{*We'll probably want to merge the previous paragraph and next one as there 
+are repeating themes.*}
 
 Agent models of human behavior might be an effective way to better
 predict the impact of a security system in a given environment. These
@@ -149,27 +207,34 @@ domains in which to apply the approach. \secref{conclusion} concludes.
 
 %%\textcolor{red}{HIPAA has automatic logoff requirements that are listed as ddressable... so perhaps recommendations here are a bit useless as the system designers really have little choice other than complying.}
 
+In a partner institution (a large hospital), security officers were concerned
+that {\em COWs} ({\em computers on wheels}) and desktop machines were 
+too often left logged-in but unattended by clinicians, creating
+the risk for confidentiality and integrity problems in stored patient data.
 
-In a partner institution (a large hospital),
+\ignore{In a partner institution (a large hospital),
 clinicians used {\em COWs} ({\em computers on wheels}) and desktop machines.
 The security officers were concerned
 that these systems were too often left logged-in but unattended, creating
-the risk for confidentiality and integrity problems in the stored patient data.
+the risk for confidentiality and integrity problems in stored patient data.}
 
-To address this problem, the officers 
-attached proximity sensors to the machines and added controls that,
-when detecting that a computer had been left unattended but logged-in for a predetermined, fixed, period of time, the user would be automatically logged off.
+\ignore{To address this problem, the officers attached proximity sensors to the machines and added controls that,
+when detecting that a computer had been left unattended but logged-in for a predetermined, fixed, period of time, the user would be automatically logged off.}
+To address this problem, officers attached proximity sensors to the machines 
+with controls that would automatically log off any user after a fixed 
+duration of inactivity.
 If the officers chose a timeout that was very short (say, 1 second),
 the system would become unusable---massively frequent interruptions of workflow would cause users to noisily complain.  
 However, beyond this short window, one would assume that longer timeouts
 yield worse net exposure (e.g., total minutes of logged-in but unattended machines).   Anything between too-short and infinite would be an improvement 
 on the original scenario.
+\textcolor{red}{*I find the previous sentence unnecessary and feel we can cut it if we need more space*}
 
 What happened was unexpected:
 frustrated with the interruptions (and perhaps with accuracy problems
 in the proximity detectors), some users instead put styrofoam cups on the 
 detectors, leading to all systems always believing a user was present.
-The naive designer model suggested a linear curve; a more accurate model
+The naive designer model suggested a \textcolor{red}{monotonic} \ignore{linear} curve; a more accurate model
 would require taking into account the aggregate effects of aggregate user  behavior, such as: (1) how frustrated different users might get with timeouts perceived as too-short; (2) how quickly such ``edgy'' users might find a workaround, such as the styrofoam cups; (3) how many of the remaining users who might not actively break the system themselves might happily use a system where someone else had left a styrofoam cup; (4) whether having a security intern walking the wards once a day and removing cups would actually improve things.  (How many interns would there have to be to make a real difference?)
 
 \subsection{A Different Approach to the Timeout Decision}
@@ -183,21 +248,14 @@ security and overall organizational efficiency, and considering
 variables such as user frustration, to the extent they can be well
 modeled.
 
-%\subsection{An Alternative To The Standard Approach}
+\ignore{\subsection{An Alternative To The Standard Approach}}
 
-For example, the simple approach to timeouts uses a fixed timeout
-threshold and neglects numerous factors that contribute to user
-frustration in the event of a timeout. One indicative factor of
-frustration experienced is the intended use of the system. A home
-computer user who is timed out due to a lack of keyboard interaction
-while watching a video on, say, NetFlix, is likely to experience a
-greater level of frustration than one who is timed out while checking
-the weather.
-
-%Similarly, in a medical context, \textcolor{red}{[perhaps    Ross can provide a couple of solid examples here]}.
-
+The typical approach to timeouts makes use of a fixed timeout
+threshold and neglects numerous factors that are indicative of 
+experienced frustration in the event of a timeout-- factors such as 
+intended use of the system, fatigue, and stress. 
 This motivates choosing a timeout value that is sensitive to the
-user's actions and working environment rather than choosing a
+user's state, actions, and working environment rather than choosing a
 constant. Given feedback, for example, a security tool might learn to
 estimate the user's expected frustration caused by a timeout based on
 the open applications on the computer, time of day, and
@@ -205,12 +263,11 @@ domain-specific indications of workload such as the patient roster. At
 the same time it might learn to estimate the probability of a
 vulnerability caused by a lengthened timeout in the same way and use
 the two values to reason about the tradeoffs of user frustration and
-near-term security. Such a tool is likely to require extensive data
+near-term security. \textcolor{red}{*The previous line is worrisome if we 
+are talking about wicked problems.*} Such a tool is likely to require extensive data
 about the operations where it is to be deployed, but the parameters of
 interest and initial values could be set by learning within the
 simulation.
-
-\ignore{Envision a system where, whenever a user is going to leave a system unattended, she informs the system and identifies the action she will take. \ignore{\textcolor{red}{[this implicitly assumes that the user would identify an action, which needn't be the case!... perhaps an action can be assumed in such situation]}}. This action can then be used as input to an algorithm that determines an appropriate timeout threshold as a function of user attributes, the action specified, and other state. Perhaps such an approach can simultaneously achieve higher satisfaction ages among both security folks as well as users of the system in comparison to the traditional approach.}
 
 \ignore{\subsection{Why Does It Take So Long To Recognize Workarounds?}}
 
@@ -222,16 +279,23 @@ simulation.
 
 It is often counterproductive, and, in some situations, even
 dangerous, to consider security objectives in isolation. Security
-measures implemented to realize security goals often impact other
-organizational goals in a significant way that is unaccounted for. For
-example, Koppel et al \cite{koppel2008workarounds} demonstrated ways
+mechanisms implemented to realize security goals often impact other
+organizational goals in a significant way that is often left unaccounted for. 
+For example, Koppel et al \cite{koppel2008workarounds} documented ways
 that circumvention relating to BCMA (Barcode Medication
-Administration) systems led to medical errors. Even in situations
-where workarounds are not employed, medical errors may arise due to
-sincere attempts by clinicians to comply with a system that interferes
-with workflow.
+Administration) systems led to medical errors. \textcolor{red}{However, is important to note 
+that security mechanisms do not only impact other organizational objectives 
+in the presence of workarounds. Even in the absence of workarounds, 
+stringent security mechanisms can induce stress, fatigue, and 
+changes in mood that impact workflow and sabotage numerous 
+organizational goals. *a citation here would be great!*}
 
-In general, the optimal security strategy will depend on the interplay
+\ignore{Even in situations where 
+workarounds are not employed, medical errors 
+may arise due to sincere attempts by clinicians to comply with a system 
+that interferes with workflow.}
+
+In general, an optimal security strategy will depend on the interplay
 between security objectives and organizational objectives, and between
 different individuals in the organization, even in cases where
 workarounds are not available. The complexity of the problem is one
@@ -239,7 +303,7 @@ motivating factor for an agent-based model of the system to be
 secured, that captures the objectives of individual agents and factors
 that influence their likelihood of compliance with security
 protocols. We envision such a platform being employed by security
-designers to test various security measures when it is infeasible to
+designers to test various security mechanisms when it is infeasible to
 run real experiments due to ethical costs, monetary costs, or for
 other reasons.
 
@@ -275,8 +339,8 @@ variables in the model, the most pertinent being the timeout
 threshold.
 
 During each time step, each agent (clinician) begins or continues an action in
-accordance with a short plan that requires the agent to be logged in
-to a COW. During the simulation, agents may be timed out of a COW that
+accordance with a short plan that requires the agent to be logged into a COW. 
+During the simulation, agents may be timed out of a COW that
 they had previously been using. These timeouts occur when users are
 logged into a COW that they had not been using for a duration of time,
 the timeout threshold.
@@ -318,7 +382,7 @@ timeout threshold if we optimize for organizational objectives instead
 of solely optimizing for a security objective.
 
 \ignore{\textcolor{red}{
-I swapped the paragraph given below with the previous paragraph:
+I swapped the paragraph given below with the previous  paragraph:
 In the future, we plan to build upon this model by incorporating
 richer alternative plans, explicit appraisal and a more faithful model
 of the way agents of different types interact in this environment. It
