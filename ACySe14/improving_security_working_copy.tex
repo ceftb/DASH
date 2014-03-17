@@ -332,7 +332,63 @@ appraisal of entities that are seen as conflicting with the agent's
 plan. In field work, frustration has emerged as a significant factor
 in the application of workarounds.
 
-We have developed a model for the COW anecdote discussed earlier,
+\textcolor{red}{Regarding the styrofoam cup example, clinicians may perceive the 
+following as organizational goals: minimizing medical errors, ensuring patients 
+are treated with dignity and attended to promptly, minimizing unnecessary 
+exposure of patient data. Individual goals may include things like providing 
+superior patient care and finishing the current task adequately but quickly. 
+These goals give rise to a utility function that can be used to evaluate the 
+perceived outcomes of executing plans, which is done through 
+the reasoning module. When an agent invokes the reasoning module to 
+choose amongst multiple actions in {\sc dash}, she essentially compares the 
+plans associated with each of the actions, and chooses the action associated
+with the plans that she perceives will provide the most utility according to the 
+beliefs she holds.}
+ 
+\textcolor{red}{However, planning achieved through the reasoning module
+may also be bypassed using the instinctive module when the agent is subject to certain 
+emotions such as frustration. For example, a user frustrated with having to 
+remember a new password might instinctually write down passwords.
+Frustration may also impact action choices when the reasoning 
+module is employed. Suppose a clever user is frustrated with a policy requiring
+routine password change. If the user is aware that the system only prohibits 
+the current password when password reset attempt are made, and the 
+cognitive burden of remembering a new password is sufficiently high, 
+she might decide to call the help desk, stating that her password had been 
+changed, so as to have her old password restored (a real-world anecdote!). 
+Other emotions (e.g. fatigue, stress) may also have an impact on the user's 
+perception, beliefs, and mental processes.}
+ 
+\textcolor{red}{The end goal is to build on this platform so that it may be 
+used by organizations to compare security mechanisms and choose the 
+ones that best satisfy some objective function of security goals 
+and other organizational goals, giving special importance to commonly 
+overlooked but frequently occurring events that happen in the real world, 
+such as workarounds. To this end, our simulation must be able to 
+track various statistics. We've already designed a simple prototype to 
+achieve these goals, and, though we've had 
+interesting results, the prototype only utilized a subset of {\sc dash}; furthermore, 
+validation seems to be a significant challenge.}
+ 
+ \textcolor{red}{Prior to seeking validation, we must come up with a method to 
+set parameter values so that the agents in our model faithfully describe 
+the respective users in the real world. Ideally, we would like to measure, 
+quantitatively, emotions such as frustration, stress, and fatigue. It's also 
+imperative we have a deep understanding of when and how these values 
+change in real environments so as to engineer our simulation faithfully.}
+
+
+% some of the following papers may be enlightening
+% Automatic prediction of frustration - Kapoor et al
+% Measurement of User Frustration A Biologic Approach - Hazlett
+% The Sensing and Measurement of Frustration with Computer - Carson Jonathan Reynolds
+% This Computer Responds to User Frustration: Theory, Design, and Results - Klein et al
+
+%%%%%%%%%%%%%%%%
+% start ignore of original section 3
+%%%%%%%%%%%%%%%%
+
+\ignore{We have developed a model for the COW anecdote discussed earlier,
 capable of running simple simulations, based on a subset of DASH. This
 allows us to measure various security effects as a function of
 variables in the model, the most pertinent being the timeout
@@ -356,8 +412,6 @@ workaround. Some agents begin the simulation with this knowledge,
 while we model other agents as gaining the knowledge by witnessing
 another agent use the workaround.
 
-
-
 %{\bf I tentatively replaced this text with the above.}
 \ignore{\textcolor{red}{In each time step, simulation data and statistics are also updated. The two most important statistics that are measured are net exposure and average peak frustration. Net exposure is defined as the total duration of time for which clinicians are logged into COWs but not within close proximity to them. Peak frustration for a given clinician is defined as the highest level of experienced frustration for that clinician. Average peak frustration is computed by averaging peak frustrations over all clinicians.}}
 
@@ -379,7 +433,7 @@ monetary costs of plans, and security effects experienced during a
 given simulation, instead of naively considering a security objective
 in isolation.  We believe that we would arrive at a vastly different
 timeout threshold if we optimize for organizational objectives instead
-of solely optimizing for a security objective.
+of solely optimizing for a security objective.}
 
 \ignore{\textcolor{red}{
 I swapped the paragraph given below with the previous  paragraph:
@@ -396,6 +450,10 @@ user biases, etc. We believe such an approach would admit a vastly
 different optimal solution than would be obtained by ignoring these
 user aspects.
 }}
+
+%%%%%%%%%%%%%%%%
+% end ignore of original section 3
+%%%%%%%%%%%%%%%%
 
 \section{Some Other Applications}
 \label{sec-future}
