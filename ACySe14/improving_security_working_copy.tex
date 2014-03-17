@@ -96,8 +96,8 @@ forced to change a critical password, some users will change passwords
 for other accounts (outside the officer's purview) to be the
 same---thus increasing both risk {\em and} consequence of compromise.
 
-\textcolor{red}{Thus, we see an uncanny descent: places where implementing more 
-stringent security mechanism reduces overall security posture.}
+\textcolor{red}{Thus, we see an \textit{uncanny descent}: places where implementing a more 
+stringent security mechanisms reduces overall security posture.}
 
 \ignore{Thus, what seems to be a simple monotonic relationship may in fact harbor
 what graphics specialists call {\em uncanny valleys}: places where
@@ -107,23 +107,23 @@ dialing up the controls actually decreases overall security posture.}
 predicted security and aggregate security as a function of security features. 
 I don't think it's necessary, but I'm just tossing the idea out there.}
 
-Solving this problem \textcolor{red}{*I don't know if I'd classify this as a problem in itself-- 
-I consider it more of a paradox... maybe we can start with ``Addressing this paradox''?*} requires understanding how and why user behavior
-differs from \ignore{``optimal.''} \textcolor{red}{`optimum.'' (I don't know if this 
-optimal->optimum change is necessary... in some fields optimum refers to
-the unique best solution whereas optimal refers to one of potentially multiple 
-``locally best'' solutions). In this 
-statement it sounded like we were assuming the former with the optimum 
-being the way system designers believe users will behave-- complaining but 
-following the rules.}
+\textcolor{red}{Addressing this paradox requires understanding how and why user behavior
+differs from ``optimum.''}
 
-People behave differently for a number of reasons: (1) they have a
+\textcolor{red}{
+People behave differently for a number of reasons: 
+\begin{itemize}
+\item they have a
 different model of their environment from the security designers, with
-typically a richer set of goals and action costs, (2) they have a
+typically a richer set of goals and action costs.
+\item they have a
 different model of the security risks. The designer may typically have
-a more accurate model but this is not always true, (3) even with
+a more accurate model but this is not always true.
+\item even with
 correct models, humans often make suboptimal choices, for example due
 to biases in decision making, distractions, emotion and fatigue.
+\end{itemize}
+}
 
 \textcolor{red}{The literature provides valuable insights. Adams and Sasse 
 \cite{adams1999users} challenged the belief that users 
@@ -142,22 +142,23 @@ Furthermore, they postulated that users will comply when the task cost of
 compliance (individual cost - benefits) does not exceed the compliance threshold.
 }
 
-\textcolor{red}{Many computer security problems, especially those regarding 
-circumvention, may be classified as wicked problems-- problems that are 
-extraordinarily difficult, requiring novel ideas and techniques to 
+\textcolor{red}{Some might classify circumvention as a \textit{wicked problem}-- 
+a problem that is extraordinarily difficult, requiring novel ideas and techniques to 
 address. [*** this is a very imprecise definition... fully defining 
 wicked problems would take up a lot of space... also, citation needed!***]. 
-We argue that agent-based modeling can provide tremendous value here. 
-Even when it is impossible to define, a priori, how users will circumvent, 
+We argue that agent-based modeling can nonetheless provide tremendous value here. 
+Even when it is impossible to define, a priori, how users will circumvent controls, 
 agent-based simulations may be able to tell us whether users would be 
 inclined to circumvent if given the opportunity, e.g. by identifying frustration levels.
 [*** citations? ***] 
 In some situations, we may be able to address sources of frustration, 
 and, in doing so, address the problem of circumvention, without even identifying a 
 particular instance of circumvention. In other situations, where we can identify, a posteriori, 
-instances of circumvention, agent-based modeling may provide a deeper 
-understanding of the factors conducive to circumvention. If we 
-think about circumvention as a contagion, it may be possible to identify how workaround
+a particular method of circumvention, agent-based modeling may provide a deeper 
+understanding of the factors conducive to circumvention 
+(such as the types of password misbehavior documented in fieldwork surveys). }
+
+\textcolor{red}{If we think about circumvention as a contagion, it may be possible to identify how workaround
 knowledge spreads, which population groups are most susceptible to engaging in workarounds, 
 and where the tipping point is between between the occasional workaround and ubiquitous circumvention. 
 Using this information, it may be possible to shift users from one group to another, and 
@@ -228,7 +229,6 @@ the system would become unusable---massively frequent interruptions of workflow 
 However, beyond this short window, one would assume that longer timeouts
 yield worse net exposure (e.g., total minutes of logged-in but unattended machines).   Anything between too-short and infinite would be an improvement 
 on the original scenario.
-\textcolor{red}{*I find the previous sentence unnecessary and feel we can cut it if we need more space*}
 
 What happened was unexpected:
 frustrated with the interruptions (and perhaps with accuracy problems
@@ -259,12 +259,18 @@ user's state, actions, and working environment rather than choosing a
 constant. Given feedback, for example, a security tool might learn to
 estimate the user's expected frustration caused by a timeout based on
 the open applications on the computer, time of day, and
-domain-specific indications of workload such as the patient roster. At
-the same time it might learn to estimate the probability of a
+domain-specific indications of workload such as the patient roster. 
+\ignore{At the same time it might learn to estimate the probability of a
 vulnerability caused by a lengthened timeout in the same way and use
 the two values to reason about the tradeoffs of user frustration and
-near-term security. \textcolor{red}{*The previous line is worrisome if we 
-are talking about wicked problems.*} Such a tool is likely to require extensive data
+near-term security.}
+\textcolor{red}{At the same time it might learn to estimate the  
+the probability that a very frustrated user might execute an unforeseen 
+workaround, and the probability that a less frustrated user might copy 
+such a workaround if she sees it.}
+\textcolor{red}{*The previous sentence has been modified 
+so as to not contradict the ``wickedness'' of the problem.*} 
+Such a tool is likely to require extensive data
 about the operations where it is to be deployed, but the parameters of
 interest and initial values could be set by learning within the
 simulation.
@@ -287,7 +293,7 @@ Administration) systems led to medical errors. \textcolor{red}{However, is impor
 that security mechanisms do not only impact other organizational objectives 
 in the presence of workarounds. Even in the absence of workarounds, 
 stringent security mechanisms can induce stress, fatigue, and 
-changes in mood that impact workflow and sabotage numerous 
+changes in mood that impact workflow and hinder progress toward numerous 
 organizational goals. *a citation here would be great!*}
 
 \ignore{Even in situations where 
@@ -352,10 +358,10 @@ remember a new password might instinctually write down passwords.
 Frustration may also impact action choices when the reasoning 
 module is employed. Suppose a clever user is frustrated with a policy requiring
 routine password change. If the user is aware that the system only prohibits 
-the current password when password reset attempt are made, and the 
+the current password when password reset attempts are made, and the 
 cognitive burden of remembering a new password is sufficiently high, 
 she might decide to call the help desk, stating that her password had been 
-changed, so as to have her old password restored (a real-world anecdote!). 
+changed, so as to have her old password restored, which we have seen in fieldwork. 
 Other emotions (e.g. fatigue, stress) may also have an impact on the user's 
 perception, beliefs, and mental processes.}
  
@@ -365,16 +371,18 @@ ones that best satisfy some objective function of security goals
 and other organizational goals, giving special importance to commonly 
 overlooked but frequently occurring events that happen in the real world, 
 such as workarounds. To this end, our simulation must be able to 
-track various statistics. We've already designed a simple prototype to 
-achieve these goals, and, though we've had 
-interesting results, the prototype only utilized a subset of {\sc dash}; furthermore, 
-validation seems to be a significant challenge.}
- 
- \textcolor{red}{Prior to seeking validation, we must come up with a method to 
+track various statistics. We've already designed a simple prototype as a first 
+step to achieving these goals in the timeout scenario, and had students in 
+a special-topics course build a few more for other scenarios, with
+interesting results; however, the prototype only utilized a subset of {\sc dash} 
+and there's still much more to do!}
+
+ \textcolor{red}{Validation seems to be a significant challenge. But, prior to 
+ seeking validation, we must come up with a method to 
 set parameter values so that the agents in our model faithfully describe 
 the respective users in the real world. Ideally, we would like to measure, 
 quantitatively, emotions such as frustration, stress, and fatigue. It's also 
-imperative we have a deep understanding of when and how these values 
+imperative that we have a deep understanding of when and how these values 
 change in real environments so as to engineer our simulation faithfully.}
 
 
@@ -544,6 +552,13 @@ security and organizational benefits of various systems. We have
 studied a particular scenario in timeouts and believe the agent-based
 approach will be useful in a number of other applications, including
 password-based authentication and authorization.
+
+\section{Acknowledgements}
+\label{sec-acks}
+
+This material is based in part upon work support by the Army Research Office under Award No. W911NF-13-1-0086.
+
+\textcolor{red}{* change this if necessary*}
 
 \small
 
