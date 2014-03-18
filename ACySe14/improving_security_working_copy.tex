@@ -136,7 +136,6 @@ users will write it down (thus {\em increasing} compromise risk); if
 forced to change a critical password, some users will change passwords
 for other accounts (outside the officer's purview) to be the
 same---thus increasing both risk {\em and} consequence of compromise.
-
 Thus, we see a descent into an \textit{uncanny valley}: where
 implementing a more stringent security mechanism may reduce the
 overall security posture \cite{mori70}.
@@ -144,22 +143,24 @@ overall security posture \cite{mori70}.
 \ignore{Thus, what seems to be a simple monotonic relationship may in fact harbor
 what graphics specialists call {\em uncanny valleys}: places where
 dialing up the controls actually decreases overall security posture.}
-%
+
 Addressing this paradox requires understanding how and why user behavior
 differs from ``optimum.''
-
-People behave differently for a number of reasons: 
-\begin{itemize}
-\item they have a
+People behave differently for a number of reasons:
+%\begin{itemize}
+%\item 
+first, they may have a
 different model of their environment from the security designers, with
 typically a richer set of goals and action costs.
-\item they have a
+%\item 
+Second, they may have a
 different model of the security risks. The designer may typically have
 a more accurate model but this is not always true.
-\item even with
+%\item 
+Third, even with
 correct models, humans often make suboptimal choices, for example due
 to biases in decision making, distractions, emotion and fatigue.
-\end{itemize}
+%\end{itemize}
 
 
 Adams and Sasse 
@@ -169,12 +170,19 @@ are averse to engaging in secure behaviors and motivated the need for
 Through interviews, Beautement et al  \cite{beautement2009compliance} discovered that ``the key factors in 
 the compliance decision are the actual and anticipated cost and benefits of 
 compliance to the individual employee, and perceived cost and benefits to 
-the organization.'' They also identified numerous examples of these factors:
-\begin{itemize}
-\item perceived costs of compliance: increased physical load, increased cognitive load, embarrassment, missed opportunities, the `hassle factor'
-\item perceived benefits of compliance: avoiding the consequences of a security breach, protection from sanctions
-\item external factors of compliance: design, awareness, training, and education, the culture of the organization, monitoring, sanctions
-\end{itemize}
+the organization.'' They also identified numerous examples of these
+factors.
+%\begin{itemize}
+%\item 
+Perceived costs of compliance included increased physical load,
+increased cognitive load, embarrassment, missed opportunities and the `hassle factor'.
+%\item 
+Perceived benefits of compliance included avoiding the consequences of
+a security breach and protection from sanctions.
+%\item 
+Finally, external factors of compliance included design, awareness,
+training, and education, the culture of the organization, monitoring and sanctions.
+%\end{itemize}
 Furthermore, they postulated that users will comply when the task cost of 
 compliance (individual cost - benefits) does not exceed the compliance threshold.
 
@@ -585,23 +593,24 @@ these costs?)}
 \label{sec-conclusion}
 
 In this paper, we have argued that in order to realize systems
-security goals it is imperative that we first fully understand the
-nuances of users and user behavior.  We have also argued that we must
-stop looking at security objectives in isolation --- incorrect
-assumptions by security designers can have very real repercussions,
-e.g. due to circumvention, that impact non-security goals. Agent-based
-modeling can help on both fronts. In particular, we believe that the
-{\sc dash} framework can assist system designers in understanding user
-behavior, predicting the prevalence of workarounds, and measuring both
-security and organizational benefits of various systems. We have
-studied \textcolor{red}{(and will continue to study)} a particular scenario in timeouts and believe the agent-based
-approach will be useful in a number of other applications, including
-password-based authentication and authorization.
+security goals we must first fully understand the nuances of users and
+user behavior.  We have also argued that we must stop looking at
+security objectives in isolation --- incorrect assumptions by security
+designers can have very real repercussions, e.g. due to circumvention,
+that impact non-security goals. Agent-based modeling can help on both
+fronts. In particular, we believe that the {\sc dash} framework can
+assist system designers in understanding user behavior, predicting the
+prevalence of workarounds, and measuring both security and
+organizational benefits of various systems. We described a particular
+scenario in timeouts and believe the agent-based approach will be
+useful in a number of other applications, including password-based
+authentication and authorization.
 
 \section{Acknowledgements}
 \label{sec-acks}
 
-This material is based in part upon work support by the Army Research Office under Award No. W911NF-13-1-0086.
+This material is based in part upon work support by the Army Research
+Office under Award No. {\small W911NF-13-1-0086}.
 
 \small
 
