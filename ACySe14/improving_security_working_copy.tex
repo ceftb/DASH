@@ -357,8 +357,7 @@ system to be secured, that captures the objectives of individual
 agents and factors that influence their likelihood of compliance with
 security protocols. We envision such a platform being employed by
 security designers to test various security mechanisms when it is
-infeasible to run real experiments due to ethical costs, monetary
-costs, or for other reasons.
+infeasible to run real experiments for various reasons.
 
 \ignore{Suppose we consider the most simple model in which users are incapable of circumvention and fixed timeout thresholds must be used. How do we set the right threshold? In order to even begin approaching this problem we must consider the interplay between security objectives and other organizational objectives. Additionally, we must incorporate the nuances of user behavior-- emotions, biases, etc. To this end, we are in the process of developing an agent-based platform. We envision such a platform being employed by security designers to test various security measures when it is infeasible to run real experiments due to ethical costs, monetary costs, or for other reasons.}
 
@@ -385,53 +384,52 @@ appraisal of entities that are seen as conflicting with the agent's
 plan. In field work, frustration has emerged as a significant factor
 in the application of workarounds.
 
-\textcolor{red}{Regarding the styrofoam cup example, clinicians may perceive the 
-following as organizational goals: minimizing medical errors, ensuring patients 
-are treated with dignity and attended to promptly, minimizing unnecessary 
-exposure of patient data. Individual goals may include things like providing 
-superior patient care and finishing the current task adequately but quickly. 
-These goals give rise to a utility function that can be used to evaluate the 
-perceived outcomes of executing plans, which is done through 
-the reasoning module. When an agent invokes the reasoning module to 
-choose amongst multiple actions in {\sc dash}, she essentially compares the 
-plans associated with each of the actions, and chooses the action associated
-with the plans that she perceives will provide the most utility according to the 
-beliefs she holds.}
- 
-\textcolor{red}{However, planning achieved through the reasoning module
-may also be bypassed using the instinctive module when the agent is subject to certain 
-emotions such as frustration. For example, a user frustrated with having to 
-remember a new password might instinctually write down passwords.
-Frustration may also impact action choices when the reasoning 
-module is employed. Suppose a clever user is frustrated with a policy requiring
-routine password change. If the user is aware that the system only prohibits 
-the current password when password reset attempts are made, and the 
-cognitive burden of remembering a new password is sufficiently high, 
-she might decide to call the help desk, stating that her password had been 
-changed, so as to have her old password restored, which we have seen in fieldwork. 
-Other attributes (e.g. fatigue, stress) may also have an impact on the user's 
-perception, beliefs, and mental processes.}
- 
-\textcolor{red}{The end goal is to build on this platform so that it may be 
-used by organizations to compare security mechanisms and choose the 
-ones that best satisfy some objective function of security goals 
-and other organizational goals, giving special importance to commonly 
-overlooked but frequently occurring events that happen in the real world, 
-such as workarounds. To this end, our simulation must be able to 
-track various statistics. We've already designed a simple prototype as a first 
-step to achieving these goals in the timeout scenario, and had students in 
-a special-topics course build a few more for other scenarios, with
-interesting results; however, the prototype only utilized a subset of {\sc dash} 
-and there's still much more to do!}
+Regarding the styrofoam cup example, clinicians may perceive the
+following as organizational and individual goals: minimizing medical
+errors, ensuring patients are treated with dignity and attended to
+promptly, minimizing unnecessary exposure of patient
+data. \ignore{Individual goals may include things like providing
+  superior patient care and finishing the current task adequately but
+  quickly.}  These goals give rise to a utility function that can be
+used to evaluate the perceived outcomes of executing plans, which is
+done through the reasoning module. When using deliberative reasoning,
+a {\sc dash} agent by default chooses among alternative actions by
+projecting the plan associated with each one and picking the plan
+whose outcome has highest utility according to its beliefs.
 
- \textcolor{red}{Validation seems to be a significant challenge. Prior to 
- seeking validation, we must come up with a method to 
-set parameter values so that the agents in our model faithfully describe 
-the respective users in the real world. Ideally, we would like to measure, 
-quantitatively, emotions such as frustration (e.g. \cite{hazlett2003measurement}, \cite{kapoor2007automatic}, \cite{klein2002computer}, \cite{reynolds2001sensing}), stress, and fatigue. It's also 
-imperative that we have a deep understanding of when and how these values 
-change in real environments so as to engineer our simulation faithfully.}
+However, planning achieved through the reasoning module may also be
+bypassed using the instinctive module when the agent is subject to
+certain emotions such as frustration. For example, an agent under
+stress caused by time pressure may skip a step to check that it is
+logged into the computer rather than another agent, and proceed to
+entering prescription information, since this more material step
+receives high activation from the instinctive module. Since the
+instinctive module provides input on goals as well as actions,
+frustration may also impact action choices when the reasoning module
+is employed. Suppose a clever user is frustrated with a policy
+requiring routine password change. If the user is aware that the
+system only prohibits the current password during a reset, and the
+perceived burden of remembering a new password is sufficiently high,
+she might create a plan to call the help desk after a reset so as to
+have her old password restored. This matches behavior seen in
+fieldwork.  Other attributes (e.g. fatigue, stress) may also have an
+impact on the user's perception, beliefs, and mental processes.
+ 
+We have implemented a prototype model as a first step to exploring the
+interaction of security goals and user behavior in the timeout
+scenario, and students in a special-topics course have built models
+for other scenarios. We are now in the process of extending the models
+to account for more of the behaviors found in fieldwork or by some of
+the richer models available in {\sc dash}.
 
+Validation is a significant challenge. In a two-step approach, we will
+begin by showing that our models can duplicate behaviors seen in our
+field studies. Next, we are planning experiments to uncover and where
+possible manipulate internal states such as frustration
+(\cite{hazlett2003measurement}, \cite{kapoor2007automatic},
+\cite{klein2002computer}, \cite{reynolds2001sensing}), stress and
+fatigue, to both test hypotheses about the role they play and show
+that our agent models can capture the behavior at a deeper level.
 
 % some of the following papers may be enlightening
 % Automatic prediction of frustration - Kapoor et al
