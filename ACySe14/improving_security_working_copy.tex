@@ -92,8 +92,8 @@ Jim Blythe\\
 %\abstract
 
 \begin{abstract}
-Security subsystems are often designed with flawed assumptions arising from faulty
-mental models held by system designers. 
+Security subsystems are often designed with flawed assumptions arising from 
+system designers' faulty mental models. 
 Designers tend to assume that users behave according to some textbook ideal,
 and to consider each potential exposure/interface in isolation.
 However, fieldwork 
@@ -108,7 +108,7 @@ to choices that actually make security worse, in practice.
 
 We propose that improving this situation requires giving designers more
 accurate models of real user behavior and how it influences aggregate system
-security, and that agent-based modeling can be a fruitful 
+security. Agent-based modeling can be a fruitful 
 first step here.
 In this paper, we study a
 particular instance of this problem, propose
@@ -128,7 +128,7 @@ complex, non-personally meaningful passwords which must be changed on
 a regular basis.  In other words, the more the officer ``dials up''
 her control knob, the more secure the system is.
 
-However, fieldwork (e.g. \cite{blythe2013circumvention}, \cite{DP00},
+However, fieldwork (e.g., \cite{blythe2013circumvention}, \cite{DP00},
 \cite{florencio2007large}, \cite{gaw2006password},
 \cite{riley2006password}) shows that human users behave in ways that
 subvert this model.  For example, if a password is too complex, human
@@ -184,26 +184,28 @@ Finally, external factors of compliance included design, awareness,
 training, and education, the culture of the organization, monitoring and sanctions.
 %\end{itemize}
 Furthermore, they postulated that users will comply when the task cost of 
-compliance (individual cost - benefits) does not exceed the compliance threshold.
-
+compliance (individual cost - benefits) does not exceed the compliance threshold. 
+Fieldwork also indicates security systems (e.g., anti-virus software, backup systems) 
+often provide users with a false sense of security, allowing users to believe such 
+systems act as safeguards against their own circumventions and security lapses.
 
 Agent-based modeling can provide important insights into the question
 of the optimal security posture by taking the potential human response
 into account.  Some might classify circumvention as a \textit{wicked
-  problem} (e.g. \cite{rittel1973dilemmas}) -- an extraordinarily
+  problem} (e.g., \cite{rittel1973dilemmas}) -- an extraordinarily
 challenging problem that does not lend itself to definitive
 formulation, which requires novel ideas and techniques to address.  We
 argue that agent-based modeling can nonetheless provide significant
-value.  Even when it is impossible to define, a priori, how users will
+value.  Even when it is impossible to define \textit{a priori}, how users will
 circumvent controls, agent-based simulations may be able to predict
 when users would be inclined to circumvent given the opportunity,
 e.g. by estimating frustration levels.  In some situations, we may be
 able to address sources of frustration, and, in doing so, address the
-problem of circumvention, without identifying a particular instance of
+problem of circumvention, without identifying a particular method of
 circumvention. Furthermore, agent-based simulations may enable us to
 look at not just the causes for surprising behavior, in the aggregate,
 but also at the effects, in the aggregate.  In other situations, where
-we can identify, a posteriori, a particular method of circumvention,
+we can identify \textit{a posteriori}, a method of circumvention,
 agent-based modeling may provide a deeper understanding of the factors
 conducive to circumvention (such as the types of password misbehavior
 documented in fieldwork surveys).
@@ -236,12 +238,12 @@ may differ from those of the system designers, and the potential
 effects of known biases and of emotions such as frustration on user
 compliance.  We are in the process of developing an agent platform
 that captures these aspects. In this position paper we briefly present
-the approach and describe an example where agent models are used to
+the approach and describe an example where agent models may be used to
 predict the best timeout value for automatically logging users off in
 multi-user environments.  A model that assumes user compliance may
 find that a short timeout is optimal, because it minimizes the chance
 of another user either accessing material inappropriately or
-accidentally entering information to the wrong account. However our
+accidentally entering information to the wrong account. However our preliminary
 model predicts that a longer timeout may provide better performance in
 an environment where the logout procedure can be actively
 defeated---as actually and unexpectedly happened in a real-world
@@ -290,7 +292,7 @@ increases; a more
 accurate model would require taking into account the aggregate effects
 of user behavior, such as: (1) how frustrated different users might
 get with timeouts perceived as too short; (2) how quickly frustrated
-users might find a workaround, such as the styrofoam cups; (3) how
+users might seek a workaround, such as the styrofoam cups; (3) how
 many of the remaining users, who might not actively break the system
 themselves, might happily use a system where someone else had left a
 styrofoam cup; (4) whether having a security professional walking the
@@ -312,7 +314,7 @@ modeled.
 
 The naive approach to timeouts uses a fixed timeout threshold and
 neglects factors that are indicative of frustration experienced in the
-event of a timeout. These factors, including the intended use of the
+event of a timeout. These factors, which include the intended use of the
 system, fatigue, and stress, motivate choosing a timeout value that is
 sensitive to the user's state, actions, and working environment rather
 than choosing a constant. Given feedback, for example, a security tool
@@ -431,7 +433,7 @@ to account for more of the behaviors found in fieldwork or by some of
 the richer models available in {\sc dash}.
 
 Validation is a significant challenge. In a two-step approach, we will
-begin by showing that our models can duplicate behaviors seen in our
+begin by showing that our models can duplicate behaviors seen in our and others'
 field studies. Next, we are planning experiments to uncover and where
 possible manipulate internal states such as frustration
 (\cite{hazlett2003measurement}, \cite{kapoor2007automatic},
@@ -554,7 +556,8 @@ Many users have easily-guessed answers to security questions, even if
 their passwords are strong.  Many users simultaneously know what good
 password practices are, but fail to follow them.  Some users try to
 choose stronger passwords when they perceive compromise of an account
-might hurt them personally.
+might hurt them personally. Many users come up with 
+the right passwords for the wrong usernames or for the wrong services.
 
 What is the aggregate security effect of a decision regarding password
 policy, if users behave as the surveys suggest in the proportions the
@@ -563,7 +566,7 @@ better training) might yield the best results?
 
 Another set of avenues might be exploring behavior-based workarounds and 
 errors in enterprise {\em authorization}
-(e.g., \cite{Scout08a, SS08, Scout10})
+(e.g., \cite{SS08, Scout10, Scout08a})
 Commercial enterprises tend to {\em over-entitlement}, as the perceived costs of under-entitlement are too high.
 Enterprises also tend to over-entitlement, because users tend
 to accumulate permissions over their career path (even keeping irrelevant ones across promotions and transfers).
@@ -574,13 +577,11 @@ entitlements from current employees, rather than thinking in detail.
 
 One infosec officer at an investment bank reported that potential
 clients would judge his bank's security by the question ``how many of
-your employees will be able to see my data?''.  Realistically
+your employees will be able to see my data?''  Realistically
 reasoning about this question, or the net amount of exposure, the
 costs of under-entitlement, how much exposure could be reduced by
-hiring $N$ more officers or switching to scheme $Y$, all requires the
-model the aggregate behavior of humans.
-
-
+hiring $N$ more officers or switching to scheme $Y$, all requires 
+modeling the aggregate behavior of humans.
 
 \ignore{(Indeed, X.509 PKI has often been lamented as costing too many
 man-hours when deployed in practice, in large enterprises.  Could our
@@ -592,7 +593,7 @@ these costs?)}
 \section{Conclusion}
 \label{sec-conclusion}
 
-In this paper, we have argued that in order to realize systems
+In this paper, we have argued that to realize systems
 security goals we must first fully understand the nuances of users and
 user behavior.  We have also argued that we must stop looking at
 security objectives in isolation --- incorrect assumptions by security
@@ -614,7 +615,7 @@ Office under Award No. {\small W911NF-13-1-0086}.
 
 \small
 
-\nocite{*}
+%\nocite{*}
 
 \bibliographystyle{plain}
 \bibliography{paper_refs}
