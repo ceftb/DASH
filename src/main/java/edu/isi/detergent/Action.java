@@ -76,7 +76,10 @@ public class Action {
 		} else if ("logIn".equals(name) || (name != null && name.contains("Password"))) {  // dumb hack
 			return 1;   // avoid the generic result to delete 'loggedIn'.
 		} else {
-			detergent.printOut("Performing " + this);
+            String value = detergent.comms.submitAction(jpl.Term.toString(new Term[] {this.t}));
+			detergent.printOut("Performing " + jpl.Term.toString(new Term[] {this.t}));
+			detergent.printOut("Also, submitting action to server so that it may generate appropriate observables.\n");
+            return value;
 		}
 		lastActionName = name;
 		//return successValue();

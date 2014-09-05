@@ -53,6 +53,21 @@ public class Comms {
 		}
 
 	}
+    
+    /**
+     * Submits chosen action to the server. The server can then
+     * generate an appropriate result for the action and also
+     * generate the appropriate observables that are relayed to
+     * agents via checkMessages.
+     *
+     * @param action
+     * @return
+     */
+    public String submitAction(String actionString) {
+        System.out.println("Submitting action " + actionString + " to server.\n");
+        return sendAndRead("action " + actionString);
+    }
+    
 	
 	/**
 	 * Sends a message to another agent with the given id. This is logged

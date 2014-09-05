@@ -22,6 +22,8 @@ public class CommServer {
 	static HashMap<String,String>variables = new HashMap<String,String>();
 	static long startTime = System.currentTimeMillis();
 	
+    public static WorldLogic worldLogic = null;
+    
 	/**
 	 * Each connection is served in a ClientThread
 	 * @author blythe
@@ -62,7 +64,13 @@ public class CommServer {
 				id = Integer.parseInt(inputLine.substring(3)); 
 				if (!messages.containsKey(id))
 					messages.put(id, new ArrayList<String>());
+                worldLogic.addAgent(id);
 				return "ok";
+            } else if (inputLine.startsWith("action")) {
+				System.out.println(id + ": " + inputLine);
+ 
+                String action = inputLine.substring(7);
+				return worldLogic.processAction(id, action);
 			} else if (inputLine.startsWith("send")) {
 				// queue a message for another agent
 				System.out.println(id + ": " + inputLine);
@@ -74,6 +82,12 @@ public class CommServer {
 			} else if (inputLine.startsWith("check")) {
 				// send any messages queued for this agent
 				List<String>myMessages = messages.get(id);
+                
+                // query prolog for unprocessed observations
+                String observations = worldLogic.getObservations(id);
+                System.out.println("Got observations: " + observations + ".\n");
+                myMessages.add(observations);
+                
 				if (myMessages == null || myMessages.isEmpty())
 					return "0";
 				else {
@@ -109,7 +123,9 @@ public class CommServer {
 	 */
 	public static void main(String[] args) {
 		ServerSocket serverSocket = null;
-
+        
+        worldLogic = new WorldLogic();
+        
 		try {
 			serverSocket = new ServerSocket(port);
 		} catch (IOException e) {
@@ -117,6 +133,7 @@ public class CommServer {
 			System.exit(1);
 		}
 		
+        
 		System.out.println("Detergent server version 0.1, listening on " + port);
 		try {
 			while (listening)

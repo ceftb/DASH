@@ -69,6 +69,7 @@ public class Cognition {
 	protected Action getNextAction() {
 		Query doQuery = new Query("do", new Term[] {new Variable("Action")});
 		Term t = getQueryResult(doQuery, "Action");
+                
 		if (t != null) {
 			String[] args = new String[t.args().length];
 			for (int i = 0; i < args.length; i++)
