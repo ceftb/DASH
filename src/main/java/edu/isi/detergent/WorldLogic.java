@@ -64,11 +64,11 @@ public class WorldLogic {
     
     // processes the given action, generating a result and appropriate observations
     public String processAction(java.lang.Integer id, String action) {
-        System.out.println("processAction called with id " + id + " and action " + action + "\n");
+        System.out.println("processAction called with action " + action + " and id " + id + "\n");
 
         try {
             // generate processQuery here to process the action and return a result
-            Term processTerm = jpl.Util.textToTerm("processAction" + "(" + id + "," + action + "," + "R)");
+            Term processTerm = jpl.Util.textToTerm("processAction" + "(" + action + "," + id + "," + "R)");
             Query processQuery = new Query(processTerm);
         
             if (processQuery.hasMoreElements()) {
@@ -96,11 +96,11 @@ public class WorldLogic {
                 return jpl.Term.toString(new Term[] {result});
             } else {
                 System.out.println("WorldLogic: getObservations: error: could not get observations for agent " + id + ".\n");
-                return "fail";
+                return null;
             }
         } catch (jpl.PrologException E) {
             System.out.println("WorldLogic: getObservations: error: could not get observations for agent " + id + ".\n");
-            return "fail";
+            return null;
         }
     }
 

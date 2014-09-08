@@ -70,7 +70,7 @@ public class CommServer {
 				System.out.println(id + ": " + inputLine);
  
                 String action = inputLine.substring(7);
-				return worldLogic.processAction(id, action);
+				return worldLogic.processAction(action, id);
 			} else if (inputLine.startsWith("send")) {
 				// queue a message for another agent
 				System.out.println(id + ": " + inputLine);
@@ -86,7 +86,11 @@ public class CommServer {
                 // query prolog for unprocessed observations
                 String observations = worldLogic.getObservations(id);
                 System.out.println("Got observations: " + observations + ".\n");
-                myMessages.add(observations);
+                
+                if (observations != null)
+                    myMessages.add(observations);
+                else
+                    System.out.println("Uhoh! getObservations returned null. This should never happen!\n");
                 
 				if (myMessages == null || myMessages.isEmpty())
 					return "0";
