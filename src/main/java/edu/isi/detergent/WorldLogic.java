@@ -63,7 +63,7 @@ public class WorldLogic {
     }
     
     // processes the given action, generating a result and appropriate observations
-    public String processAction(java.lang.Integer id, String action) {
+    public String processAction(String action, java.lang.Integer id) {
         System.out.println("processAction called with action " + action + " and id " + id + "\n");
 
         try {
