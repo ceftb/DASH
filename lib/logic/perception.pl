@@ -5,7 +5,7 @@
 :- dynamic(observations/1).
 :- dynamic(perceive/1).
 
-perception :- observations(Observations), reverse(Observations, L), perception(L).
+perception :- observations(Observations), reverse(Observations, L), perception(L), retract(observations(Observations)).
 perception :- not(observations(Observations)).
 
 perception([]).
