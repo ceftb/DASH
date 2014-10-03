@@ -176,12 +176,37 @@ public class Detergent {
 					// Should really record that this is a message and allow the agent
 					// to process the contents as beliefs, but just surgically inserting the fact for now.
 					println("Got message: " + messages[i]);
-					cognition.addFact(messages[i]);
+					//cognition.addFact(messages[i]);
+                    
+                    try {
+                        Term assertTerm = jpl.Util.textToTerm("assert(" + messages[i] + ")");
+                        Query assertQuery = new Query(assertTerm);
+                        
+                        if (!assertQuery.hasSolution()) {
+                            System.out.println("WorldLogic: addAgent: error: could not add agent " + id + " to knowledge base.\n");
+                        }
+                    } catch (jpl.PrologException E) {
+                        System.out.println("WorldLogic: addAgent: error: could not add agent " + id + " to knowledge base.\n");
+                    }
 				}
 			}
 			// tell the cognitive part how the action went.
-			if (a != null)
-				cognition.addFact("result", new Object[] {a.t, result, time});
+			if (a != null) {
+                //cognition.addFact("result(" + a.t + ", " + result + ", " + time + ")");
+                //cognition.addFact("result", new Object[] {a.t, result, time});
+                
+                try {
+                    Term assertTerm = jpl.Util.textToTerm("assert(result(" + a.t + ", " + result + ", " + time + "))");
+                    Query assertQuery = new Query(assertTerm);
+                    
+                    if (!assertQuery.hasSolution()) {
+                        System.out.println("WorldLogic: addAgent: error: could not add agent " + id + " to knowledge base.\n");
+                    }
+                } catch (jpl.PrologException E) {
+                    System.out.println("WorldLogic: addAgent: error: could not add agent " + id + " to knowledge base.\n");
+                }
+                
+            }
 		}
 	}
 

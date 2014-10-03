@@ -1,4 +1,4 @@
 
-SWILIB=/opt/local/lib/swipl-6.2.6/lib
-SWIOS=x86_64-darwin11.4.2
+SWILIB=/opt/local/lib/swipl-6.6.6/lib
+SWIOS=x86_64-darwin13.2.0
 BIN=./target/classes

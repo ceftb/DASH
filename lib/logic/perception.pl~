@@ -1,0 +1,8 @@
+% note that we reverse the observations as the observations
+% are provided in reverse chronological order from the hub
+% - it is more efficient to reverse it at one time here
+perception :- observations(O), reverse(O, L), perception(L).
+
+perception([]).
+perception([H | T]) :- not(perceive(H)), perception(T), !.
+perception([H | T]) :- perceive(H), perception(T), !.

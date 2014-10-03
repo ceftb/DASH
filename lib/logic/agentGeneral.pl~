@@ -34,7 +34,7 @@ test(Time) :- do(Action), format('~w\n', [Action]), assert(result(Action, 1, Tim
 
 % This is the fundamental step, so it calls system 1.
 do(Action) :-
-	perception,
+        perception,
 	updateBeliefs,
 	system1,
 	chooseAction(Action).

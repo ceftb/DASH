@@ -73,8 +73,8 @@ public class Action {
 			return simulatorSetStub();
 		} else if ("checkSystem1".equals(name)) {
 			return emoCogWrapper();
-		} else if ("logIn".equals(name) || (name != null && name.contains("Password"))) {  // dumb hack
-			return 1;   // avoid the generic result to delete 'loggedIn'.
+//		} else if ("logIn".equals(name) || (name != null && name.contains("Password"))) {  // dumb hack
+//			return 1;   // avoid the generic result to delete 'loggedIn'.
 		} else {
             String value = detergent.comms.submitAction(jpl.Term.toString(new Term[] {this.t}));
 			detergent.printOut("Performing " + jpl.Term.toString(new Term[] {this.t}));

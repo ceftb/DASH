@@ -32,7 +32,7 @@ public class WorldLogic {
     }
     
     // adds agent to the knowledge base
-    public int addAgent(int id) {
+    public synchronized int addAgent(int id) {
         try {
             Term assertTerm = jpl.Util.textToTerm("assert(id(" + id + "))");
             Query assertQuery = new Query(assertTerm);
@@ -63,7 +63,7 @@ public class WorldLogic {
     }
     
     // processes the given action, generating a result and appropriate observations
-    public String processAction(String action, java.lang.Integer id) {
+    public synchronized String processAction(String action, java.lang.Integer id) {
         System.out.println("processAction called with action " + action + " and id " + id + "\n");
 
         try {
@@ -84,7 +84,7 @@ public class WorldLogic {
         }
     }
     
-    public String getObservations(java.lang.Integer id) {
+    public synchronized String getObservations(java.lang.Integer id) {
         System.out.println("getObservations called with id " + id + "\n.");
         
         try {

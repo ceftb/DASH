@@ -1,0 +1,18 @@
+:- style_check(-singleton).
+:- style_check(-discontiguous).
+
+:- consult ('agentGeneral').
+
+goal(soleGoal).
+
+primitiveAction(printObservations).
+primitiveAction(sleep).
+
+goalRequirements(soleGoal, [printObservations]) :- observations(L), printList(L), retract(observations(L)), !.
+goalRequirements(soleGoal, [sleep]) :- no(observations(L)).
+
+
+printList([] :- !.
+printList([H | T]) :- format('obs: ~w.\n', [H]), print(T), !.
+
+updateBeliefs(_,_).

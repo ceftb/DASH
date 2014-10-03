@@ -21,8 +21,8 @@ primitiveAction(doNothing).
 
 % handle requests from various users
 goalRequirements(handleRequests, [handleRequest(createAccount(ID, Username, Password))]) :- createAccount(ID, Username, Password), retract(createAccount(ID, Username, Password)), assert(requirementsSet([handleRequest(createAccount(ID, Username, Password))])).
-goalRequirements(handleRequests, [handleRequest(signIn(ID, Username, Password))]) :- signIn(ID, Username, Password), retract(signIn(ID, Username, Password)), assert([handleRequest(signIn(ID, Username, Password))]).
-goalRequirements(handleRequests, [handleRequest(signOut(ID, Username, Password))]) :- signOut(ID, Username, Password), retract(signOut(ID, Username, Password)), assert([handleRequest(signOut(ID, Username, Password))]).
+goalRequirements(handleRequests, [handleRequest(signIn(ID, Username, Password))]) :- signIn(ID, Username, Password), retract(signIn(ID, Username, Password)), assert(requirementsSet([handleRequest(signIn(ID, Username, Password))])).
+goalRequirements(handleRequests, [handleRequest(signOut(ID, Username, Password))]) :- signOut(ID, Username, Password), retract(signOut(ID, Username, Password)), assert(requirementsSet([handleRequest(signOut(ID, Username, Password))])).
 goalRequirements(handleRequests, [doNothing]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
