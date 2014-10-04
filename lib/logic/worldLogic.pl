@@ -36,8 +36,8 @@
 
 % by default, the result is default
 % if, however, determineResult(A, ID, R) does exist we use that to determine the result
-processAction(A, ID, R) :- format('processsing action ~w by user ~w.\n', [A, ID]), determineResult(A, ID, R), forall(id(Observer), updateObservations(Observer, actionResult(A, ID, R))), printWorldStateWrapper.
-processAction(A, ID, default) :- not(determineResult(A, ID, _)), forall(id(Observer), updateObservations(Observer, actionResult(A, ID, default))), printWorldStateWrapper.
+processAction(A, ID, R) :- determineResult(A, ID, R), forall(id(Observer), updateObservations(Observer, actionResult(A, ID, R))), ansi_format([fg(red)], 'processed action ~w by user ~w. result: ~w\n', [A, ID, R]), printWorldStateWrapper.
+processAction(A, ID, default) :- not(determineResult(A, ID, _)), forall(id(Observer), updateObservations(Observer, actionResult(A, ID, default))), ansi_format([fg(red)], 'processed action ~w by user ~w. result: ~w\n', [A, ID, R]), printWorldStateWrapper.
 
 printWorldStateWrapper :- not(printWorldState), !.
 printWorldStateWrapper :- printWorldState, !.
