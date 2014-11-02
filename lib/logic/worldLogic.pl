@@ -39,8 +39,8 @@
 processAction(A, ID, R) :- determineResult(A, ID, R), forall(id(Observer), updateObservations(Observer, actionResult(A, ID, R))), ansi_format([fg(red)], 'processed action ~w by user ~w. result: ~w\n', [A, ID, R]), printWorldStateWrapper.
 processAction(A, ID, default) :- not(determineResult(A, ID, _)), forall(id(Observer), updateObservations(Observer, actionResult(A, ID, default))), ansi_format([fg(red)], 'processed action ~w by user ~w. result: ~w\n', [A, ID, R]), printWorldStateWrapper.
 
-printWorldStateWrapper :- not(printWorldState), !.
 printWorldStateWrapper :- printWorldState, !.
+printWorldStateWrapper :- not(printWorldState), !.
 
 % we should always have observations(ID, L) if ID is legitimate. L may be [].
 % if generateObservation(Observer, ActionResult, Observation) exists, we use this to determine what the observer observes
