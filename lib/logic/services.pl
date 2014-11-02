@@ -1,8 +1,19 @@
 :- dynamic(accountExists/4).
 :- dynamic(determineResult/3).
 :- dynamic(signedIn/3).
-
+:- dynamic(printWorldState/0).
+:- dynamic(numPasswordResets/1).
+:- dynamic(numUsernamesWritten/1).
+:- dynamic(numPasswordsWritten/1).
+:- dynamic(numAccountsCreated/1).
 :- consult('services_util').
+
+numPasswordResets(0).
+numPasswordsWritten(0).
+numAccountsCreated(0).
+numUsernamesWritten(0).
+
+printWorldState :- numPasswordResets(PR), numUsernamesWritten(UW), numPasswordsWritten(PW), numAccountsCreated(AC), ansi_format([fg(blue)], 'number of accounts created: ~w\nnumber of usernames written down: ~w\nnumber of passwords written down: ~w\nnumber of password resets performed: ~w\n', [AC, UW, PW, PR]).
 
 services([gmail, hotmail, yahoomail]).
 
@@ -26,18 +37,23 @@ determineResult(enterDesiredPassword(Service, Password), User, Result) :- servic
 
 %%% TEST!!!!: determineResult(clickCreateAccountButton(Service, Username, Password), User, error(success, error([minLength(20)]))).
 determineResult(clickCreateAccountButton(Service, Username, Password), User, error(noService)) :- not(serviceExists(Service)), format('This should never happen! User tried to access service ~w, which does not exist.\n', [Service]), !.
-determineResult(clickCreateAccountButton(Service, Username, Password), User, success) :- serviceExists(Service), usernameResponse(Service, Username, UsernameResult), passwordResponse(Service, Password, PasswordResult), UsernameResult = success, PasswordResult = success(PasswordRating), assert(accountExists(Service, Username, Password, User)), format('created account!\n'), !.
+determineResult(clickCreateAccountButton(Service, Username, Password), User, success) :- serviceExists(Service), usernameResponse(Service, Username, UsernameResult), passwordResponse(Service, Password, PasswordResult), UsernameResult = success, PasswordResult = success(PasswordRating), assert(accountExists(Service, Username, Password, User)), retract(numAccountsCreated(X)), Y is X + 1, assert(numAccountsCreated(Y)), format('created account!\n'), !.
 determineResult(clickCreateAccountButton(Service, Username, Password), User, error(UsernameResult, PasswordResult)) :- serviceExists(Service), usernameResponse(Service, Username, UsernameResult), passwordResponse(Service, Password, PasswordResult), UsernameResult = error(Reason), !.
 determineResult(clickCreateAccountButton(Service, Username, Password), User, error(UsernameResult, PasswordResult)) :- serviceExists(Service), usernameResponse(Service, Username, UsernameResult), passwordResponse(Service, Password, PasswordResult), PasswordResult = error(Reason), !.
 
 determineResult(clickResetPasswordButton(Service, Username, Password), User, error(noService)) :- not(serviceExists(Service)), format('This should never happen! User tried to access service ~w, which does not exist.\n', [Service]), !.
 determineResult(clickResetPasswordButton(Service, Username, Password), User, error(noUsername(Username))) :- serviceExists(Service), not(accountExists(Service, Username, _, User)), format('could not reset account since account with specified username does not exist!\n'), !.
 determineResult(clickResetPasswordButton(Service, Username, Password), User, PasswordResult) :- serviceExists(Service), accountExists(Service, Username, _, User), passwordResponse(Service, Password, PasswordResult), PasswordResult = error(Reason), retract(accountExists(Service, Username, _, User)), assert(accountExists(Service, Username, Password, User)), format('reset password on account!\n'), !.
-determineResult(clickResetPasswordButton(Service, Username, Password), User, success) :- serviceExists(Service), accountExists(Service, Username, _, User), passwordResponse(Service, Password, PasswordResult), PasswordResult = success(PasswordRating), retract(accountExists(Service, Username, _, User)), assert(accountExists(Service, Username, Password, User)), format('reset password on account!\n'), !.
+determineResult(clickResetPasswordButton(Service, Username, Password), User, success) :- serviceExists(Service), accountExists(Service, Username, _, User), passwordResponse(Service, Password, PasswordResult), PasswordResult = success(PasswordRating), retract(accountExists(Service, Username, _, User)), assert(accountExists(Service, Username, Password, User)), retract(numPasswordResets(X)), Y is X + 1, assert(numPasswordResets(Y)), format('reset password on account!\n'), !.
 
 determineResult(clickSignInButton(Service, Username, Password), User, Result) :- processSignIn(Service, Username, Password, User, Result), !.
 
 determineResult(clickSignOutButton(Service, Username), User, Result) :- processSignOut(Service, Username, User, Result), !.
+
+determineResult(writeUsernameOnPostIt(Service), User, success) :- retract(numUsernamesWritten(X)), Y is X + 1, assert(numUsernamesWritten(Y)), !.
+
+determineResult(writePasswordOnPostIt(Service), User, success) :- retract(numPasswordsWritten(X)), Y is X + 1, assert(numPasswordsWritten(Y)), !.
+
 
 usernameResponse(Service, Username, error([isNot(Username)])) :- usernameTaken(Service, Username).
 usernameResponse(Service, Username, error([H])) :- not(usernameTaken(Service, Username)), usernameRequirements(Service, Requirements), getUnsatisfiedRequirements(Username, Requirements, [H|T]), !.
