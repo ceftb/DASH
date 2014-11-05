@@ -56,29 +56,30 @@ subGoal(signOut(Service)) :- serviceExists(Service).
 subGoal(resetPassword(Service)) :- serviceExists(Service).
 
 % goal requirements for various goals and subgoals
-goalRequirements(doWork, Requirements) :- sleep(1), requirementsSet(Requirements), !.
+%goalRequirements(doWork, Requirements) :- sleep(1), not(true).
+goalRequirements(doWork, Requirements) :- printDoneStatements, not(true).
+goalRequirements(doWork, Requirements) :- requirementsSet(Requirements), !.
 goalRequirements(doWork, [initializeUser]) :- not(requirementsSet(X)), not(inCurrentWorld(userInitialized)), ansi_format([fg(blue)], 'initializing user.\n', []), !.
 goalRequirements(doWork, Requirements) :- not(requirementsSet(X)), chooseService(Service), determineRequirements(Service, Requirements), assert(requirementsSet(Requirements)), ansi_format([fg(blue)], 'new requirements set: ~w\n', [Requirements]), !.
 
-determineRequirements(Service, [createAccount(Service)]) :- not(inCurrentWorld(createdAccount(Service))), !.
-%determineRequirements(Service, [signIn(Service)]) :- R is random(2), R is 0, !.
-%determineRequirements(Service, [signOut(Service)]) :- !.
-determineRequirements(Service, [Reqs]) :- R is random(3), nth0(R, [signIn(Service), signOut(Service), resetPassword(Service)], Reqs), !.
-%determineRequirements(Service, [Reqs]) :- R is random(2), nth0(R, [signIn(Service), signOut(Service)], Reqs), !.
+determineRequirements(Service, [createAccount(Service), resetRequirements]) :- not(inCurrentWorld(createdAccount(Service))), !.
+%determineRequirements(Service, [Reqs, resetRequirements]) :- R is random(3), nth0(R, [signIn(Service), signOut(Service), resetPassword(Service)], Reqs), !.
+determineRequirements(Service, [Reqs, resetRequirements]) :- R is random(2), nth0(R, [signIn(Service), signOut(Service)], Reqs), !.
 
 % the primitiveAction initializeUser is the very first action the agent performs.
 % the purpose is to synchronize the hub with the user
 % as a response, the hub returns the list of services available to the user.
 % this list of users is then asserted in updateBeliefs
 % perhaps, later, we can instead have this result contain more information (e.g., other users)
-primitiveAction(initializeUser) :- not(userInitialized), initializeUserState.
 primitiveAction(initializeUser) :- userInitialized.
-updateBeliefs(initializeUser, R) :- ansi_format([fg(red)], 'update beliefs called with initializeUser. result: ~w\n', [R]), addToWorld(performed(initializeUser)), assert(R), addToWorld(userInitialized), !.
+primitiveAction(initializeUser) :- not(userInitialized), initializeUserState.
+
+updateBeliefsHelper(initializeUser, R) :- ansi_format([fg(red)], 'update beliefs called with initializeUser. result: ~w\n', [R]), addToWorld(performed(initializeUser)), assert(R), addToWorld(userInitialized), !.
 
 % this is used to reset the current task the user is working on
 % it is executed as the last step to achieving a particular task
 executable(resetRequirements).
-execute(resetRequirements) :- retractall(requirementsSet(_)), format('executing ~w.\n', resetRequirements).
+execute(resetRequirements) :- retractall(requirementsSet(_)), retractall(setupApproachUsed(_, _)), format('executing ~w.\n', resetRequirements).
 
 % this is ``called'' by initializeUser to initialize user state
 initializeUserState :- FirstNameIndex is random(4), nth0(FirstNameIndex, [joe, bob, sally, carol], FirstName), addToWorld(firstName(FirstName)), addToWorld(cognitiveBurden(0)), addToWorld(cognitiveThreshold(15)).
@@ -92,6 +93,8 @@ serviceExists(Service) :- services(ServiceList), member(Service, ServiceList).
 
 % choose a service at random
 chooseService(Service) :- services(ServiceList), length(ServiceList, Length), ServiceIndex is random(Length), nth0(ServiceIndex, ServiceList, Service).
+
+printDoneStatements :- foreach(done(A, B), ansi_format([fg(yellow)], '~w.\n', [done(A, B)])), foreach(requirementsSet(X), ansi_format([fg(yellow)], '~w.\n', [requirementsSet(X)])).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % tracking changes to world %
@@ -161,15 +164,17 @@ executable(choosePassword(Service)).
 primitiveAction(enterDesiredPassword(Service, Password)) :- inCurrentWorld(desiredPassword(Service, Password)).
 primitiveAction(clickCreateAccountButton(Service, Username, Password)) :- inCurrentWorld(desiredUsername(Service, Username)), inCurrentWorld(desiredPassword(Service, Password)).
 subGoal(setupForAccountRetrieval(Service)).
-executable(memorizeUsername(Service)).
-executable(memorizePassword(Service)).
+%executable(memorizeUsername(Service)).
+%executable(memorizePassword(Service)).
+primitiveAction(memorizeUsername(Service)).
+primitiveAction(memorizePassword(Service)).
 primitiveAction(writeUsernameOnPostIt(Service)).
 primitiveAction(writePasswordOnPostIt(Service)).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % goal requirements and repeatables %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-goalRequirements(createAccount(Service), [attemptCreateAccount(Service), setupForAccountRetrieval(Service), resetRequirements]).
+goalRequirements(createAccount(Service), [attemptCreateAccount(Service), setupForAccountRetrieval(Service)]).
 
 goalRequirements(attemptCreateAccount(Service), [navigateToCreateAccountPage(Service), enterDesiredUsernameSG(Service), enterDesiredPasswordSG(Service), clickCreateAccountButton(Service, Username, Password)]).
 
@@ -181,12 +186,6 @@ goalRequirements(setupForAccountRetrieval(Service), Approach) :- inCurrentWorld(
 
 chooseSetupApproach(Service, [memorizeUsername(Service), memorizePassword(Service)]) :- format('chooseSetupApproach - cp1.\n'), inCurrentWorld(usernameSetupRequired(Service, Username)), inCurrentWorld(passwordSetupRequired(Service, Password)), format('chooseSetupApproach - cp2.\n'), inCurrentWorld(cognitiveBurden(B)), inCurrentWorld(cognitiveThreshold(T)), format('chooseSetupApproach - cp3.\n'), X is B + 10, X < T, removeFromWorld(cognitiveBurden(B)), addToWorld(cognitiveBurden(X)), format('chosen setup approach: memorizing username and password.\n').
 chooseSetupApproach(Service, [writeUsernameOnPostIt(Service), writePasswordOnPostIt(Service)]) :- inCurrentWorld(usernameSetupRequired(Service, Username)), inCurrentWorld(passwordSetupRequired(Service, Password)), inCurrentWorld(cognitiveBurden(B)), inCurrentWorld(cognitiveThreshold(T)), X is B + 10, X >= T, format('chosen setup approach: writing username and password to post it notes.\n').
-
-%goalRequirements(setupForAccountRetrieval(Service), [memorizeUsername(Service), memorizePassword(Service)]) :- inCurrentWorld(usernameSetupRequired(Service)), inCurrentWorld(passwordSetupRequired(Service)), inCurrentWorld(cognitiveBurden(B)), inCurrentWorld(cognitiveThreshold(T)), X is B + 10, X < T.
-%goalRequirements(setupForAccountRetrieval(Service), [memorizeUsername(Service), memorizePassword(Service)]) :- not(inCurrentWorld(usernameSetupRequired(Service))), inCurrentWorld(passwordSetupRequired(Service)), inCurrentWorld(cognitiveBurden(B)), inCurrentWorld(cognitiveThreshold(T)), X is B + 5, X < T.
-
-%goalRequirements(setupForAccountRetrieval(Service), [writeUsernameOnPostIt(Service), writePasswordOnPostIt(Service)]) :- not(inCurrentWorld(setupCompleteForUsernameRetrieval(Service))), not(inCurrentWorld(setupCompleteForPasswordRetrieval(Service))), inCurrentWorld(cognitiveBurden(B)), inCurrentWorld(cognitiveThreshold(T)), X is B + 10, X >= T.
-%goalRequirements(setupForAccountRetrieval(Service), [writeUsernameOnPostIt(Service), writePasswordOnPostIt(Service)]) :- inCurrentWorld(setupCompleteForUsernameRetrieval(Service)), not(inCurrentWorld(setupCompleteForPasswordRetrieval(Service))), inCurrentWorld(cognitiveBurden(B)), inCurrentWorld(cognitiveThreshold(T)), X is B + 5, X >= T.
 
 repeatable(attemptCreateAccount(Service)) :- not(inCurrentWorld(createdAccount(Service))).
 
@@ -270,34 +269,42 @@ choosePasswordHelper(Service, Requirements, _, 'VeryLonP@sSw0rd!234!?') :- satis
 % ... so, for example, if you use a username once, you're likely to forget it; if you use it 100 times, you'll be more likely to remember it in the future
 % and the rate at which you forget it will decline.
 
-execute(memorizeUsername(Service)) :- inCurrentWorld(usernameSetupRequired(Service, Username)), removeFromWorld(usernameSetupRequired(Service, Username)), addToWorld(usernameBeliefs(Service, [(Username, 1)])), format('executing ~w.\n', [memorizeUsername(Service)]).
-execute(memorizeUsername(Service)) :- not(inCurrentWorld(usernameSetupRequired(Service, _))).
+%execute(memorizeUsername(Service)) :- inCurrentWorld(usernameSetupRequired(Service, Username)), removeFromWorld(usernameSetupRequired(Service, Username)), addToWorld(usernameBeliefs(Service, [(Username, 1)])), format('executing ~w.\n', [memorizeUsername(Service)]).
+%execute(memorizeUsername(Service)) :- not(inCurrentWorld(usernameSetupRequired(Service, _))).
 
-execute(memorizePassword(Service)) :- inCurrentWorld(passwordSetupRequired(Service, Password)), removeFromWorld(passwordSetupRequired(Service, Password)), not(inCurrentWorld(passwordBeliefs(Service, _))), addToWorld(passwordBeliefs(Service, [(Password, 1)])), format('executing ~w.\n', [memorizePassword(Service)]).
-execute(memorizePassword(Service)) :- inCurrentWorld(passwordSetupRequired(Service, Password)), removeFromWorld(passwordSetupRequired(Service, Password)), inCurrentWorld(passwordBeliefs(Service, _)), removeFromWorld(passwordBeliefs(Service, _)), addToWorld(passwordBeliefs(Service, [(Password, 1)])), format('executing ~w.\n', [memorizePassword(Service)]).
-execute(memorizePassword(Service)) :- not(inCurrentWorld(passwordSetupRequired(Service, _))).
+%execute(memorizePassword(Service)) :- inCurrentWorld(passwordSetupRequired(Service, Password)), removeFromWorld(passwordSetupRequired(Service, Password)), not(inCurrentWorld(passwordBeliefs(Service, _))), addToWorld(passwordBeliefs(Service, [(Password, 1)])), format('executing ~w.\n', [memorizePassword(Service)]).
+%execute(memorizePassword(Service)) :- inCurrentWorld(passwordSetupRequired(Service, Password)), removeFromWorld(passwordSetupRequired(Service, Password)), inCurrentWorld(passwordBeliefs(Service, _)), removeFromWorld(passwordBeliefs(Service, _)), addToWorld(passwordBeliefs(Service, [(Password, 1)])), format('executing ~w.\n', [memorizePassword(Service)]).
+%execute(memorizePassword(Service)) :- not(inCurrentWorld(passwordSetupRequired(Service, _))).
 
 %%%%%%%%%%%%%%%%%
 % updateBeliefs %
 %%%%%%%%%%%%%%%%%
 
-updateBeliefs(navigateToCreateAccountPage(Service), success(usernameRequirements(UR), passwordRequirements(PR))) :- not(inCurrentWorld(userRequirements(Service, _))), not(inCurrentWorld(passwordRequirements(Service, _))), addToWorld(usernameRequirements(Service, UR)), addToWorld(passwordRequirements(Service, PR)), ansi_format([fg(red)], 'update beliefs called with ~w. result: ~w\n', [navigateToCreateAccountPage(Service), success(usernameRequirements(UR), passwordRequirements(PR))]), !.
-updateBeliefs(navigateToCreateAccountPage(Service), success(usernameRequirements(UR), passwordRequirements(PR))) :- inCurrentWorld(usernameRequirements(Service, _)), inCurrentWorld(passwordRequirements(Service, _)), ansi_format([fg(red)], 'update beliefs called with ~w. result: ~w\n', [navigateToCreateAccountPage(Service), success(usernameRequirements(UR), passwordRequirements(PR))]), !.
-updateBeliefs(navigateToCreateAccountPage(Service), Result) :- ansi_format([fg(red)], 'update beliefs called with ~w. result: ~w/. Should not be here!\n', [navigateToCreateAccountPage(Service), Result]), !.
+updateBeliefsHelper(navigateToCreateAccountPage(Service), success(usernameRequirements(UR), passwordRequirements(PR))) :- not(inCurrentWorld(userRequirements(Service, _))), not(inCurrentWorld(passwordRequirements(Service, _))), addToWorld(usernameRequirements(Service, UR)), addToWorld(passwordRequirements(Service, PR)), ansi_format([fg(red)], 'update beliefs called with ~w. result: ~w\n', [navigateToCreateAccountPage(Service), success(usernameRequirements(UR), passwordRequirements(PR))]), !.
+updateBeliefsHelper(navigateToCreateAccountPage(Service), success(usernameRequirements(UR), passwordRequirements(PR))) :- inCurrentWorld(usernameRequirements(Service, _)), inCurrentWorld(passwordRequirements(Service, _)), ansi_format([fg(red)], 'update beliefs called with ~w. result: ~w\n', [navigateToCreateAccountPage(Service), success(usernameRequirements(UR), passwordRequirements(PR))]), !.
+updateBeliefsHelper(navigateToCreateAccountPage(Service), Result) :- ansi_format([fg(red)], 'update beliefs called with ~w. result: ~w/. Should not be here!\n', [navigateToCreateAccountPage(Service), Result]), !.
 
-updateBeliefs(enterDesiredUsername(Service, Username), Result) :- removeFromWorld(usernameProposalResult(Service, _, _)), addToWorld(usernameProposalResult(Service, Username, Result)), removeFromWorld(usernameChosenButNotEntered(Service)), ansi_format([fg(red)], 'update beliefs called with ~w. result: ~w\n', [enterDesiredUsername(Service, Username), Result]), !.
+updateBeliefsHelper(enterDesiredUsername(Service, Username), Result) :- removeFromWorld(usernameProposalResult(Service, _, _)), addToWorld(usernameProposalResult(Service, Username, Result)), removeFromWorld(usernameChosenButNotEntered(Service)), ansi_format([fg(red)], 'update beliefs called with ~w. result: ~w\n', [enterDesiredUsername(Service, Username), Result]), !.
 
-updateBeliefs(enterDesiredPassword(Service, Password), Result) :- removeFromWorld(passwordProposalResult(Service, _, _)), addToWorld(passwordProposalResult(Service, Password, Result)), removeFromWorld(passwordChosenButNotEntered(Service)), ansi_format([fg(red)], 'update beliefs called with ~w. result: ~w\n', [enterDesiredPassword(Service, Password), Result]), !.
+updateBeliefsHelper(enterDesiredPassword(Service, Password), Result) :- removeFromWorld(passwordProposalResult(Service, _, _)), addToWorld(passwordProposalResult(Service, Password, Result)), removeFromWorld(passwordChosenButNotEntered(Service)), ansi_format([fg(red)], 'update beliefs called with ~w. result: ~w\n', [enterDesiredPassword(Service, Password), Result]), !.
 
-updateBeliefs(clickCreateAccountButton(Service, Username, Password), success) :- removeFromWorld(usernameProposalResult(Service, _, _)), removeFromWorld(passwordProposalResult(Service, _, _)), removeFromWorld(desiredUsername(Service, _)), removeFromWorld(desiredPassword(Service, _)), removeFromWorld(passwordRequirements(Service, _)), addToWorld(createdAccount(Service)), addToWorld(usernameSetupRequired(Service, Username)), addToWorld(passwordSetupRequired(Service, Password)), ansi_format([fg(red)], 'update beliefs called with ~w. result: ~w\n', [clickCreateAccountButton(Service, Username, Password), success]).
-updateBeliefs(clickCreateAccountButton(Service, Username, Password), error(UResult, PResult)) :- removeFromWorld(usernameProposalResult(Service, _, _)), removeFromWorld(passwordProposalResult(Service, _, _)), addToWorld(usernameProposalResult(Service, Username, UResult)), addToWorld(passwordProposalResult(Service, Password, PResult)), ansi_format([fg(red)], 'update beliefs called with ~w. result: ~w\n', [clickCreateAccountButton(Service, Username, Password), error(UResult, PResult)]).
+updateBeliefsHelper(clickCreateAccountButton(Service, Username, Password), success) :- removeFromWorld(usernameProposalResult(Service, _, _)), removeFromWorld(passwordProposalResult(Service, _, _)), removeFromWorld(desiredUsername(Service, _)), removeFromWorld(desiredPassword(Service, _)), removeFromWorld(passwordRequirements(Service, _)), addToWorld(createdAccount(Service)), addToWorld(usernameSetupRequired(Service, Username)), addToWorld(passwordSetupRequired(Service, Password)), ansi_format([fg(red)], 'update beliefs called with ~w. result: ~w\n', [clickCreateAccountButton(Service, Username, Password), success]).
+updateBeliefsHelper(clickCreateAccountButton(Service, Username, Password), error(UResult, PResult)) :- removeFromWorld(usernameProposalResult(Service, _, _)), removeFromWorld(passwordProposalResult(Service, _, _)), addToWorld(usernameProposalResult(Service, Username, UResult)), addToWorld(passwordProposalResult(Service, Password, PResult)), ansi_format([fg(red)], 'update beliefs called with ~w. result: ~w\n', [clickCreateAccountButton(Service, Username, Password), error(UResult, PResult)]).
 
-updateBeliefs(writeUsernameOnPostIt(Service), Result) :- inCurrentWorld(usernameSetupRequired(Service, Username)), removeFromWorld(usernameSetupRequired(Service, Username)), addToWorld(usernameBeliefs(Service, [(Username, 0.5)])), addToWorld(wroteUsernameOnPostIt(Service, Username)), format('executing ~w.\n', [writeUsernameOnPostIt(Service)]).
-updateBeliefs(writeUsernameOnPostIt(Service), Result) :- not(inCurrentWorld(usernameSetupRequired(Service, _))).
+updateBeliefsHelper(memorizeUsername(Service), Result) :- inCurrentWorld(usernameSetupRequired(Service, Username)), removeFromWorld(usernameSetupRequired(Service, Username)), addToWorld(usernameBeliefs(Service, [(Username, 1)])), format('memorized username ~w.\n', [Username]).
+updateBeliefsHelper(memorizeUsername(Service), Result) :- not(inCurrentWorld(usernameSetupRequired(Service, _))).
 
-updateBeliefs(writePasswordOnPostIt(Service), Result) :- inCurrentWorld(passwordSetupRequired(Service, Password)), removeFromWorld(passwordSetupRequired(Service, Password)), not(inCurrentWorld(passwordBeliefs(Service, _))), addToWorld(passwordBeliefs(Service, [(Password, 0.5)])), addToWorld(wrotePasswordOnPostIt(Service, Password)), format('executing ~w. \n', [writePasswordOnPostIt(Service)]).
-updateBeliefs(writePasswordOnPostIt(Service), Result) :- inCurrentWorld(passwordSetupRequired(Service, Password)), removeFromWorld(passwordSetupRequired(Service, Password)), inCurrentWorld(passwordBeliefs(Service, _)), removeFromWorld(passwordBeliefs(Service, _)), addToWorld(Service, [(Password, 0.5)]), addToWorld(wrotePasswordOnPostIt(Service, Password)), format('executing ~w. Setting NEW Password\n', [writePasswordOnPostIt(Service)]).
-updateBeliefs(writePasswordOnPostIt(Service), Result) :- not(inCurrentWorld(passwordSetupRequired(Service, _))).
+updateBeliefsHelper(memorizePassword(Service), Result) :- inCurrentWorld(passwordSetupRequired(Service, Password)), removeFromWorld(passwordSetupRequired(Service, Password)), not(inCurrentWorld(passwordBeliefs(Service, _))), addToWorld(passwordBeliefs(Service, [(Password, 1)])), format('memorized password ~w.\n', [Password]).
+updateBeliefsHelper(memorizePassword(Service), Result) :- inCurrentWorld(passwordSetupRequired(Service, Password)), removeFromWorld(passwordSetupRequired(Service, Password)), inCurrentWorld(passwordBeliefs(Service, _)), removeFromWorld(passwordBeliefs(Service, _)), addToWorld(passwordBeliefs(Service, [(Password, 1)])), format('executing ~w.\n', [memorizePassword(Service)]).
+updateBeliefsHelper(memorizePassword(Service), Result) :- not(inCurrentWorld(passwordSetupRequired(Service, _))).
+
+
+updateBeliefsHelper(writeUsernameOnPostIt(Service), Result) :- inCurrentWorld(usernameSetupRequired(Service, Username)), removeFromWorld(usernameSetupRequired(Service, Username)), addToWorld(usernameBeliefs(Service, [(Username, 0.5)])), addToWorld(wroteUsernameOnPostIt(Service, Username)), format('executing ~w.\n', [writeUsernameOnPostIt(Service)]).
+updateBeliefsHelper(writeUsernameOnPostIt(Service), Result) :- not(inCurrentWorld(usernameSetupRequired(Service, _))).
+
+updateBeliefsHelper(writePasswordOnPostIt(Service), Result) :- inCurrentWorld(passwordSetupRequired(Service, Password)), removeFromWorld(passwordSetupRequired(Service, Password)), not(inCurrentWorld(passwordBeliefs(Service, _))), addToWorld(passwordBeliefs(Service, [(Password, 0.5)])), addToWorld(wrotePasswordOnPostIt(Service, Password)), format('executing ~w. \n', [writePasswordOnPostIt(Service)]).
+updateBeliefsHelper(writePasswordOnPostIt(Service), Result) :- inCurrentWorld(passwordSetupRequired(Service, Password)), removeFromWorld(passwordSetupRequired(Service, Password)), inCurrentWorld(passwordBeliefs(Service, _)), removeFromWorld(passwordBeliefs(Service, _)), addToWorld(Service, [(Password, 0.5)]), addToWorld(wrotePasswordOnPostIt(Service, Password)), format('executing ~w. Setting NEW Password\n', [writePasswordOnPostIt(Service)]).
+updateBeliefsHelper(writePasswordOnPostIt(Service), Result) :- not(inCurrentWorld(passwordSetupRequired(Service, _))).
 
 %%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%
@@ -331,10 +338,10 @@ primitiveAction(readAndEnterPassword(Service, Password)) :- readPasswordOffPostI
 
 % signIn goal requirements
 
-goalRequirements(signIn(Service), [attemptSignIn(Service), resetRequirements]) :- format('expanding goal reqs for sign in - cp1.\n'), inCurrentWorld(createdAccount(Service)), not(inCurrentWorld(signedIn(Service, _, _))), format('expanding goal reqs for sign in - cp2.\n'), !.
-goalRequirements(signIn(Service), [resetRequirements]) :- inCurrentWorld(createdAccount(Service)), inCurrentWorld(signedIn(Service, _, _)), !.
+goalRequirements(signIn(Service), [attemptSignIn(Service)]) :- format('expanding goal reqs for sign in - cp1.\n'), inCurrentWorld(createdAccount(Service)), not(inCurrentWorld(signedIn(Service, _, _))), format('expanding goal reqs for sign in - cp2.\n'), !.
+goalRequirements(signIn(Service), []) :- inCurrentWorld(createdAccount(Service)), inCurrentWorld(signedIn(Service, _, _)), !.
 
-repeatable(attemptSignIn(Service)) :- sleep(1), not(inCurrentWorld(signedIn(Service, _, _))), !.
+repeatable(attemptSignIn(Service)) :- not(inCurrentWorld(signedIn(Service, _, _))), !.
 
 % To sign in, the agent must retrieve their accountinformation and enter it.
 goalRequirements(attemptSignIn(Service), [retrieveAndEnterAccountInformation(Service), clickSignInButton(Service, Username, Password)]).
@@ -368,9 +375,9 @@ signInFailed(Service, Username, Password) :- removeFromWorld(retrievedUsername(S
 % updateBeliefs %
 %%%%%%%%%%%%%%%%%
 
-updateBeliefs(clickSignInButton(Service, Username, Password), success) :- signInSucceeded(Service, Username, Password), ansi_format([fg(red)], 'update beliefs called with ~w. result: ~w\n', [clickSignInButton(Service, Username, Password), success]).
+updateBeliefsHelper(clickSignInButton(Service, Username, Password), success) :- signInSucceeded(Service, Username, Password), ansi_format([fg(red)], 'update beliefs called with ~w. result: ~w\n', [clickSignInButton(Service, Username, Password), success]).
 
-updateBeliefs(clickSignInButton(Service, Username, Password), error(Result)) :- signInFailed(Service, Username, Password), ansi_format([fg(red)], 'update beliefs called with ~w. result: ~w... this case still needs to be implemented!\n', [clickSignInButton(Service, Username, Password), error(Result)]).
+updateBeliefsHelper(clickSignInButton(Service, Username, Password), error(Result)) :- signInFailed(Service, Username, Password), ansi_format([fg(red)], 'update beliefs called with ~w. result: ~w... this case still needs to be implemented!\n', [clickSignInButton(Service, Username, Password), error(Result)]).
 
 %%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%
@@ -389,8 +396,8 @@ primitiveAction(clickSignOutButton(Service, Username)) :- inCurrentWorld(signedI
 % goal requirements and repeatables %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-goalRequirements(signOut(Service), [attemptSignOut(Service), resetRequirements]) :- inCurrentWorld(createdAccount(Service)), inCurrentWorld(signedIn(Service, _, _)), !.
-goalRequirements(signOut(Service), [resetRequirements]) :- inCurrentWorld(createdAccount(Service)), not(inCurrentWorld(signedIn(Service, _, _))), !.
+goalRequirements(signOut(Service), [attemptSignOut(Service)]) :- inCurrentWorld(createdAccount(Service)), inCurrentWorld(signedIn(Service, _, _)), !.
+goalRequirements(signOut(Service), []) :- inCurrentWorld(createdAccount(Service)), not(inCurrentWorld(signedIn(Service, _, _))), !.
 
 goalRequirements(attemptSignOut(Service), [clickSignOutButton(Service, Username)]).
 
@@ -405,9 +412,9 @@ goalRequirements(attemptSignOut(Service), [clickSignOutButton(Service, Username)
 % updateBeliefs %
 %%%%%%%%%%%%%%%%%
 
-updateBeliefs(clickSignOutButton(Service, Username), success) :- removeFromWorld(signedIn(Service, Username, _)), ansi_format([fg(red)], 'update beliefs called with ~w. result: ~w\n', [clickSignOutButton(Service, Username), success]).
+updateBeliefsHelper(clickSignOutButton(Service, Username), success) :- removeFromWorld(signedIn(Service, Username, _)), ansi_format([fg(red)], 'update beliefs called with ~w. result: ~w\n', [clickSignOutButton(Service, Username), success]).
 
-updateBeliefs(clickSignOutButton(Service, Username), error(Result)) :- ansi_format([fg(red)], 'update beliefs called with ~w. result: ~w... this case still needs to be implemented!\n', [clickSignOutButton(Service, Username), error(Result)]).
+updateBeliefsHelper(clickSignOutButton(Service, Username), error(Result)) :- ansi_format([fg(red)], 'update beliefs called with ~w. result: ~w... this case still needs to be implemented!\n', [clickSignOutButton(Service, Username), error(Result)]).
 
 %%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%
@@ -432,7 +439,7 @@ executable(memorizeNewPassword(Service)).
 % goal requirements and repeatables %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-goalRequirements(resetPassword(Service), [attemptResetPassword(Service), setupForAccountRetrieval(Service), resetRequirements]).
+goalRequirements(resetPassword(Service), [attemptResetPassword(Service), setupForAccountRetrieval(Service)]).
 
 goalRequirements(attemptResetPassword(Service), [navigateToResetPasswordPage(Service), retrieveAndEnterUsername(Service), chooseNewPassword(Service), clickResetPasswordButton(Service, Username, Password)]).
 
@@ -457,12 +464,12 @@ execute(chooseNewPassword(Service)) :- format('catch-all choose new password exe
 % updateBeliefs %
 %%%%%%%%%%%%%%%%%
 
-updateBeliefs(navigateToResetPasswordPage(Service), success(passwordRequirements(PR))) :- not(inCurrentWorld(passwordRequirements(Service, _))), addToWorld(passwordRequirements(Service, PR)), ansi_format([fg(red)], 'update beliefs called with ~w. result: ~w\n', [navigateToResetPasswordPage(Service), success(passwordRequirements(PR))]), !.
-updateBeliefs(navigateToResetPasswordPage(Service), success(passwordRequirements(PR))) :- inCurrentWorld(passwordRequirements(Service, _)), ansi_format([fg(red)], 'update beliefs called with ~w. result: ~w\n', [navigateToResetPasswordPage(Service), success(passwordRequirements(PR))]), !.
-updateBeliefs(navigateToResetPasswordPage(Service), Result) :- ansi_format([fg(red)], 'update beliefs called with ~w. result: ~w/. Should not be here!\n', [navigateToResetPasswordPage(Service), Result]), !.
+updateBeliefsHelper(navigateToResetPasswordPage(Service), success(passwordRequirements(PR))) :- not(inCurrentWorld(passwordRequirements(Service, _))), addToWorld(passwordRequirements(Service, PR)), ansi_format([fg(red)], 'update beliefs called with ~w. result: ~w\n', [navigateToResetPasswordPage(Service), success(passwordRequirements(PR))]), !.
+updateBeliefsHelper(navigateToResetPasswordPage(Service), success(passwordRequirements(PR))) :- inCurrentWorld(passwordRequirements(Service, _)), ansi_format([fg(red)], 'update beliefs called with ~w. result: ~w\n', [navigateToResetPasswordPage(Service), success(passwordRequirements(PR))]), !.
+updateBeliefsHelper(navigateToResetPasswordPage(Service), Result) :- ansi_format([fg(red)], 'update beliefs called with ~w. result: ~w/. Should not be here!\n', [navigateToResetPasswordPage(Service), Result]), !.
 
-updateBeliefs(clickResetPasswordButton(Service, Username, Password), success) :- removeFromWorld(desiredPassword(Service, _)), removeFromWorld(passwordRequirements(Service, _)), removeFromWorld(passwordProposalResult(Service, _, _)), removeFromWorld(passwordChosenButNotEntered(Service)), removeFromWorld(retrievedUsername(Service, _)), addToWorld(passwordSetupRequired(Service, Password)), ansi_format([fg(red)], 'update beliefs called with ~w. result: ~w\n', [clickResetPasswordButton(Service, Username, Password), success]).
-updateBeliefs(clickResetPasswordButton(Service, Username, Password), Result) :- Result = error(Reason), Reason \= noService, Reason \= noUsername, removeFromWorld(passwordProposalResult(Service, _, _)), removeFromWorld(passwordChosenButNotEntered(Service)), removeFromWorld(retrievedUsername(Service, _)), addToWorld(passwordProposalResult(Service, Password, Result)), ansi_format([fg(red)], 'update beliefs called with ~w. result: ~w\n', [clickResetPasswordButton(Service, Username, Password), Result]).
+updateBeliefsHelper(clickResetPasswordButton(Service, Username, Password), success) :- removeFromWorld(desiredPassword(Service, _)), removeFromWorld(passwordRequirements(Service, _)), removeFromWorld(passwordProposalResult(Service, _, _)), removeFromWorld(passwordChosenButNotEntered(Service)), removeFromWorld(retrievedUsername(Service, _)), addToWorld(passwordSetupRequired(Service, Password)), ansi_format([fg(red)], 'update beliefs called with ~w. result: ~w\n', [clickResetPasswordButton(Service, Username, Password), success]).
+updateBeliefsHelper(clickResetPasswordButton(Service, Username, Password), Result) :- Result = error(Reason), Reason \= noService, Reason \= noUsername, removeFromWorld(passwordProposalResult(Service, _, _)), removeFromWorld(passwordChosenButNotEntered(Service)), removeFromWorld(retrievedUsername(Service, _)), addToWorld(passwordProposalResult(Service, Password, Result)), ansi_format([fg(red)], 'update beliefs called with ~w. result: ~w\n', [clickResetPasswordButton(Service, Username, Password), Result]).
 
 %%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%
@@ -491,8 +498,15 @@ updateBeliefs(clickResetPasswordButton(Service, Username, Password), Result) :- 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % the default updateBeliefs if nothing is specified
-updateBeliefs(Action, Result) :- ansi_format([fg(red)], 'update beliefs called with ~w. result: ~w (default call)\n', [Action, Result]), !.
+updateBeliefs(Action, Result) :- updateUsernameBeliefs(Action, Result), updatePasswordBeliefs(Action, Result), updateBeliefsHelper(Action, Result), !.
 
+updateBeliefs(Action, Result) :- not(updateBeliefsHelper(Action, Result)), ansi_format([fg(red)], 'update beliefs called with ~w. result: ~w (default call)\n', [Action, Result]), !.
+
+updateUsernameBeliefs(Action, Result) :- !.
+updateUsernameBeliefs(_, _).
+
+updatePasswordBeliefs(Action, Result) :- !.
+updatePasswordBeliefs(_, _).
 %%%%%%%
 % fin %
 %%%%%%%
