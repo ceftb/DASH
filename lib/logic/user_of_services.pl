@@ -57,14 +57,15 @@ subGoal(resetPassword(Service)) :- serviceExists(Service).
 
 % goal requirements for various goals and subgoals
 %goalRequirements(doWork, Requirements) :- sleep(1), not(true).
-goalRequirements(doWork, Requirements) :- printDoneStatements, not(true).
+goalRequirements(doWork, Requirements) :- printUserState, printDoneStatements, not(true).
 goalRequirements(doWork, Requirements) :- requirementsSet(Requirements), !.
 goalRequirements(doWork, [initializeUser]) :- not(requirementsSet(X)), not(inCurrentWorld(userInitialized)), ansi_format([fg(blue)], 'initializing user.\n', []), !.
 goalRequirements(doWork, Requirements) :- not(requirementsSet(X)), chooseService(Service), determineRequirements(Service, Requirements), assert(requirementsSet(Requirements)), ansi_format([fg(blue)], 'new requirements set: ~w\n', [Requirements]), !.
 
 determineRequirements(Service, [createAccount(Service), resetRequirements]) :- not(inCurrentWorld(createdAccount(Service))), !.
+determineRequirements(Service, [Reqs, resetRequirements]) :- R is random(1), nth0(R, [resetPassword(Service)], Reqs), !.
 %determineRequirements(Service, [Reqs, resetRequirements]) :- R is random(3), nth0(R, [signIn(Service), signOut(Service), resetPassword(Service)], Reqs), !.
-determineRequirements(Service, [Reqs, resetRequirements]) :- R is random(2), nth0(R, [signIn(Service), signOut(Service)], Reqs), !.
+%determineRequirements(Service, [Reqs, resetRequirements]) :- R is random(2), nth0(R, [signIn(Service), signOut(Service)], Reqs), !.
 
 % the primitiveAction initializeUser is the very first action the agent performs.
 % the purpose is to synchronize the hub with the user
@@ -79,7 +80,7 @@ updateBeliefsHelper(initializeUser, R) :- ansi_format([fg(red)], 'update beliefs
 % this is used to reset the current task the user is working on
 % it is executed as the last step to achieving a particular task
 executable(resetRequirements).
-execute(resetRequirements) :- retractall(requirementsSet(_)), retractall(setupApproachUsed(_, _)), format('executing ~w.\n', resetRequirements).
+execute(resetRequirements) :- retractall(requirementsSet(_)), removeFromWorld(setupApproachUsed(_, _)), format('executing ~w.\n', resetRequirements).
 
 % this is ``called'' by initializeUser to initialize user state
 initializeUserState :- FirstNameIndex is random(4), nth0(FirstNameIndex, [joe, bob, sally, carol], FirstName), addToWorld(firstName(FirstName)), addToWorld(cognitiveBurden(0)), addToWorld(cognitiveThreshold(15)).
@@ -94,7 +95,10 @@ serviceExists(Service) :- services(ServiceList), member(Service, ServiceList).
 % choose a service at random
 chooseService(Service) :- services(ServiceList), length(ServiceList, Length), ServiceIndex is random(Length), nth0(ServiceIndex, ServiceList, Service).
 
-printDoneStatements :- foreach(done(A, B), ansi_format([fg(yellow)], '~w.\n', [done(A, B)])), foreach(requirementsSet(X), ansi_format([fg(yellow)], '~w.\n', [requirementsSet(X)])).
+printUserState :- inCurrentWorld(cognitiveBurden(B)), inCurrentWorld(cognitiveThreshold(T)), ansi_format([fg(magenta)], 'cognitive burden: ~w.\ncognitive threshold: ~w.\n', [B, T]), !.
+printUserState :- !.
+
+printDoneStatements :- foreach(done(A, B), ansi_format([fg(yellow)], '~w.\n', [done(A, B)])).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % tracking changes to world %
@@ -157,15 +161,13 @@ execute(placeholder).
 subGoal(attemptCreateAccount(Service)).
 primitiveAction(navigateToCreateAccountPage(Service)).
 subGoal(enterDesiredUsernameSG(Service)).
-executable(chooseUsername(Service)).
+primitiveAction(chooseUsername(Service)).
 primitiveAction(enterDesiredUsername(Service, Username)) :- inCurrentWorld(desiredUsername(Service, Username)).
 subGoal(enterDesiredPasswordSG(Service)).
-executable(choosePassword(Service)).
+primitiveAction(choosePassword(Service)).
 primitiveAction(enterDesiredPassword(Service, Password)) :- inCurrentWorld(desiredPassword(Service, Password)).
 primitiveAction(clickCreateAccountButton(Service, Username, Password)) :- inCurrentWorld(desiredUsername(Service, Username)), inCurrentWorld(desiredPassword(Service, Password)).
 subGoal(setupForAccountRetrieval(Service)).
-%executable(memorizeUsername(Service)).
-%executable(memorizePassword(Service)).
 primitiveAction(memorizeUsername(Service)).
 primitiveAction(memorizePassword(Service)).
 primitiveAction(writeUsernameOnPostIt(Service)).
@@ -181,9 +183,15 @@ goalRequirements(attemptCreateAccount(Service), [navigateToCreateAccountPage(Ser
 goalRequirements(enterDesiredUsernameSG(Service), [chooseUsername(Service), enterDesiredUsername(Service, Username)]).
 goalRequirements(enterDesiredPasswordSG(Service), [choosePassword(Service), enterDesiredPassword(Service, Password)]).
 
-goalRequirements(setupForAccountRetrieval(Service), Approach) :- format('subgoal: setup for account retrieval - cp1.\n'), not(inCurrentWorld(setupApproachUsed(Service, Approach))), format('subgoal: setup for account retrieval - cp2.\n'), chooseSetupApproach(Service, Approach), format('subgoal: setup for account retrieval - cp3.\n'), addToWorld(setupApproachUsed(Service, Approach)).
+goalRequirements(setupForAccountRetrieval(Service), Approach) :- format('subgoal: setup for account retrieval - cp1.\n'), not(inCurrentWorld(setupApproachUsed(Service, _))), format('subgoal: setup for account retrieval - cp2.\n'), chooseSetupApproach(Service, Approach), format('subgoal: setup for account retrieval - cp3.\n'), addToWorld(setupApproachUsed(Service, Approach)).
 goalRequirements(setupForAccountRetrieval(Service), Approach) :- inCurrentWorld(setupApproachUsed(Service, Approach)).
 
+
+% if we only need to do setup for password retrieval
+chooseSetupApproach(Service, [memorizePassword(Service)]) :- format('chooseSetupApproach - cp1.\n'), not(inCurrentWorld(usernameSetupRequired(Service, Username))), inCurrentWorld(passwordSetupRequired(Service, Password)), format('chooseSetupApproach - cp2.\n'), inCurrentWorld(cognitiveBurden(B)), inCurrentWorld(cognitiveThreshold(T)), format('chooseSetupApproach - cp3.\n'), X is B + 5, X < T, removeFromWorld(cognitiveBurden(B)), addToWorld(cognitiveBurden(X)), format('chosen setup approach: memorizing username and password.\n').
+chooseSetupApproach(Service, [writePasswordOnPostIt(Service)]) :- not(inCurrentWorld(usernameSetupRequired(Service, Username))), inCurrentWorld(passwordSetupRequired(Service, Password)), inCurrentWorld(cognitiveBurden(B)), inCurrentWorld(cognitiveThreshold(T)), X is B + 5, X >= T, format('chosen setup approach: writing username and password to post it notes.\n').
+
+% if we need to do setup for username and password retrieval
 chooseSetupApproach(Service, [memorizeUsername(Service), memorizePassword(Service)]) :- format('chooseSetupApproach - cp1.\n'), inCurrentWorld(usernameSetupRequired(Service, Username)), inCurrentWorld(passwordSetupRequired(Service, Password)), format('chooseSetupApproach - cp2.\n'), inCurrentWorld(cognitiveBurden(B)), inCurrentWorld(cognitiveThreshold(T)), format('chooseSetupApproach - cp3.\n'), X is B + 10, X < T, removeFromWorld(cognitiveBurden(B)), addToWorld(cognitiveBurden(X)), format('chosen setup approach: memorizing username and password.\n').
 chooseSetupApproach(Service, [writeUsernameOnPostIt(Service), writePasswordOnPostIt(Service)]) :- inCurrentWorld(usernameSetupRequired(Service, Username)), inCurrentWorld(passwordSetupRequired(Service, Password)), inCurrentWorld(cognitiveBurden(B)), inCurrentWorld(cognitiveThreshold(T)), X is B + 10, X >= T, format('chosen setup approach: writing username and password to post it notes.\n').
 
@@ -204,12 +212,12 @@ repeatable(enterDesiredPasswordSG(Service)) :- inCurrentWorld(passwordProposalRe
 % important: we do NOT try to unify the username in desiredUsername with that from usernameProposalResult
 % when they both exist... this is because we may later want to take into account situations where the username
 % that is typed in is subject to typos
-execute(chooseUsername(Service)) :- not(inCurrentWorld(usernameChosenButNotEntered(Service))), not(inCurrentWorld(desiredUsername(Service, _))), not(inCurrentWorld(usernameProposalResult(Service, _, _))), inCurrentWorld(usernameRequirements(Service, Requirements)), chooseUsernameHelper(Service, Requirements, '', Username), addToWorld(desiredUsername(Service, Username)), addToWorld(usernameChosenButNotEntered(Service)), format('exec username - branch 1!\n', []), !.
+updateBeliefsHelper(chooseUsername(Service), R) :- not(inCurrentWorld(usernameChosenButNotEntered(Service))), not(inCurrentWorld(desiredUsername(Service, _))), not(inCurrentWorld(usernameProposalResult(Service, _, _))), inCurrentWorld(usernameRequirements(Service, Requirements)), chooseUsernameHelper(Service, Requirements, '', Username), addToWorld(desiredUsername(Service, Username)), addToWorld(usernameChosenButNotEntered(Service)), format('exec username - branch 1!\n', []), !.
 
-execute(chooseUsername(Service)) :- not(inCurrentWorld(usernameChosenButNotEntered(Service))), inCurrentWorld(desiredUsername(Service, PreviousUsername)), inCurrentWorld(usernameProposalResult(Service, _, error(FailedUsernameRequirements))), inCurrentWorld(usernameRequirements(Service, InitialRequirements)), mergeLists(InitialRequirements, FailedUsernameRequirements, Requirements), removeFromWorld(usernameRequirements(InitialRequirements)), addToWorld(usernameRequirements(Requirements)), chooseUsernameHelper(Service, Requirements, PreviousUsername, Username), removeFromWorld(desiredUsername(Service, _)), addToWorld(desiredUsername(Service, Username)), addToWorld(usernameChosenButNotEntered(Service)), format('exec username - branch 2!\n', []), !.
+updateBeliefsHelper(chooseUsername(Service), R) :- not(inCurrentWorld(usernameChosenButNotEntered(Service))), inCurrentWorld(desiredUsername(Service, PreviousUsername)), inCurrentWorld(usernameProposalResult(Service, _, error(FailedUsernameRequirements))), inCurrentWorld(usernameRequirements(Service, InitialRequirements)), mergeLists(InitialRequirements, FailedUsernameRequirements, Requirements), removeFromWorld(usernameRequirements(InitialRequirements)), addToWorld(usernameRequirements(Requirements)), chooseUsernameHelper(Service, Requirements, PreviousUsername, Username), removeFromWorld(desiredUsername(Service, _)), addToWorld(desiredUsername(Service, Username)), addToWorld(usernameChosenButNotEntered(Service)), format('exec username - branch 2!\n', []), !.
 
 %execute(chooseUsername(Service)) :- inCurrentWorld(usernameChosenButNotEntered(Service)), format('already chose a username so skipping this exec!\n', []), !.
-execute(chooseUsername(Service)) :- format('catch-all choose username exec!\n', []), !.
+updateBeliefsHelper(chooseUsername(Service), R) :- format('catch-all choose username exec!\n', []), !.
 
 chooseUsernameHelper(Service, Requirements, _, 'username') :- satisfiesRequirements('username', Requirements).
 chooseUsernameHelper(Service, Requirements, _, 'username1') :- satisfiesRequirements('username1', Requirements).
@@ -223,11 +231,11 @@ chooseUsernameHelper(Service, Requirements, _, 'Us3rN4m3!234') :- satisfiesRequi
 
 
 % for passwords!
-execute(choosePassword(Service)) :- not(inCurrentWorld(passwordChosenButNotEntered(Service))), not(inCurrentWorld(desiredPassword(Service, _))), not(inCurrentWorld(passwordProposalResult(Service, _, _))), inCurrentWorld(passwordRequirements(Service, Requirements)), choosePasswordHelper(Service, Requirements, '', Password), addToWorld(desiredPassword(Service, Password)), addToWorld(passwordChosenButNotEntered(Service)), format('exec password - branch 1!\n', []), !.
+updateBeliefsHelper(choosePassword(Service), R) :- not(inCurrentWorld(passwordChosenButNotEntered(Service))), not(inCurrentWorld(desiredPassword(Service, _))), not(inCurrentWorld(passwordProposalResult(Service, _, _))), inCurrentWorld(passwordRequirements(Service, Requirements)), choosePasswordHelper(Service, Requirements, '', Password), addToWorld(desiredPassword(Service, Password)), addToWorld(passwordChosenButNotEntered(Service)), format('exec password - branch 1!\n', []), !.
 
-execute(choosePassword(Service)) :- not(inCurrentWorld(passwordChosenButNotEntered(Service))), inCurrentWorld(desiredPassword(Service, PreviousPassword)), inCurrentWorld(passwordProposalResult(Service, _, error(FailedPasswordRequirements))), inCurrentWorld(passwordRequirements(Service, InitialRequirements)), mergeLists(InitialRequirements, FailedPasswordRequirements, Requirements), removeFromWorld(passwordRequirements(InitialRequirements)), addToWorld(passwordRequirements(Requirements)), choosePasswordHelper(Service, Requirements, PreviousPassword, Password), removeFromWorld(desiredPassword(Service, _)), addToWorld(desiredPassword(Service, Password)), addToWorld(passwordChosenButNotEntered(Service)), format('exec password - branch 2!\n', []), !.
+updateBeliefsHelper(choosePassword(Service), R) :- not(inCurrentWorld(passwordChosenButNotEntered(Service))), inCurrentWorld(desiredPassword(Service, PreviousPassword)), inCurrentWorld(passwordProposalResult(Service, _, error(FailedPasswordRequirements))), inCurrentWorld(passwordRequirements(Service, InitialRequirements)), mergeLists(InitialRequirements, FailedPasswordRequirements, Requirements), removeFromWorld(passwordRequirements(InitialRequirements)), addToWorld(passwordRequirements(Requirements)), choosePasswordHelper(Service, Requirements, PreviousPassword, Password), removeFromWorld(desiredPassword(Service, _)), addToWorld(desiredPassword(Service, Password)), addToWorld(passwordChosenButNotEntered(Service)), format('exec password - branch 2!\n', []), !.
 
-execute(choosePassword(Service)) :- format('catch-all choose password exec!\n', []), !.
+updateBeliefsHelper(choosePassword(Service), R) :- format('catch-all choose password exec!\n', []), !.
 
 choosePasswordHelper(Service, Requirements, _, 'pass') :- satisfiesRequirements('pass', Requirements).
 choosePasswordHelper(Service, Requirements, _, 'password') :- satisfiesRequirements('password', Requirements).
@@ -260,22 +268,6 @@ choosePasswordHelper(Service, Requirements, _, 'VeryLonP@sSw0rd!234!?') :- satis
 %execute(choosePassword(Service)) :- not(inCurrentWorld(latestResult(enterDesiredPassword(Service, Password), Result))), inCurrentWorld(latestResult(createAccount(Service, Username, Password), [_, error(tooShort)])), removeFromWorld(desiredPassword(Service, _)), addToWorld(desiredPassword(Service, password1)), format('executing ~w - branch 4.\n', choosePassword(Service)).
 %execute(choosePassword(Service)) :- not(inCurrentWorld(latestResult(enterDesiredPassword(Service, Password), Result))), inCurrentWorld(latestResult(createAccount(Service, Username, Password), [_, success(weak)])), removeFromWorld(desiredPassword(Service, _)), addToWorld(desiredPassword(Service, password1234)), format('executing ~w - branch 5.\n', choosePassword(Service)).
 
-% usernameSetupRequired and passwordSetupRequired are temporarily used to store the username and password
-% for agent recall, we must used something else that is set up here...
-% right now, the basic model I am just using has form usernameBeliefs(Service, [(username1, strength1), (username2, strength2),...]
-% the idea is that whenever a username is used correctly, belief in that username is set to 1 while the others are set to 0
-% however, every agent "step" for which it is not used, the strengths of usernames used for the service is spread over all usernames
-% used over all services. The rate of spread could also be a factor of how many times the username was remembered correctly for the service
-% ... so, for example, if you use a username once, you're likely to forget it; if you use it 100 times, you'll be more likely to remember it in the future
-% and the rate at which you forget it will decline.
-
-%execute(memorizeUsername(Service)) :- inCurrentWorld(usernameSetupRequired(Service, Username)), removeFromWorld(usernameSetupRequired(Service, Username)), addToWorld(usernameBeliefs(Service, [(Username, 1)])), format('executing ~w.\n', [memorizeUsername(Service)]).
-%execute(memorizeUsername(Service)) :- not(inCurrentWorld(usernameSetupRequired(Service, _))).
-
-%execute(memorizePassword(Service)) :- inCurrentWorld(passwordSetupRequired(Service, Password)), removeFromWorld(passwordSetupRequired(Service, Password)), not(inCurrentWorld(passwordBeliefs(Service, _))), addToWorld(passwordBeliefs(Service, [(Password, 1)])), format('executing ~w.\n', [memorizePassword(Service)]).
-%execute(memorizePassword(Service)) :- inCurrentWorld(passwordSetupRequired(Service, Password)), removeFromWorld(passwordSetupRequired(Service, Password)), inCurrentWorld(passwordBeliefs(Service, _)), removeFromWorld(passwordBeliefs(Service, _)), addToWorld(passwordBeliefs(Service, [(Password, 1)])), format('executing ~w.\n', [memorizePassword(Service)]).
-%execute(memorizePassword(Service)) :- not(inCurrentWorld(passwordSetupRequired(Service, _))).
-
 %%%%%%%%%%%%%%%%%
 % updateBeliefs %
 %%%%%%%%%%%%%%%%%
@@ -290,6 +282,16 @@ updateBeliefsHelper(enterDesiredPassword(Service, Password), Result) :- removeFr
 
 updateBeliefsHelper(clickCreateAccountButton(Service, Username, Password), success) :- removeFromWorld(usernameProposalResult(Service, _, _)), removeFromWorld(passwordProposalResult(Service, _, _)), removeFromWorld(desiredUsername(Service, _)), removeFromWorld(desiredPassword(Service, _)), removeFromWorld(passwordRequirements(Service, _)), addToWorld(createdAccount(Service)), addToWorld(usernameSetupRequired(Service, Username)), addToWorld(passwordSetupRequired(Service, Password)), ansi_format([fg(red)], 'update beliefs called with ~w. result: ~w\n', [clickCreateAccountButton(Service, Username, Password), success]).
 updateBeliefsHelper(clickCreateAccountButton(Service, Username, Password), error(UResult, PResult)) :- removeFromWorld(usernameProposalResult(Service, _, _)), removeFromWorld(passwordProposalResult(Service, _, _)), addToWorld(usernameProposalResult(Service, Username, UResult)), addToWorld(passwordProposalResult(Service, Password, PResult)), ansi_format([fg(red)], 'update beliefs called with ~w. result: ~w\n', [clickCreateAccountButton(Service, Username, Password), error(UResult, PResult)]).
+
+
+% usernameSetupRequired and passwordSetupRequired are temporarily used to store the username and password
+% for agent recall, we must used something else that is set up here...
+% right now, the basic model I am just using has form usernameBeliefs(Service, [(username1, strength1), (username2, strength2),...]
+% the idea is that whenever a username is used correctly, belief in that username is set to 1 while the others are set to 0
+% however, every agent "step" for which it is not used, the strengths of usernames used for the service is spread over all usernames
+% used over all services. The rate of spread could also be a factor of how many times the username was remembered correctly for the service
+% ... so, for example, if you use a username once, you're likely to forget it; if you use it 100 times, you'll be more likely to remember it in the future
+% and the rate at which you forget it will decline.
 
 updateBeliefsHelper(memorizeUsername(Service), Result) :- inCurrentWorld(usernameSetupRequired(Service, Username)), removeFromWorld(usernameSetupRequired(Service, Username)), addToWorld(usernameBeliefs(Service, [(Username, 1)])), format('memorized username ~w.\n', [Username]).
 updateBeliefsHelper(memorizeUsername(Service), Result) :- not(inCurrentWorld(usernameSetupRequired(Service, _))).
@@ -430,10 +432,9 @@ subGoal(attemptResetPassword(Service)).
 primitiveAction(navigateToResetPasswordPage(Service)).
 subGoal(retrieveAndEnterUsername(Service)).
 subGoal(setupForNewPasswordRetrieval(Service)).
-executable(chooseNewPassword(Service)).
+primitiveAction(chooseNewPassword(Service)).
 primitiveAction(clickResetPasswordButton(Service, Username, Password)) :- inCurrentWorld(desiredPassword(Service, Password)), inCurrentWorld(retrievedUsername(Service, Username)).
-primitiveAction(attemptResetPassword(Service, Password)).
-executable(memorizeNewPassword(Service)).
+subGoal(attemptResetPassword(Service, Password)).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % goal requirements and repeatables %
@@ -445,20 +446,13 @@ goalRequirements(attemptResetPassword(Service), [navigateToResetPasswordPage(Ser
 
 goalRequirements(retrieveAndEnterUsername(Service), [recallAndEnterUsername(Service, Username)]).
 goalRequirements(retrieveAndEnterUsername(Service), [readAndEnterUsername(Service, Username)]).
-goalRequirements(retrieveAndEnterUsername(Service), []) :- ansi_format([fg(green)], 'retrieveAndEnterAccountInformation(Service) - nil branch... This should not happen!\n', []), removeFromWorld(retrievedUsername(Service, _)).
+goalRequirements(retrieveAndEnterUsername(Service), []) :- ansi_format([fg(green)], 'retrieveAndEnterUsername(Service) - nil branch... This should not happen!\n', []), removeFromWorld(retrievedUsername(Service, _)).
 
 repeatable(attemptResetPassword(Service)) :- inCurrentWorld(passwordProposalResult(Service, _, error(_))).
 
 %%%%%%%%%%%%
 % executes %
 %%%%%%%%%%%%
-
-execute(chooseNewPassword(Service)) :- not(inCurrentWorld(passwordChosenButNotEntered(Service))), not(inCurrentWorld(desiredPassword(Service, _))), not(inCurrentWorld(passwordProposalResult(Service, _, _))), inCurrentWorld(passwordRequirements(Service, Requirements)), choosePasswordHelper(Service, Requirements, '', Password), addToWorld(desiredPassword(Service, Password)), addToWorld(passwordChosenButNotEntered(Service)), format('exec choose new password - branch 1!\n', []), !.
-
-execute(chooseNewPassword(Service)) :- not(inCurrentWorld(passwordChosenButNotEntered(Service))), inCurrentWorld(desiredPassword(Service, PreviousPassword)), inCurrentWorld(passwordProposalResult(Service, _, error(FailedPasswordRequirements))), inCurrentWorld(passwordRequirements(Service, InitialRequirements)), mergeLists(InitialRequirements, FailedPasswordRequirements, Requirements), removeFromWorld(passwordRequirements(InitialRequirements)), addToWorld(passwordRequirements(Requirements)), choosePasswordHelper(Service, Requirements, PreviousPassword, Password), removeFromWorld(desiredPassword(Service, _)), addToWorld(desiredPassword(Service, Password)), addToWorld(passwordChosenButNotEntered(Service)), format('exec choose new password - branch 2!\n', []), !.
-
-execute(chooseNewPassword(Service)) :- format('catch-all choose new password exec!\n', []), !.
-
 
 %%%%%%%%%%%%%%%%%
 % updateBeliefs %
@@ -470,6 +464,12 @@ updateBeliefsHelper(navigateToResetPasswordPage(Service), Result) :- ansi_format
 
 updateBeliefsHelper(clickResetPasswordButton(Service, Username, Password), success) :- removeFromWorld(desiredPassword(Service, _)), removeFromWorld(passwordRequirements(Service, _)), removeFromWorld(passwordProposalResult(Service, _, _)), removeFromWorld(passwordChosenButNotEntered(Service)), removeFromWorld(retrievedUsername(Service, _)), addToWorld(passwordSetupRequired(Service, Password)), ansi_format([fg(red)], 'update beliefs called with ~w. result: ~w\n', [clickResetPasswordButton(Service, Username, Password), success]).
 updateBeliefsHelper(clickResetPasswordButton(Service, Username, Password), Result) :- Result = error(Reason), Reason \= noService, Reason \= noUsername, removeFromWorld(passwordProposalResult(Service, _, _)), removeFromWorld(passwordChosenButNotEntered(Service)), removeFromWorld(retrievedUsername(Service, _)), addToWorld(passwordProposalResult(Service, Password, Result)), ansi_format([fg(red)], 'update beliefs called with ~w. result: ~w\n', [clickResetPasswordButton(Service, Username, Password), Result]).
+
+updateBeliefsHelper(chooseNewPassword(Service), R) :- not(inCurrentWorld(passwordChosenButNotEntered(Service))), not(inCurrentWorld(desiredPassword(Service, _))), not(inCurrentWorld(passwordProposalResult(Service, _, _))), inCurrentWorld(passwordRequirements(Service, Requirements)), choosePasswordHelper(Service, Requirements, '', Password), addToWorld(desiredPassword(Service, Password)), addToWorld(passwordChosenButNotEntered(Service)), format('exec choose new password - branch 1!\n', []), !.
+
+updateBeliefsHelper(chooseNewPassword(Service), R) :- not(inCurrentWorld(passwordChosenButNotEntered(Service))), inCurrentWorld(desiredPassword(Service, PreviousPassword)), inCurrentWorld(passwordProposalResult(Service, _, error(FailedPasswordRequirements))), inCurrentWorld(passwordRequirements(Service, InitialRequirements)), mergeLists(InitialRequirements, FailedPasswordRequirements, Requirements), removeFromWorld(passwordRequirements(InitialRequirements)), addToWorld(passwordRequirements(Requirements)), choosePasswordHelper(Service, Requirements, PreviousPassword, Password), removeFromWorld(desiredPassword(Service, _)), addToWorld(desiredPassword(Service, Password)), addToWorld(passwordChosenButNotEntered(Service)), format('exec choose new password - branch 2!\n', []), !.
+
+updateBeliefsHelper(chooseNewPassword(Service), R) :- format('catch-all choose new password exec!\n', []), !.
 
 %%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%

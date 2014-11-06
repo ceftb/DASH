@@ -2,18 +2,23 @@
 :- dynamic(determineResult/3).
 :- dynamic(signedIn/3).
 :- dynamic(printWorldState/0).
-:- dynamic(numPasswordResets/1).
-:- dynamic(numUsernamesWritten/1).
-:- dynamic(numPasswordsWritten/1).
 :- dynamic(numAccountsCreated/1).
+:- dynamic(numUsernamesMemorized/1).
+:- dynamic(numUsernamesWritten/1).
+:- dynamic(numPasswordsMemorized/1).
+:- dynamic(numPasswordsWritten/1).
+:- dynamic(numPasswordResets/1).
+
 :- consult('services_util').
 
 numPasswordResets(0).
+numUsernamesMemorized(0).
+numPasswordsMemorized(0).
 numPasswordsWritten(0).
 numAccountsCreated(0).
 numUsernamesWritten(0).
 
-printWorldState :- numPasswordResets(PR), numUsernamesWritten(UW), numPasswordsWritten(PW), numAccountsCreated(AC), ansi_format([fg(blue)], 'number of accounts created: ~w\nnumber of usernames written down: ~w\nnumber of passwords written down: ~w\nnumber of password resets performed: ~w\n', [AC, UW, PW, PR]).
+printWorldState :- numAccountsCreated(AC), numUsernamesMemorized(UM), numUsernamesWritten(UW), numPasswordsMemorized(PM), numPasswordsWritten(PW), numPasswordResets(PR), ansi_format([fg(blue)], 'number of accounts created: ~w\nnumber of usernames memorized: ~w\nnumber of usernames written down: ~w\nnumber of passwords memorized: ~w\nnumber of passwords written down: ~w\nnumber of password resets performed: ~w\n', [AC, UM, UW, PM, PW, PR]).
 
 services([gmail, hotmail, yahoomail]).
 
@@ -22,10 +27,10 @@ serviceExists(Service) :- services(Services), member(Service, Services).
 determineResult(initializeUser, User, services(X)) :- format('User ~w added to simulation.\n', [User]), services(X).
 
 determineResult(navigateToCreateAccountPage(Service), User, error(noService)) :- not(serviceExists(Service)), format('This should never happen! User tried to access service ~w, which does not exist.\n', [Service]).
-determineResult(navigateToCreateAccountPage(Service), User, success(usernameRequirements(UR), passwordRequirements(PR))) :- serviceExists(Service), usernameNavRequirements(Service, UR), passwordNavRequirements(Service, PR), format('User ~w performed ~w. Result: ~w,\n', [User, navigateToCreateAccountPage(Service), success(usernameRequirements(Service, UR), passwordRequirements(Service, PR))]).
+determineResult(navigateToCreateAccountPage(Service), User, success(usernameRequirements(UR), passwordRequirements(PR))) :- serviceExists(Service), usernameNavRequirements(Service, UR), passwordNavRequirements(Service, PR), format('User ~w performed ~w. Result: ~w.\n', [User, navigateToCreateAccountPage(Service), success(usernameRequirements(Service, UR), passwordRequirements(Service, PR))]).
 
 determineResult(navigateToResetPasswordPage(Service), User, error(noService)) :- not(serviceExists(Service)), format('This should never happen! User tried to access service ~w, which does not exist.\n', [Service]).
-determineResult(navigateToResetPasswordPage(Service), User, success(passwordRequirements(PR))) :- serviceExists(Service), passwordNavRequirements(Service, PR), format('User ~w performed ~w. Result: ~w', [User, navigateToResetPasswordPage(Service), success(passwordRequirements(PR))]).
+determineResult(navigateToResetPasswordPage(Service), User, success(passwordRequirements(PR))) :- serviceExists(Service), passwordNavRequirements(Service, PR), format('User ~w performed ~w. Result: ~w\n', [User, navigateToResetPasswordPage(Service), success(passwordRequirements(PR))]).
 
 
 determineResult(enterDesiredUsername(Service, Username), User, error(noService)) :- not(serviceExists(Service)), format('This should never happen! User tried to access service ~w, which does not exist.\n', [Service]).
@@ -54,6 +59,10 @@ determineResult(writeUsernameOnPostIt(Service), User, success) :- retract(numUse
 
 determineResult(writePasswordOnPostIt(Service), User, success) :- retract(numPasswordsWritten(X)), Y is X + 1, assert(numPasswordsWritten(Y)), !.
 
+
+determineResult(memorizeUsername(Service), User, success) :- retract(numUsernamesMemorized(X)), Y is X + 1, assert(numUsernamesMemorized(Y)), !.
+
+determineResult(memorizePassword(Service), User, success) :- retract(numPasswordsMemorized(X)), Y is X + 1, assert(numPasswordsMemorized(Y)), !.
 
 usernameResponse(Service, Username, error([isNot(Username)])) :- usernameTaken(Service, Username).
 usernameResponse(Service, Username, error([H])) :- not(usernameTaken(Service, Username)), usernameRequirements(Service, Requirements), getUnsatisfiedRequirements(Username, Requirements, [H|T]), !.
