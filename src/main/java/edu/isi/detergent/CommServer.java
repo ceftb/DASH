@@ -34,6 +34,7 @@ public class CommServer {
 		Integer id = null;
 		
 		public ClientThread(Socket socket) {
+            System.out.println("Constructor called for ClientThread.\n");
 			clientSocket = socket;
 		}
 		
@@ -61,10 +62,13 @@ public class CommServer {
 		private String processInput(String inputLine) {
 			// First line usually tells us who the agent is on this socket
 			if (inputLine.startsWith("id")) {
-				id = Integer.parseInt(inputLine.substring(3)); 
+                System.out.println("Line starting with id received.\n");
+				id = Integer.parseInt(inputLine.substring(3));
 				if (!messages.containsKey(id))
 					messages.put(id, new ArrayList<String>());
+                System.out.println("Adding agent " + id + " to world logic.\n");
                 worldLogic.addAgent(id);
+                System.out.println("Added agent " + id + " to world logic.\n");
 				return "ok";
             } else if (inputLine.startsWith("action")) {
 				System.out.println(id + ": " + inputLine);

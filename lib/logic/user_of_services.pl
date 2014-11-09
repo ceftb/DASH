@@ -223,6 +223,7 @@ chooseUsernameHelper(Service, Requirements, _, 'username') :- satisfiesRequireme
 chooseUsernameHelper(Service, Requirements, _, 'username1') :- satisfiesRequirements('username1', Requirements).
 chooseUsernameHelper(Service, Requirements, _, 'Username12') :- satisfiesRequirements('Username12', Requirements).
 chooseUsernameHelper(Service, Requirements, _, 'Us3rN4m3!234') :- satisfiesRequirements('Us3rN4m3!234', Requirements).
+chooseUsernameHelper(Service, Requirements, _, Username) :- id(MyID), atom_concat('Us3rN4m3!234', MyID, Username), satisfiesRequirements(Username, Requirements).
 
 %chooseUsernameHelper(Service, Requirements, '', 'username').
 %chooseUsernameHelper(Service, Requirements, BaseUsername, Username) :- atom_concat(BaseUsername, '1', Username), !.

@@ -33,6 +33,7 @@ public class WorldLogic {
     
     // adds agent to the knowledge base
     public synchronized int addAgent(int id) {
+        System.out.println("WorldLogic: addAgent: Attempting to add agent " + id + " to knowledge base.\n");
         try {
             Term assertTerm = jpl.Util.textToTerm("assert(id(" + id + "))");
             Query assertQuery = new Query(assertTerm);
@@ -46,11 +47,14 @@ public class WorldLogic {
             return 1;
         }
         
+        System.out.println("WorldLogic: addAgent: cp1.\n");
+        
         try {
             Term assertTerm = jpl.Util.textToTerm("assert(observations(" + id + ", []))");
             Query assertQuery = new Query(assertTerm);
             
             if (assertQuery.hasSolution()) {
+                System.out.println("WorldLogic: addAgent: successfully added agent " + id + " to knowledge base.\n");
                 return 0;
             } else {
                 System.out.println("WorldLogic: addAgent: error: could not add agent " + id + " to knowledge base.\n");
@@ -64,7 +68,7 @@ public class WorldLogic {
     
     // processes the given action, generating a result and appropriate observations
     public synchronized String processAction(String action, java.lang.Integer id) {
-        System.out.println("processAction called with action " + action + " and id " + id + "\n");
+        System.out.println("WorldLogic: processAction called with action " + action + " and id " + id + "\n");
 
         try {
             // generate processQuery here to process the action and return a result
@@ -85,7 +89,7 @@ public class WorldLogic {
     }
     
     public synchronized String getObservations(java.lang.Integer id) {
-        System.out.println("getObservations called with id " + id + "\n.");
+        System.out.println("WorldLogic: getObservations called with id " + id + "\n.");
         
         try {
             Term obsTerm = jpl.Util.textToTerm("getObservations(" + id + ", Obs)");
