@@ -95,7 +95,7 @@ serviceExists(Service) :- services(ServiceList), member(Service, ServiceList).
 % choose a service at random
 chooseService(Service) :- services(ServiceList), length(ServiceList, Length), ServiceIndex is random(Length), nth0(ServiceIndex, ServiceList, Service).
 
-printUserState :- inCurrentWorld(cognitiveBurden(B)), inCurrentWorld(cognitiveThreshold(T)), ansi_format([fg(magenta)], 'cognitive burden: ~w.\ncognitive threshold: ~w.\n', [B, T]), !.
+printUserState :- inCurrentWorld(cognitiveBurden(B)), inCurrentWorld(cognitiveThreshold(T)), ansi_format([fg(magenta)], 'cognitive burden: ~w.\ncognitive threshold: ~w.\n', [B, T]), printUsernameBeliefs, !.
 printUserState :- !.
 
 printDoneStatements :- foreach(done(A, B), ansi_format([fg(yellow)], '~w.\n', [done(A, B)])).
@@ -212,9 +212,9 @@ repeatable(enterDesiredPasswordSG(Service)) :- inCurrentWorld(passwordProposalRe
 % important: we do NOT try to unify the username in desiredUsername with that from usernameProposalResult
 % when they both exist... this is because we may later want to take into account situations where the username
 % that is typed in is subject to typos
-updateBeliefsHelper(chooseUsername(Service), R) :- not(inCurrentWorld(usernameChosenButNotEntered(Service))), not(inCurrentWorld(desiredUsername(Service, _))), not(inCurrentWorld(usernameProposalResult(Service, _, _))), inCurrentWorld(usernameRequirements(Service, Requirements)), chooseUsernameHelper(Service, Requirements, '', Username), addToWorld(desiredUsername(Service, Username)), addToWorld(usernameChosenButNotEntered(Service)), format('exec username - branch 1!\n', []), !.
+updateBeliefsHelper(chooseUsername(Service), R) :- not(inCurrentWorld(usernameChosenButNotEntered(Service))), not(inCurrentWorld(desiredUsername(Service, _))), not(inCurrentWorld(usernameProposalResult(Service, _, _))), inCurrentWorld(usernameRequirements(Service, Requirements)), format('chooseUsername: trying to satisfy requirements: ~w.\n', [Requirements]), chooseUsernameHelper(Service, Requirements, '', Username), addToWorld(desiredUsername(Service, Username)), addToWorld(usernameChosenButNotEntered(Service)), format('exec username - branch 1!\n', []), !.
 
-updateBeliefsHelper(chooseUsername(Service), R) :- not(inCurrentWorld(usernameChosenButNotEntered(Service))), inCurrentWorld(desiredUsername(Service, PreviousUsername)), inCurrentWorld(usernameProposalResult(Service, _, error(FailedUsernameRequirements))), inCurrentWorld(usernameRequirements(Service, InitialRequirements)), mergeLists(InitialRequirements, FailedUsernameRequirements, Requirements), removeFromWorld(usernameRequirements(InitialRequirements)), addToWorld(usernameRequirements(Requirements)), chooseUsernameHelper(Service, Requirements, PreviousUsername, Username), removeFromWorld(desiredUsername(Service, _)), addToWorld(desiredUsername(Service, Username)), addToWorld(usernameChosenButNotEntered(Service)), format('exec username - branch 2!\n', []), !.
+updateBeliefsHelper(chooseUsername(Service), R) :- not(inCurrentWorld(usernameChosenButNotEntered(Service))), inCurrentWorld(desiredUsername(Service, PreviousUsername)), inCurrentWorld(usernameProposalResult(Service, _, error(FailedUsernameRequirements))), inCurrentWorld(usernameRequirements(Service, InitialRequirements)), mergeLists(InitialRequirements, FailedUsernameRequirements, Requirements), removeFromWorld(usernameRequirements(Service, InitialRequirements)), addToWorld(usernameRequirements(Service, Requirements)), format('chooseUsername: trying to satisfy requirements: ~w.\n', [Requirements]), chooseUsernameHelper(Service, Requirements, PreviousUsername, Username), removeFromWorld(desiredUsername(Service, _)), addToWorld(desiredUsername(Service, Username)), addToWorld(usernameChosenButNotEntered(Service)), format('exec username - branch 2!\n', []), !.
 
 %execute(chooseUsername(Service)) :- inCurrentWorld(usernameChosenButNotEntered(Service)), format('already chose a username so skipping this exec!\n', []), !.
 updateBeliefsHelper(chooseUsername(Service), R) :- format('catch-all choose username exec!\n', []), !.
@@ -233,7 +233,7 @@ chooseUsernameHelper(Service, Requirements, _, 'Us3rN4m3!234') :- satisfiesRequi
 % for passwords!
 updateBeliefsHelper(choosePassword(Service), R) :- not(inCurrentWorld(passwordChosenButNotEntered(Service))), not(inCurrentWorld(desiredPassword(Service, _))), not(inCurrentWorld(passwordProposalResult(Service, _, _))), inCurrentWorld(passwordRequirements(Service, Requirements)), choosePasswordHelper(Service, Requirements, '', Password), addToWorld(desiredPassword(Service, Password)), addToWorld(passwordChosenButNotEntered(Service)), format('exec password - branch 1!\n', []), !.
 
-updateBeliefsHelper(choosePassword(Service), R) :- not(inCurrentWorld(passwordChosenButNotEntered(Service))), inCurrentWorld(desiredPassword(Service, PreviousPassword)), inCurrentWorld(passwordProposalResult(Service, _, error(FailedPasswordRequirements))), inCurrentWorld(passwordRequirements(Service, InitialRequirements)), mergeLists(InitialRequirements, FailedPasswordRequirements, Requirements), removeFromWorld(passwordRequirements(InitialRequirements)), addToWorld(passwordRequirements(Requirements)), choosePasswordHelper(Service, Requirements, PreviousPassword, Password), removeFromWorld(desiredPassword(Service, _)), addToWorld(desiredPassword(Service, Password)), addToWorld(passwordChosenButNotEntered(Service)), format('exec password - branch 2!\n', []), !.
+updateBeliefsHelper(choosePassword(Service), R) :- not(inCurrentWorld(passwordChosenButNotEntered(Service))), inCurrentWorld(desiredPassword(Service, PreviousPassword)), inCurrentWorld(passwordProposalResult(Service, _, error(FailedPasswordRequirements))), inCurrentWorld(passwordRequirements(Service, InitialRequirements)), mergeLists(InitialRequirements, FailedPasswordRequirements, Requirements), removeFromWorld(passwordRequirements(Service, InitialRequirements)), addToWorld(passwordRequirements(Service, Requirements)), choosePasswordHelper(Service, Requirements, PreviousPassword, Password), removeFromWorld(desiredPassword(Service, _)), addToWorld(desiredPassword(Service, Password)), addToWorld(passwordChosenButNotEntered(Service)), format('exec password - branch 2!\n', []), !.
 
 updateBeliefsHelper(choosePassword(Service), R) :- format('catch-all choose password exec!\n', []), !.
 
@@ -467,7 +467,7 @@ updateBeliefsHelper(clickResetPasswordButton(Service, Username, Password), Resul
 
 updateBeliefsHelper(chooseNewPassword(Service), R) :- not(inCurrentWorld(passwordChosenButNotEntered(Service))), not(inCurrentWorld(desiredPassword(Service, _))), not(inCurrentWorld(passwordProposalResult(Service, _, _))), inCurrentWorld(passwordRequirements(Service, Requirements)), choosePasswordHelper(Service, Requirements, '', Password), addToWorld(desiredPassword(Service, Password)), addToWorld(passwordChosenButNotEntered(Service)), format('exec choose new password - branch 1!\n', []), !.
 
-updateBeliefsHelper(chooseNewPassword(Service), R) :- not(inCurrentWorld(passwordChosenButNotEntered(Service))), inCurrentWorld(desiredPassword(Service, PreviousPassword)), inCurrentWorld(passwordProposalResult(Service, _, error(FailedPasswordRequirements))), inCurrentWorld(passwordRequirements(Service, InitialRequirements)), mergeLists(InitialRequirements, FailedPasswordRequirements, Requirements), removeFromWorld(passwordRequirements(InitialRequirements)), addToWorld(passwordRequirements(Requirements)), choosePasswordHelper(Service, Requirements, PreviousPassword, Password), removeFromWorld(desiredPassword(Service, _)), addToWorld(desiredPassword(Service, Password)), addToWorld(passwordChosenButNotEntered(Service)), format('exec choose new password - branch 2!\n', []), !.
+updateBeliefsHelper(chooseNewPassword(Service), R) :- not(inCurrentWorld(passwordChosenButNotEntered(Service))), inCurrentWorld(desiredPassword(Service, PreviousPassword)), inCurrentWorld(passwordProposalResult(Service, _, error(FailedPasswordRequirements))), inCurrentWorld(passwordRequirements(Service, InitialRequirements)), mergeLists(InitialRequirements, FailedPasswordRequirements, Requirements), removeFromWorld(passwordRequirements(Service, InitialRequirements)), addToWorld(passwordRequirements(Service, Requirements)), choosePasswordHelper(Service, Requirements, PreviousPassword, Password), removeFromWorld(desiredPassword(Service, _)), addToWorld(desiredPassword(Service, Password)), addToWorld(passwordChosenButNotEntered(Service)), format('exec choose new password - branch 2!\n', []), !.
 
 updateBeliefsHelper(chooseNewPassword(Service), R) :- format('catch-all choose new password exec!\n', []), !.
 
@@ -503,10 +503,31 @@ updateBeliefs(Action, Result) :- updateUsernameBeliefs(Action, Result), updatePa
 updateBeliefs(Action, Result) :- not(updateBeliefsHelper(Action, Result)), ansi_format([fg(red)], 'update beliefs called with ~w. result: ~w (default call)\n', [Action, Result]), !.
 
 updateUsernameBeliefs(Action, Result) :- !.
-updateUsernameBeliefs(_, _).
+updateUsernameBeliefs(_, _) :- !.
 
 updatePasswordBeliefs(Action, Result) :- !.
-updatePasswordBeliefs(_, _).
+%updatePasswordBeliefs(_, _) :- uniquePasswords(U), foreach(X, services(X), ), foreach(Service(X)), passwordFatigue(X), !.
+
+uniquePasswords(U) :- setof(Password, isPassword(Password), U).
+
+isPassword(Password) :- passwordBeliefs(L), member((Password, _), L).
+
+passwordFatigue(Service) :- inCurrentWorld(passwordBeliefs(Service, List)), averagePasswordStrength(List, Average), applyFatigue(List, Average, 0.001, NewList), removeFromWorld(passwordBeliefs(Service, List)), addToWorld(passwordBeliefs(Service, NewList)).
+
+applyFatigue([(P,V)|T], Average, Rate, [(P, NewV)|NewT]) :- V < Average, NewV is V + Rate, applyPasswordFatigue(T, Average, NewT).
+applyFatigue([(P,V)|T], Average, Rate, [(P, NewV)|NewT]) :- V > Average, NewV is V - Rate, applyPasswordFatigue(T, Average, NewT).
+applyFatigue([(P,V)|T], Average, Rate, [(P, V)|NewT]) :- V = Average,  applyPasswordFatigue(T, Average, NewT).
+applyPasswordFatigue([], Average, Rate, []).
+
+averageStrength(List, Average) :- length(List, Length), netStrength(List, NetStrength), Average is NetStrength / Length, !.
+
+netStrength([(P,V)|T], NetStrength) :- netStrength(T, NetStrengthR), NetStrength is NetStrengthR + V.
+netStrength([], 0).
+
+printUsernameBeliefs :- services(ListOfServices), foreach(member(Service, ListOfServices), printUsernameBeliefs(Service)).
+
+printUsernameBeliefs(Service) :- inCurrentWorld(usernameBeliefs(Service, Beliefs)), ansi_format([fg(magenta)], 'Username beliefs for Service ~w: ~w.\n', [Service, Beliefs]).
+printUsernameBeliefs(Service) :- not(inCurrentWorld(usernameBeliefs(Service, _))), ansi_format([fg(magenta)], 'No username beliefs exist for service ~w.\n', [Service]).
 %%%%%%%
 % fin %
 %%%%%%%
