@@ -28,7 +28,7 @@
 %%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%
 
-initialPasswordForgetRate(0.4).
+initialPasswordForgetRate(0.01).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % iteration stuff
