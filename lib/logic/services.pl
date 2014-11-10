@@ -20,7 +20,7 @@ numUsernamesWritten(0).
 
 printWorldState :- numAccountsCreated(AC), numUsernamesMemorized(UM), numUsernamesWritten(UW), numPasswordsMemorized(PM), numPasswordsWritten(PW), numPasswordResets(PR), ansi_format([fg(blue)], 'number of accounts created: ~w\nnumber of usernames memorized: ~w\nnumber of usernames written down: ~w\nnumber of passwords memorized: ~w\nnumber of passwords written down: ~w\nnumber of password resets performed: ~w\n', [AC, UM, UW, PM, PW, PR]).
 
-services([gmail, hotmail, yahoomail]).
+services([gmail, hotmail, yahoomail, aol]).
 
 serviceExists(Service) :- services(Services), member(Service, Services).
 
@@ -92,10 +92,11 @@ processSignOut(Service, Username, User, error(usernameDoesNotExist)) :- not(acco
 processSignOut(Service, Username, User, error(notSignedIn)) :- accountExists(Service, Username, _, _), not(signedIn(Service, Username, User)), !.
 processSignOut(Service, Username, User, success) :- signedIn(Service, Username, _), retractall(signedIn(Service, Username, _)), !.
 
-usernameNavRequirements(Service, [minLength(6)]).
-passwordNavRequirements(Service, [minLength(6)]).
+usernameNavRequirements(Service, [minLength(4)]).
+passwordNavRequirements(Service, [minLength(4)]).
 
-usernameRequirements(Service, [minLength(6), minLower(1), minUpper(1), maxLength(64)]).
+usernameRequirements(Service, [minLength(4), minLower(1), minUpper(1), maxLength(64)]).
+passwordRequirements(aol, [minLength(4), minLower(0), minUpper(0), minDigit(0), minSpecial(0), maxLength(64)]).
 passwordRequirements(hotmail, [minLength(8), minLower(0), minUpper(0), minDigit(0), minSpecial(0), maxLength(64)]).
 passwordRequirements(yahoomail, [minLength(12), minLower(1), minUpper(1), minDigit(0), minSpecial(0), maxLength(64)]).
 passwordRequirements(gmail, [minLength(20), minLower(2), minUpper(2), minDigit(2), minSpecial(2), maxLength(64)]).
