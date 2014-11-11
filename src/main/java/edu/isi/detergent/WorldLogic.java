@@ -36,7 +36,12 @@ public class WorldLogic {
         System.out.println("WorldLogic: addAgent: Attempting to add agent " + id + " to knowledge base.\n");
         try {
             Term assertTerm = jpl.Util.textToTerm("assert(id(" + id + "))");
+            
+            System.out.println("WorldLogic: cp0.1.\n");
+            
             Query assertQuery = new Query(assertTerm);
+
+            System.out.println("WorldLogic: cp0.2.\n");
             
             if (!assertQuery.hasSolution()) {
                 System.out.println("WorldLogic: addAgent: error: could not add agent " + id + " to knowledge base.\n");

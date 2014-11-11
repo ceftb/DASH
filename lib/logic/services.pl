@@ -9,7 +9,15 @@
 :- dynamic(numPasswordsWritten/1).
 :- dynamic(numPasswordResets/1).
 
+:- dynamic(servicesCreated/0).
+:- dynamic(services/1).
+:- dynamic(passwordRequirements/2).
+:- dynamic(testServiceStrength/1).
+
 :- consult('services_util').
+
+numServices(10).
+testServiceStrength(weak). % weak, average, or strong
 
 numPasswordResets(0).
 numUsernamesMemorized(0).
@@ -20,7 +28,17 @@ numUsernamesWritten(0).
 
 printWorldState :- numAccountsCreated(AC), numUsernamesMemorized(UM), numUsernamesWritten(UW), numPasswordsMemorized(PM), numPasswordsWritten(PW), numPasswordResets(PR), ansi_format([fg(blue)], 'number of accounts created: ~w\nnumber of usernames memorized: ~w\nnumber of usernames written down: ~w\nnumber of passwords memorized: ~w\nnumber of passwords written down: ~w\nnumber of password resets performed: ~w\n', [AC, UM, UW, PM, PW, PR]).
 
-services([gmail, hotmail, yahoomail, aol]).
+services(S) :- not(servicesCreated), format('creating services...\n', []), format('services - cp1.\n', []), numServices(NumServices), format('services - cp2.\n', []), createServices(NumServices, S), format('services - cp3.\n', []), asserta(services(S)), format('services - cp4.\n', []), asserta(servicesCreated), format('created services: ~w.\n', [S]), !.
+
+createServices(N, [Service|Rest]) :- format('createServices: N = ~w.\n', [N]), N > 1, atom_number(AtomN, N), atom_concat(service, AtomN, Service), NMinus1 is N - 1, setPasswordRequirements(Service), createServices(NMinus1, Rest), !.
+
+createServices(1, [service1]) :- setPasswordRequirements(service1).
+
+setPasswordRequirements(service1) :- testServiceStrength(weak), assert(passwordRequirements(service1, [minLength(4), minLower(0), minUpper(0), minDigit(0), minSpecial(0), maxLength(64)])).
+setPasswordRequirements(service1) :- testServiceStrength(average), assert(passwordRequirements(service1, [minLength(8), minLower(2), minUpper(1), minDigit(1), minSpecial(0), maxLength(64)])).
+setPasswordRequirements(service1) :- testServiceStrength(weak), assert(passwordRequirements(service1, [minLength(12), minLower(2), minUpper(2), minDigit(2), minSpecial(2), maxLength(64)])).
+
+setPasswordRequirements(Service) :- Service \= service1, MinLower is random(3), MinUpper is random(3), MinDigit is random(3), MinSpecial is random(3), MinLength is 4 + random(9), assert(passwordRequirements(Service, [minLength(MinLength), minLower(MinLower), minUpper(MinUpper), minDigit(MinDigit), minSpecial(MinSpecial), maxLength(64)])).
 
 serviceExists(Service) :- services(Services), member(Service, Services).
 
@@ -37,7 +55,7 @@ determineResult(enterDesiredUsername(Service, Username), User, error(noService))
 determineResult(enterDesiredUsername(Service, Username), User, Result) :- serviceExists(Service), usernameResponse(Service, Username, Result), format('User ~w performed ~w. Result: ~w.\n', [User, enterDesiredUsername(Service, Username), Result]).
 
 determineResult(enterDesiredPassword(Service, Password), User, error(noService)) :- not(serviceExists(Service)), format('This should never happen! User tried to access service ~w, which does not exist.\n', [Service]).
-determineResult(enterDesiredPassword(Service, Password), User, Result) :- serviceExists(Service), passwordResponse(Service, Password, Result), format('User ~w performed ~w. Result: ~w.\n', [User, enterDesiredPassword(Service, Password), Result]).
+determineResult(enterDesiredPassword(Service, Password), User, Result) :- format('trying to determine result for enterDesiredPassword(~w, ~w): cp 1.\n', [Service,Password]), serviceExists(Service), format('trying to determine result for enterDesiredPassword(~w, ~w): cp 2.\n', [Service,Password]), passwordResponse(Service, Password, Result), format('User ~w performed ~w. Result: ~w.\n', [User, enterDesiredPassword(Service, Password), Result]).
 
 
 %%% TEST!!!!: determineResult(clickCreateAccountButton(Service, Username, Password), User, error(success, error([minLength(20)]))).
@@ -73,11 +91,11 @@ usernameResponse(Service, Username, success) :- not(usernameTaken(Service, Usern
 % usernameResponse(Service, Username, error(maxLength(32))) :- string_length(Username, Length), Length > 32.
 % usernameResponse(Service, Username, success) :- not(usernameTaken(Service, Username)), string_length(Username, Length), Length >= 8, Length =< 32.
 
-passwordResponse(Service, Password, error([H])) :- passwordRequirements(Service, Requirements), getUnsatisfiedRequirements(Password, Requirements, [H|T]), !.
-passwordResponse(Service, Password, success(Strength)) :- passwordRequirements(Service, Requirements), getUnsatisfiedRequirements(Password, Requirements, UnsatisfiedRequirements), UnsatisfiedRequirements = [], passwordStrength(Service, Password, Strength), !.
+passwordResponse(Service, Password, error([H])) :- format('passwordResponse: error branch - cp 1.\n'), passwordRequirements(Service, Requirements), format('passwordResponse: error branch - cp 2.\n'), getUnsatisfiedRequirements(Password, Requirements, [H|T]), format('passwordResponse: error branch - END.\n'), !.
+passwordResponse(Service, Password, success(Strength)) :- format('passwordResponse: success branch - cp 1.\n'), passwordRequirements(Service, Requirements), format('passwordResponse: success branch - cp 2.\n'), getUnsatisfiedRequirements(Password, Requirements, UnsatisfiedRequirements), format('passwordResponse: success branch - cp 3.\n'), UnsatisfiedRequirements = [], format('passwordResponse: success branch - cp 4.\n'), passwordStrength(Service, Password, Strength), format('passwordResponse: success branch - END.\n'), !.
 
 passwordStrength(Service, Password, weak) :- passwordScore(Service, Password, Score), Score < 8.
-passwordStrength(Service, Password, fair) :- passwordScore(Service, Password, Score), Score >= 8, Score < 10.
+passwordStrength(Service, Password, fair) :- passwordScore(Service, Password, Score), Score >= 8, Score < 12.
 passwordStrength(Service, Password, good) :- passwordScore(Service, Password, Score), Score >= 12, Score < 16.
 passwordStrength(Service, Password, strong) :- passwordScore(Service, Password, Score), Score >= 16.
 
@@ -96,10 +114,10 @@ usernameNavRequirements(Service, [minLength(4)]).
 passwordNavRequirements(Service, [minLength(4)]).
 
 usernameRequirements(Service, [minLength(4), minLower(1), minUpper(1), maxLength(64)]).
-passwordRequirements(aol, [minLength(4), minLower(0), minUpper(0), minDigit(0), minSpecial(0), maxLength(64)]).
-passwordRequirements(hotmail, [minLength(8), minLower(0), minUpper(0), minDigit(0), minSpecial(0), maxLength(64)]).
-passwordRequirements(yahoomail, [minLength(12), minLower(1), minUpper(1), minDigit(0), minSpecial(0), maxLength(64)]).
-passwordRequirements(gmail, [minLength(20), minLower(2), minUpper(2), minDigit(2), minSpecial(2), maxLength(64)]).
+%passwordRequirements(aol, [minLength(4), minLower(0), minUpper(0), minDigit(0), minSpecial(0), maxLength(64)]).
+%passwordRequirements(hotmail, [minLength(8), minLower(0), minUpper(0), minDigit(0), minSpecial(0), maxLength(64)]).
+%passwordRequirements(yahoomail, [minLength(12), minLower(1), minUpper(1), minDigit(0), minSpecial(0), maxLength(64)]).
+%passwordRequirements(gmail, [minLength(20), minLower(2), minUpper(2), minDigit(2), minSpecial(2), maxLength(64)]).
 
 %passwordRequirements(Service, [minLength(6), minLower(1), minUpper(1), minDigit(2), minSpecial(1), maxLength(64)]).
 

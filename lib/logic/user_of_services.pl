@@ -254,6 +254,10 @@ choosePasswordHelper(Service, Requirements, _, 'Password') :- satisfiesRequireme
 choosePasswordHelper(Service, Requirements, _, 'PassWord12') :- satisfiesRequirements('Password12', Requirements).
 choosePasswordHelper(Service, Requirements, _, 'P@sSw0rd!234') :- satisfiesRequirements('P@sSw0rd1234', Requirements).
 choosePasswordHelper(Service, Requirements, _, 'VeryLonP@sSw0rd!234!?') :- satisfiesRequirements('VeryLongP@sSw0rd1234!?', Requirements).
+
+%choosePasswordHelper(Service, Requirements, '', 'password') :- satisfiesRequirements('Password12', Requirements).
+%choosePasswordHelper(Service, Requirements, BasePassword, NewPassword) :- getUnsatisfiedReqs(BasePassword, REquirements, UnsatisfiedRequirements),
+
 % instead of using the above model for generating passwords, we may want to do something more interesting with initialized user information
 
 %%% This is the beginning of code for an approach that involves removing one requirement at a time
