@@ -1,3 +1,5 @@
+:- consult('levenshtein_rosetta').
+
 %%%%%%%%%%%
 % general %
 %%%%%%%%%%%
@@ -72,24 +74,21 @@ getStringStatistics([], [0, 0, 0, 0]).
 % levenshtein distance %
 %%%%%%%%%%%%%%%%%%%%%%%%
 
+%%% since both my implementations of levenshtein distance were slow
+%%% I decided to use an implementation borrowed from
+%%% http://rosettacode.org/wiki/Levenshtein_distance .
+%%% This is provided via the consult levenshtein_rosetta .
+
 %%%% adopted from http://en.wikipedia.org/wiki/Levenshtein_distance
 %%%% however, we "shorten" the substrings, thereby breaking down the
 %%%% problem into smaller problems by consdering the first character
 %%%% in the string instead of the last
 
-lev(StringOne, StringTwo, Distance) :- atom_codes(StringOne, CodesOne), atom_codes(StringTwo, CodesTwo), length(CodesOne, I), length(CodesTwo, J), levCodes(CodesOne, CodesTwo, I, J, Distance), !.
-
-levCodes(CodesOne, CodesTwo, 0, 0, 0) :- !.
-
-levCodes(CodesOne, CodesTwo, I, 0, I) :- !.
-levCodes(CodesOne, CodesTwo, 0, J, J) :- !.
-
-levCodesRemoveBoth(L1, L2, I, J, Distance) :- nth1(I, L1, C1), nth1(J, L2, C2), C1 = C2, IR is I - 1, JR is J - 1, levCodes(L1, L2, IR, JR, Distance), !.
-levCodesRemoveBoth(L1, L2, I, J, Distance) :- nth1(I, L1, C1), nth1(J, L2, C2), C1 \= C2, IR is I - 1, JR is J - 1, levCodes(L1, L2, IR, JR, DistanceR), Distance is DistanceR + 1, !.
-
-levCodesRemoveOne(L1, L2, I, J, Distance) :- IR is I - 1, JR is J - 1, levCodes(L1, L2, IR, J, Distance1), levCodes(L1, L2, I, JR, Distance2), Distance is min(Distance1, Distance2) + 1, !.
-
-levCodes(L1, L2, I, J, Distance) :- levCodesRemoveOne(L1, L2, I, J, Distance1), levCodesRemoveBoth(L1, L2, I, J, Distance2), Distance is min(Distance1, Distance2), !.
+%%%
+%%%
+%%% implementation 0: slow
+%%%
+%%%
 
 %lev(StringOne, StringTwo, Distance) :- atom_codes(StringOne, CodesOne), atom_codes(StringTwo, CodesTwo), levCodes(CodesOne, CodesTwo, Distance), !.
 
@@ -104,3 +103,23 @@ levCodes(L1, L2, I, J, Distance) :- levCodesRemoveOne(L1, L2, I, J, Distance1), 
 
 
 %levCodes([HOne|TOne], [HTwo|TTwo], Distance) :- levCodesRemoveOne([HOne|TOne], [HTwo|TTwo], Distance1), levCodesRemoveBoth([HOne|TOne], [HTwo|TTwo], Distance2), Distance is min(Distance1, Distance2), !.
+
+%%%
+%%%
+%%% implementation 1: very slow
+%%%
+%%%
+
+%lev(StringOne, StringTwo, Distance) :- atom_codes(StringOne, CodesOne), atom_codes(StringTwo, CodesTwo), length(CodesOne, I), length(CodesTwo, J), levCodes(CodesOne, CodesTwo, I, J, Distance), !.
+
+%levCodes(CodesOne, CodesTwo, 0, 0, 0) :- !.
+
+%levCodes(CodesOne, CodesTwo, I, 0, I) :- !.
+%levCodes(CodesOne, CodesTwo, 0, J, J) :- !.
+
+%levCodesRemoveBoth(L1, L2, I, J, Distance) :- nth1(I, L1, C1), nth1(J, L2, C2), C1 = C2, IR is I - 1, JR is J - 1, levCodes(L1, L2, IR, JR, Distance), !.
+%levCodesRemoveBoth(L1, L2, I, J, Distance) :- nth1(I, L1, C1), nth1(J, L2, C2), C1 \= C2, IR is I - 1, JR is J - 1, levCodes(L1, L2, IR, JR, DistanceR), Distance is DistanceR + 1, !.
+
+%levCodesRemoveOne(L1, L2, I, J, Distance) :- IR is I - 1, JR is J - 1, levCodes(L1, L2, IR, J, Distance1), levCodes(L1, L2, I, JR, Distance2), Distance is min(Distance1, Distance2) + 1, !.
+
+%levCodes(L1, L2, I, J, Distance) :- levCodesRemoveOne(L1, L2, I, J, Distance1), levCodesRemoveBoth(L1, L2, I, J, Distance2), Distance is min(Distance1, Distance2), !.

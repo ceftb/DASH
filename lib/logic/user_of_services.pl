@@ -28,7 +28,7 @@
 %%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%
 
-initialPasswordForgetRate(0.02).
+initialPasswordForgetRate(0.015).
 strengthenRateAsFunctionOfForgetRate(Rate, StrengthenRate) :- StrengthenRate is 5 * Rate, !.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % iteration stuff
@@ -195,12 +195,15 @@ goalRequirements(setupForAccountRetrieval(Service), Approach) :- inCurrentWorld(
 
 
 % if we only need to do setup for password retrieval
-chooseSetupApproach(Service, [memorizePassword(Service)]) :- format('chooseSetupApproach - cp1.\n'), not(inCurrentWorld(usernameSetupRequired(Service, Username))), inCurrentWorld(passwordSetupRequired(Service, Password)), format('chooseSetupApproach - cp2.\n'), inCurrentWorld(cognitiveBurden(B)), inCurrentWorld(cognitiveThreshold(T)), format('chooseSetupApproach - cp3.\n'), X is B + 5, X < T, removeFromWorld(cognitiveBurden(B)), addToWorld(cognitiveBurden(X)), format('chosen setup approach: memorizing username and password.\n').
-chooseSetupApproach(Service, [writePasswordOnPostIt(Service)]) :- not(inCurrentWorld(usernameSetupRequired(Service, Username))), inCurrentWorld(passwordSetupRequired(Service, Password)), inCurrentWorld(cognitiveBurden(B)), inCurrentWorld(cognitiveThreshold(T)), X is B + 5, X >= T, format('chosen setup approach: writing username and password to post it notes.\n').
+chooseSetupApproach(Service, [memorizePassword(Service)]) :- format('chooseSetupApproach - cp1.\n'), not(inCurrentWorld(usernameSetupRequired(Service, _))), inCurrentWorld(passwordSetupRequired(Service, Password)), format('chooseSetupApproach - cp2.\n'), inCurrentWorld(cognitiveBurden(B)), inCurrentWorld(cognitiveThreshold(T)), cognitiveBurdenForPassword(Password, CP), format('chooseSetupApproach - cp3.\n'), X is B + CP, X =< T, removeFromWorld(cognitiveBurden(B)), addToWorld(cognitiveBurden(X)), format('chosen setup approach: memorizing password.\n').
+chooseSetupApproach(Service, [writePasswordOnPostIt(Service)]) :- not(inCurrentWorld(usernameSetupRequired(Service, _))), inCurrentWorld(passwordSetupRequired(Service, Password)), inCurrentWorld(cognitiveBurden(B)), inCurrentWorld(cognitiveThreshold(T)), cognitiveBurdenForPassword(Password, CP), X is B + CP, X > T, format('chosen setup approach: writing password to post it note.\n').
+
+%cognitiveBurdenForUsername(Username, CU), cognitiveBurdenForPassword(Password, CP),
 
 % if we need to do setup for username and password retrieval
-chooseSetupApproach(Service, [memorizeUsername(Service), memorizePassword(Service)]) :- format('chooseSetupApproach - cp1.\n'), inCurrentWorld(usernameSetupRequired(Service, Username)), inCurrentWorld(passwordSetupRequired(Service, Password)), format('chooseSetupApproach - cp2.\n'), inCurrentWorld(cognitiveBurden(B)), inCurrentWorld(cognitiveThreshold(T)), format('chooseSetupApproach - cp3.\n'), X is B + 10, X < T, removeFromWorld(cognitiveBurden(B)), addToWorld(cognitiveBurden(X)), format('chosen setup approach: memorizing username and password.\n').
-chooseSetupApproach(Service, [writeUsernameOnPostIt(Service), writePasswordOnPostIt(Service)]) :- inCurrentWorld(usernameSetupRequired(Service, Username)), inCurrentWorld(passwordSetupRequired(Service, Password)), inCurrentWorld(cognitiveBurden(B)), inCurrentWorld(cognitiveThreshold(T)), X is B + 10, X >= T, format('chosen setup approach: writing username and password to post it notes.\n').
+chooseSetupApproach(Service, [memorizeUsername(Service), memorizePassword(Service)]) :- format('chooseSetupApproach - cp1.\n'), inCurrentWorld(usernameSetupRequired(Service, Username)), inCurrentWorld(passwordSetupRequired(Service, Password)), format('chooseSetupApproach - cp2.\n'), inCurrentWorld(cognitiveBurden(B)), inCurrentWorld(cognitiveThreshold(T)), cognitiveBurdenForUsername(Username, CU), cognitiveBurdenForPassword(Password, CP), format('chooseSetupApproach - cp3.\n'), X is B + CU + CP, X =< T, removeFromWorld(cognitiveBurden(B)), addToWorld(cognitiveBurden(X)), format('chosen setup approach: memorizing username and password.\n').
+chooseSetupApproach(Service, [memorizeUsername(Service), writePasswordOnPostIt(Service)]) :- format('chooseSetupApproach - cp1.\n'), inCurrentWorld(usernameSetupRequired(Service, Username)), inCurrentWorld(passwordSetupRequired(Service, Password)), format('chooseSetupApproach - cp2.\n'), inCurrentWorld(cognitiveBurden(B)), inCurrentWorld(cognitiveThreshold(T)), cognitiveBurdenForUsername(Username, CU), cognitiveBurdenForPassword(Password, CP), format('chooseSetupApproach - cp3.\n'), X is B + CU, X =< T, Y is B + CU + CP, Y > T, removeFromWorld(cognitiveBurden(B)), addToWorld(cognitiveBurden(X)), format('chosen setup approach: memorizing username and password.\n').
+chooseSetupApproach(Service, [writeUsernameOnPostIt(Service), writePasswordOnPostIt(Service)]) :- inCurrentWorld(usernameSetupRequired(Service, Username)), inCurrentWorld(passwordSetupRequired(Service, Password)), inCurrentWorld(cognitiveBurden(B)), inCurrentWorld(cognitiveThreshold(T)), cognitiveBurdenForUsername(Username, CU), cognitiveBurdenForPassword(Password, CP), X is B + CU + CP, X > T, format('chosen setup approach: writing username and password to post it notes.\n').
 
 repeatable(attemptCreateAccount(Service)) :- not(inCurrentWorld(createdAccount(Service))).
 
@@ -317,6 +320,17 @@ updateBeliefsHelper(writeUsernameOnPostIt(Service), Result) :- not(inCurrentWorl
 updateBeliefsHelper(writePasswordOnPostIt(Service), Result) :- inCurrentWorld(passwordSetupRequired(Service, Password)), not(inCurrentWorld(passwordBeliefs(Service, _))), addToWorld(passwordBeliefs(Service, [(Password, 0.5)])), addToWorld(wrotePasswordOnPostIt(Service, Password)), initialPasswordForgetRate(Rate), addToWorld(passwordForgetRate(Service, Rate)), removeFromWorld(passwordSetupRequired(Service, Password)), removeFromWorld(resettingPassword(Service)), format('wrote down password ~w. \n', [writePasswordOnPostIt(Service)]).
 updateBeliefsHelper(writePasswordOnPostIt(Service), Result) :- inCurrentWorld(passwordSetupRequired(Service, Password)), inCurrentWorld(passwordBeliefs(Service, _)), removeFromWorld(passwordBeliefs(Service, _)), addToWorld(passwordBeliefs(Service, [(Password, 0.5)])), addToWorld(wrotePasswordOnPostIt(Service, Password)), initialPasswordForgetRate(Rate), removeFromWorld(passwordForgetRate(Service, _)), addToWorld(passwordForgetRate(Service, Rate)), removeFromWorld(passwordSetupRequired(Service, Password)), removeFromWorld(resettingPassword(Service)), format('wrote down password ~w. Setting NEW Password\n', [writePasswordOnPostIt(Service)]).
 updateBeliefsHelper(writePasswordOnPostIt(Service), Result) :- not(inCurrentWorld(passwordSetupRequired(Service, _))).
+
+%%%%%%%%%%%%
+% utility  %
+%%%%%%%%%%%%
+
+cognitiveBurdenForUsername(Username, MinBurden) :- uniqueUsernames(UniqueUsernames), minBurden(Username, UniqueUsernames, MinBurden).
+
+cognitiveBurdenForPassword(Password, MinBurden) :- uniquePasswords(UniquePasswords), minBurden(Password, UniquePasswords, MinBurden).
+
+minBurden(String, [H|T], Min) :- minBurden(String, T, MinR), lev(String, H, MinH), Min is min(MinR, MinH).
+minBurden(String, [], Min) :- atom_length(String, Min).
 
 %%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%
@@ -531,8 +545,14 @@ addUniquePasswords(Service, [Password|Rest]) :- not(isPassword(Service, Password
 addUniquePasswords(Service, [Password|Rest]) :- not(isPassword(Service, Password)), not(inCurrentWorld(passwordBeliefs(Service, _))), !.
 addUniquePasswords(Service, []) :- !.
 
+uniqueUsernames(UniqueUsernames) :- setof(Username, isUsername(Username), UniqueUsernames), format('found the following unique usernames: ~w.\n', [UniqueUsernames]), !.
+uniqueUsernames([]) :- not(setof(Username, isUsername(_, Username), _)), format('no unique usernames found.\n'), !.
+
+isUsername(Username) :- isUsername(_, Username).
+isUsername(Service, Username) :- inCurrentWorld(usernameBeliefs(Service, L)), member((Username, _), L).
+
 uniquePasswords(UniquePasswords) :- setof(Password, isPassword(Password), UniquePasswords), format('found the following unique passwords: ~w.\n', [UniquePasswords]), !.
-uniquePasswords([]) :- not(setof(Password, isPassword(_, Password), UniquePasswords)), format('no unique passwords found.\n'), !.
+uniquePasswords([]) :- not(setof(Password, isPassword(_, Password), _)), format('no unique passwords found.\n'), !.
 
 isPassword(Password) :- isPassword(_, Password).
 isPassword(Service, Password) :- inCurrentWorld(passwordBeliefs(Service, L)), member((Password, _), L).
