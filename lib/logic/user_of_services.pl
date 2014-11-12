@@ -329,9 +329,9 @@ updateBeliefsHelper(writePasswordOnPostIt(Service), Result) :- not(inCurrentWorl
 % utility  %
 %%%%%%%%%%%%
 
-cognitiveBurdenForUsername(Username, MinBurden) :- uniqueUsernames(UniqueUsernames), minBurden(Username, UniqueUsernames, MinBurden).
+cognitiveBurdenForUsername(Username, MinBurden) :- uniqueUsernames(UniqueUsernames), minBurden(Username, UniqueUsernames, MinBurdenIfPositive), MinBurden is max(1, MinBurdenIfPositive).
 
-cognitiveBurdenForPassword(Password, MinBurden) :- uniquePasswords(UniquePasswords), minBurden(Password, UniquePasswords, MinBurden).
+cognitiveBurdenForPassword(Password, MinBurden) :- uniquePasswords(UniquePasswords), minBurden(Password, UniquePasswords, MinBurdenIfPositive), MinBurden is max(1, MinBurdenIfPositive).
 
 minBurden(String, [H|T], Min) :- minBurden(String, T, MinR), lev(String, H, MinH), Min is min(MinR, MinH).
 minBurden(String, [], Min) :- atom_length(String, Min).
