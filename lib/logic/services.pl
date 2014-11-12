@@ -17,7 +17,7 @@
 :- consult('services_util').
 
 numServices(10).
-testServiceStrength(weak). % weak, average, or strong
+testServiceStrength(strong). % weak, average, or strong
 
 numPasswordResets(0).
 numUsernamesMemorized(0).
@@ -30,7 +30,7 @@ printWorldState :- numAccountsCreated(AC), numUsernamesMemorized(UM), numUsernam
 
 printExposureForService1 :- foreach(id(User), printExposureForService1(User)).
 
-printExposureForService1(User) :- accountExists(service1, _, Password, User), findall(X, accountExists(X, _, Password, User), L), length(L, Length), ansi_format([fg(green)], 'The password used for service1 is shared amongst ~w service(s) including service1 itself.\n', [Length]), !.
+printExposureForService1(User) :- accountExists(service1, _, Password, User), findall(X, accountExists(X, _, Password, User), L), length(L, Length), ansi_format([fg(green)], 'User ~w is reusing the password constructed for service1 shared amongst ~w service(s) including service1 itself.\n', [User, Length]), !.
 
 services(S) :- not(servicesCreated), format('creating services...\n', []), format('services - cp1.\n', []), numServices(NumServices), format('services - cp2.\n', []), createServices(NumServices, S), format('services - cp3.\n', []), assert(services(S)), format('services - cp4.\n', []), asserta(servicesCreated), format('created services: ~w.\n', [S]), !.
 
@@ -40,7 +40,7 @@ createServices(1, [service1]) :- setPasswordRequirements(service1).
 
 setPasswordRequirements(service1) :- testServiceStrength(weak), assert(passwordRequirements(service1, [minLength(4), minLower(0), minUpper(0), minDigit(0), minSpecial(0), maxLength(64)])).
 setPasswordRequirements(service1) :- testServiceStrength(average), assert(passwordRequirements(service1, [minLength(8), minLower(2), minUpper(1), minDigit(1), minSpecial(0), maxLength(64)])).
-setPasswordRequirements(service1) :- testServiceStrength(weak), assert(passwordRequirements(service1, [minLength(12), minLower(2), minUpper(2), minDigit(2), minSpecial(2), maxLength(64)])).
+setPasswordRequirements(service1) :- testServiceStrength(strong), assert(passwordRequirements(service1, [minLength(12), minLower(2), minUpper(2), minDigit(2), minSpecial(2), maxLength(64)])).
 
 setPasswordRequirements(Service) :- Service \= service1, MinLower is random(3), MinUpper is random(3), MinDigit is random(3), MinSpecial is random(3), MinLength is 4 + random(9), assert(passwordRequirements(Service, [minLength(MinLength), minLower(MinLower), minUpper(MinUpper), minDigit(MinDigit), minSpecial(MinSpecial), maxLength(64)])).
 
