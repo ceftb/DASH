@@ -16,8 +16,13 @@
 
 :- consult('services_util').
 
-numServices(10).
-testServiceStrength(strong). % weak, average, or strong
+numServices(30).
+targetServicePasswordCompositionStrength(good). % weak, average, good, or strong
+
+weakPasswordCompositionBias(32).
+averagePasswordCompositionBias(16).
+goodPasswordCompositionBias(8).
+strongPasswordCompositionBias(4).
 
 numPasswordResets(0).
 numUsernamesMemorized(0).
@@ -38,11 +43,24 @@ createServices(N, [Service|Rest]) :- format('createServices: N = ~w.\n', [N]), N
 
 createServices(1, [service1]) :- setPasswordRequirements(service1).
 
-setPasswordRequirements(service1) :- testServiceStrength(weak), assert(passwordRequirements(service1, [minLength(4), minLower(0), minUpper(0), minDigit(0), minSpecial(0), maxLength(64)])).
-setPasswordRequirements(service1) :- testServiceStrength(average), assert(passwordRequirements(service1, [minLength(8), minLower(2), minUpper(1), minDigit(1), minSpecial(0), maxLength(64)])).
-setPasswordRequirements(service1) :- testServiceStrength(strong), assert(passwordRequirements(service1, [minLength(12), minLower(2), minUpper(2), minDigit(2), minSpecial(2), maxLength(64)])).
+setPasswordRequirements(Service, weak) :- MinLength is 2 + random(3), MinLower is random(2), MinUpper is random(2), assert(passwordRequirements(Service, [minLength(MinLength), minLower(MinLower), minUpper(MinUpper), minDigit(0), minSpecial(0), maxLength(64)])).
+setPasswordRequirements(Service, average) :- MinLength is 4 + random(5), MinLower is 1 + random(2), MinUpper is 1 + random(2), MinDigit is random(2), assert(passwordRequirements(Service, [minLength(MinLength), minLower(MinLower), minUpper(MinUpper), minDigit(MinDigit), minSpecial(0), maxLength(64)])).
+setPasswordRequirements(Service, good) :- MinLength is 6 + random(7), MinLower is 1 + random(3), MinUpper is 1 + random(3), MinDigit is 1 + random(2), MinSpecial is random(2), assert(passwordRequirements(Service, [minLength(MinLength), minLower(MinLower), minUpper(MinUpper), minDigit(MinDigit), minSpecial(MinSpecial), maxLength(64)])).
+setPasswordRequirements(Service, strong) :- MinLength is 8 + random(9), MinLower is 2 + random(3), MinUpper is 2 + random(3), MinDigit is 2 + random(3), MinSpecial is 1 + random(2), assert(passwordRequirements(Service, [minLength(MinLength), minLower(MinLower), minUpper(MinUpper), minDigit(MinDigit), minSpecial(MinSpecial), maxLength(64)])).
 
-setPasswordRequirements(Service) :- Service \= service1, MinLower is random(3), MinUpper is random(3), MinDigit is random(3), MinSpecial is random(3), MinLength is 4 + random(9), assert(passwordRequirements(Service, [minLength(MinLength), minLower(MinLower), minUpper(MinUpper), minDigit(MinDigit), minSpecial(MinSpecial), maxLength(64)])).
+setPasswordRequirements(service1) :- targetServicePasswordCompositionStrength(Strength), setPasswordRequirements(service1, Strength), !.
+setPasswordRequirements(Service) :- Service \= service1, generatePasswordCompositionStrength(Strength), setPasswordRequirements(Service, Strength), !.
+
+
+
+%setPasswordRequirements(Service) :- Service \= service1, MinLower is random(5), MinUpper is random(5), MinDigit is random(5), MinSpecial is random(3), MinLength is 2 + random(15), assert(passwordRequirements(Service, [minLength(MinLength), minLower(MinLower), minUpper(MinUpper), minDigit(MinDigit), minSpecial(MinSpecial), maxLength(64)])).
+
+generatePasswordCompositionStrength(Strength) :- weakPasswordCompositionBias(WB), averagePasswordCompositionBias(AB), goodPasswordCompositionBias(GB), strongPasswordCompositionBias(SB), Net is  WB + AB + GB + SB, IntegerRepresentation is 1 + random(Net), mapIntegerToStrength(IntegerRepresentation, WB, AB, GB, SB, Strength), !.
+
+mapIntegerToStrength(Int, WB, AB, GB, SB, weak) :- Int =< WB, !.
+mapIntegerToStrength(Int, WB, AB, GB, SB, average) :- Int > WB, Int =< WB + AB, !.
+mapIntegerToStrength(Int, WB, AB, GB, SB, good) :- Int >  WB + AB, Int =< WB + AB + GB, !.
+mapIntegerToStrength(Int, WB, AB, GB, SB, strong) :- Int > WB + AB + GB, Int =< WB + AB + GB + SB, !.
 
 serviceExists(Service) :- services(Services), member(Service, Services).
 

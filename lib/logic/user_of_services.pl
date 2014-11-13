@@ -28,8 +28,11 @@
 %%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%
 
-initialPasswordForgetRate(0.015).
+initialPasswordForgetRate(0.005).
 strengthenRateAsFunctionOfForgetRate(Rate, StrengthenRate) :- StrengthenRate is 5 * Rate, !.
+
+initialCognitiveThreshold(100).
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % iteration stuff
 % ...for testing in isolation
@@ -90,7 +93,7 @@ executable(resetRequirements).
 execute(resetRequirements) :- retractall(requirementsSet(_)), removeFromWorld(setupApproachUsed(_, _)), format('executing ~w.\n', resetRequirements).
 
 % this is ``called'' by initializeUser to initialize user state
-initializeUserState :- FirstNameIndex is random(4), nth0(FirstNameIndex, [joe, bob, sally, carol], FirstName), addToWorld(firstName(FirstName)), addToWorld(cognitiveBurden(0)), addToWorld(cognitiveThreshold(35)).
+initializeUserState :- FirstNameIndex is random(4), nth0(FirstNameIndex, [joe, bob, sally, carol], FirstName), addToWorld(firstName(FirstName)), addToWorld(cognitiveBurden(0)), initialCognitiveThreshold(X), addToWorld(cognitiveThreshold(X)).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % general and utility content %
@@ -248,12 +251,59 @@ updateBeliefsHelper(choosePassword(Service), R) :- not(inCurrentWorld(passwordCh
 
 updateBeliefsHelper(choosePassword(Service), R) :- format('catch-all choose password exec!\n', []), !.
 
-choosePasswordHelper(Service, Requirements, _, 'pass') :- satisfiesRequirements('pass', Requirements).
-choosePasswordHelper(Service, Requirements, _, 'password') :- satisfiesRequirements('password', Requirements).
-choosePasswordHelper(Service, Requirements, _, 'Password') :- satisfiesRequirements('Password', Requirements).
-choosePasswordHelper(Service, Requirements, _, 'PassWord12') :- satisfiesRequirements('Password12', Requirements).
-choosePasswordHelper(Service, Requirements, _, 'P@sSw0rd!234') :- satisfiesRequirements('P@sSw0rd1234', Requirements).
-choosePasswordHelper(Service, Requirements, _, 'VeryLonP@sSw0rd!234!?') :- satisfiesRequirements('VeryLongP@sSw0rd1234!?', Requirements).
+choosePasswordHelper(Service, Requirements, _, Password) :- inCurrentWorld(cognitiveThreshold(T)), inCurrentWorld(cognitiveBurden(B)), B > T/2, uniquePasswords(U), U \= [], stringsSortedByLength(U, SortedU), findall(Password, isReusable(Password, U, Requirements), L), head(L, Password), !.
+
+choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'pass', satisfiesRequirements(Password, Requirements).
+choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'Pass', satisfiesRequirements(Password, Requirements).
+choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'password', satisfiesRequirements(Password, Requirements).
+choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'Password', satisfiesRequirements(Password, Requirements).
+choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'PassWord', satisfiesRequirements(Password, Requirements).
+choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'PaSs12', satisfiesRequirements(Password, Requirements).
+choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'PaSsWord', satisfiesRequirements(Password, Requirements).
+choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'PassWord1', satisfiesRequirements(Password, Requirements).
+choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'PaSsWord1', satisfiesRequirements(Password, Requirements).
+choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'PaSsWord12', satisfiesRequirements(Password, Requirements).
+choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'PaSsWord!2', satisfiesRequirements(Password, Requirements).
+choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'PaSsWord!234', satisfiesRequirements(Password, Requirements).
+choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'MyPaSsWord!234', satisfiesRequirements(Password, Requirements).
+choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'MyP@SsW0rd!2345', satisfiesRequirements(Password, Requirements).
+choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'MyS3cUReP@SsW0rd!2345', satisfiesRequirements(Password, Requirements).
+choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'MyV3ryL0ngS3cUReP@SsW0rd!2345?', satisfiesRequirements(Password, Requirements).
+
+
+isReusable(Password, U, Requirements) :- member(Password, U), satisfiesRequirements(Password, Requirements).
+
+stringsSortedByLength([], []) :- ansi_format([fg(red)], 'stringsSortedByLength: CRITICAL ERROR - we should not be here.\n', []), halt, !.
+stringsSortedByLength([String], [String]).
+stringsSortedByLength([String|Rest], [LongestString|SortedRest]) :- Rest \= [], findLongestString([String|Rest], LongestString), select(LongestString, [String|Rest], StringsRecursive), stringsSortedByLength(StringsRecursive, SortedRest), !.
+%stringsSortedByLength([String|Rest], [ShortestString|SortedRest]) :- Rest \= [], findShortestString([String|Rest], ShortestString), select(ShortestString, [String|Rest], StringsRecursive), stringsSortedByLength(StringsRecursive, SortedRest), !.
+
+% delete ShortestPassword, save result in NewPasswordsList, and recurse
+
+findShortestString([String], String).
+
+findShortestString([String|Rest], String) :- findShortestString(Rest, Shortest), atom_length(String, X), atom_length(Shortest, Y), X =< Y, !.
+findShortestString([String|Rest], Shortest) :- findShortestString(Rest, Shortest), atom_length(String, X), atom_length(Shortest, Y), X > Y, !.
+
+
+findLongestString([String], String).
+
+findLongestString([String|Rest], String) :- findLongestString(Rest, Longest), atom_length(String, X), atom_length(Longest, Y), X >= Y, !.
+findLongestString([String|Rest], Longest) :- findLongestString(Rest, Longest), atom_length(String, X), atom_length(Longest, Y), X < Y, !.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 %choosePasswordHelper(Service, Requirements, '', 'password') :- satisfiesRequirements('Password12', Requirements).
 %choosePasswordHelper(Service, Requirements, BasePassword, NewPassword) :- getUnsatisfiedReqs(BasePassword, REquirements, UnsatisfiedRequirements),
