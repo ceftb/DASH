@@ -28,10 +28,12 @@
 %%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%
 
-initialPasswordForgetRate(0.005).
-strengthenRateAsFunctionOfForgetRate(Rate, StrengthenRate) :- StrengthenRate is 5 * Rate, !.
+initialPasswordForgetRate(0.002).
+strengthenRateAsFunctionOfForgetRate(Rate, StrengthenRate) :- StrengthenRate is 4 * Rate, !.
 
-initialCognitiveThreshold(100).
+initialCognitiveThreshold(100). % after the cognitive burden reaches this threshold users will write down passwords
+passwordReuseThreshold(75). % after the cognitive burden reaches this threshold users will begin to reuse passwords
+passwordReusePriority(long). % short or long - this determines whether users will prefer to reuse the longest password or new password construction
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % iteration stuff
@@ -251,7 +253,7 @@ updateBeliefsHelper(choosePassword(Service), R) :- not(inCurrentWorld(passwordCh
 
 updateBeliefsHelper(choosePassword(Service), R) :- format('catch-all choose password exec!\n', []), !.
 
-choosePasswordHelper(Service, Requirements, _, Password) :- inCurrentWorld(cognitiveThreshold(T)), inCurrentWorld(cognitiveBurden(B)), B > T/2, uniquePasswords(U), U \= [], stringsSortedByLength(U, SortedU), findall(Password, isReusable(Password, U, Requirements), L), head(L, Password), !.
+choosePasswordHelper(Service, Requirements, _, Password) :- inCurrentWorld(cognitiveThreshold(T)), inCurrentWorld(cognitiveBurden(B)), passwordReusePriority(Priority), passwordReuseThreshold(R),  B > R, uniquePasswords(U), U \= [], stringsSortedByLength(U, Priority, SortedU), findall(Password, isReusable(Password, U, Requirements), L), head(L, Password), !.
 
 choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'pass', satisfiesRequirements(Password, Requirements).
 choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'Pass', satisfiesRequirements(Password, Requirements).
@@ -270,13 +272,12 @@ choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'MyP@SsW0
 choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'MyS3cUReP@SsW0rd!2345', satisfiesRequirements(Password, Requirements).
 choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'MyV3ryL0ngS3cUReP@SsW0rd!2345?', satisfiesRequirements(Password, Requirements).
 
-
 isReusable(Password, U, Requirements) :- member(Password, U), satisfiesRequirements(Password, Requirements).
 
-stringsSortedByLength([], []) :- ansi_format([fg(red)], 'stringsSortedByLength: CRITICAL ERROR - we should not be here.\n', []), halt, !.
-stringsSortedByLength([String], [String]).
-stringsSortedByLength([String|Rest], [LongestString|SortedRest]) :- Rest \= [], findLongestString([String|Rest], LongestString), select(LongestString, [String|Rest], StringsRecursive), stringsSortedByLength(StringsRecursive, SortedRest), !.
-%stringsSortedByLength([String|Rest], [ShortestString|SortedRest]) :- Rest \= [], findShortestString([String|Rest], ShortestString), select(ShortestString, [String|Rest], StringsRecursive), stringsSortedByLength(StringsRecursive, SortedRest), !.
+stringsSortedByLength([], _, []) :- ansi_format([fg(red)], 'stringsSortedByLength: CRITICAL ERROR - we should not be here.\n', []), halt, !.
+stringsSortedByLength([String], _, [String]).
+stringsSortedByLength([String|Rest], short, [ShortestString|SortedRest]) :- Rest \= [], findShortestString([String|Rest], ShortestString), select(ShortestString, [String|Rest], StringsRecursive), stringsSortedByLength(StringsRecursive, short, SortedRest), !.
+stringsSortedByLength([String|Rest], long, [LongestString|SortedRest]) :- Rest \= [], findLongestString([String|Rest], LongestString), select(LongestString, [String|Rest], StringsRecursive), stringsSortedByLength(StringsRecursive, long, SortedRest), !.
 
 % delete ShortestPassword, save result in NewPasswordsList, and recurse
 
@@ -290,20 +291,6 @@ findLongestString([String], String).
 
 findLongestString([String|Rest], String) :- findLongestString(Rest, Longest), atom_length(String, X), atom_length(Longest, Y), X >= Y, !.
 findLongestString([String|Rest], Longest) :- findLongestString(Rest, Longest), atom_length(String, X), atom_length(Longest, Y), X < Y, !.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 %choosePasswordHelper(Service, Requirements, '', 'password') :- satisfiesRequirements('Password12', Requirements).
 %choosePasswordHelper(Service, Requirements, BasePassword, NewPassword) :- getUnsatisfiedReqs(BasePassword, REquirements, UnsatisfiedRequirements),

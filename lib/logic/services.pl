@@ -21,10 +21,10 @@
 %%%%%%%%%%%%%%
 
 numServices(30).
-targetServicePasswordCompositionStrength(good). % weak, average, good, or strong
+targetServicePasswordCompositionStrength(weak). % weak, average, good, or strong
 
-weakPasswordCompositionBias(32).
-averagePasswordCompositionBias(16).
+weakPasswordCompositionBias(16).
+averagePasswordCompositionBias(12).
 goodPasswordCompositionBias(8).
 strongPasswordCompositionBias(4).
 
