@@ -16,6 +16,10 @@
 
 :- consult('services_util').
 
+%%%%%%%%%%%%%%
+% parameters %
+%%%%%%%%%%%%%%
+
 numServices(30).
 targetServicePasswordCompositionStrength(good). % weak, average, good, or strong
 
@@ -24,12 +28,21 @@ averagePasswordCompositionBias(16).
 goodPasswordCompositionBias(8).
 strongPasswordCompositionBias(4).
 
+%%%%%%%%%%%%%%%%%%
+% initial values %
+% DO NOT CHANGE! %
+%%%%%%%%%%%%%%%%%%
+
 numPasswordResets(0).
 numUsernamesMemorized(0).
 numPasswordsMemorized(0).
 numPasswordsWritten(0).
 numAccountsCreated(0).
 numUsernamesWritten(0).
+
+%%%%%%%%%%%%%%%%%%
+% services logic %
+%%%%%%%%%%%%%%%%%%
 
 printWorldState :- numAccountsCreated(AC), numUsernamesMemorized(UM), numUsernamesWritten(UW), numPasswordsMemorized(PM), numPasswordsWritten(PW), numPasswordResets(PR), ansi_format([fg(blue)], 'number of accounts created: ~w\nnumber of usernames memorized: ~w\nnumber of usernames written down: ~w\nnumber of passwords memorized: ~w\nnumber of passwords written down: ~w\nnumber of password resets performed: ~w\n', [AC, UM, UW, PM, PW, PR]), printExposureForService1, !.
 
