@@ -32,7 +32,7 @@ initialPasswordForgetRate(0.002).
 strengthenRateAsFunctionOfForgetRate(Rate, StrengthenRate) :- StrengthenRate is 4 * Rate, !.
 
 initialCognitiveThreshold(100). % after the cognitive burden reaches this threshold users will write down passwords
-passwordReuseThreshold(75). % after the cognitive burden reaches this threshold users will begin to reuse passwords
+passwordReuseThreshold(80). % after the cognitive burden reaches this threshold users will begin to reuse passwords
 passwordReusePriority(long). % short or long - this determines whether users will prefer to reuse the longest password or new password construction
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
