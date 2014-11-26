@@ -7,7 +7,7 @@
 :- dynamic(numUsernamesWritten/1).
 :- dynamic(numPasswordsMemorized/1).
 :- dynamic(numPasswordsWritten/1).
-:- dynamic(numPasswordResets/1).
+:- dynamic(numPasswordsReset/1).
 
 :- dynamic(servicesCreated/0).
 :- dynamic(services/1).
@@ -24,22 +24,54 @@
 %%%%%%%%%%%%%%
 
 numServices(30).
-targetServicePasswordCompositionStrength(weak). % weak, average, good, or strong
+targetServicePasswordCompositionStrength(strong). % weak, average, good, or strong
 
-weakPasswordCompositionBias(16).
-averagePasswordCompositionBias(12).
-goodPasswordCompositionBias(8).
-strongPasswordCompositionBias(4).
+weakPasswordCompositionBias(32).
+averagePasswordCompositionBias(32).
+goodPasswordCompositionBias(32).
+strongPasswordCompositionBias(32).
 
-attackRisk(0.05).      % measure of a given service's 'vulnerability
-reuseAttackRisk(0.5). % probability that an attacker will reuse passwords across all services
+% direct attack risk associated with service
+attackRisk(Service, User, 0.2) :- passwordWrittenDown(Service, User).
+attackRisk(Service, User, 0.1) :- not(passwordWrittenDown(Service, User)).
+reuseAttackRisk(0.1). % probability that an attacker will reuse passwords across all services
+
+serviceVulnerabilityRisk(Service, User, 0.1) :- accountExists(Service, _, _, User).
+serviceVulnerabilityRisk(Service, User, 0.0) :- not(accountExists(Service, _, _, User)).
+
+stolenPasswordAttackRisk(Service, User, 0.2) :- accountExists(Service, _, _, User), passwordWrittenDown(Service, User).
+stolenPasswordAttackRisk(Service, User, 0) :- accountExists(Service, _, _, User), not(passwordWrittenDown(Service, User)).
+stolenPasswordAttackRisk(Service, User, 0) :- not(accountExists(Service, _, _, User)).
+
+probabilitySafeFromDirectAttack(Service, User, P) :- accountExists(Service, _, _, User), serviceVulnerabilityRisk(Service, User, SVR), stolenPasswordAttackRisk(Service, User, SPAR), P is (1 - SVR) * (1 - SPAR), !.
+probabilitySafeFromDirectAttack(Service, User, 1) :- not(accountExists(Service, _, _, User)), !.
+
+probabilitySafe(Service, User, P) :- probabilitySafeFromDirectAttack(Service, User, PDirect), probabilitySafeFromAllIndirectAttacks(Service, User, PIndirect), P is PDirect * PIndirect, !.
+
+%probabilitySafe(Service, User, P) :- probabilitySafeFromDirectAttack(Service, User, P), !.
+
+probabilitySafeFromAllIndirectAttacks(Service, User, P) :- services(L), probabilitySafeFromAllIndirectAttacksHelper(Service, L, User, P), !.
+
+probabilitySafeFromAllIndirectAttacksHelper(IndirectlyAttackedService, [DirectlyAttackedService | Rest], User, P) :- probabilitySafeFromIndirectAttack(IndirectlyAttackedService, DirectlyAttackedService, User, PThis), probabilitySafeFromAllIndirectAttacksHelper(IndirectlyAttackedService, Rest, User, PRecurse), P is PThis * PRecurse, !.
+probabilitySafeFromAllIndirectAttacksHelper(_, [], User, 1) :- !.
+
+probabilitySafeFromIndirectAttack(IndirectlyAttackedService, DirectlyAttackedService, User, P) :- IndirectlyAttackedService \= DirectlyAttackedService, accountExists(IndirectlyAttackedService, Username, Password, User), accountExists(DirectlyAttackedService, Username, Password, User), probabilitySafeFromDirectAttack(DirectlyAttackedService, User, PSafeFromDirectAttack), reuseAttackRisk(RAR), P is 1 - (1 - PSafeFromDirectAttack) * RAR, !.
+
+probabilitySafeFromIndirectAttack(IndirectlyAttackedService, DirectlyAttackedService, User, 1) :- IndirectlyAttackedService \= DirectlyAttackedService, accountExists(IndirectlyAttackedService, Username1, Password1, User), accountExists(DirectlyAttackedService, Username2, Password2, User), Username1 \= Username2, !.
+
+probabilitySafeFromIndirectAttack(IndirectlyAttackedService, DirectlyAttackedService, User, 1) :- IndirectlyAttackedService \= DirectlyAttackedService, accountExists(IndirectlyAttackedService, Username1, Password1, User), accountExists(DirectlyAttackedService, Username2, Password2, User), Password1 \= Password2, !.
+
+probabilitySafeFromIndirectAttack(IndirectlyAttackedService, DirectlyAttackedService, User, 1) :- IndirectlyAttackedService \= DirectlyAttackedService, not(accountExists(IndirectlyAttackedService, _, _, User)), !.
+probabilitySafeFromIndirectAttack(IndirectlyAttackedService, DirectlyAttackedService, User, 1) :- IndirectlyAttackedService \= DirectlyAttackedService, not(accountExists(DirectlyAttackedService, _, _, User)), !.
+
+probabilitySafeFromIndirectAttack(IndirectlyAttackedService, DirectlyAttackedService, User, 1) :- IndirectlyAttackedService = DirectlyAttackedService, !.
 
 %%%%%%%%%%%%%%%%%%
 % initial values %
 % DO NOT CHANGE! %
 %%%%%%%%%%%%%%%%%%
 
-numPasswordResets(0).
+numPasswordsReset(0).
 numUsernamesMemorized(0).
 numPasswordsMemorized(0).
 numPasswordsWritten(0).
@@ -50,17 +82,21 @@ numUsernamesWritten(0).
 % services logic %
 %%%%%%%%%%%%%%%%%%
 
-printWorldState :- numAccountsCreated(AC), numUsernamesMemorized(UM), numUsernamesWritten(UW), numPasswordsMemorized(PM), numPasswordsWritten(PW), numPasswordResets(PR), ansi_format([fg(blue)], 'number of accounts created: ~w\nnumber of usernames memorized: ~w\nnumber of usernames written down: ~w\nnumber of passwords memorized: ~w\nnumber of passwords written down: ~w\nnumber of password resets performed: ~w\n', [AC, UM, UW, PM, PW, PR]), printExposureForService1, !.
+printWorldState :- ansi_format([fg(blue)], 'printing world state...\n', []), numAccountsCreated(AC), numUsernamesMemorized(UM), numUsernamesWritten(UW), numPasswordsMemorized(PM), numPasswordsWritten(PW), numPasswordsReset(PR), ansi_format([fg(blue)], 'number of accounts created: ~w\nnumber of usernames memorized: ~w\nnumber of usernames written down: ~w\nnumber of passwords memorized: ~w\nnumber of passwords written down: ~w\nnumber of password resets performed: ~w\n', [AC, UM, UW, PM, PW, PR]), printExposureForService1, !.
 
 printExposureForService1 :- foreach(id(User), printExposureForService1(User)).
 
-printExposureForService1(User) :- accountExists(service1, _, Password, User), findall(X, accountExists(X, _, Password, User), L), length(L, Length), attackRisk(AR), reuseAttackRisk(RA), Risk is AR + RA * AR * Length, ansi_format([fg(green)], 'User ~w is reusing the password ~w which was constructed for service1 amongst ~w service(s) including service1 itself.\n', [User, Password, Length]), printIfPasswordWrittenDownForService1(User), printIfPasswordResetPerformedForService1(User), ansi_format([fg(green)], 'The password risk associated with User ~w for service 1 is ~w.\n', [User, Risk]), !.
+printExposureForService1(User) :- printIfPasswordWrittenDownForService1(User), printIfPasswordResetPerformedForService1(User), probabilitySafe(service1, User, P), ansi_format([fg(green)], 'Security measure - user ~w, service ~w: ~w.\n', [User, service1, P]), !.
 
-printIfPasswordWrittenDownForService1(User) :- passwordWrittenDown(Service, User), ansi_format([fg(green)], 'User ~w wrote down password for service1.\n', [User]), !.
-printIfPasswordWrittenDownForService1(User) :- not(passwordWrittenDown(Service, User)), ansi_format([fg(green)], 'User ~w did NOT write down password for service1.\n', [User]), !.
 
-printIfPasswordResetPerformedForService1(User) :- passwordResetPerformed(Service, User), ansi_format([fg(green)], 'User ~w did reset password for service1.\n', [User]), !.
-printIfPasswordResetPerformedForService1(User) :- not(passwordResetPerformed(Service, User)), ansi_format([fg(green)], 'User ~w did NOT reset password for service1.\n', [User]), !.
+directAttackRiskSet([], 0).
+directAttackRiskSet([(Service, User)|T], Risk) :- attackRisk(Service, User, RiskH), directAttackRiskSet(T, RiskR), Risk is RiskH + RiskR, !.
+
+printIfPasswordWrittenDownForService1(User) :- passwordWrittenDown(service1, User), ansi_format([fg(green)], 'User ~w wrote down password for service1.\n', [User]), !.
+printIfPasswordWrittenDownForService1(User) :- not(passwordWrittenDown(service1, User)), ansi_format([fg(green)], 'User ~w did NOT write down password for service1.\n', [User]), !.
+
+printIfPasswordResetPerformedForService1(User) :- passwordResetPerformed(service1, User), ansi_format([fg(green)], 'User ~w did reset password for service1.\n', [User]), !.
+printIfPasswordResetPerformedForService1(User) :- not(passwordResetPerformed(service1, User)), ansi_format([fg(green)], 'User ~w did NOT reset password for service1.\n', [User]), !.
 
 services(S) :- not(servicesCreated), format('creating services...\n', []), format('services - cp1.\n', []), numServices(NumServices), format('services - cp2.\n', []), createServices(NumServices, S), format('services - cp3.\n', []), assert(services(S)), format('services - cp4.\n', []), asserta(servicesCreated), format('created services: ~w.\n', [S]), !.
 
@@ -112,7 +148,7 @@ determineResult(clickCreateAccountButton(Service, Username, Password), User, err
 determineResult(clickResetPasswordButton(Service, Username, Password), User, error(noService)) :- not(serviceExists(Service)), format('This should never happen! User tried to access service ~w, which does not exist.\n', [Service]), !.
 determineResult(clickResetPasswordButton(Service, Username, Password), User, error(noUsername(Username))) :- serviceExists(Service), not(accountExists(Service, Username, _, User)), format('could not reset account since account with specified username does not exist!\n'), !.
 determineResult(clickResetPasswordButton(Service, Username, Password), User, PasswordResult) :- serviceExists(Service), accountExists(Service, Username, _, User), passwordResponse(Service, Password, PasswordResult), PasswordResult = error(Reason), retract(accountExists(Service, Username, _, User)), assert(accountExists(Service, Username, Password, User)), format('reset password on account!\n'), !.
-determineResult(clickResetPasswordButton(Service, Username, Password), User, success) :- serviceExists(Service), accountExists(Service, Username, _, User), passwordResponse(Service, Password, PasswordResult), PasswordResult = success(PasswordRating), retract(accountExists(Service, Username, _, User)), assert(accountExists(Service, Username, Password, User)), retract(numPasswordResets(X)), Y is X + 1, assert(numPasswordResets(Y)), retractall(passwordResetPerformed(Service, User)), assert(passwordResetPerformed(Service, User)), format('reset password on account!\n'), !.
+determineResult(clickResetPasswordButton(Service, Username, Password), User, success) :- serviceExists(Service), accountExists(Service, Username, _, User), passwordResponse(Service, Password, PasswordResult), PasswordResult = success(PasswordRating), retract(accountExists(Service, Username, _, User)), assert(accountExists(Service, Username, Password, User)), retract(numPasswordsReset(X)), Y is X + 1, assert(numPasswordsReset(Y)), retractall(passwordResetPerformed(Service, User)), assert(passwordResetPerformed(Service, User)), format('reset password on account!\n'), !.
 
 determineResult(clickSignInButton(Service, Username, Password), User, Result) :- processSignIn(Service, Username, Password, User, Result), !.
 

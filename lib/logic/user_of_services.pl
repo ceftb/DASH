@@ -31,9 +31,25 @@
 initialPasswordForgetRate(0.002).
 strengthenRateAsFunctionOfForgetRate(Rate, StrengthenRate) :- StrengthenRate is 4 * Rate, !.
 
-initialCognitiveThreshold(100). % after the cognitive burden reaches this threshold users will write down passwords
-passwordReuseThreshold(80). % after the cognitive burden reaches this threshold users will begin to reuse passwords
+recallThreshold(0.5).
+
+%initialCognitiveThreshold(100). % after the cognitive burden reaches this threshold users will write down passwords
+
+passwordReuseThreshold(60). % after the cognitive burden reaches this threshold users will begin to reuse passwords
 passwordReusePriority(long). % short or long - this determines whether users will prefer to reuse the longest password or new password construction
+
+cognitiveThreshold(90).
+
+%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%
+%%%% initial values %%%%
+%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%
+
+cognitiveBurden(B) :- cognitiveUsernameBurden(UB), cognitivePasswordBurden(PB), B is UB + PB, !.
+
+cognitiveUsernameBurden(UB) :- recallableUsernames(UU), cognitiveBurden(UU, UB1), findall(S, inCurrentWorld(createdAccount(S)), ServicesC), length(ServicesC, AccountsCreated), findall(S, inCurrentWorld(wroteUsernameOnPostIt(S, _)), ServicesW), length(ServicesW, UsernamesWrittenDown), UB2 is AccountsCreated - UsernamesWrittenDown, UB is UB1 + UB2, !.
+cognitivePasswordBurden(PB) :- recallablePasswords(UP), cognitiveBurden(UP, PB1), findall(S, inCurrentWorld(createdAccount(S)), ServicesC), length(ServicesC, AccountsCreated), findall(S, inCurrentWorld(wrotePasswordOnPostIt(S, _)), ServicesW), length(ServicesW, PasswordsWrittenDown), PB2 is AccountsCreated - PasswordsWrittenDown, PB is PB1 + PB2, !.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % iteration stuff
@@ -95,7 +111,7 @@ executable(resetRequirements).
 execute(resetRequirements) :- retractall(requirementsSet(_)), removeFromWorld(setupApproachUsed(_, _)), format('executing ~w.\n', resetRequirements).
 
 % this is ``called'' by initializeUser to initialize user state
-initializeUserState :- FirstNameIndex is random(4), nth0(FirstNameIndex, [joe, bob, sally, carol], FirstName), addToWorld(firstName(FirstName)), addToWorld(cognitiveBurden(0)), initialCognitiveThreshold(X), addToWorld(cognitiveThreshold(X)).
+initializeUserState :- FirstNameIndex is random(4), nth0(FirstNameIndex, [joe, bob, sally, carol], FirstName), addToWorld(firstName(FirstName)), !.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % general and utility content %
@@ -107,7 +123,7 @@ serviceExists(Service) :- inCurrentWorld(services(Services)), member(Service, Se
 % choose a service at random
 chooseService(Service) :- inCurrentWorld(services(Services)), length(Services, Length), ServiceIndex is random(Length), nth0(ServiceIndex, Services, Service).
 
-printUserState :- inCurrentWorld(cognitiveBurden(B)), inCurrentWorld(cognitiveThreshold(T)), ansi_format([fg(magenta)], 'cognitive burden: ~w.\ncognitive threshold: ~w.\n', [B, T]), printUsernameBeliefs, printPasswordBeliefs, printForgetRates, !.
+printUserState :- cognitiveBurden(B), cognitiveThreshold(T), ansi_format([fg(magenta)], 'cognitive burden: ~w.\ncognitive threshold: ~w.\n', [B, T]), printUsernameBeliefs, printPasswordBeliefs, printForgetRates, !.
 printUserState :- !.
 
 printDoneStatements :- foreach(done(A, B), ansi_format([fg(yellow)], '~w.\n', [done(A, B)])).
@@ -200,15 +216,13 @@ goalRequirements(setupForAccountRetrieval(Service), Approach) :- inCurrentWorld(
 
 
 % if we only need to do setup for password retrieval
-chooseSetupApproach(Service, [memorizePassword(Service)]) :- format('chooseSetupApproach - cp1.\n'), not(inCurrentWorld(usernameSetupRequired(Service, _))), inCurrentWorld(passwordSetupRequired(Service, Password)), format('chooseSetupApproach - cp2.\n'), inCurrentWorld(cognitiveBurden(B)), inCurrentWorld(cognitiveThreshold(T)), cognitiveBurdenForPassword(Password, CP), format('chooseSetupApproach - cp3.\n'), X is B + CP, X =< T, removeFromWorld(cognitiveBurden(B)), addToWorld(cognitiveBurden(X)), format('chosen setup approach: memorizing password.\n').
-chooseSetupApproach(Service, [writePasswordOnPostIt(Service)]) :- not(inCurrentWorld(usernameSetupRequired(Service, _))), inCurrentWorld(passwordSetupRequired(Service, Password)), inCurrentWorld(cognitiveBurden(B)), inCurrentWorld(cognitiveThreshold(T)), cognitiveBurdenForPassword(Password, CP), X is B + CP, X > T, format('chosen setup approach: writing password to post it note.\n').
-
-%cognitiveBurdenForUsername(Username, CU), cognitiveBurdenForPassword(Password, CP),
+chooseSetupApproach(Service, [memorizePassword(Service)]) :- format('chooseSetupApproach - cp1.\n'), not(inCurrentWorld(usernameSetupRequired(Service, _))), inCurrentWorld(passwordSetupRequired(Service, Password)), format('chooseSetupApproach - cp2.\n'), cognitiveUsernameBurden(UB), cognitiveThreshold(T), cognitiveBurdenForPassword(Password, NewPB), format('chooseSetupApproach - cp3.\n'), X is UB + NewPB, X =< T, format('chosen setup approach: memorizing password.\n').
+chooseSetupApproach(Service, [writePasswordOnPostIt(Service)]) :- not(inCurrentWorld(usernameSetupRequired(Service, _))), inCurrentWorld(passwordSetupRequired(Service, Password)), cognitiveUsernameBurden(UB), cognitiveThreshold(T), cognitiveBurdenForPassword(Password, NewPB), X is UB + NewPB, X > T, format('chosen setup approach: writing password to post it note.\n').
 
 % if we need to do setup for username and password retrieval
-chooseSetupApproach(Service, [memorizeUsername(Service), memorizePassword(Service)]) :- format('chooseSetupApproach - cp1.\n'), inCurrentWorld(usernameSetupRequired(Service, Username)), inCurrentWorld(passwordSetupRequired(Service, Password)), format('chooseSetupApproach - cp2.\n'), inCurrentWorld(cognitiveBurden(B)), inCurrentWorld(cognitiveThreshold(T)), cognitiveBurdenForUsername(Username, CU), cognitiveBurdenForPassword(Password, CP), format('chooseSetupApproach - cp3.\n'), X is B + CU + CP, X =< T, removeFromWorld(cognitiveBurden(B)), addToWorld(cognitiveBurden(X)), format('chosen setup approach: memorizing username and password.\n').
-chooseSetupApproach(Service, [memorizeUsername(Service), writePasswordOnPostIt(Service)]) :- format('chooseSetupApproach - cp1.\n'), inCurrentWorld(usernameSetupRequired(Service, Username)), inCurrentWorld(passwordSetupRequired(Service, Password)), format('chooseSetupApproach - cp2.\n'), inCurrentWorld(cognitiveBurden(B)), inCurrentWorld(cognitiveThreshold(T)), cognitiveBurdenForUsername(Username, CU), cognitiveBurdenForPassword(Password, CP), format('chooseSetupApproach - cp3.\n'), X is B + CU, X =< T, Y is B + CU + CP, Y > T, removeFromWorld(cognitiveBurden(B)), addToWorld(cognitiveBurden(X)), format('chosen setup approach: memorizing username and password.\n').
-chooseSetupApproach(Service, [writeUsernameOnPostIt(Service), writePasswordOnPostIt(Service)]) :- inCurrentWorld(usernameSetupRequired(Service, Username)), inCurrentWorld(passwordSetupRequired(Service, Password)), inCurrentWorld(cognitiveBurden(B)), inCurrentWorld(cognitiveThreshold(T)), cognitiveBurdenForUsername(Username, CU), cognitiveBurdenForPassword(Password, CP), X is B + CU + CP, X > T, format('chosen setup approach: writing username and password to post it notes.\n').
+chooseSetupApproach(Service, [memorizeUsername(Service), memorizePassword(Service)]) :- format('chooseSetupApproach - cp1.\n'), inCurrentWorld(usernameSetupRequired(Service, Username)), inCurrentWorld(passwordSetupRequired(Service, Password)), format('chooseSetupApproach - cp2.\n'), cognitiveThreshold(T), cognitiveBurdenForUsername(Username, NewUB), cognitiveBurdenForPassword(Password, NewPB), format('chooseSetupApproach - cp3.\n'), X is NewUB + NewPB, X =< T, format('chosen setup approach: memorizing username and password.\n').
+chooseSetupApproach(Service, [memorizeUsername(Service), writePasswordOnPostIt(Service)]) :- format('chooseSetupApproach - cp1.\n'), inCurrentWorld(usernameSetupRequired(Service, Username)), inCurrentWorld(passwordSetupRequired(Service, Password)), format('chooseSetupApproach - cp2.\n'), cognitiveThreshold(T), cognitiveBurdenForUsername(Username, NewUB), cognitivePasswordBurden(PB), cognitiveBurdenForPassword(Password, NewPB), format('chooseSetupApproach - cp3.\n'), X is NewUB + PB, X =< T, Y is NewUB + NewPB, Y > T, format('chosen setup approach: memorizing username and password.\n').
+chooseSetupApproach(Service, [writeUsernameOnPostIt(Service), writePasswordOnPostIt(Service)]) :- inCurrentWorld(usernameSetupRequired(Service, Username)), inCurrentWorld(passwordSetupRequired(Service, Password)), cognitiveBurden(B), cognitiveThreshold(T), cognitiveBurdenForUsername(Username, NewUB), cognitivePasswordBurden(PB), X is NewUB + PB, X > T, format('chosen setup approach: writing username and password to post it notes.\n').
 
 repeatable(attemptCreateAccount(Service)) :- not(inCurrentWorld(createdAccount(Service))).
 
@@ -253,22 +267,28 @@ updateBeliefsHelper(choosePassword(Service), R) :- not(inCurrentWorld(passwordCh
 
 updateBeliefsHelper(choosePassword(Service), R) :- format('catch-all choose password exec!\n', []), !.
 
-choosePasswordHelper(Service, Requirements, _, Password) :- inCurrentWorld(cognitiveThreshold(T)), inCurrentWorld(cognitiveBurden(B)), passwordReusePriority(Priority), passwordReuseThreshold(R),  B > R, uniquePasswords(U), U \= [], stringsSortedByLength(U, Priority, SortedU), findall(Password, isReusable(Password, U, Requirements), L), head(L, Password), !.
+choosePasswordHelper(Service, Requirements, _, Password) :- cognitiveThreshold(T), cognitiveBurden(B), passwordReusePriority(Priority), passwordReuseThreshold(R),  B > R, uniquePasswords(U), U \= [], stringsSortedByLength(U, Priority, SortedU), findall(Password, isReusable(Password, U, Requirements), L), head(L, Password), !.
 
+choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'pw', satisfiesRequirements(Password, Requirements).
+choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'pw1', satisfiesRequirements(Password, Requirements).
 choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'pass', satisfiesRequirements(Password, Requirements).
+choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'pass1', satisfiesRequirements(Password, Requirements).
 choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'Pass', satisfiesRequirements(Password, Requirements).
+choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'Pass1', satisfiesRequirements(Password, Requirements).
 choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'password', satisfiesRequirements(Password, Requirements).
-choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'Password', satisfiesRequirements(Password, Requirements).
+choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'P4ssW1', satisfiesRequirements(Password, Requirements).
 choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'PassWord', satisfiesRequirements(Password, Requirements).
 choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'PaSs12', satisfiesRequirements(Password, Requirements).
 choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'PaSsWord', satisfiesRequirements(Password, Requirements).
+choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'PaSsW0rd', satisfiesRequirements(Password, Requirements).
 choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'PassWord1', satisfiesRequirements(Password, Requirements).
 choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'PaSsWord1', satisfiesRequirements(Password, Requirements).
+choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'P4ssW0rd!', satisfiesRequirements(Password, Requirements).
+choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'P4SsW0rd!', satisfiesRequirements(Password, Requirements).
 choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'PaSsWord12', satisfiesRequirements(Password, Requirements).
 choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'PaSsWord!2', satisfiesRequirements(Password, Requirements).
 choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'PaSsWord!234', satisfiesRequirements(Password, Requirements).
 choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'MyPaSsWord!234', satisfiesRequirements(Password, Requirements).
-choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'MyP@SsW0rd!2345', satisfiesRequirements(Password, Requirements).
 choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'MyS3cUReP@SsW0rd!2345', satisfiesRequirements(Password, Requirements).
 choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'MyV3ryL0ngS3cUReP@SsW0rd!2345?', satisfiesRequirements(Password, Requirements).
 
@@ -293,7 +313,7 @@ findLongestString([String|Rest], String) :- findLongestString(Rest, Longest), at
 findLongestString([String|Rest], Longest) :- findLongestString(Rest, Longest), atom_length(String, X), atom_length(Longest, Y), X < Y, !.
 
 %choosePasswordHelper(Service, Requirements, '', 'password') :- satisfiesRequirements('Password12', Requirements).
-%choosePasswordHelper(Service, Requirements, BasePassword, NewPassword) :- getUnsatisfiedReqs(BasePassword, REquirements, UnsatisfiedRequirements),
+%choosePasswordHelper(Service, Requirements, BasePassword, NewPassword) :- getUnsatisfiedReqs(BasePassword, Requirements, UnsatisfiedRequirements),
 
 % instead of using the above model for generating passwords, we may want to do something more interesting with initialized user information
 
@@ -366,12 +386,8 @@ updateBeliefsHelper(writePasswordOnPostIt(Service), Result) :- not(inCurrentWorl
 % utility  %
 %%%%%%%%%%%%
 
-cognitiveBurdenForUsername(Username, MinBurden) :- uniqueUsernames(UniqueUsernames), minBurden(Username, UniqueUsernames, MinBurdenIfPositive), MinBurden is max(1, MinBurdenIfPositive).
-
-cognitiveBurdenForPassword(Password, MinBurden) :- uniquePasswords(UniquePasswords), minBurden(Password, UniquePasswords, MinBurdenIfPositive), MinBurden is max(1, MinBurdenIfPositive).
-
-minBurden(String, [H|T], Min) :- minBurden(String, T, MinR), lev(String, H, MinH), Min is min(MinR, MinH).
-minBurden(String, [], Min) :- atom_length(String, Min).
+cognitiveBurdenForUsername(Username, UB) :- recallableUsernames(UU), Usernames = [Username|UU], cognitiveBurden(Usernames, UB1), findall(S, inCurrentWorld(createdAccount(S)), ServicesC), length(ServicesC, AccountsCreated), findall(S, inCurrentWorld(wroteUsernameOnPostIt(S, _)), ServicesW), length(ServicesW, UsernamesWrittenDown), UB2 is AccountsCreated + 1 - UsernamesWrittenDown, UB is UB1 + UB2, !.
+cognitiveBurdenForPassword(Password, PB) :- recallablePasswords(UP), Passwords = [Password|UP], cognitiveBurden(Passwords, PB1), findall(S, inCurrentWorld(createdAccount(S)), ServicesC), length(ServicesC, AccountsCreated), findall(S, inCurrentWorld(wrotePasswordOnPostIt(S, _)), ServicesW), length(ServicesW, PasswordsWrittenDown), PB2 is AccountsCreated + 1 - PasswordsWrittenDown, PB is PB1 + PB2, !.
 
 %%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%
@@ -429,9 +445,9 @@ goalRequirements(retrieveAndEnterAccountInformation(Service), [resetPassword(Ser
 % utility  %
 %%%%%%%%%%%%
 
-recallUsername(Service, Username) :- format('recallUsername - cp 1.\n'), not(inCurrentWorld(retrievedUsername(Service, _))), format('recallUsername - cp 2.\n'), inCurrentWorld(usernameBeliefs(Service, List)), format('recallUsername - cp 3.\n'), maxPairList(List, (Username, Weight)), format('recallUsername - cp 4.\n'), Weight > 0.5, format('recallUsername - cp 5.\n'), addToWorld(retrievedUsername(Service, Username)), format('recallUsername(~w, ~w) completed.\n', [Service, Username]), !.
+recallUsername(Service, Username) :- format('recallUsername - cp 1.\n'), not(inCurrentWorld(retrievedUsername(Service, _))), format('recallUsername - cp 2.\n'), inCurrentWorld(usernameBeliefs(Service, List)), format('recallUsername - cp 3.\n'), maxPairList(List, (Username, Weight)), format('recallUsername - cp 4.\n'), recallThreshold(RT), Weight > RT, format('recallUsername - cp 5.\n'), addToWorld(retrievedUsername(Service, Username)), format('recallUsername(~w, ~w) completed.\n', [Service, Username]), !.
 
-recallPassword(Service, Password) :- format('recallPassword - cp 1.\n'), not(inCurrentWorld(retrievedPassword(Service, _))), format('recallPassword - cp 2.\n'), inCurrentWorld(passwordBeliefs(Service, List)), format('recallPassword - cp 3.\n'), maxPairList(List, (Password, Weight)), format('recallPassword - cp 4.\n'), Weight > 0.5, format('recallPassword - cp 5.\n'), addToWorld(retrievedPassword(Service, Password)), format('recallPassword(~w, ~w) completed.\n', [Service, Password]), !.
+recallPassword(Service, Password) :- format('recallPassword - cp 1.\n'), not(inCurrentWorld(retrievedPassword(Service, _))), format('recallPassword - cp 2.\n'), inCurrentWorld(passwordBeliefs(Service, List)), format('recallPassword - cp 3.\n'), maxPairList(List, (Password, Weight)), format('recallPassword - cp 4.\n'), recallThreshold(RT), Weight > RT, format('recallPassword - cp 5.\n'), addToWorld(retrievedPassword(Service, Password)), format('recallPassword(~w, ~w) completed.\n', [Service, Password]), !.
 
 readUsernameOffPostIt(Service, Username) :- not(inCurrentWorld(retrievedUsername(Service, _))), inCurrentWorld(wroteUsernameOnPostIt(Service, Username)), addToWorld(retrievedUsername(Service, Username)), !.
 
@@ -565,7 +581,7 @@ updateBeliefsHelper(chooseNewPassword(Service), R) :- format('catch-all choose n
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % the default updateBeliefs if nothing is specified
-updateBeliefs(Action, Result) :- updateUsernameBeliefs(Action, Result), updatePasswordBeliefs(Action, Result), updateBeliefsHelper(Action, Result), !.
+updateBeliefs(Action, Result) :- ansi_format([fg(red)], 'update beliefs called with ~w. BEGIN.\n', [Action]), updateUsernameBeliefs(Action, Result), updatePasswordBeliefs(Action, Result), updateBeliefsHelper(Action, Result), ansi_format([fg(red)], 'update beliefs called with ~w. result: ~w. END.\n', [Action, Result]), updateUsernameBeliefs(Action, Result), !.
 
 updateBeliefs(Action, Result) :- not(updateBeliefsHelper(Action, Result)), ansi_format([fg(red)], 'update beliefs called with ~w. result: ~w (default call)\n', [Action, Result]), !.
 
@@ -592,11 +608,24 @@ uniqueUsernames([]) :- not(setof(Username, isUsername(_, Username), _)), format(
 isUsername(Username) :- isUsername(_, Username).
 isUsername(Service, Username) :- inCurrentWorld(usernameBeliefs(Service, L)), member((Username, _), L).
 
+recallableUsernames(RecallableUsernames) :- setof(Username, isRecallableUsername(Username), RecallableUsernames), format('found the following recallable usernames: ~w.\n', [RecallableUsernames]), !.
+recallableUsernames([]) :- not(setof(Username, isRecallableUsername(_, Username), _)), format('no recallable usernames found.\n'), !.
+
+isRecallableUsername(Username) :- isRecallableUsername(_, Username).
+isRecallableUsername(Service, Username) :- inCurrentWorld(usernameBeliefs(Service, L)), member((Username, Strength), L), recallThreshold(RT), Strength > RT.
+
 uniquePasswords(UniquePasswords) :- setof(Password, isPassword(Password), UniquePasswords), format('found the following unique passwords: ~w.\n', [UniquePasswords]), !.
 uniquePasswords([]) :- not(setof(Password, isPassword(_, Password), _)), format('no unique passwords found.\n'), !.
 
 isPassword(Password) :- isPassword(_, Password).
 isPassword(Service, Password) :- inCurrentWorld(passwordBeliefs(Service, L)), member((Password, _), L).
+
+recallablePasswords(UniquePasswords) :- setof(Password, isRecallablePassword(Password), RecallablePasswords), format('found the following recallable passwords: ~w.\n', [RecallablePasswords]), !.
+recallablePasswords([]) :- not(setof(Password, isRecallablePassword(_, Password), _)), format('no recallable passwords found.\n'), !.
+
+isRecallablePassword(Password) :- isRecallablePassword(_, Password).
+isRecallablePassword(Service, Password) :- inCurrentWorld(passwordBeliefs(Service, L)), member((Password, Strength), L), recallThreshold(RT), Strength > RT.
+
 
 passwordFatigue(Service) :- inCurrentWorld(passwordBeliefs(Service, List)), inCurrentWorld(passwordForgetRate(Service, Rate)), applyFatigue(List, Rate, NewList), removeFromWorld(passwordBeliefs(Service, List)), addToWorld(passwordBeliefs(Service, NewList)).
 passwordFatigue(Service) :- not(inCurrentWorld(passwordBeliefs(Service, _))), !.

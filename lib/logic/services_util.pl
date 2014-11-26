@@ -124,13 +124,13 @@ getStringStatistics([], [0, 0, 0, 0]).
 
 %levCodes(L1, L2, I, J, Distance) :- levCodesRemoveOne(L1, L2, I, J, Distance1), levCodesRemoveBoth(L1, L2, I, J, Distance2), Distance is min(Distance1, Distance2), !.
 
-calculateCognitiveBurden(Passwords, Burden) :- calculateCognitiveBurden(Passwords, [], Burden), !.
+cognitiveBurden(StringsToProcess, Burden) :- cognitiveBurden(StringsToProcess, [], Burden), !.
 
-calculateCognitiveBurden([], PasswordsAddressed, 0) :- !.
+cognitiveBurden([], PasswordsAddressed, 0) :- !.
 
-calculateCognitiveBurden(PasswordsLeft, PasswordsAddressed, Burden) :- findall(B, calculateCognitiveBurdenHelper(Password, PasswordsLeft, PasswordsAddressed, B), BurdenValues), findMin(BurdenValues, Burden).
+cognitiveBurden(PasswordsLeft, PasswordsAddressed, Burden) :- findall(B, cognitiveBurdenHelper(Password, PasswordsLeft, PasswordsAddressed, B), BurdenValues), findMin(BurdenValues, Burden).
 
-calculateCognitiveBurdenHelper(Password, PasswordsLeft, PasswordsAddressed, Burden) :- member(Password, PasswordsLeft), select(Password, PasswordsLeft, PasswordsLeftR), calculateCognitiveBurden(PasswordsLeftR, [Password | PasswordsAddressed], BurdenR), levSet(Password, PasswordsAddressed, Distance), Burden is BurdenR + Distance, !.
+cognitiveBurdenHelper(Password, PasswordsLeft, PasswordsAddressed, Burden) :- member(Password, PasswordsLeft), select(Password, PasswordsLeft, PasswordsLeftR), cognitiveBurden(PasswordsLeftR, [Password | PasswordsAddressed], BurdenR), levSet(Password, PasswordsAddressed, Distance), Burden is BurdenR + Distance, !.
 
 findMin([Value], Value) :- !.
 findMin([H|T], Min) :- findMin(T, MinR), Min is min(H, minR), !.
