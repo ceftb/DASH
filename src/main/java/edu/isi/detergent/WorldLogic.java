@@ -45,6 +45,10 @@ public class WorldLogic {
         } catch (jpl.PrologException E) {
             System.out.println("WorldLogic: addAgent: error: could not add agent " + id + " to knowledge base.\n");
             return 1;
+        } catch (Exception e) {
+        	System.out.println("WorldLogic: addAgent: non-prolog error: could not add agent " + id + " to knowledge base.\n");
+        	e.printStackTrace();
+        	return 1;
         }
         
         System.out.println("WorldLogic: addAgent: cp1.\n");
