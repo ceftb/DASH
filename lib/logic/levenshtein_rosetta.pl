@@ -1,6 +1,9 @@
 % IMPORTANT! EVERYTHING but the lev predicate is copied code.
 % source: http://rosettacode.org/wiki/Levenshtein_distance
 
+levSet(String, [], Distance) :- atom_length(String, Distance), !.
+levSet(String, [H|T], Distance) :- levSet(String, T, DistanceR), lev(String, H, DistanceH), Distance is min(DistanceR, DistanceH), !.
+
 lev(S, T, R) :- atom_codes(S, SCodes), atom_codes(T, TCodes), levenshtein(SCodes, TCodes, R).
 
 levenshtein(S, T, R) :-

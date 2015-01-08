@@ -34,16 +34,21 @@ public class WorldLogic {
     // adds agent to the knowledge base
     public synchronized int addAgent(int id) {
         System.out.println("WorldLogic: addAgent: Attempting to add agent " + id + " to knowledge base.\n");
+
         try {
             Term assertTerm = jpl.Util.textToTerm("assert(id(" + id + "))");
             Query assertQuery = new Query(assertTerm);
             
-            if (!assertQuery.hasSolution()) {
-                System.out.println("WorldLogic: addAgent: error: could not add agent " + id + " to knowledge base.\n");
+            if (assertQuery.hasSolution()) {
+                assertQuery.close();
+                System.out.println("WorldLogic: addAgent: successfully added agent " + id + "'s id to knowledge base.\n");
+            } else {
+                assertQuery.close();
+                System.out.println("WorldLogic: addAgent: error: could not add agent " + id + "'s id state to knowledge base.\n");
                 return 1;
             }
-        } catch (jpl.PrologException E) {
-            System.out.println("WorldLogic: addAgent: error: could not add agent " + id + " to knowledge base.\n");
+        } catch (Exception E) {
+            System.out.println("WorldLogic: addAgent: error: could not add agent " + id + "'s state to knowledge base.\n");
             return 1;
         } catch (Exception e) {
         	System.out.println("WorldLogic: addAgent: non-prolog error: could not add agent " + id + " to knowledge base.\n");
@@ -51,21 +56,22 @@ public class WorldLogic {
         	return 1;
         }
         
-        System.out.println("WorldLogic: addAgent: cp1.\n");
-        
         try {
+            
             Term assertTerm = jpl.Util.textToTerm("assert(observations(" + id + ", []))");
             Query assertQuery = new Query(assertTerm);
             
             if (assertQuery.hasSolution()) {
-                System.out.println("WorldLogic: addAgent: successfully added agent " + id + " to knowledge base.\n");
+                assertQuery.close();
+                System.out.println("WorldLogic: addAgent: successfully added agent " + id + "'s state to knowledge base.\n");
                 return 0;
             } else {
-                System.out.println("WorldLogic: addAgent: error: could not add agent " + id + " to knowledge base.\n");
+                assertQuery.close();
+                System.out.println("WorldLogic: addAgent: error: could not add agent " + id + "'s state to knowledge base.\n");
                 return 1;
             }
         } catch (jpl.PrologException E) {
-            System.out.println("WorldLogic: addAgent: error: could not add agent " + id + " to knowledge base.\n");
+            System.out.println("WorldLogic: addAgent: error: could not add agent " + id + "'s state to knowledge base.\n");
             return 1;
         }
     }
@@ -81,12 +87,14 @@ public class WorldLogic {
         
             if (processQuery.hasMoreElements()) {
                 Term result = ((Term) ((Hashtable) processQuery.nextElement()).get("R"));
+                processQuery.close();
                 return jpl.Term.toString(new Term[] {result});
             } else {
+                processQuery.close();
                 System.out.println("WorldLogic: processAction: error: could not process action " + action + " by agent " + id + ".\n");
                 return "fail";
             }
-        } catch (jpl.PrologException E) {
+        } catch (Exception E) {
             System.out.println("WorldLogic: processAction: error: could not process action " + action + " by agent " + id + ".\n");
             return "fail";
         }
@@ -101,12 +109,14 @@ public class WorldLogic {
         
             if (obsQuery.hasMoreElements()) {
                 Term result = ((Term) ((Hashtable) obsQuery.nextElement()).get("Obs"));
+                obsQuery.close();
                 return jpl.Term.toString(new Term[] {result});
             } else {
+                obsQuery.close();
                 System.out.println("WorldLogic: getObservations: error: could not get observations for agent " + id + ".\n");
                 return null;
             }
-        } catch (jpl.PrologException E) {
+        } catch (Exception E) {
             System.out.println("WorldLogic: getObservations: error: could not get observations for agent " + id + ".\n");
             return null;
         }
