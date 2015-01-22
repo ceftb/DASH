@@ -23,23 +23,34 @@
 % parameters %
 %%%%%%%%%%%%%%
 
-numServices(30).
-targetServicePasswordCompositionStrength(strong). % weak, average, good, or strong
+targetServicePasswordCompositionStrength(weak). % weak, average, good, or strong
 
-weakPasswordCompositionBias(32).
-averagePasswordCompositionBias(32).
-goodPasswordCompositionBias(32).
-strongPasswordCompositionBias(32).
+% any one of these may be one less than the true value as the target service is not accounted for in the numbers below
+numWeakServices(7).
+numAverageServices(8).
+numGoodServices(8).
+numStrongServices(8).
 
+numServices(N) :- numWeakServices(NW), numAverageServices(NA), numGoodServices(NG), numStrongServices(NS), N is NW + NA + NG + NS + 1, !.
+
+% i do not think this is used anymore...
 % direct attack risk associated with service
-attackRisk(Service, User, 0.2) :- passwordWrittenDown(Service, User).
-attackRisk(Service, User, 0.1) :- not(passwordWrittenDown(Service, User)).
-reuseAttackRisk(0.1). % probability that an attacker will reuse passwords across all services
+% attackRisk(Service, User, 0.2) :- passwordWrittenDown(Service, User).
+% attackRisk(Service, User, 0.1) :- not(passwordWrittenDown(Service, User)).
 
-serviceVulnerabilityRisk(Service, User, 0.1) :- accountExists(Service, _, _, User).
-serviceVulnerabilityRisk(Service, User, 0.0) :- not(accountExists(Service, _, _, User)).
+reuseAttackRisk(0.25). % probability that an attacker will reuse passwords across all services
 
-stolenPasswordAttackRisk(Service, User, 0.2) :- accountExists(Service, _, _, User), passwordWrittenDown(Service, User).
+
+rawPasswordStrength(Service, User, 0.1) :- accountExists(Service, _, Password, User), passwordScore(Service, Password, Score), Score =< 2.
+rawPasswordStrength(Service, User, 0.2) :- accountExists(Service, _, Password, User), passwordScore(Service, Password, Score), Score > 2, Score =< 4.
+rawPasswordStrength(Service, User, 0.3) :- accountExists(Service, _, Password, User), passwordScore(Service, Password, Score), Score > 4, Score =< 8.
+rawPasswordStrength(Service, User, 0.4) :- accountExists(Service, _, Password, User), passwordScore(Service, Password, Score), Score > 8, Score =< 16.
+rawPasswordStrength(Service, User, 0.5) :- accountExists(Service, _, Password, User), passwordScore(Service, Password, Score), Score > 16.
+rawPasswordStrength(Service, User, 1) :- not(accountExists(Service, _, _, User).
+
+serviceVulnerabilityRisk(Service, User, Risk) :- rawPasswordStrength(Service, User, Strength), Risk is (1 - Strength) * 0.2.
+
+stolenPasswordAttackRisk(Service, User, 0.25) :- accountExists(Service, _, _, User), passwordWrittenDown(Service, User).
 stolenPasswordAttackRisk(Service, User, 0) :- accountExists(Service, _, _, User), not(passwordWrittenDown(Service, User)).
 stolenPasswordAttackRisk(Service, User, 0) :- not(accountExists(Service, _, _, User)).
 
@@ -82,15 +93,23 @@ numUsernamesWritten(0).
 % services logic %
 %%%%%%%%%%%%%%%%%%
 
-printWorldState :- ansi_format([fg(blue)], 'printing world state...\n', []), numAccountsCreated(AC), numUsernamesMemorized(UM), numUsernamesWritten(UW), numPasswordsMemorized(PM), numPasswordsWritten(PW), numPasswordsReset(PR), ansi_format([fg(blue)], 'number of accounts created: ~w\nnumber of usernames memorized: ~w\nnumber of usernames written down: ~w\nnumber of passwords memorized: ~w\nnumber of passwords written down: ~w\nnumber of password resets performed: ~w\n', [AC, UM, UW, PM, PW, PR]), printExposureForService1, !.
+printWorldState :- ansi_format([fg(blue)], 'printing world state...\n', []), numAccountsCreated(AC), numUsernamesMemorized(UM), numUsernamesWritten(UW), numPasswordsMemorized(PM), numPasswordsWritten(PW), numPasswordsReset(PR), ansi_format([fg(blue)], 'number of accounts created: ~w\nnumber of usernames memorized: ~w\nnumber of usernames written down: ~w\nnumber of passwords memorized: ~w\nnumber of passwords written down: ~w\nnumber of password resets performed: ~w\n', [AC, UM, UW, PM, PW, PR]), printExposureForService1, printAverageExposure, !.
 
 printExposureForService1 :- foreach(id(User), printExposureForService1(User)).
 
-printExposureForService1(User) :- printIfPasswordWrittenDownForService1(User), printIfPasswordResetPerformedForService1(User), probabilitySafe(service1, User, P), ansi_format([fg(green)], 'Security measure - user ~w, service ~w: ~w.\n', [User, service1, P]), !.
+printExposureForService1(User) :- printIfPasswordWrittenDownForService1(User), printIfPasswordResetPerformedForService1(User), probabilitySafe(service1, User, P), ansi_format([fg(green)], 'Password security measure for user ~w at target service ~w: ~w.\n', [User, service1, P]), !.
 
+printAverageExposure :- foreach(id(User), printAverageExposureForUser(User)).
 
-directAttackRiskSet([], 0).
-directAttackRiskSet([(Service, User)|T], Risk) :- attackRisk(Service, User, RiskH), directAttackRiskSet(T, RiskR), Risk is RiskH + RiskR, !.
+printAverageExposureForUser(User) :- services(Services), computeNetExposureForUser(User, Services, NetExposure), numServices(NumServices), AverageExposure is NetExposure / NumServices, ansi_format([fg(green)], 'Average password security measure for user ~w is ~w.\n', [User, AverageExposure]), !.
+
+computeNetExposureForUser(User, [H | T], NetExposure) :- probabilitySafe(H, User, P), computeNetExposureForUser(User, T, NetExposureRecurse), NetExposure is P + NetExposureRecurse, !.
+
+computeNetExposureForUser(User, [], 0) :- !.
+
+% I do not think this is used anymore...
+%directAttackRiskSet([], 0).
+%directAttackRiskSet([(Service, User)|T], Risk) :- attackRisk(Service, User, RiskH), directAttackRiskSet(T, RiskR), Risk is RiskH + RiskR, !.
 
 printIfPasswordWrittenDownForService1(User) :- passwordWrittenDown(service1, User), ansi_format([fg(green)], 'User ~w wrote down password for service1.\n', [User]), !.
 printIfPasswordWrittenDownForService1(User) :- not(passwordWrittenDown(service1, User)), ansi_format([fg(green)], 'User ~w did NOT write down password for service1.\n', [User]), !.
@@ -100,26 +119,52 @@ printIfPasswordResetPerformedForService1(User) :- not(passwordResetPerformed(ser
 
 services(S) :- not(servicesCreated), format('creating services...\n', []), format('services - cp1.\n', []), numServices(NumServices), format('services - cp2.\n', []), createServices(NumServices, S), format('services - cp3.\n', []), assert(services(S)), format('services - cp4.\n', []), asserta(servicesCreated), format('created services: ~w.\n', [S]), !.
 
-createServices(N, [Service|Rest]) :- format('createServices: N = ~w.\n', [N]), N > 1, atom_number(AtomN, N), atom_concat(service, AtomN, Service), NMinus1 is N - 1, setPasswordRequirements(Service), createServices(NMinus1, Rest), !.
+createServices(N, [Service|Rest]) :- format('createServices: N = ~w.\n', [N]), N > 1, atom_number(AtomN, N), atom_concat(service, AtomN, Service), NMinus1 is N - 1, setPasswordRequirements(N), createServices(NMinus1, Rest), !.
 
-createServices(1, [service1]) :- setPasswordRequirements(service1).
+createServices(1, [service1]) :- setPasswordRequirements(1).
 
-setPasswordRequirements(Service, weak) :- MinLength is 2 + random(3), MinLower is random(2), MinUpper is random(2), assert(passwordRequirements(Service, [minLength(MinLength), minLower(MinLower), minUpper(MinUpper), minDigit(0), minSpecial(0), maxLength(64)])).
-setPasswordRequirements(Service, average) :- MinLength is 4 + random(5), MinLower is 1 + random(2), MinUpper is 1 + random(2), MinDigit is random(2), assert(passwordRequirements(Service, [minLength(MinLength), minLower(MinLower), minUpper(MinUpper), minDigit(MinDigit), minSpecial(0), maxLength(64)])).
-setPasswordRequirements(Service, good) :- MinLength is 6 + random(7), MinLower is 1 + random(3), MinUpper is 1 + random(3), MinDigit is 1 + random(2), MinSpecial is random(2), assert(passwordRequirements(Service, [minLength(MinLength), minLower(MinLower), minUpper(MinUpper), minDigit(MinDigit), minSpecial(MinSpecial), maxLength(64)])).
-setPasswordRequirements(Service, strong) :- MinLength is 8 + random(9), MinLower is 2 + random(3), MinUpper is 2 + random(3), MinDigit is 2 + random(3), MinSpecial is 1 + random(2), assert(passwordRequirements(Service, [minLength(MinLength), minLower(MinLower), minUpper(MinUpper), minDigit(MinDigit), minSpecial(MinSpecial), maxLength(64)])).
+setPasswordRequirements(Service, weak) :- format('setting weak password requirements for ~w.\n', [Service]), MinLength is 1 + random(4), MinLower is random(2), MinUpper is random(2), assert(passwordRequirements(Service, [minLength(MinLength), minLower(MinLower), minUpper(MinUpper), minDigit(0), minSpecial(0), maxLength(64)])).
+setPasswordRequirements(Service, average) :- format('setting average password requirements for ~w.\n', [Service]), MinLength is 4 + random(5), MinLower is 1 + random(2), MinUpper is 1 + random(2), MinDigit is random(2), assert(passwordRequirements(Service, [minLength(MinLength), minLower(MinLower), minUpper(MinUpper), minDigit(MinDigit), minSpecial(0), maxLength(64)])).
+setPasswordRequirements(Service, good) :- format('setting good password requirements for ~w.\n', [Service]), MinLength is 8 + random(5), MinLower is 1 + random(3), MinUpper is 1 + random(3), MinDigit is 1 + random(2), MinSpecial is random(2), assert(passwordRequirements(Service, [minLength(MinLength), minLower(MinLower), minUpper(MinUpper), minDigit(MinDigit), minSpecial(MinSpecial), maxLength(64)])).
+setPasswordRequirements(Service, strong) :- format('setting strong password requirements for ~w.\n', [Service]), MinLength is 12 + random(5), MinLower is 2 + random(3), MinUpper is 2 + random(3), MinDigit is 2 + random(3), MinSpecial is 1 + random(2), assert(passwordRequirements(Service, [minLength(MinLength), minLower(MinLower), minUpper(MinUpper), minDigit(MinDigit), minSpecial(MinSpecial), maxLength(64)])).
 
-setPasswordRequirements(service1) :- targetServicePasswordCompositionStrength(Strength), setPasswordRequirements(service1, Strength), !.
-setPasswordRequirements(Service) :- Service \= service1, generatePasswordCompositionStrength(Strength), setPasswordRequirements(Service, Strength), !.
 
-%setPasswordRequirements(Service) :- Service \= service1, MinLower is random(5), MinUpper is random(5), MinDigit is random(5), MinSpecial is random(3), MinLength is 2 + random(15), assert(passwordRequirements(Service, [minLength(MinLength), minLower(MinLower), minUpper(MinUpper), minDigit(MinDigit), minSpecial(MinSpecial), maxLength(64)])).
+setPasswordRequirements(K) :- atom_number(AtomK, K), atom_concat(service, AtomK, ServiceK), numWeakServices(NW), numAverageServices(NA), numGoodServices(NG), numStrongServices(NS), LowerThresold is 1, UpperThreshold is 1 + NW, LowerThresold < K, K =< UpperThreshold, setPasswordRequirements(ServiceK, weak).
 
-generatePasswordCompositionStrength(Strength) :- weakPasswordCompositionBias(WB), averagePasswordCompositionBias(AB), goodPasswordCompositionBias(GB), strongPasswordCompositionBias(SB), Net is  WB + AB + GB + SB, IntegerRepresentation is 1 + random(Net), mapIntegerToStrength(IntegerRepresentation, WB, AB, GB, SB, Strength), !.
+setPasswordRequirements(K) :- atom_number(AtomK, K), atom_concat(service, AtomK, ServiceK), numWeakServices(NW), numAverageServices(NA), numGoodServices(NG), numStrongServices(NS), LowerThresold is 1 + NW, UpperThreshold is 1 + NW + NA, LowerThresold < K, K =< UpperThreshold, setPasswordRequirements(ServiceK, average).
 
-mapIntegerToStrength(Int, WB, AB, GB, SB, weak) :- Int =< WB, !.
-mapIntegerToStrength(Int, WB, AB, GB, SB, average) :- Int > WB, Int =< WB + AB, !.
-mapIntegerToStrength(Int, WB, AB, GB, SB, good) :- Int >  WB + AB, Int =< WB + AB + GB, !.
-mapIntegerToStrength(Int, WB, AB, GB, SB, strong) :- Int > WB + AB + GB, Int =< WB + AB + GB + SB, !.
+setPasswordRequirements(K) :- atom_number(AtomK, K), atom_concat(service, AtomK, ServiceK), numWeakServices(NW), numAverageServices(NA), numGoodServices(NG), numStrongServices(NS), LowerThresold is 1 + NW + NA, UpperThreshold is 1 + NW + NA + NG, LowerThresold < K, K =< UpperThreshold, setPasswordRequirements(ServiceK, good).
+
+setPasswordRequirements(K) :- atom_number(AtomK, K), atom_concat(service, AtomK, ServiceK), numWeakServices(NW), numAverageServices(NA), numGoodServices(NG), numStrongServices(NS), LowerThresold is 1 + NW + NA + NG, UpperThreshold is 1 + NW + NA + NG + NS, LowerThresold < K, K =< UpperThreshold, setPasswordRequirements(ServiceK, strong).
+
+setPasswordRequirements(1) :- targetServicePasswordCompositionStrength(Strength), setPasswordRequirements(service1, Strength), !.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% old randomized approach to creating services %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% weakPasswordCompositionBias(32).
+% averagePasswordCompositionBias(32).
+% goodPasswordCompositionBias(32).
+% strongPasswordCompositionBias(32).
+
+%createServices(N, [Service|Rest]) :- format('createServices: N = ~w.\n', [N]), N > 1, atom_number(AtomN, N), atom_concat(service, AtomN, Service), NMinus1 is N - 1, setPasswordRequirements(Service), createServices(NMinus1, Rest), !.
+
+%createServices(1, [service1]) :- setPasswordRequirements(service1).
+
+%setPasswordRequirements(service1) :- targetServicePasswordCompositionStrength(Strength), setPasswordRequirements(service1, Strength), !.
+
+%setPasswordRequirements(Service) :- Service \= service1, generatePasswordCompositionStrength(Strength), setPasswordRequirements(Service, Strength), !.
+
+%generatePasswordCompositionStrength(Strength) :- weakPasswordCompositionBias(WB), averagePasswordCompositionBias(AB), goodPasswordCompositionBias(GB), strongPasswordCompositionBias(SB), Net is  WB + AB + GB + SB, IntegerRepresentation is 1 + random(Net), mapIntegerToStrength(IntegerRepresentation, WB, AB, GB, SB, Strength), !.
+
+%mapIntegerToStrength(Int, WB, AB, GB, SB, weak) :- Int =< WB, !.
+%mapIntegerToStrength(Int, WB, AB, GB, SB, average) :- Int > WB, Int =< WB + AB, !.
+%mapIntegerToStrength(Int, WB, AB, GB, SB, good) :- Int >  WB + AB, Int =< WB + AB + GB, !.
+%mapIntegerToStrength(Int, WB, AB, GB, SB, strong) :- Int > WB + AB + GB, Int =< WB + AB + GB + SB, !.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 serviceExists(Service) :- services(Services), member(Service, Services).
 
@@ -147,8 +192,8 @@ determineResult(clickCreateAccountButton(Service, Username, Password), User, err
 
 determineResult(clickResetPasswordButton(Service, Username, Password), User, error(noService)) :- not(serviceExists(Service)), format('This should never happen! User tried to access service ~w, which does not exist.\n', [Service]), !.
 determineResult(clickResetPasswordButton(Service, Username, Password), User, error(noUsername(Username))) :- serviceExists(Service), not(accountExists(Service, Username, _, User)), format('could not reset account since account with specified username does not exist!\n'), !.
-determineResult(clickResetPasswordButton(Service, Username, Password), User, PasswordResult) :- serviceExists(Service), accountExists(Service, Username, _, User), passwordResponse(Service, Password, PasswordResult), PasswordResult = error(Reason), retract(accountExists(Service, Username, _, User)), assert(accountExists(Service, Username, Password, User)), format('reset password on account!\n'), !.
-determineResult(clickResetPasswordButton(Service, Username, Password), User, success) :- serviceExists(Service), accountExists(Service, Username, _, User), passwordResponse(Service, Password, PasswordResult), PasswordResult = success(PasswordRating), retract(accountExists(Service, Username, _, User)), assert(accountExists(Service, Username, Password, User)), retract(numPasswordsReset(X)), Y is X + 1, assert(numPasswordsReset(Y)), retractall(passwordResetPerformed(Service, User)), assert(passwordResetPerformed(Service, User)), format('reset password on account!\n'), !.
+determineResult(clickResetPasswordButton(Service, Username, Password), User, PasswordResult) :- serviceExists(Service), accountExists(Service, Username, _, User), passwordResponse(Service, Password, PasswordResult), PasswordResult = error(Reason), retract(accountExists(Service, Username, _, User)), assert(accountExists(Service, Username, Password, User)), format('reset password on account! (pw was  inadequate but we accept inadequate passwords during password resets)\n'), !.
+determineResult(clickResetPasswordButton(Service, Username, Password), User, success) :- serviceExists(Service), accountExists(Service, Username, _, User), passwordResponse(Service, Password, PasswordResult), PasswordResult = success(PasswordRating), retract(accountExists(Service, Username, _, User)), assert(accountExists(Service, Username, Password, User)), retract(numPasswordsReset(X)), Y is X + 1, assert(numPasswordsReset(Y)), retractall(passwordResetPerformed(Service, User)), assert(passwordResetPerformed(Service, User)), retractall(passwordWrittenDown(Service, User)), format('reset password on account!\n'), !.
 
 determineResult(clickSignInButton(Service, Username, Password), User, Result) :- processSignIn(Service, Username, Password, User, Result), !.
 

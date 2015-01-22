@@ -35,10 +35,10 @@ recallThreshold(0.5).
 
 %initialCognitiveThreshold(100). % after the cognitive burden reaches this threshold users will write down passwords
 
-passwordReuseThreshold(60). % after the cognitive burden reaches this threshold users will begin to reuse passwords
+passwordReuseThreshold(40). % after the cognitive burden reaches this threshold users will begin to reuse passwords
 passwordReusePriority(long). % short or long - this determines whether users will prefer to reuse the longest password or new password construction
 
-cognitiveThreshold(90).
+cognitiveThreshold(60).
 
 %%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%
@@ -269,26 +269,41 @@ updateBeliefsHelper(choosePassword(Service), R) :- format('catch-all choose pass
 
 choosePasswordHelper(Service, Requirements, _, Password) :- cognitiveThreshold(T), cognitiveBurden(B), passwordReusePriority(Priority), passwordReuseThreshold(R),  B > R, uniquePasswords(U), U \= [], stringsSortedByLength(U, Priority, SortedU), findall(Password, isReusable(Password, U, Requirements), L), head(L, Password), !.
 
+choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'p', satisfiesRequirements(Password, Requirements).
+choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'P', satisfiesRequirements(Password, Requirements).
 choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'pw', satisfiesRequirements(Password, Requirements).
+choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'Pw', satisfiesRequirements(Password, Requirements).
 choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'pw1', satisfiesRequirements(Password, Requirements).
+choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'Pw1', satisfiesRequirements(Password, Requirements).
 choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'pass', satisfiesRequirements(Password, Requirements).
-choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'pass1', satisfiesRequirements(Password, Requirements).
 choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'Pass', satisfiesRequirements(Password, Requirements).
+choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'pas1', satisfiesRequirements(Password, Requirements).
+choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'Pas1', satisfiesRequirements(Password, Requirements).
+choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'pass1', satisfiesRequirements(Password, Requirements).
 choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'Pass1', satisfiesRequirements(Password, Requirements).
+choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'PaSs1', satisfiesRequirements(Password, Requirements).
 choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'password', satisfiesRequirements(Password, Requirements).
 choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'P4ssW1', satisfiesRequirements(Password, Requirements).
 choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'PassWord', satisfiesRequirements(Password, Requirements).
 choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'PaSs12', satisfiesRequirements(Password, Requirements).
 choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'PaSsWord', satisfiesRequirements(Password, Requirements).
 choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'PaSsW0rd', satisfiesRequirements(Password, Requirements).
+choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'P@SsW0rd', satisfiesRequirements(Password, Requirements).
 choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'PassWord1', satisfiesRequirements(Password, Requirements).
 choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'PaSsWord1', satisfiesRequirements(Password, Requirements).
 choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'P4ssW0rd!', satisfiesRequirements(Password, Requirements).
 choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'P4SsW0rd!', satisfiesRequirements(Password, Requirements).
 choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'PaSsWord12', satisfiesRequirements(Password, Requirements).
+choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'P@SsWord12', satisfiesRequirements(Password, Requirements).
+choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'P@SsWoRd12', satisfiesRequirements(Password, Requirements).
 choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'PaSsWord!2', satisfiesRequirements(Password, Requirements).
-choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'PaSsWord!234', satisfiesRequirements(Password, Requirements).
-choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'MyPaSsWord!234', satisfiesRequirements(Password, Requirements).
+choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'P@SsWord!234', satisfiesRequirements(Password, Requirements).
+choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'P@SsWord!234', satisfiesRequirements(Password, Requirements).
+choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'MyP4SsW0rd!', satisfiesRequirements(Password, Requirements).
+choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'MyP4SsW0rd!234', satisfiesRequirements(Password, Requirements).
+choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'MyP@SsW0rd!234', satisfiesRequirements(Password, Requirements).
+choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'MyPaSsWoRd!234?', satisfiesRequirements(Password, Requirements).
+choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'MyPaSsW0Rd!234?', satisfiesRequirements(Password, Requirements).
 choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'MyS3cUReP@SsW0rd!2345', satisfiesRequirements(Password, Requirements).
 choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'MyV3ryL0ngS3cUReP@SsW0rd!2345?', satisfiesRequirements(Password, Requirements).
 
