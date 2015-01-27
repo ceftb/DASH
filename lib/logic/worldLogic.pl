@@ -1,4 +1,6 @@
-:- consult('services.pl').
+% 'services.pl' is specific to passwords and probably shouldn't always be loaded into the world model
+% To load, call the comms shell with services.pl as an argument, i.e. ./comms.sh services.pl
+%:- consult('services.pl').
 
 :- dynamic(id/1).
 :- dynamic(observations/2).

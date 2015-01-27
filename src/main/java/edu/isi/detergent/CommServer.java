@@ -132,7 +132,7 @@ public class CommServer {
 	public static void main(String[] args) {
 		ServerSocket serverSocket = null;
         
-        worldLogic = new WorldLogic();
+        worldLogic = new WorldLogic(args);  // pass remaining args as files to load into WorldLogic
         
 		try {
 			serverSocket = new ServerSocket(port);

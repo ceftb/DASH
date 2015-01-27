@@ -665,6 +665,7 @@ public class Wizard {
 					utilityRules.add(new UtilityRule(Term.parseTerms(data[0]), data[1]));
 				}
 			}
+			br.close();
 		}
 		catch (FileNotFoundException e) { 
 			System.out.println(e); 

@@ -10,24 +10,38 @@ import jpl.Util;
 import java.util.Hashtable;
 
 public class WorldLogic {
+	
+	public static String worldLogicFile = "worldLogic.pl";
+	public static String prologRoot = "lib/logic";
     
-    // calls the general constructor with a default filename (currently, we assume lib/logic as defualt directory)
+    // calls the general constructor with a default filename (currently, we assume lib/logic as default directory)
     public WorldLogic() {
-        this("worldLogic.pl");
+        this(worldLogicFile);
+    }
+    
+    public WorldLogic(String[] files) {
+    	this(worldLogicFile);
+    	if (files != null) {
+    		for (String file: files) {
+    			loadFile(file);
+    		}
+    	}
     }
     
     // consults the specified file
     public WorldLogic(String filename) {
-        String prologRoot = "lib/logic";
-
+    	loadFile(filename);
+    }
+    
+    private void loadFile(String filename) {
         //Query consultQuery = new Query("consult('logic.pl')");
         Query consultQuery = new Query("consult", new Term[] {new Atom(prologRoot + "/" + filename)});
         
         if (!consultQuery.hasSolution()) {
-            System.out.println("Failed to consult worldLogic.pl. Exiting.\n");
+            System.out.println("Failed to consult logic file " + filename + ". Exiting.\n");
             System.exit(1);
         } else {
-            System.out.println("Successfully consulted worldLogic.pl.\n");
+            System.out.println("Successfully consulted " + filename + ".\n");
         }
     }
     
@@ -50,11 +64,11 @@ public class WorldLogic {
         } catch (Exception E) {
             System.out.println("WorldLogic: addAgent: error: could not add agent " + id + "'s state to knowledge base.\n");
             return 1;
-        } catch (Exception e) {
+        } /*catch (Exception e) {
         	System.out.println("WorldLogic: addAgent: non-prolog error: could not add agent " + id + " to knowledge base.\n");
         	e.printStackTrace();
         	return 1;
-        }
+        }*/
         
         try {
             
