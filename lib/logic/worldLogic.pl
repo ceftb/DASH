@@ -39,7 +39,7 @@
 % by default, the result is default
 % if, however, determineResult(A, ID, R) does exist we use that to determine the result
 processAction(A, ID, R) :- determineResult(A, ID, R), forall(id(Observer), updateObservations(Observer, actionResult(A, ID, R))), ansi_format([fg(red)], 'processed action ~w by user ~w. result: ~w\n', [A, ID, R]), printWorldStateWrapper.
-processAction(A, ID, default) :- not(determineResult(A, ID, _)), forall(id(Observer), updateObservations(Observer, actionResult(A, ID, default))), ansi_format([fg(red)], 'processed action ~w by user ~w. result: ~w\n', [A, ID, R]), printWorldStateWrapper.
+processAction(A, ID, default) :- not(determineResult(A, ID, _)), forall(id(Observer), updateObservations(Observer, actionResult(A, ID, default))), ansi_format([fg(red)], 'processed action ~w by user ~w. result undetermined\n', [A, ID]), printWorldStateWrapper.
 
 printWorldStateWrapper :- ansi_format([fg(red)], 'printWorldStateWrapper: clause 1 begin.\n', []), printWorldState, ansi_format([fg(red)], 'printWorldStateWrapper: clause 1 end.\n', []), !.
 printWorldStateWrapper :- ansi_format([fg(red)], 'printWorldStateWrapper: clause 2 begin.\n', []), not(printWorldState), ansi_format([fg(red)], 'printWorldStateWrapper: clause 2 end.\n', []), !.
@@ -55,4 +55,4 @@ printObservations(Observer, L) :- format('Retrieving observations for ~w:', [Obs
 printObservations([]) :- format('\n').
 printObservations([H | T]) :- format(' ~w -', [H]), printObservations(T).
 
-generateObservation(Observer, actionResult(A, ID, R), observation(A, ID, R)).
+generateObservation(_, actionResult(A, ID, R), observation(A, ID, R)).
