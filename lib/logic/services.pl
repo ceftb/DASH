@@ -46,7 +46,7 @@ rawPasswordStrength(Service, User, 0.2) :- accountExists(Service, _, Password, U
 rawPasswordStrength(Service, User, 0.3) :- accountExists(Service, _, Password, User), passwordScore(Service, Password, Score), Score > 4, Score =< 8.
 rawPasswordStrength(Service, User, 0.4) :- accountExists(Service, _, Password, User), passwordScore(Service, Password, Score), Score > 8, Score =< 16.
 rawPasswordStrength(Service, User, 0.5) :- accountExists(Service, _, Password, User), passwordScore(Service, Password, Score), Score > 16.
-rawPasswordStrength(Service, User, 1) :- not(accountExists(Service, _, _, User).
+rawPasswordStrength(Service, User, 1) :- not(accountExists(Service, _, _, User)).
 
 serviceVulnerabilityRisk(Service, User, Risk) :- rawPasswordStrength(Service, User, Strength), Risk is (1 - Strength) * 0.2.
 
