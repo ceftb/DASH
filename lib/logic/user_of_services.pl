@@ -40,6 +40,8 @@ passwordReusePriority(long). % short or long - this determines whether users wil
 
 cognitiveThreshold(60).
 
+potentialPasswords(['p', 'P', 'pw', 'Pw', 'pw1', 'Pw1', 'pass', 'Pass', 'pas1', 'Pas1', 'pass1', 'Pass1', 'PaSs1', 'password', 'P4ssW1', 'PassWord', 'PaSs12', 'PaSsWord', 'PaSsW0rd', 'P@SsW0rd', 'PassWord1', 'PaSsWord1', 'P4ssW0rd!', 'P4SsW0rd!', 'PaSsWord12', 'P@SsWord12', 'P@SsWoRd12', 'PaSsWord!2', 'P@SsWord!234', 'P@SsWord!234', 'MyP4SsW0rd!', 'MyP4SsW0rd!234', 'MyP@SsW0rd!234', 'MyPaSsWoRd!234?', 'MyPaSsW0Rd!234?', 'MyS3cUReP@SsW0rd!2345', 'MyV3ryL0ngS3cUReP@SsW0rd!2345?']).
+
 %%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%
 %%%% initial values %%%%
@@ -268,6 +270,12 @@ updateBeliefsHelper(choosePassword(Service), R) :- not(inCurrentWorld(passwordCh
 updateBeliefsHelper(choosePassword(Service), R) :- format('catch-all choose password exec!\n', []), !.
 
 choosePasswordHelper(Service, Requirements, _, Password) :- cognitiveThreshold(T), cognitiveBurden(B), passwordReusePriority(Priority), passwordReuseThreshold(R),  B > R, uniquePasswords(U), U \= [], stringsSortedByLength(U, Priority, SortedU), findall(Password, isReusable(Password, U, Requirements), L), head(L, Password), !.
+
+% first, try to choose a new password
+choosePasswordHelper(Service, Requirements, _, Password) :- potentialPasswords(PasswordList), member(Password, PasswordList), not(isRecallablePassword(Password)), satisfiesRequirements(Password, Requirements).
+
+% else, reuse an existing one (not a deliberate choice)
+choosePasswordHelper(Service, Requirements, _, Password) :- potentialPasswords(PasswordList), member(Password, PasswordList), satisfiesRequirements(Password, Requirements).
 
 choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'p', satisfiesRequirements(Password, Requirements).
 choosePasswordHelper(Service, Requirements, _, Password) :- Password = 'P', satisfiesRequirements(Password, Requirements).
