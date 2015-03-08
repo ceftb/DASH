@@ -28,19 +28,25 @@
 %%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%
 
-initialPasswordForgetRate(0.002).
-strengthenRateAsFunctionOfForgetRate(Rate, StrengthenRate) :- StrengthenRate is 4 * Rate, !.
-
-recallThreshold(0.5).
-
-%initialCognitiveThreshold(100). % after the cognitive burden reaches this threshold users will write down passwords
-
-passwordReuseThreshold(40). % after the cognitive burden reaches this threshold users will begin to reuse passwords
+initialPasswordForgetRate(0.0025).
+strengthenScalar(4). % whenever a password is used correctly for a service X, the user will strengthen her beliefs in that password for every other service Y by the product of the password forget rate of Y and this scalar.
+recallThreshold(0.5). % the user will not be able to recall passwords below this threshold
 passwordReusePriority(long). % short or long - this determines whether users will prefer to reuse the longest password or new password construction
-
-cognitiveThreshold(60).
+passwordReuseThreshold(40). % after the cognitive burden reaches this threshold users will begin to reuse passwords
+cognitiveThreshold(60). % after the cognitive burden reaches this threshold users will write down passwords
+passwordForgetRateStoppingCriterion(0.0005). % after all forget rates are below this threshold the program will stop
 
 potentialPasswords(['p', 'P', 'pw', 'Pw', 'pw1', 'Pw1', 'pass', 'Pass', 'pas1', 'Pas1', 'pass1', 'Pass1', 'PaSs1', 'password', 'P4ssW1', 'PassWord', 'PaSs12', 'PaSsWord', 'PaSsW0rd', 'P@SsW0rd', 'PassWord1', 'PaSsWord1', 'P4ssW0rd!', 'P4SsW0rd!', 'PaSsWord12', 'P@SsWord12', 'P@SsWoRd12', 'PaSsWord!2', 'P@SsWord!234', 'P@SsWord!234', 'MyP4SsW0rd!', 'MyP4SsW0rd!234', 'MyP@SsW0rd!234', 'MyPaSsWoRd!234?', 'MyPaSsW0Rd!234?', 'MyS3cUReP@SsW0rd!2345', 'MyV3ryL0ngS3cUReP@SsW0rd!2345?']).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%% stopping criterion %%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+testStoppingCriterion :- inCurrentWorld(services(Services)), passwordForgetRateStoppingCriterion(StopRate), foreach(member(Service, Services), passwordForgetRateSmallerThan(Service, StopRate)), halt(1), !.
+
+passwordForgetRateSmallerThan(Service, StopRate) :- inCurrentWorld(passwordForgetRate(Service, Rate)), Rate < StopRate, !.
 
 %%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%
@@ -87,6 +93,7 @@ subGoal(resetPassword(Service)) :- serviceExists(Service).
 
 % goal requirements for various goals and subgoals
 %goalRequirements(doWork, Requirements) :- sleep(1), not(true).
+goalRequirements(doWork, Requirements) :- testStoppingCriterion.
 goalRequirements(doWork, Requirements) :- printUserState, printDoneStatements, not(true).
 goalRequirements(doWork, Requirements) :- requirementsSet(Requirements), !.
 goalRequirements(doWork, [initializeUser]) :- not(requirementsSet(X)), not(inCurrentWorld(userInitialized)), ansi_format([fg(blue)], 'initializing user.\n', []), !.
@@ -253,7 +260,6 @@ updateBeliefsHelper(chooseUsername(Service), R) :- format('catch-all choose user
 chooseUsernameHelper(Service, Requirements, _, 'username') :- satisfiesRequirements('username', Requirements).
 chooseUsernameHelper(Service, Requirements, _, 'username1') :- satisfiesRequirements('username1', Requirements).
 chooseUsernameHelper(Service, Requirements, _, 'Username12') :- satisfiesRequirements('Username12', Requirements).
-chooseUsernameHelper(Service, Requirements, _, 'Us3rN4m3!234') :- satisfiesRequirements('Us3rN4m3!234', Requirements).
 chooseUsernameHelper(Service, Requirements, _, Username) :- id(MyID), atom_concat('Us3rN4m3!234', MyID, Username), satisfiesRequirements(Username, Requirements).
 
 %chooseUsernameHelper(Service, Requirements, '', 'username').
@@ -617,7 +623,7 @@ updatePasswordBeliefs(Action, Result) :- Action = clickSignInButton(_, _, _), Re
 updatePasswordBeliefs(Action, Result) :- Action \= clickSignInButton(_, _, _), inCurrentWorld(services(Services)), uniquePasswords(UniquePasswords), foreach(member(Service, Services), addUniquePasswords(Service, UniquePasswords)), foreach(member(Service, Services), passwordFatigue(Service)), !.
 updatePasswordBeliefs(Action, Result) :- not(inCurrentWorld(services(Services))), !.
 
-strengthenPassword(Service, Password) :- inCurrentWorld(passwordBeliefs(Service, PasswordBeliefs)), inCurrentWorld(passwordForgetRate(Service, Rate)), member((Password, Strength), PasswordBeliefs), removeFromWorld(passwordBeliefs(Service, _)), delete(PasswordBeliefs, (Password, _), PasswordBeliefsModified), strengthenRateAsFunctionOfForgetRate(Rate, StrengthenRate), NewStrength is min(Strength + StrengthenRate, 1), NewPasswordBeliefs = [(Password, NewStrength)|PasswordBeliefsModified], addToWorld(passwordBeliefs(Service, NewPasswordBeliefs)), !.
+strengthenPassword(Service, Password) :- inCurrentWorld(passwordBeliefs(Service, PasswordBeliefs)), inCurrentWorld(passwordForgetRate(Service, Rate)), member((Password, Strength), PasswordBeliefs), removeFromWorld(passwordBeliefs(Service, _)), delete(PasswordBeliefs, (Password, _), PasswordBeliefsModified), strengthenScalar(StrengthenScalar), StrengthenRate = StrengthenScalar * Rate, NewStrength is min(Strength + StrengthenRate, 1), NewPasswordBeliefs = [(Password, NewStrength)|PasswordBeliefsModified], addToWorld(passwordBeliefs(Service, NewPasswordBeliefs)), !.
 strengthenPassword(Service, Password) :- not(inCurrentWorld(passwordBeliefs(Service, _))), !.
 
 addUniquePasswords(Service, [Password|Rest]) :- isPassword(Service, Password), addUniquePasswords(Service, Rest), !.
@@ -654,7 +660,6 @@ passwordFatigue(Service) :- inCurrentWorld(passwordBeliefs(Service, List)), inCu
 passwordFatigue(Service) :- not(inCurrentWorld(passwordBeliefs(Service, _))), !.
 
 applyFatigue([(P,V)|T], Rate, [(P,NewV)|NewT]) :- NewV is max(V - Rate, 0), applyFatigue(T, Rate, NewT), !.
-applyFatigue([(P,V)|T], Rate, [(P,V)|NewT]) :- V = 0.5, applyFatigue(T, Rate, NewT), !.
 applyFatigue([], _, []).
 
 %passwordFatigue(Service) :- inCurrentWorld(passwordBeliefs(Service, List)), averagePasswordStrength(List, Average), applyFatigue(List, Average, 0.001, NewList), removeFromWorld(passwordBeliefs(Service, List)), addToWorld(passwordBeliefs(Service, NewList)).
