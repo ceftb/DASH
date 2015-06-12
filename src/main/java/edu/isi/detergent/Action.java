@@ -67,7 +67,16 @@ public class Action {
 				lastActionName = "computer_applicationOpen";
 				return 0;
 			}
-		}  else if ("check".equals(name)) {
+		} else if ("ms".equals(name)) {  // a wrapper to be sent eventually to a metasplot interface, for now simulated
+			// The first argument should be another prolog term with the actual action
+			Term action = t.args()[0];
+			System.out.println("Running metasploit action on " + action);
+			// For now, say bannerGrabber succeeds on any machine with windows xp sp2 and hPOpenView also succeeds.
+			if ("bannerGrabber".equals(action.name())) {
+				return "macOS10"; // since a simple string. I'll convert the windows example to be the same.
+			} else
+				return 1;
+		} else if ("check".equals(name)) {
 			return simulatorCheckStub();
 		} else if ("set".equals(name)) {
 			return simulatorSetStub();

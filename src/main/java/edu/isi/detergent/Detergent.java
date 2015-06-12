@@ -34,7 +34,7 @@ public class Detergent {
 	public String[] prologFiles = {"agentGeneral.pl", "agentWorker.pl", "agentWorker_bootStrap.pl"};  // usually over-written by command line arguments
 	public String commsHost = "localhost";
 	public int commsPort = 4789;
-	public long stepPause = 10, minStepPause = 10, maxStepPause = 2000; // pause 1/100 second between actions
+	public long stepPause = 1000, minStepPause = 1000, maxStepPause = 2000; // pause 1/100 second between actions
 	public List<String>output = new LinkedList<String>(), actions = new LinkedList<String>();
 		
 	// List of any agents that are spawned by this one. They currently live in the same image.

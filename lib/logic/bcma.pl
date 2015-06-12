@@ -32,6 +32,7 @@ testAgent([A|R],N) :- do(A), updateBeliefs(A,1), initialWorld(World), M is N - 1
 goal(doWork).
 goalWeight(doWork, 1).
 
+% Create a goal to deliver meds to each patient on the agent's roster.
 goalRequirements(doWork, DeliverMeds) :- roster(Roster), buildDeliveryList(Roster,DeliverMeds), format('delivery plan is ~w\n', [DeliverMeds]), !.
 goalRequirements(doWork, [doNothing]).
 
