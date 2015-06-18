@@ -61,6 +61,8 @@ public class Detergent {
 				facts.add("id("+arguments[++i]+")");
 			} else if (arg.equals("-maxSteps")) {
 				maxSteps = Integer.parseInt(arguments[++i]);   // throw the exception so the agent bombs rather than running forever for a malformed number.
+			} else if (arg.equals("-root")) {
+				prologRoot = arguments[++i];
 			} else {  // anything unrecognized is assumed to be the name of a prolog file sent to the cognitive module
 				files.add(arg);
 			}
