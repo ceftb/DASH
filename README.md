@@ -2,6 +2,7 @@ WebDash
 =======
 
 * Tested on Firefox 20.0.1
+* Make sure you have installed swipl with MacPort installer
 
 ### Download Maven:
 ```
@@ -21,6 +22,7 @@ export DYLD_LIBRARY_PATH=path_to_jpl
 export DYLD_LIBRARY_PATH=/opt/local/lib/swipl-6.2.2/lib/i386-darwin11.3.0
 ```
 
+* If needed, update the env.sh version to your OS and version of prolog. 
 
 ### Compile
 ```
