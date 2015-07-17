@@ -67,13 +67,15 @@ public class Action {
 				lastActionName = "computer_applicationOpen";
 				return 0;
 			}
-		} else if ("ms".equals(name)) {  // a wrapper to be sent eventually to a metasplot interface, for now simulated
+		} else if ("ms".equals(name)) {  // a wrapper to be sent eventually to a metasploit interface, for now simulated
 			// The first argument should be another prolog term with the actual action
 			Term action = t.args()[0];
 			System.out.println("Running metasploit action " + action);
 			// For now, say bannerGrabber succeeds on any machine with windows xp sp2 and hPOpenView also succeeds.
 			if ("bannerGrabber".equals(action.name())) {
 				return "windowsXP_SP2"; // "macOS10"; 
+			} else if ("portScanner".equals(action.name())) {  // for now, say port scanner returns mysql server on 
+				return Util.termArrayToList(new Term[]{new Compound("mysql", new Term[]{new jpl.Integer(3306)})});
 			} else
 				return 1;
 		} else if ("check".equals(name)) {
