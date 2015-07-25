@@ -26,13 +26,27 @@
 %goalWeight(agentUploaded(targetMachine),1).
 
 % The main goal for this run is to read a file on the target machine
-goalWeight(readFile(targetMachine,'/tmp/passwd'),1).
+goalWeight(readFile('127.0.0.1','/tmp/passwd'),1).
 
 % One possible top-level goal is to install the agent on a target host
 goal(agentUploaded(_)).
 
 % Another is to read a file from the host
 goal(readFile(_,_)).
+
+% Features of a host
+% findOS(Host,Os) - subgoal of finding OS of a host
+% knowOS(Host,Os) - agent knows OS of host
+% OSs currently used below: windowsXP_SP2, macOS10 (versioning to be made formal)
+% 
+% findArch(Host,Arch) - subgoal of finding the architecture of a host
+% knowArch(Host,Arch) - agent knows arch
+% Archs currently mentioned: i386 (not yet used to choose attacks)
+%
+% findService(Host,Service) - subgoal to detect host is running a service
+% knowServices(H,Services) - agents knows a list of services the host is running
+% Services are structured objects that include ports
+% Services currently used below: 
 
 subGoal(findOS(_,_)).
 subGoal(findService(_,_)).
@@ -52,7 +66,7 @@ exploit(macOpenView(_,X),X). % in metasploit, not currently implemented
 exploit(sqlInjectionReadFile(_,X,_,_),X). % uses rabidsqrl
 osLearner(bannerGrabber(X),X).            % in metasploit, not currently implemented
 serviceLearner(portScanner(X),X).         % uses nmap
-vulnerabilityLearner(sqlmapproject(X,sql(P)),X,sql(P)). % sqlmapproject
+vulnerabilityLearner(sqlmap(X,sql(P)),X,sql(P)). % sqlmapproject
 
 % Exploits, serviceLearners and osLearners and vulnerabilityLearners are kinds of primitive actions.
 primitiveAction(ms(T)) :- exploit(T,_).
@@ -70,7 +84,8 @@ goalRequirements(agentUploaded(X), [doNothing])
 
 % It may be possible to use an sql injection attack to read a file,
 % if the target machine is running a vulnerable server
-goalRequirements(readFile(X,File), [findService(X,sql(Port)), findVulnerability(X,sql(Port),V), ms(sqlInjectionReadFile(Y,X,Port,File))])
+goalRequirements(readFile(X,File), 
+                 [findService(X,sql(Port)), findVulnerability(X,sql(Port),V), ms(sqlInjectionReadFile(Y,X,Port,File))])
   :- agentUploaded(Y), reachable(X,Y).
 
 % One way to get on is by OpenView remote buffer overflow, if the
@@ -98,10 +113,10 @@ goalRequirements(findService(X,S), [ms(portScanner(X)), verifyService(X,S)]).
 
 goalRequirements(findArch(X,A), []) :- knowArch(X,A).
 
-% sqlmapproject can be used to find a vulnerability in a sql server or web interface
+% sqlmap can be used to find a vulnerability in a sql server or web interface
 goalRequirements(findVulnerability(X,sql(P),V),[]) :- knowVulnerability(X, sql(P), V).
 
-goalRequirements(findVulnerability(X,sql(P),V),[ms(sqlmapproject(X,sql(P))),verifyVulnerability(X,sql(P),V)]).
+goalRequirements(findVulnerability(X,sql(P),V),[ms(sqlmap(X,sql(P))),verifyVulnerability(X,sql(P),V)]).
 
 % As we represent more information about the actions we might
 % need to expand these updateBeliefs clauses.
@@ -130,7 +145,7 @@ addToWorld(Fact) :- initialWorld(I), retract(initialWorld(I)), assert(initialWor
 % In the initial world, the agent can only run code on its own host computer.
 agentUploaded(localhost).
 initialWorld([agentUploaded(localhost)]).
-reachable(targetMachine,localhost).   % To test a one-hop plan without pivoting
+reachable('127.0.0.1',localhost).   % To test a one-hop plan without pivoting
 
 % To make things simple while putting stuff in place, everything's an intel box
 knowArch(_,i386).

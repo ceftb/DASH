@@ -3,6 +3,10 @@
  ******************************************************************************/
 package edu.isi.detergent;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -74,8 +78,9 @@ public class Action {
 			// For now, say bannerGrabber succeeds on any machine with windows xp sp2 and hPOpenView also succeeds.
 			if ("bannerGrabber".equals(action.name())) {
 				return "windowsXP_SP2"; // "macOS10"; 
-			} else if ("portScanner".equals(action.name())) {  // for now, say port scanner returns mysql server on 
-				return Util.termArrayToList(new Term[]{new Compound("mysql", new Term[]{new jpl.Integer(3306)})});
+			} else if ("portScanner".equals(action.name())) {  // for now, say port scanner returns mysql server on
+				System.out.println("Action: " + action + " args: " + action.args());
+				return runPortScanner(action.args()[0].toString());
 			} else
 				return 1;
 		} else if ("check".equals(name)) {
@@ -100,6 +105,64 @@ public class Action {
 		return Util.termArrayToList(new Term[]{new Compound("del", new Term[]{new Atom("loggedIn")})});
 		// can we return the empty list? Yup.
 		//return Util.termArrayToList(new Term[]{});
+	}
+	
+	private Term runPortScanner(String host) {
+		if (host.startsWith("'") && host.endsWith("'"))
+			host = host.substring(1,host.length()-1);
+		System.out.println("Host is " + host);
+		ProcessBuilder scanBuilder = new ProcessBuilder("/usr/local/bin/nmap", host);
+		List<Term>results = new LinkedList<Term>();
+		try {
+			Process scan = scanBuilder.start();
+			InputStream is = scan.getInputStream();
+			InputStreamReader isr = new InputStreamReader(is);
+			BufferedReader br = new BufferedReader(isr);
+			String line;
+			boolean gettingPorts = false;
+			while ((line = br.readLine()) != null) {
+	            if (line.startsWith("PORT"))
+	            	gettingPorts = true;
+	            else if (gettingPorts && line == "")
+	            	gettingPorts = false;
+	            else if (gettingPorts) {
+	            	String[]d = line.split(" +");
+	            	System.out.println(d);
+	            	if (d.length >= 2) {
+		            	String[]portProtocol = d[0].split("/");
+		            	if (portProtocol.length >= 1) {
+		            		System.out.println(d[2] + ":" + portProtocol[0]);
+		            		try {
+		            		results.add(new Compound(d[2], new Term[]{new jpl.Integer(new Integer(portProtocol[0]))}));
+		            		} catch (NumberFormatException e) {
+		            			e.printStackTrace();
+		            		}
+		            	}
+	            	}
+	            } else
+	            	System.out.println("|"+line+"|");  // see what else is going on, for now
+	        }
+	        //Wait to get exit value
+	        try {
+	            int exitValue = scan.waitFor();
+	            System.out.println("\n\nExit Value is " + exitValue);
+	        } catch (InterruptedException e) {
+	            // TODO Auto-generated catch block
+	            e.printStackTrace();
+	        }
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+		System.out.println("Found ports:");
+		for (Term l: results)
+			System.out.println(l);
+		//return Util.termArrayToList(new Term[]{new Compound("mysql", new Term[]{new jpl.Integer(3306)})});
+		Term[] ta = new Term[results.size()];
+		for (int i = 0; i < results.size(); i++)
+			ta[i] = (Term)results.get(i);
+		return Util.termArrayToList(ta);
 	}
 	
 	
