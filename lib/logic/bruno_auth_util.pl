@@ -45,3 +45,11 @@ parse_line([X|X1]-X2,[X|Xs]) :- \+ eol_char(X), parse_line(X1-X2,Xs).
 
 eol_char('\r').
 eol_char('\n').
+
+
+
+%utility for coppying one list to the other
+
+copy(L,R) :- accCp(L,R).
+accCp([],[]).
+accCp([H|T1],[H|T2]) :- accCp(T1,T2).
