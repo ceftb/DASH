@@ -53,3 +53,10 @@ eol_char('\n').
 copy(L,R) :- accCp(L,R).
 accCp([],[]).
 accCp([H|T1],[H|T2]) :- accCp(T1,T2).
+
+%printing the list line by line (for unit testing
+printlist([]).
+    
+printlist([X|List]) :-
+        write(X),nl,
+        printlist(List).
