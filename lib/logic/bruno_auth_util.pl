@@ -22,6 +22,7 @@ read_lines(File,Lines) :-
    seeing(Old), see(File), 
    get_char(X), read_file(X,CharList),  % read the whole file into a charlist
    parse_charlist(CharList-[],Lines),   % parse lines using difference lists
+    seen,                               % close the current input stream (Jim)
    see(Old).
 
 read_file(end_of_file,[]) :- !.
