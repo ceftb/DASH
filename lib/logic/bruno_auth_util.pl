@@ -61,3 +61,13 @@ printlist([]).
 printlist([X|List]) :-
         write(X),nl,
         printlist(List).
+
+%Last part of computing estimated number of guesses for a distribution
+% This is to provide an example of computing a number. I will leave as an
+% exercise to compute G and L (lambda_mu_alpha in the Bonneau paper).
+
+% G and L should be bound before calling this, R will be bound to the
+% result on exiting, unless the inputs require division by zero or
+% the log of a negative number, when an error will be generated. (Jim).
+
+gAlpha(G,L,Result) :- Result is log((2*G)/L - 1) + log(1/(2-L)).
