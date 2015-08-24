@@ -71,3 +71,33 @@ printlist([X|List]) :-
 % the log of a negative number, when an error will be generated. (Jim).
 
 gAlpha(G,L,Result) :- Result is log((2*G)/L - 1) + log(1/(2-L)).
+
+
+
+% Utility for finding the shortest strings
+findShortestString([String], String).
+
+findShortestString([String|Rest], String) :- findShortestString(Rest, Shortest), atom_length(String, X), atom_length(Shortest, Y), X =< Y, !.
+findShortestString([String|Rest], Shortest) :- findShortestString(Rest, Shortest), atom_length(String, X), atom_length(Shortest, Y), X > Y, !.
+
+
+% Utility for finding longest strings
+findLongestString([String], String).
+
+findLongestString([String|Rest], String) :- findLongestString(Rest, Longest), atom_length(String, X), atom_length(Longest, Y), X >= Y, !.
+findLongestString([String|Rest], Longest) :- findLongestString(Rest, Longest), atom_length(String, X), atom_length(Longest, Y), X < Y, !.
+
+% Sort strings by length (Vijay)
+stringsSortedByLength([], _, []) :- ansi_format([fg(red)], 'stringsSortedByLength: CRITICAL ERROR - we should not be here.\n', []), halt, !.
+stringsSortedByLength([String], _, [String]).
+stringsSortedByLength([String|Rest], short, [ShortestString|SortedRest]) :- Rest \= [], findShortestString([String|Rest], ShortestString), select(ShortestString, [String|Rest], StringsRecursive), stringsSortedByLength(StringsRecursive, short, SortedRest), !.
+stringsSortedByLength([String|Rest], long, [LongestString|SortedRest]) :- Rest \= [], findLongestString([String|Rest], LongestString), select(LongestString, [String|Rest], StringsRecursive), stringsSortedByLength(StringsRecursive, long, SortedRest), !.
+
+% Alternative implementation - potentially faster
+
+my_comp(Comp, W1, W2) :-
+	length(W1,L1),
+	length(W2, L2),
+	(   L1 < L2 -> Comp = '>'
+	;   L1 > L2 -> Comp = '<'
+	;   compare(Comp, W1, W2)).
