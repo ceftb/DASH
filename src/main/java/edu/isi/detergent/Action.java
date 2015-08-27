@@ -115,6 +115,63 @@ public class Action {
 	}
 	
 	private Object runSQLReadFile(Term action) {
+		return runSQLReadFileSQLMap(action);
+	}
+	
+	/**
+	 * Uses SQLMap to read a file. The file is read into a local file and the return value indicates success.
+	 * This shares a lot of code with runSQLMap and should probably be refactored.
+	 * @param action
+	 * @return
+	 */
+	private Object runSQLReadFileSQLMap(Term action) {
+		Term[] args = action.args();
+		String host = args[0].toString(), file = args[2].toString(), 
+				port = args[3].toString(), base = args[4].toString(), 
+				param = args[5].toString();
+		if (host.startsWith("'") && host.endsWith("'"))
+			host = host.substring(1,host.length()-1);
+		if (base.startsWith("'") && base.endsWith("'"))
+			base = base.substring(1,base.length()-1);
+		if (file.startsWith("'") && file.endsWith("'"))
+			file = file.substring(1,base.length()-1);
+		System.out.println("Running SQLMap readfile on " + host + " with port " + port + ", base " + base + 
+				" and parameter " + param + "\n");
+		String call = "/usr/bin/python" +
+				" /Users/jim/repo/Projects/ARL/sqlmapproject-sqlmap-1aafe85/sqlmap.py" +
+				" -u http://" + host + ":" + port + "/" + base
+				+ "?" + param + "=1 --file-read="+file;
+		
+		System.out.println("Call is " + call);
+		ProcessBuilder scanBuilder = new ProcessBuilder(call);
+		int exitValue = 0;
+		try {
+			Process scan = scanBuilder.start();
+			InputStream is = scan.getInputStream();
+			InputStreamReader isr = new InputStreamReader(is);
+			BufferedReader br = new BufferedReader(isr);
+			String line;
+			while ((line = br.readLine()) != null) {
+				//System.out.println("Line is " + line);  // this will mess with the screen since sqlmap does some raw terminal output
+				// Doesn't currently process the data, just reads the exit value to see if it succeeded
+	        }
+	        //Wait to get exit value
+	        try {
+	            exitValue = scan.waitFor();
+	            System.out.println("\n\nExit Value is " + exitValue);
+	            return "" + exitValue;
+	        } catch (InterruptedException e) {
+	            // TODO Auto-generated catch block
+	            e.printStackTrace();
+	        }
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return "" + exitValue;  // so 0 for success in unix is 1, used for success in the agent.
+	}
+
+	private Object runSQLReadFileRabid(Term action) {
 		Term[] args = action.args();
 		String host = args[0].toString(), file = args[2].toString(), 
 				port = args[3].toString(), base = args[4].toString(), 
@@ -148,7 +205,6 @@ public class Action {
 		// execute the attack and put the results on stdout
 		ProcessBuilder scanBuilder = new ProcessBuilder("/Library/Frameworks/Python.framework/Versions/3.4/bin/python3",
 				"-m", "rabidsqrl", "-c", fileName, "-r");
-		List<Term>results = new LinkedList<Term>();
 		try {
 			Process scan = scanBuilder.start();
 			InputStream is = scan.getInputStream();
@@ -186,15 +242,15 @@ public class Action {
 		System.out.println("Running sqlmap on " + host + " with port " + port + ", base " + base + 
 				" and parameter " + param + "\n");
 		System.out.println("Call is " + "/usr/bin/python" +
-				" ~/repo/Projects/ARL/sqlmapproject-sqlmap-1aafe85/sqlmap.py" +
+				" /Users/jim/repo/Projects/ARL/sqlmapproject-sqlmap-1aafe85/sqlmap.py" +
 				" -u http://" + host + ":" + port + "/" + base
 				+ "?" + param + "=1");
 		
 		ProcessBuilder scanBuilder = new ProcessBuilder("/usr/bin/python",
-				"~/repo/Projects/ARL/sqlmapproject-sqlmap-1aafe85/sqlmap.py",
+				"/Users/jim/repo/Projects/ARL/sqlmapproject-sqlmap-1aafe85/sqlmap.py",
 				"-u" + "http://" + host + ":" + port + "/" + base
 				+ "?" + param + "=1");
-		List<Term>results = new LinkedList<Term>();
+		int exitValue = 0;
 		try {
 			Process scan = scanBuilder.start();
 			InputStream is = scan.getInputStream();
@@ -202,12 +258,12 @@ public class Action {
 			BufferedReader br = new BufferedReader(isr);
 			String line;
 			while ((line = br.readLine()) != null) {
-				System.out.println("Line is " + line);
-				// Doesn't currently process the data
+				//System.out.println("Line is " + line);  // this will mess with the screen since sqlmap does some raw terminal output
+				// Doesn't currently process the data, just reads the exit value to see if it succeeded
 	        }
 	        //Wait to get exit value
 	        try {
-	            int exitValue = scan.waitFor();
+	            exitValue = scan.waitFor();
 	            System.out.println("\n\nExit Value is " + exitValue);
 	            return "" + exitValue;
 	        } catch (InterruptedException e) {
@@ -218,7 +274,7 @@ public class Action {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		return "1";
+		return "" + exitValue;  // so 0 for success in unix is 1, used for success in the agent.
 	}
 
 	private Term runPortScanner(String host) {
@@ -247,7 +303,11 @@ public class Action {
 		            	if (portProtocol.length >= 1) {
 		            		System.out.println(d[2] + ":" + portProtocol[0]);
 		            		try {
-		            		results.add(new Compound(d[2], new Term[]{new jpl.Integer(new Integer(portProtocol[0]))}));
+		            			// used to provide a term with protocol on the predicate e.g. sql-proxy(8000), but that's harder to
+		            			// reason with in prolog, so now returning port(8000,'sql-proxy')
+		            			//results.add(new Compound(d[2], new Term[]{new jpl.Integer(new Integer(portProtocol[0]))}));
+		            			results.add(new Compound("port",
+		            					new Term[]{new jpl.Integer(new Integer(portProtocol[0])), new Atom(d[2])}));
 		            		} catch (NumberFormatException e) {
 		            			e.printStackTrace();
 		            		}

@@ -2,9 +2,8 @@
 
 % Agent to simulate attacks
 
-% Current status: initial implementation.
-
-% 
+% Current status: initial implementation. Uses nmap, rabidsqrl and sqlmap,
+% with these interfaces defined on the body side in Action.java
 
 :- style_check(-singleton).
 :- style_check(-discontiguous).
@@ -113,20 +112,20 @@ goalRequirements(readFile(Target,File),
 		  ms(sqlInjectionReadFile(AttackLoc,Target,File,Port,BaseUrl,Parameter))])
   :- agentUploaded(AttackLoc), reachable(Target,AttackLoc).
 
-% Can do the same with an alt service (the returned term from the port scanner is 'http-alt'(Port)).
+% Can do the same with an alt service (the returned term from the port scanner is port(Port,'http-alt') - used to be 'http-alt'(Port)).
 goalRequirements(findSQLVuln(Host), 
-		 [findService(Host,'http-alt'(Port)), findVulnerability(Host, http(Port), sql(Port,BaseUrl,Parameter))])
+		 [findService(Host,port(Port,Protocol)), findVulnerability(Host, http(Port,Protocol), sql(Port,BaseUrl,Parameter))])
   :- likelyVulnerability(Host, Port, BaseUrl, Parameter).
 
 % One way to find a vulnerable sql port is to look for a vulnerable mysql service
-goalRequirements(findSQLVuln(Host), 
-		 [findService(Host,http(Port)), findVulnerability(Host, http(Port), sql(Port,BaseUrl,Parameter))])
-  :- likelyVulnerability(Host, Port, BaseUrl, Parameter).
+%goalRequirements(findSQLVuln(Host), 
+%		 [findService(Host,port(Port,http)), findVulnerability(Host, http(Port), sql(Port,BaseUrl,Parameter))])
+%  :- likelyVulnerability(Host, Port, BaseUrl, Parameter).
 
 % Can do the same with a proxy-service (the returned term from the port scanner is 'http-proxy'(Port)).
-goalRequirements(findSQLVuln(Host), 
-		 [findService(Host,'http-proxy'(Port)), findVulnerability(Host, http(Port), sql(Port,BaseUrl,Parameter))])
-  :- likelyVulnerability(Host, Port, BaseUrl, Parameter).
+%goalRequirements(findSQLVuln(Host), 
+%		 [findService(Host,port(Port,'http-proxy')), findVulnerability(Host, http(Port), sql(Port,BaseUrl,Parameter))])
+%  :- likelyVulnerability(Host, Port, BaseUrl, Parameter).
 
 
 % One way to upload a local agent is by OpenView remote buffer overflow, if the
@@ -159,24 +158,26 @@ goalRequirements(findArch(X,A), []) :- knowArch(X,A).
 goalRequirements(findVulnerability(X,S,V),[]) :- knowVulnerability(X, S, V).
 
 % sqlmap can be used to find a vulnerability in a mysql server or web interface (as well as others)
-goalRequirements(findVulnerability(X,http(Port),sql(Port,Base,Param)),
-		 [ms(sqlmap(X,Port,Base,Param)),verifyVulnerability(X,sql(Port,Base,Param),V)]).
+goalRequirements(findVulnerability(X,http(Port,Protocol),sql(Port,Base,Param)),
+		 [ms(sqlmap(X,Port,Base,Param)),verifyVulnerability(X,sql(Port,Base,Param),0)]) :-  % 0 is success for a vulnerability learner.
+    member(Protocol,['sun-answerbook', 'http-alt','http-proxy',http]).   % Check the recorded protocol is one we might expect to respond to http requests
 
 % As we represent more information about the actions we might
 % need to expand these updateBeliefs clauses.
 
 updateBeliefs(ms(Act),1) 
   :- exploit(Act,X), addToWorld(performed(ms(Act))). % , addToWorld(agentUploaded(X)).
-updateBeliefs(ms(Act), 0) 
-  :- addToWorld(performed(ms(Act))), !, fail.
+%updateBeliefs(ms(Act), 0) % 0 is success in some of the actions, e.g. sqlmap
+%  :- addToWorld(performed(ms(Act))), !, fail.
 updateBeliefs(ms(Act), OSResult) 
   :- osLearner(Act,X), addToWorld(performed(ms(Act))), addToWorld(knowOS(X, OSResult)), 
      assert(knowOS(X,OSResult)).
 updateBeliefs(ms(Act), ServiceResult) 
   :- serviceLearner(Act,X), addToWorld(performed(ms(Act))), addToWorld(knowServices(X, ServiceResult)).
      %assert(knowServices(X,[sql(3306)])).
-updateBeliefs(ms(Act), VulnResult) 
+updateBeliefs(ms(Act), VulnResult)
   :- vulnerabilityLearner(Act,X,S), addToWorld(performed(ms(Act))), addToWorld(knowVulnerability(X, S, VulnResult)),
+     format('vulnerability result for ~w was ~w~n', [[Act,X,S], VulnResult]),
      assert(knowVulnerability(X,S,VulnResult)).
 
 execute(verifyOS(Host,OS)) :- knowOS(Host,OS).
@@ -198,6 +199,9 @@ knowArch(_,i386).
 % And to make things simple, we already know a likely sql vulnerability on the target machine.
 % This may have come from e.g. google dork or from a human sniffing around, which we 
 % still need to simulate in an agent model.
-likelyVulnerability('testphp.vulnweb.com',_,'listproducts.php','cat').
-likelyVulnerability('127.0.0.1',_,'listproducts.php','cat').
+likelyVulnerability('testphp.vulnweb.com',80,'listproducts.php','cat').
+% A local simple server defined in python, vulnerable to mysql injection attacks
+likelyVulnerability('127.0.0.1',8000,'index.html','name').  % Added the port so we don't try this everywhere
+likelyVulnerability('127.0.0.1',8888,'hackme.php','select').  % Could be guessed from the form on the index.html page
+
 
