@@ -14,6 +14,9 @@
 :- dynamic(desiredPassword/2).
 :- dynamic(latestResult/2).
 
+:-dynamic(numSuccesLogins/1).
+:-dynamic(numFailedLogins/1).
+
 % this is asserted during updateBeliefs for the intializeUser primitiveAction
 :- dynamic(services/1).
 :- dynamic(count/1).
@@ -59,17 +62,6 @@ cognitiveBurden(B) :- cognitiveUsernameBurden(UB), cognitivePasswordBurden(PB), 
 cognitiveUsernameBurden(UB) :- recallableUsernames(UU), cognitiveBurden(UU, UB1), findall(S, inCurrentWorld(createdAccount(S)), ServicesC), length(ServicesC, AccountsCreated), findall(S, inCurrentWorld(wroteUsernameOnPostIt(S, _)), ServicesW), length(ServicesW, UsernamesWrittenDown), UB2 is AccountsCreated - UsernamesWrittenDown, UB is UB1 + UB2, !.
 cognitivePasswordBurden(PB) :- recallablePasswords(UP), cognitiveBurden(UP, PB1), findall(S, inCurrentWorld(createdAccount(S)), ServicesC), length(ServicesC, AccountsCreated), findall(S, inCurrentWorld(wrotePasswordOnPostIt(S, _)), ServicesW), length(ServicesW, PasswordsWrittenDown), PB2 is AccountsCreated - PasswordsWrittenDown, PB is PB1 + PB2, !.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% iteration stuff
-% ...for testing in isolation
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-% iterations of loop
-run :- kIterations(50).
-kIterations(K) :- integer(K), K > 1, oneIteration, KMinusOne is K - 1, kIterations(KMinusOne).
-kIterations(1) :- oneIteration.
-
-oneIteration :- format('\n\nchoosing action...\n'), system1, do(X), format('chose action ~w\n', X), updateBeliefs(X, 1), system1.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -92,7 +84,6 @@ subGoal(signOut(Service)) :- serviceExists(Service).
 subGoal(resetPassword(Service)) :- serviceExists(Service).
 
 % goal requirements for various goals and subgoals
-%goalRequirements(doWork, Requirements) :- sleep(1), not(true).
 goalRequirements(doWork, Requirements) :- testStoppingCriterion.
 goalRequirements(doWork, Requirements) :- printUserState, printDoneStatements, not(true).
 goalRequirements(doWork, Requirements) :- requirementsSet(Requirements), !.
@@ -623,8 +614,16 @@ updatePasswordBeliefs(Action, Result) :- Action = clickSignInButton(_, _, _), Re
 updatePasswordBeliefs(Action, Result) :- Action \= clickSignInButton(_, _, _), inCurrentWorld(services(Services)), uniquePasswords(UniquePasswords), foreach(member(Service, Services), addUniquePasswords(Service, UniquePasswords)), foreach(member(Service, Services), passwordFatigue(Service)), !.
 updatePasswordBeliefs(Action, Result) :- not(inCurrentWorld(services(Services))), !.
 
-strengthenPassword(Service, Password) :- inCurrentWorld(passwordBeliefs(Service, PasswordBeliefs)), inCurrentWorld(passwordForgetRate(Service, Rate)), member((Password, Strength), PasswordBeliefs), removeFromWorld(passwordBeliefs(Service, _)), delete(PasswordBeliefs, (Password, _), PasswordBeliefsModified), strengthenScalar(StrengthenScalar), StrengthenRate = StrengthenScalar * Rate, NewStrength is min(Strength + StrengthenRate, 1), NewPasswordBeliefs = [(Password, NewStrength)|PasswordBeliefsModified], addToWorld(passwordBeliefs(Service, NewPasswordBeliefs)), !.
-strengthenPassword(Service, Password) :- not(inCurrentWorld(passwordBeliefs(Service, _))), !.
+strengthenPassword(Service, Password) :- inCurrentWorld(passwordBeliefs(Service, PasswordBeliefs)), inCurrentWorld(passwordForgetRate(Service, Rate)), 
+										 member((Password, Strength), PasswordBeliefs), 
+										 removeFromWorld(passwordBeliefs(Service, _)), 
+										 delete(PasswordBeliefs, (Password, _), PasswordBeliefsModified),
+										 numSuccesLogins(Nsl), 
+										 StrengthenRate = max(log(Nsl/3), Rate + 0,2), 
+										 NewStrength is min(StrengthenRate, 1), NewPasswordBeliefs = [(Password, NewStrength)|PasswordBeliefsModified], 
+										 addToWorld(passwordBeliefs(Service, NewPasswordBeliefs)), 
+										 assert(numSuccesLogins(Nsl+1)), assert(numFailedLogins(0)), !.
+strengthenPassword(Service, Password) :- not(inCurrentWorld(passwordrdBeliefs(Service, _))), !.
 
 addUniquePasswords(Service, [Password|Rest]) :- isPassword(Service, Password), addUniquePasswords(Service, Rest), !.
 addUniquePasswords(Service, [Password|Rest]) :- not(isPassword(Service, Password)), inCurrentWorld(passwordBeliefs(Service, List)), append([(Password, 0)], List, NewList), removeFromWorld(passwordBeliefs(Service, __)), addToWorld(passwordBeliefs(Service, NewList)), addUniquePasswords(Service, Rest), !.
@@ -659,7 +658,10 @@ isRecallablePassword(Service, Password) :- inCurrentWorld(passwordBeliefs(Servic
 passwordFatigue(Service) :- inCurrentWorld(passwordBeliefs(Service, List)), inCurrentWorld(passwordForgetRate(Service, Rate)), applyFatigue(List, Rate, NewList), removeFromWorld(passwordBeliefs(Service, List)), addToWorld(passwordBeliefs(Service, NewList)).
 passwordFatigue(Service) :- not(inCurrentWorld(passwordBeliefs(Service, _))), !.
 
-applyFatigue([(P,V)|T], Rate, [(P,NewV)|NewT]) :- NewV is max(V - Rate, 0), applyFatigue(T, Rate, NewT), !.
+applyFatigue([(P,V)|T], Rate, [(P,NewV)|NewT]) :- numFailedLogins(X), Nsl is max(1, X), %check for 0 division 
+												  pow(V, 1/Rate, TempV), % calculate the new value 
+												  NewV is max(TempV, 0), % check that it is zero
+												  applyFatigue(T, Rate, NewT), !. %recurse
 applyFatigue([], _, []).
 
 %passwordFatigue(Service) :- inCurrentWorld(passwordBeliefs(Service, List)), averagePasswordStrength(List, Average), applyFatigue(List, Average, 0.001, NewList), removeFromWorld(passwordBeliefs(Service, List)), addToWorld(passwordBeliefs(Service, NewList)).
@@ -750,3 +752,7 @@ printForgetRates(Service) :- not(inCurrentWorld(passwordForgetRate(Service, _)))
 %incr(Fieldname) :- field(Fieldname,N), New is N + 1, retractall(field(Fieldname,_)), assert(field(Fieldname,New)).
 
 %field(envision, 0).
+
+
+numFailedLogins(0).
+numSuccesLogins(0).
