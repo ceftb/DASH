@@ -88,10 +88,11 @@ findLongestString([String|Rest], String) :- findLongestString(Rest, Longest), at
 findLongestString([String|Rest], Longest) :- findLongestString(Rest, Longest), atom_length(String, X), atom_length(Longest, Y), X < Y, !.
 
 % Sort strings by length (Vijay)
-stringsSortedByLength([], _, []) :- ansi_format([fg(red)], 'stringsSortedByLength: CRITICAL ERROR - we should not be here.\n', []), halt, !.
+stringsSortedByLength([], _, []) :- ansi_format([fg(red)], 'StringsSortedByLength: CRITICAL ERROR - we should not be here.\n', []), halt, !.
 stringsSortedByLength([String], _, [String]).
 stringsSortedByLength([String|Rest], short, [ShortestString|SortedRest]) :- Rest \= [], findShortestString([String|Rest], ShortestString), select(ShortestString, [String|Rest], StringsRecursive), stringsSortedByLength(StringsRecursive, short, SortedRest), !.
 stringsSortedByLength([String|Rest], long, [LongestString|SortedRest]) :- Rest \= [], findLongestString([String|Rest], LongestString), select(LongestString, [String|Rest], StringsRecursive), stringsSortedByLength(StringsRecursive, long, SortedRest), !.
+
 
 % Alternative implementation - potentially faster
 
