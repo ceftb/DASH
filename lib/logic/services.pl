@@ -1,3 +1,6 @@
+:- style_check(-singleton).
+:- style_check(-discontiguous).
+
 :- dynamic(accountExists/4).
 :- dynamic(determineResult/3).
 :- dynamic(signedIn/3).
