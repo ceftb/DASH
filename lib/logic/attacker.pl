@@ -105,14 +105,17 @@ goalRequirements(showDBUsers(Host),
 % if the target machine is running a vulnerable server
 
 % Mark as done if the action was performed
-goalRequirements(readFile(X,File), []) :- performed(ms(sqlInjectionReadFile(Y,X,File,Port,Base,Param))).
+goalRequirements(readFile(X,File), [doNothing]) :- performed(ms(sqlInjectionReadFile(Y,X,File,Port,Base,Param))).
 
+% One way to read a file is via an sql injection if available. Alternative ways to read a file could
+% be specified with additional clauses.
 goalRequirements(readFile(Target,File), 
-                 [findSQLVuln(Target), verifyVulnerability(Target,sql(Port,BaseUrl,Parameter),V),
+                 [findSQLVuln(Target), verifyVulnerability(Target,sql(Port,BaseUrl,Parameter),0),
 		  ms(sqlInjectionReadFile(AttackLoc,Target,File,Port,BaseUrl,Parameter))])
-  :- agentUploaded(AttackLoc), reachable(Target,AttackLoc).
+  :- agentUploaded(AttackLoc), reachable(Target,AttackLoc), format('Seeking an SQL vulnerability on ~w to read ~w~n', [Target,File]).
 
-% Can do the same with an alt service (the returned term from the port scanner is port(Port,'http-alt') - used to be 'http-alt'(Port)).
+% Can do the same with an alternative service 
+% (the returned term from the port scanner is port(Port,'http-alt') - used to be 'http-alt'(Port)).
 goalRequirements(findSQLVuln(Host), 
 		 [findService(Host,port(Port,Protocol)), findVulnerability(Host, http(Port,Protocol), sql(Port,BaseUrl,Parameter))])
   :- likelyVulnerability(Host, Port, BaseUrl, Parameter).
@@ -165,8 +168,10 @@ goalRequirements(findVulnerability(X,http(Port,Protocol),sql(Port,Base,Param)),
 % As we represent more information about the actions we might
 % need to expand these updateBeliefs clauses.
 
-updateBeliefs(ms(Act),1) 
-  :- exploit(Act,X), addToWorld(performed(ms(Act))). % , addToWorld(agentUploaded(X)).
+updateBeliefs(ms(Act),0) 
+  :- exploit(Act,_), !, format('Succeeded with exploit ~w~n', [Act]), addToWorld(performed(ms(Act))). % , addToWorld(agentUploaded(X)).
+updateBeliefs(ms(Act),_) 
+  :- exploit(Act,_), format('Exploit ~w failed~n', [Act]), addToWorld(performed(ms(Act))). % , addToWorld(agentUploaded(X)).
 %updateBeliefs(ms(Act), 0) % 0 is success in some of the actions, e.g. sqlmap
 %  :- addToWorld(performed(ms(Act))), !, fail.
 updateBeliefs(ms(Act), OSResult) 
@@ -179,12 +184,14 @@ updateBeliefs(ms(Act), VulnResult)
   :- vulnerabilityLearner(Act,X,S), addToWorld(performed(ms(Act))), addToWorld(knowVulnerability(X, S, VulnResult)),
      format('vulnerability result for ~w was ~w~n', [[Act,X,S], VulnResult]),
      assert(knowVulnerability(X,S,VulnResult)).
+updateBeliefs(doNothing,_).  % The doNothing action always succeeds. The updateBeliefs predicate should always succeed 
+                             % but I want to catch every sitation so haven't added a catchall clause.
 
 execute(verifyOS(Host,OS)) :- knowOS(Host,OS).
 execute(verifyService(Host,Service)) :- knowServices(Host,L), member(Service,L).
 execute(verifyVulnerability(Host,Service,Vuln)) :- knowVulnerability(Host,Service,Vuln).
 
-addToWorld(Fact) :- initialWorld(I), retract(initialWorld(I)), assert(initialWorld([Fact|I])), assert(Fact), format('asserted ~w~n',[Fact]).
+addToWorld(Fact) :- initialWorld(I), retract(initialWorld(I)), assert(initialWorld([Fact|I])), assert(Fact). %, format('asserted ~w~n',[Fact]).
 
 
 % In the initial world, the agent can only run code on its own host computer.
@@ -201,7 +208,7 @@ knowArch(_,i386).
 % still need to simulate in an agent model.
 likelyVulnerability('testphp.vulnweb.com',80,'listproducts.php','cat').
 % A local simple server defined in python, vulnerable to mysql injection attacks
-likelyVulnerability('127.0.0.1',8000,'index.html','name').  % Added the port so we don't try this everywhere
+likelyVulnerability('127.0.0.1',80,'index.html','name').
 likelyVulnerability('127.0.0.1',8888,'hackme.php','select').  % Could be guessed from the form on the index.html page
 
 

@@ -4,11 +4,14 @@
 package edu.isi.detergent;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -77,7 +80,7 @@ public class Action {
 		} else if ("ms".equals(name)) {  // a wrapper to be sent eventually to a metasploit interface, for now simulated
 			// The first argument should be another prolog term with the actual action
 			Term action = t.args()[0];
-			System.out.println("Running metasploit action " + action);
+			System.out.println("Running cyber action " + action);
 			// For now, say bannerGrabber succeeds on any machine with windows xp sp2 and hPOpenView also succeeds.
 			if ("bannerGrabber".equals(action.name())) {
 				return "windowsXP_SP2"; // "macOS10"; 
@@ -134,7 +137,7 @@ public class Action {
 		if (base.startsWith("'") && base.endsWith("'"))
 			base = base.substring(1,base.length()-1);
 		if (file.startsWith("'") && file.endsWith("'"))
-			file = file.substring(1,base.length()-1);
+			file = file.substring(1,file.length()-1);
 		System.out.println("Running SQLMap readfile on " + host + " with port " + port + ", base " + base + 
 				" and parameter " + param + "\n");
 		String call = "/usr/bin/python" +
@@ -142,8 +145,11 @@ public class Action {
 				" -u http://" + host + ":" + port + "/" + base
 				+ "?" + param + "=1 --file-read="+file;
 		
-		System.out.println("Call is " + call);
-		ProcessBuilder scanBuilder = new ProcessBuilder(call);
+		System.out.println("Making call: " + call);
+		ProcessBuilder scanBuilder = new ProcessBuilder("/usr/bin/python",
+				"/Users/jim/repo/Projects/ARL/sqlmapproject-sqlmap-1aafe85/sqlmap.py",
+				"-u", "http://" + host + ":" + port + "/" + base + "?" + param + "=1", 
+				"--file-read="+file);
 		int exitValue = 0;
 		try {
 			Process scan = scanBuilder.start();
@@ -151,18 +157,29 @@ public class Action {
 			InputStreamReader isr = new InputStreamReader(is);
 			BufferedReader br = new BufferedReader(isr);
 			String line;
+			// Send some carriage returns for default values to the process
+			OutputStream os = scan.getOutputStream();
+			BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(os));
+			writer.write("\n\n\n");
+			writer.flush();
 			while ((line = br.readLine()) != null) {
 				//System.out.println("Line is " + line);  // this will mess with the screen since sqlmap does some raw terminal output
-				// Doesn't currently process the data, just reads the exit value to see if it succeeded
+				// look for confirmation that the file is downloaded or re-checked if already downloaded
+				if (line.contains("the local file"))
+					System.out.println("SQLMap: " + line);
 	        }
 	        //Wait to get exit value
 	        try {
 	            exitValue = scan.waitFor();
 	            System.out.println("\n\nExit Value is " + exitValue);
+				writer.close();
+				br.close();
 	            return "" + exitValue;
 	        } catch (InterruptedException e) {
 	            // TODO Auto-generated catch block
 	            e.printStackTrace();
+				writer.close();
+				br.close();
 	        }
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
@@ -251,21 +268,36 @@ public class Action {
 				"-u" + "http://" + host + ":" + port + "/" + base
 				+ "?" + param + "=1");
 		int exitValue = 0;
+		int returnResult = 1;  // failure by default. 0 is considered success.
 		try {
 			Process scan = scanBuilder.start();
 			InputStream is = scan.getInputStream();
 			InputStreamReader isr = new InputStreamReader(is);
 			BufferedReader br = new BufferedReader(isr);
 			String line;
+			boolean printing = false;
+			int seenDashes = 0;
 			while ((line = br.readLine()) != null) {
 				//System.out.println("Line is " + line);  // this will mess with the screen since sqlmap does some raw terminal output
-				// Doesn't currently process the data, just reads the exit value to see if it succeeded
+				// Find evidence of the vulnerability and print it. It is stored in a file for use in subsequent calls
+				if (line.contains("the following injection point")) {
+					returnResult = 0;  // success!
+					printing = true;
+				}
+				if (printing) {
+					System.out.println("SQLMap: " + line);
+					if (line.contains("---")) {
+						seenDashes++;
+						if (seenDashes == 2)
+							printing = false;
+					}
+				}
 	        }
 	        //Wait to get exit value
 	        try {
 	            exitValue = scan.waitFor();
-	            System.out.println("\n\nExit Value is " + exitValue);
-	            return "" + exitValue;
+	            //System.out.println("\n\nExit Value is " + exitValue);
+	            return "" + returnResult;
 	        } catch (InterruptedException e) {
 	            // TODO Auto-generated catch block
 	            e.printStackTrace();
@@ -274,7 +306,7 @@ public class Action {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		return "" + exitValue;  // so 0 for success in unix is 1, used for success in the agent.
+		return "" + returnResult;  // so 0 for success in unix is 1, used for success in the agent.
 	}
 
 	private Term runPortScanner(String host) {
@@ -297,11 +329,11 @@ public class Action {
 	            	gettingPorts = false;
 	            else if (gettingPorts) {
 	            	String[]d = line.split(" +");
-	            	System.out.println(d);
+	            	//System.out.println(d);
 	            	if (d.length >= 2) {
 		            	String[]portProtocol = d[0].split("/");
 		            	if (portProtocol.length >= 1) {
-		            		System.out.println(d[2] + ":" + portProtocol[0]);
+		            		//System.out.println(d[2] + ":" + portProtocol[0]);
 		            		try {
 		            			// used to provide a term with protocol on the predicate e.g. sql-proxy(8000), but that's harder to
 		            			// reason with in prolog, so now returning port(8000,'sql-proxy')
@@ -309,7 +341,7 @@ public class Action {
 		            			results.add(new Compound("port",
 		            					new Term[]{new jpl.Integer(new Integer(portProtocol[0])), new Atom(d[2])}));
 		            		} catch (NumberFormatException e) {
-		            			e.printStackTrace();
+		            			//e.printStackTrace();  // some inputs fail, e.g. 'Nmap'.
 		            		}
 		            	}
 	            	}
