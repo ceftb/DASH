@@ -267,7 +267,6 @@ public class Action {
 				"/Users/jim/repo/Projects/ARL/sqlmapproject-sqlmap-1aafe85/sqlmap.py",
 				"-u" + "http://" + host + ":" + port + "/" + base
 				+ "?" + param + "=1");
-		int exitValue = 0;
 		int returnResult = 1;  // failure by default. 0 is considered success.
 		try {
 			Process scan = scanBuilder.start();
@@ -295,7 +294,7 @@ public class Action {
 	        }
 	        //Wait to get exit value
 	        try {
-	            exitValue = scan.waitFor();
+	            scan.waitFor();
 	            //System.out.println("\n\nExit Value is " + exitValue);
 	            return "" + returnResult;
 	        } catch (InterruptedException e) {
