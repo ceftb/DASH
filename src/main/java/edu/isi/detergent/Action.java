@@ -86,7 +86,7 @@ public class Action {
 				return "windowsXP_SP2"; // "macOS10"; 
 			} else if ("portScanner".equals(action.name())) {  // for now, say port scanner returns mysql server on
 				System.out.println("Action: " + action + " args: " + action.args());
-				return runPortScanner(action.args()[0].toString());
+				return runPortScanner(action.args()[0].toString(), action.args()[1].toString());
 			} else if ("sqlmap".equals(action.name())) {
 				return runSQLMap(action);
 			} else if ("sqlInjectionReadFile".equals(action.name())) {
@@ -308,11 +308,13 @@ public class Action {
 		return "" + returnResult;  // so 0 for success in unix is 1, used for success in the agent.
 	}
 
-	private Term runPortScanner(String host) {
+	private Term runPortScanner(String host, String path) {
 		if (host.startsWith("'") && host.endsWith("'"))
 			host = host.substring(1,host.length()-1);
-		System.out.println("Host is " + host);
-		ProcessBuilder scanBuilder = new ProcessBuilder("/usr/local/bin/nmap", host);
+		if (path.startsWith("'") && path.endsWith("'"))
+			path = path.substring(1,path.length()-1);
+		System.out.println("Host is " + host + ", path is " + path);
+		ProcessBuilder scanBuilder = new ProcessBuilder(path, host);
 		List<Term>results = new LinkedList<Term>();
 		try {
 			Process scan = scanBuilder.start();

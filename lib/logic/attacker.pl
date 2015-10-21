@@ -35,7 +35,7 @@ goalWeight(readFile('127.0.0.1','/etc/passwd'),1).
 % One possible top-level goal is to install the agent on a target host
 goal(agentUploaded(_)).
 
-% Another is to read a file from the host
+% Another is to read a file from a host
 goal(readFile(_,_)).
 
 % Features of a host
@@ -75,11 +75,11 @@ subGoal(findSQLVuln(Host)). % Find a vulnerable sql vulnerability on a host
 
 exploit(hpOpenView(_,X),X).  % in metasploit, not currently implemented
 exploit(macOpenView(_,X),X). % in metasploit, not currently implemented
-exploit(sqlInjectionReadFile(_,X,File,Port,Baseurl,Parameter),X). % uses rabidsqrl
-exploit(sqlInjectionShowUsers(_,X,Port,Baseurl,Parameter),X). % uses rabidsqrl
+exploit(sqlInjectionReadFile(_,X,File,Port,Baseurl,Parameter),X). % uses rabidsqrl and mysqlmap
+exploit(sqlInjectionShowUsers(_,X,Port,Baseurl,Parameter),X). % uses rabidsqrl and mysqlmap
 osLearner(bannerGrabber(X),X).            % in metasploit, not currently implemented
-serviceLearner(portScanner(X),X).         % uses nmap
-vulnerabilityLearner(sqlmap(X,Port,Baseurl,Param),X,sql(Port,Baseurl,Param)). % sqlmapproject
+serviceLearner(portScanner(X,Path),X).         % uses nmap
+vulnerabilityLearner(sqlmap(X,Port,Baseurl,Param),X,sql(Port,Baseurl,Param)). % sqlmap
 
 % Exploits, serviceLearners and osLearners and vulnerabilityLearners are kinds of primitive actions.
 primitiveAction(ms(T)) :- exploit(T,_).
@@ -152,7 +152,8 @@ goalRequirements(findOS(X,OS), [ms(bannerGrabber(X)), verifyOS(X,OS)]).
 goalRequirements(findService(X,S),[]) :- format('looking for ~w~n', [S]), knowServices(X,L), member(S,L), 
 					 format('know service ~w~n', [S]).
 
-goalRequirements(findService(X,S), [ms(portScanner(X)), verifyService(X,S)]).
+goalRequirements(findService(X,S), [ms(portScanner(X,Path)), verifyService(X,S)]) :-
+    absolute_file_name(path('nmap'),Path).
 
 
 goalRequirements(findArch(X,A), []) :- knowArch(X,A).
