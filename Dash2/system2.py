@@ -6,6 +6,7 @@ goalRequirementsDict = dict()
 knownDict = dict()
 
 # Read the agent definition in a simpler syntax and create the appropriate definitions
+traceLoad = False
 def readAgent(string):
     state = 0
     goalRequirements = 1
@@ -35,6 +36,7 @@ def readGoalWeight(line):
 def readGoalRequirements(lines):
     goal = readGoalTuple(lines[0][lines[0].find(" "):].strip())
     requirements = [readGoalTuple(line) for line in lines[1:]]
+    if traceLoad: print "Adding goal requirements for", goal, ":", requirements
     goalRequirements(goal, requirements)
 
 def readKnown(line):
@@ -86,41 +88,49 @@ def chooseGoal():
     # Return a goal with highest weight
     return max(goalWeightDict.items(), key = lambda pair: pair[1])[0]
 
-def chooseActionForGoals(goals):
+# indent is used to print trace information with increasing indentation
+traceGoals = False
+def chooseActionForGoals(goals, indent=0):
     if goals == None:
         return None
+    if traceGoals: print ' '*indent, "Seeking action for goals", goals
     gpb = findGoalRequirements(goals[0])
     if gpb == None:
         print "No goal requirements match for ", goals[0]
         return None
     (goal, requirements, bindings) = gpb
     # Return the first action in the requirements body, substituting bindings
-    return nextAction(goal, requirements, bindings)
+    return nextAction(goal, requirements, bindings, indent)
 
 # Recursively move through subgoals and return the next primitive action
-def nextAction(goal, requirements, bindings):
+def nextAction(goal, requirements, bindings, indent):
     for candidate in requirements[1]:
-        newBindings = isKnown(substitute(candidate, bindings))
+        subbed = substitute(candidate, bindings)
+        if traceGoals: print ' '*indent, "inspecting requirement", subbed, "from", candidate
+        newBindings = isKnown(subbed)
         if newBindings != False:
+            if traceGoals: print ' '*indent, goal, "known with bindings", newBindings
             bindings = dict(bindings.items() + newBindings.items())  # wasteful but succinct
             continue
         elif dash.isPrimitive(candidate):
-            return substitute(candidate, bindings)
+            return subbed
         elif isGoal(candidate):
-            action = chooseActionForGoals([substitute(candidate, bindings)])
+            action = chooseActionForGoals([subbed], indent + 2)
             if action != None and action[0] == 'known':  
                 # This subgoal was achievable from what is already done.
                 # Update bindings
+                if traceGoals: print ' '*indent, candidate, "already achieved"
                 bindings = dict(bindings.items() + action[1].items())
                 continue
             else:
                 return action
         else:   # Not adding 'executables' right now
-            print candidate, "is not a goal or primitive or already known"
+            print ' '*indent, subbed, "is not a goal or primitive or already known"
             return None
     # If we got here, then we went through all the subactions without needing to do anything,
     # So the goal should be marked as achieved
     knownTuple(substitute(goal,bindings))
+    if traceGoals: print "Marking", substitute(goal,bindings), "as achieved"
     return ['known', bindings]
     
 

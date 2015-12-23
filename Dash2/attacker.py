@@ -1,8 +1,6 @@
 from dash import readAgent, known, primitiveActions, agentLoop, isConstant
 import subprocess
 
-nmap = '/usr/local/bin/nmap'   # location of netmap program
-
 readAgent("""
 
 goalWeight readFile(!localhost, !/etc/passwd) 1
@@ -55,12 +53,12 @@ def portScanner(action):
     # For now I'll assume port and protocol are unbound and return all matches
     bindingsList = []
     readingPorts = False
-    for line in subprocess.check_output([nmap, action[1][1:]]).split('\n'):
+    for line in subprocess.check_output(["nmap", action[1][1:]]).split('\n'): # runs nmap if it's in the path
         words = line.split()
         if not readingPorts and len(words) > 0 and words[0] == "PORT":
             readingPorts = True
         elif readingPorts and len(words) >= 3 and words[1] != 'done:':
-            bindingsList.append({action[2]: words[0][0:words[0].find("/")], action[3]: words[2]})
+            bindingsList.append({action[2]: "!" + words[0][0:words[0].find("/")], action[3]: "!" + words[2]})
     return bindingsList
 
 def sqlInjectionReadFile(args):
