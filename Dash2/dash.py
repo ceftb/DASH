@@ -36,4 +36,5 @@ def performAction(action):
 def updateBeliefs(result, action):
     print "Updating beliefs based on action", action, "with result", result
     if isinstance(result, list):
-        knownTuple(substitute(action, result[0]))   # Mark action as performed/known
+        for bindings in result:
+            knownTuple(substitute(action, bindings))   # Mark action as performed/known
