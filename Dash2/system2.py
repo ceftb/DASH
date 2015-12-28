@@ -64,6 +64,8 @@ def printGoals():
     for goal in goalWeightDict:
         print goal, goalWeightDict[goal]
 
+traceKnown = False
+
 def knownTuple(t):
     known(t[0],t[1:])
 
@@ -73,6 +75,7 @@ def known(predicate, arguments):
         knownDict[predicate] = []
     goal = tuple([predicate]) + tuple(arguments)  # this allows arguments to be any iterable
     if goal not in knownDict[predicate]:
+        if traceKnown: print "Recording as known", goal
         knownDict[predicate].append(goal)
 
 # Might be subgoal or top-level goal
@@ -109,10 +112,11 @@ def nextAction(goal, requirements, bindings, indent):
         if traceGoals: print ' '*indent, "inspecting requirement", subbed, "from", candidate
         newBindings = isKnown(subbed)
         if newBindings != False:
-            if traceGoals: print ' '*indent, goal, "known with bindings", newBindings
+            if traceGoals: print ' '*indent, candidate, "known with bindings", newBindings
             bindings = dict(bindings.items() + newBindings.items())  # wasteful but succinct
             continue
         elif dash.isPrimitive(candidate):
+            if traceGoals: print ' '*indent, "returning primitive", subbed
             return subbed
         elif isGoal(candidate):
             action = chooseActionForGoals([subbed], indent + 2)
