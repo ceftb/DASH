@@ -48,14 +48,19 @@ def portScanner(action):
     # Will expand to a call to nmap here
     print "called portScanner with", action
     # Host needs to be bound
-    if not isConstant(action[1]):
-        print "Host needs to be bound on calling portScanner:", action[1]
+    [host, portVar, protocolVar] = action[1:]
+    if not isConstant(host):
+        print "Host needs to be bound on calling portScanner:", host
         return False
-    portVar = action[2]
-    protocolVar = action[3]
     bindingsList = []
     readingPorts = False
-    for line in subprocess.check_output(["nmap", action[1][1:]]).split('\n'): # runs nmap if it's in the path
+    proc = None
+    try:
+        proc = subprocess.check_output(["nmap", host[1:]]).split('\n') # runs nmap if it's in the path
+    except:
+        print "Unable to run nmap"
+        return {}
+    for line in proc:
         words = line.split()
         if not readingPorts and len(words) > 0 and words[0] == "PORT":
             readingPorts = True
@@ -67,7 +72,7 @@ def portScanner(action):
             # This returns all the results that match.
             # Also records every result just so nmap isn't run more than
             # necessary if a different port or protocol is explored later.
-            knownTuple((action[0], action[1], port, protocol))
+            knownTuple((action[0], host, port, protocol))
             if not isConstant(portVar) and not isConstant(protocolVar):
                 bindingsList.append({portVar: port, protocolVar: protocol})
             elif portVar == port and not isConstant(protocolVar):
@@ -78,9 +83,34 @@ def portScanner(action):
                 bindingsList.append({})   # constants all match, record success
     return bindingsList
 
+SQLMapHome = "~blythe/attack/sqlmap"
+
 def sqlMap(action):
     print "Called sql map with action", action
-    return [{}]
+    # Expect everything to be bound and use sqlmap to check there is a vulnerability there
+    # Remove the prefix exclamation marks
+    [host, port, base, parameter] = [arg[1:] for arg in action[1:]]
+    proc = None
+    try:
+        proc = subprocess.check_output(["python", SQLMapHome + "/sqlmap.py", "-u",
+                                        "http://" + host + ":" + port + "/" + base + "?" + parameter + "=1"]).split('\n')
+    except:
+        print "Unable to run sqlmap"
+        return []
+    result = []
+    printing = False
+    seenDashes = 0  # follow the same algorithm for printing as the original java version
+    for line in proc:
+        if "the following injection point" in line:    # found at least one injection point
+            result = [{}]
+            printing = true
+        if printing:
+            print("SQLMap: " + line)
+            if "---" in line:
+                seenDashes += 1
+                if seenDashes == 2:
+                    printing = False
+    return result
 
 def sqlInjectionReadFile(args):
     print "Performing sql injection attack to read a file with args", args
