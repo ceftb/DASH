@@ -1,5 +1,5 @@
 import system1
-from system2 import goalWeight, goalRequirements, printGoals, knownTuple, known, substitute, chooseAction, readAgent, isConstant
+from system2 import goalWeight, goalRequirements, printGoals, knownTuple, known, substitute, chooseAction, readAgent, isConstant, isKnown
 
 primitiveActionDict = dict()
 

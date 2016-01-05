@@ -66,17 +66,16 @@ def printGoals():
 
 traceKnown = False
 
-def knownTuple(t):
-    known(t[0],t[1:])
-
 # Adds 'goal' as a known fact or completed goal
+def knownTuple(t):
+    if t[0] not in knownDict:
+        knownDict[t[0]] = []
+    if t not in knownDict(t[0]):
+        if traceKnown: print "recording as known", t
+        knownDict[t[0]].append(t)
+
 def known(predicate, arguments):
-    if predicate not in knownDict:
-        knownDict[predicate] = []
-    goal = tuple([predicate]) + tuple(arguments)  # this allows arguments to be any iterable
-    if goal not in knownDict[predicate]:
-        if traceKnown: print "Recording as known", goal
-        knownDict[predicate].append(goal)
+    knownTuple(tuple([predicate]) + tuple(arguments))  # this allows arguments to be any iterable
 
 # Might be subgoal or top-level goal
 def isGoal(goal):
