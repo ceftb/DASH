@@ -1,9 +1,12 @@
 from dash import readAgent, known, primitiveActions, agentLoop, isConstant, knownTuple
 import subprocess
 
+import system2
+system2.traceGoals = True
+
 readAgent("""
 
-goalWeight readFile(_server3, _/etc/passwd) 1
+goalWeight readFile(_server3, '/etc/passwd') 1
 
 goalRequirements readFile(target, file)
   SQLVulnerability(target, port, baseUrl, parameter)
@@ -14,16 +17,16 @@ goalRequirements SQLVulnerability(target, port, baseUrl, parameter)
   likelyVulnerability(target, port, baseUrl, parameter)
   service(target, port, protocol)
   checkSQLVulnerability(target, port, baseUrl, parameter)
-  http-style(protocol)
+  httpStyle(protocol)
 
 goalRequirements service(target, port, protocol)
   portScanner(target, port, protocol)
 
 # this predicate means the information is known, and also records
 # that a subgoal has been achieved
-known likelyVulnerability(_server1, _80, _cards.php, _select)
-known likelyVulnerability(_server3, _80, _cards.php, _select)
-known likelyVulnerability(_localhost, _80, _index.html, _name)
+known likelyVulnerability(_server1, _80, 'cards.php', _select)
+known likelyVulnerability(_server3, _80, 'cards.php', _select)
+known likelyVulnerability(_localhost, _80, 'index.html', _name)
 
 known reachable(anywhere, _server1)
 known reachable(anywhere, _server3)
@@ -33,7 +36,7 @@ known reachable(anywhere, _localhost)
 
 # This says what values from portScanner are likely to be attackable through http/sql injection
 for protocol in ['http', 'http-alt', 'http-proxy', 'sun-answerbook']:
-    known('http-style', ['_' + protocol])
+    known('httpStyle', ['_' + protocol])
 
 # This is just to test the top goal
 #known(('SQLVulnerability', '_server1', 80, '_index.html', '_name'))
@@ -83,6 +86,7 @@ def portScanner(action):
                 bindingsList.append({portVar: port})
             elif portVar == port and protocolVar == protocol:
                 bindingsList.append({})   # constants all match, record success
+    print "portscanner:", bindingsList
     return bindingsList
 
 SQLMapHome = "/users/blythe/attack/sqlmap"
@@ -102,6 +106,8 @@ def sqlMap(action):
     result = []
     printing = False
     seenDashes = 0  # follow the same algorithm for printing as the original java version
+    # also following the same approach to writing
+    proc.stdin.write('\n\n\n\n')
     line = proc.stdout.readline()
     control = ''
     for i in range(1,32):
@@ -118,7 +124,8 @@ def sqlMap(action):
                 seenDashes += 1
                 if seenDashes == 2:
                     printing = False
-        if "o you want to" in line:
+        if "o you want to" in line:  # I suspect these lines are actually sent to stderr - they don't seem
+                                     # to show up here.
             print "SQLMap (answering):", line
             proc.stdin.write('\n')    # take the default option
         if "starting" or "shutting down" in line:
@@ -141,6 +148,8 @@ def SQLInjectionReadFile(args):
                 "--file-read=" + targetFile]
         proc = subprocess.Popen(call, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
         # The java sends three carriage returns - here I look for lines asking questions and send them
+        # On second thoughts, no
+        proc.stdin.write('\n\n\n')
         control = ''
         for i in range(1,32):
             control += chr(i)

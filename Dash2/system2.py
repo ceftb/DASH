@@ -79,6 +79,11 @@ def parseToTuple(parse):
         return tuple(['and'] + [parseToTuple(x) for x in parse.nodes])
     elif isinstance(parse, compiler.ast.Or):
         return tuple(['or'] + [parseToTuple(x) for x in parse.nodes])
+    elif isinstance(parse, compiler.ast.Const):   # a string constant used
+        return "_" + parse.value
+    else:
+        print "Unhandled node type:", parse
+        raise
 
 
 def readPrimitive(line):
@@ -226,6 +231,7 @@ def unifyGoal(goal, pair):
     return unify(goal[1:], head[1:])
 
 def unify(pattern, candidate):
+    print "unifying ", pattern, "and", candidate
     bindings = {}
     # Match the arguments in the goal and the requirements head
     for (goalarg, matcharg) in zip(pattern, candidate):
@@ -243,6 +249,7 @@ def unify(pattern, candidate):
         elif goalarg != bindings[matcharg]:
             return False
     # Just match the head for now
+    print "returns", bindings
     return bindings
 
 def isConstant(term):
