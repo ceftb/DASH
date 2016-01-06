@@ -3,7 +3,7 @@ import subprocess
 
 readAgent("""
 
-goalWeight readFile(!server3, !/etc/passwd) 1
+goalWeight readFile(_server3, _/etc/passwd) 1
 
 goalRequirements readFile(target, file)
   SQLVulnerability(target, port, baseUrl, parameter)
@@ -21,22 +21,22 @@ goalRequirements service(target, port, protocol)
 
 # this predicate means the information is known, and also records
 # that a subgoal has been achieved
-known likelyVulnerability(!server1, !80, !cards.php, !select)
-known likelyVulnerability(!server3, !80, !cards.php, !select)
-known likelyVulnerability(!localhost, !80, !index.html, !name)
+known likelyVulnerability(_server1, _80, _cards.php, _select)
+known likelyVulnerability(_server3, _80, _cards.php, _select)
+known likelyVulnerability(_localhost, _80, _index.html, _name)
 
-known reachable(anywhere, !server1)
-known reachable(anywhere, !server3)
-known reachable(anywhere, !localhost)
+known reachable(anywhere, _server1)
+known reachable(anywhere, _server3)
+known reachable(anywhere, _localhost)
 
 """)
 
 # This says what values from portScanner are likely to be attackable through http/sql injection
 for protocol in ['http', 'http-alt', 'http-proxy', 'sun-answerbook']:
-    known('http-style', ['!' + protocol])
+    known('http-style', ['_' + protocol])
 
 # This is just to test the top goal
-#known(('SQLVulnerability', '!server1', 80, '!index.html', '!name'))
+#known(('SQLVulnerability', '_server1', 80, '_index.html', '_name'))
 
 
 # Define primitive actions by specifying the bound variables in the input
@@ -45,7 +45,7 @@ for protocol in ['http', 'http-alt', 'http-proxy', 'sun-answerbook']:
 # Currently since the function is passed into the performAction method,
 # there can only be one argument. Will fix.
 
-# 'action' is a term, e.g. ('portScanner', '!server1', !80, 'protocol')
+# 'action' is a term, e.g. ('portScanner', '_server1', _80, 'protocol')
 def portScanner(action):
     # Will expand to a call to nmap here
     print "called portScanner with", action
@@ -69,8 +69,8 @@ def portScanner(action):
         elif readingPorts and len(words) >= 3 and words[1] != 'done:':
             # each line like this is a port and protocol, 
             # which may not match what we're looking for based on input bindings
-            port = "!" + words[0][0:words[0].find("/")]  # remove '/tcp'
-            protocol = "!" + words[2]
+            port = "_" + words[0][0:words[0].find("/")]  # remove '/tcp'
+            protocol = "_" + words[2]
             # This returns all the results that match.
             # Also records every result just so nmap isn't run more than
             # necessary if a different port or protocol is explored later.
@@ -130,9 +130,9 @@ def sqlMap(action):
     print proc.communicate()
     return result
 
-def sqlInjectionReadFile(args):
+def SQLInjectionReadFile(args):
     print "Performing sql injection attack to read a file with args", args
-    [source, target, targetFile, port, baseUrl, parameter] = [arg[1:] for arg in args[1:]]  # assume constants, remove !
+    [source, target, targetFile, port, baseUrl, parameter] = [arg[1:] for arg in args[1:]]  # assume constants, remove _
     # Call is very similar to sqlMap above with an extra --file-read argument
     result = []
     try:
@@ -158,8 +158,8 @@ def sqlInjectionReadFile(args):
         print "Unable to run sqlmap to read file:", e
     return result
 
-primitiveActions([('SQLInjectionReadFile', sqlInjectionReadFile), 
-                  ('portScanner', portScanner),
+primitiveActions([('SQLInjectionReadFile',SQLInjectionReadFile),
+                  ('portScanner',portScanner),
                   ('checkSQLVulnerability', sqlMap)])
 
 # Figure out the next action to take

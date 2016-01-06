@@ -1,5 +1,5 @@
 import system1
-from system2 import goalWeight, goalRequirements, printGoals, knownTuple, known, substitute, chooseAction, readAgent, isConstant, isKnown
+from system2 import goalWeight, goalRequirements, printGoals, knownTuple, known, substitute, chooseAction, readAgent, isConstant, isKnown, preferPlan
 
 primitiveActionDict = dict()
 
@@ -29,17 +29,23 @@ def primitiveActions(l):
     # Add the items into the set of known primitive actions
     # mapping name to function
     for item in l:
-        primitiveActionDict[item[0]] = item[1]
+        if isinstance(item, basestring):
+            primitiveActionDict[item] = item # store the name and look for the function at planning time
+        else:
+            primitiveActionDict[item[0]] = item[1]
 
 def isPrimitive(goal):
     return goal[0] in primitiveActionDict
 
 def performAction(action):
     if isPrimitive(action):
-        return primitiveActionDict[action[0]](action)
+        function = primitiveActionDict[action[0]]
+        return function(action)
 
+traceUpdate = False
 def updateBeliefs(result, action):
-    print "Updating beliefs based on action", action, "with result", result
+    if traceUpdate:
+        print "Updating beliefs based on action", action, "with result", result
     if isinstance(result, list):
         for bindings in result:
             knownTuple(substitute(action, bindings))   # Mark action as performed/known

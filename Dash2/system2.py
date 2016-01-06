@@ -1,21 +1,31 @@
 # Contains code relating to goal decomposition and mental model projection
 import dash  # don't import specific names so this module will be compiled first
+import compiler # Testing using the compiler to parse expressions
 
 goalWeightDict = dict()
 goalRequirementsDict = dict()
 knownDict = dict()
+projectionRuleDict = dict()
 
 # Read the agent definition in a simpler syntax and create the appropriate definitions
 traceLoad = False
 def readAgent(string):
+    # state is used for multi-line statements like goalRequirements
+    # and projection rules
     state = 0
     goalRequirements = 1
+    project = 2
     lines = []
     for line in string.split('\n'):
+        if "#" in line:
+            line = line[0:line.find("#")]
         line = line.strip()
-        if state == goalRequirements:
+        if state == goalRequirements or state == project:
             if line == "":
-                readGoalRequirements(lines)
+                if state == goalRequirements:
+                    readGoalRequirements(lines)
+                elif state == project:
+                    readProject(lines)
                 state = 0
             else:
                 lines.append(line)
@@ -26,11 +36,17 @@ def readAgent(string):
             lines = [line]
         elif line.startswith("known"):
             readKnown(line)
+        elif line.startswith("primitive"):
+            readPrimitive(line)
+        elif line.startswith("project"):
+            state = project
+            lines = [line]
 
 def readGoalWeight(line):
     # line has form 'goalWeight predicate(arg1, arg2, ..) integer'
-    goal = readGoalTuple(line[line.find(" "):].strip())
-    weight = int(line[line.find(")") + 1:].strip())
+    goal = readGoalTuple(line[line.find(" "):line.rfind(" ")].strip())
+    weight = int(line[line.rfind(" "):].strip())
+    print "Goal is ", goal
     goalWeight(goal, weight)
 
 def readGoalRequirements(lines):
@@ -43,12 +59,56 @@ def readKnown(line):
     goal = readGoalTuple(line[line.find(" "):].strip())
     knownTuple(goal)
 
-# Read a goal as a tuple from the line, which should start with the goal description
+# Read a goal as a tuple from the line, which should start with the goal 
+# description, e.g. goal(arg1, arg2, ..). Each arg may be a subgoal.
+# Uses the python compiler's parser
 def readGoalTuple(line):
-    predicate = line[0:line.find("(")].split(" ")[0]
-    args = line[line.find("(")+1:line.find(")")].split(", ")
-    return tuple([predicate]+args)
-    
+    # It's a compiler module, with a statement node with one Discard object
+    return parseToTuple(compiler.parse(line).node.nodes[0].expr)
+
+# It's tempting to leave the parse tree with the classes from the compiler
+# module but I'd like to make it modular with abstraction
+def parseToTuple(parse):
+    if isinstance(parse, compiler.ast.Name):
+        return parse.name
+    elif isinstance(parse, compiler.ast.CallFunc):
+        return tuple([parseToTuple(x) for x in [parse.node] + parse.args])
+    elif isinstance(parse, compiler.ast.List):
+        return [parseToTuple(x) for x in parse.nodes]
+    elif isinstance(parse, compiler.ast.And):
+        return tuple(['and'] + [parseToTuple(x) for x in parse.nodes])
+    elif isinstance(parse, compiler.ast.Or):
+        return tuple(['or'] + [parseToTuple(x) for x in parse.nodes])
+
+
+def readPrimitive(line):
+    # 'primitive a, b, c' means that a, b and c and primitive actions with their own names as the defining functions
+    dash.primitiveActions(line[10:].split(", "))
+
+def readProject(lines):
+    print "Reading project rule from", lines
+    goal = readGoalTuple(lines[0][lines[0].find(" "):].strip())
+    effects = []
+    # To handle multi-line preconditions, group lines into a longLine that
+    # contains a " + " or " - "
+    longLine = ""
+    for line in lines[1:]:
+        longLine += line
+        if " + " in line or " - " in line:
+            if "->" in longLine:
+                [precondLine, effectLine] = longLine.split("->")
+                effects.append(Effect(Effect.add if " + " in line else Effect.delete,
+                                      readGoalTuple(effectLine[3:]),  # should find +/-
+                                      readGoalTuple(precondLine),
+                                      1))   # Not reading probability yet
+            else:
+                effects.append(Effect(Effect.add if " + " in line else Effect.delete,
+                                      readGoalTuple(longLine[3:]), True, 1))
+            longLine = ""
+    # Store a list of projection rules indexed by the goal
+    if goal not in projectionRuleDict:
+        projectionRuleDict[goal] = []
+    projectionRuleDict[goal].append(effects)
 
 def goalWeight(goal, weight):
     goalWeightDict[goal] = weight
@@ -70,7 +130,7 @@ traceKnown = False
 def knownTuple(t):
     if t[0] not in knownDict:
         knownDict[t[0]] = []
-    if t not in knownDict(t[0]):
+    if t not in knownDict[t[0]]:
         if traceKnown: print "recording as known", t
         knownDict[t[0]].append(t)
 
@@ -114,10 +174,10 @@ def nextAction(goal, requirements, bindings, indent):
             if traceGoals: print ' '*indent, candidate, "known with bindings", newBindings
             bindings = dict(bindings.items() + newBindings.items())  # wasteful but succinct
             continue
-        elif dash.isPrimitive(candidate):
+        elif dash.isPrimitive(subbed):
             if traceGoals: print ' '*indent, "returning primitive", subbed
             return subbed
-        elif isGoal(candidate):
+        elif isGoal(subbed):
             action = chooseActionForGoals([subbed], indent + 2)
             if action != None and action[0] == 'known':  
                 # This subgoal was achievable from what is already done.
@@ -188,12 +248,62 @@ def unify(pattern, candidate):
 def isConstant(term):
     # Anything other than a string is assumed to be a constant
     # This test assumes python 2.x
-    return not isinstance(term, basestring) or term.startswith("!")
+    return not isinstance(term, basestring) or term.startswith("_")
 
 # Substitute bindings in tuple representation of a term,
 # where the first argument is the predicate.
+# Needs to support structure in the term arguments.
 def substitute(predicate, bindings):
-    args = [arg if arg not in bindings else bindings[arg] for arg in predicate[1:]]
-    args.insert(0,predicate[0])
-    return tuple(args)
+    if isinstance(predicate, (list, tuple)):
+        args = [substituteArgument(arg,bindings) for arg in predicate[1:]]
+        return tuple([predicate[0]] + args)
+    return substituteArgument(predicate, bindings)
 
+def substituteArgument(arg, bindings):
+    if isinstance(arg, list):
+        return [substituteArgument(x, bindings) for x in arg]
+    elif isinstance(arg, tuple):
+        return tuple([substituteArgument(x, bindings) for x in arg])
+    elif arg not in bindings:
+        return arg
+    else:
+        return bindings[arg]
+
+
+#################
+## Projection
+#################
+
+# A probabilistic effect should really be a list of alternatives whose
+# probability sum to 1 but for now I'm just providing a probability p,
+# and we assume that the alternative is nothing happening with prob 1-p.
+
+class Effect(object):
+
+    add = 1
+    delete = 0
+    
+    def __init__(self, addOrDelete, term, precondition=True, probability=1):
+        self.addOrDelete = addOrDelete  # 1 means add, 0 means delete
+        self.term = term  # thing being added or deleted
+        self.precondition = precondition
+        self.probability = probability
+
+def preferPlan(planA, planB):
+    return expectedUtility(project(planA)) > expectedUtility(project(planB))
+
+def project(plan, state=[]):
+    worlds = [state]
+    for step in plan:
+        newWorlds = []
+        for world in worlds:
+            newWorlds = newWorlds + projectStep(step, world)
+        worlds = newWorlds
+    return worlds
+
+# Project a single step by finding the appropriate projection rule
+def projectStep(step, world):
+    return [world]
+
+def expectedUtility(worlds):
+    return 0
