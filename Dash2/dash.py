@@ -7,13 +7,13 @@ primitiveActionDict = dict()
 def agentLoop(maxIterations=-1):
     nextAction = chooseAction()
     iteration = 0
-    while nextAction != None and (maxIterations < 0 or iteration < maxIterations):
+    while nextAction is not None and (maxIterations < 0 or iteration < maxIterations):
         print "Next action is ", nextAction
         result = performAction(nextAction)
         updateBeliefs(result, nextAction)
         nextAction = chooseAction()
         iteration += 1
-    if nextAction == None:
+    if nextAction is None:
         print "No action chosen"
     elif maxIterations >= 0 and iteration >= maxIterations:
         print "Finished finite agent cycles:", maxIterations, "with", iteration
@@ -45,6 +45,7 @@ def updateBeliefs(result, action):
     if traceUpdate:
         print "Updating beliefs based on action", action, "with result", result
     if not result:
+        print "Adding known false", action
         knownFalseTuple(action)
     if isinstance(result, list):
         for bindings in result:

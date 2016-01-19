@@ -13,6 +13,7 @@ utilityRules = []
 
 # Read the agent definition in a simpler syntax and create the appropriate definitions
 traceLoad = False
+traceParse = False
 
 
 def readAgent(string):
@@ -108,7 +109,8 @@ def readPrimitive(line):
 
 
 def readProject(lines):
-    print "Reading projection rule from", lines
+    if traceParse:
+        print "Reading projection rule from", lines
     goal = readGoalTuple(lines[0][lines[0].find(" "):].strip())
     effects = []
     # To handle multi-line preconditions, group lines into a longLine that
@@ -134,9 +136,9 @@ def readProject(lines):
 
 
 def readEffectLine(line, condition=True):
-    print "Parsing ", line
     p = compiler.parse(line.strip()).node.nodes[0].expr
-    print "Parse for effect line is ", p
+    if traceParse:
+        print 'Parse for effect line', line, 'is', p
     # With no probabilities the results are UnaryAdd or UnaryDel, otherwise Add and Del,
     # Note the condition isn't included here
     if isinstance(p, compiler.ast.UnaryAdd):
@@ -238,8 +240,8 @@ def chooseActionForGoals(goals, indent=0):
         if traceGoals: print ' '*indent, ' ', 'trying req set', i, goal, requirements, bindings
         # Return the first unfulfilled action in the requirements body, substituting bindings
         # but try the next requirements (if any) if there is a knownFalse subgoal in the requirements
-        na =  nextAction(goal, requirements, bindings, indent)
-        if na != False and na is not None:
+        na = nextAction(goal, requirements, bindings, indent)
+        if na is not False and na is not None:
             return na
         i += 1
     return None
@@ -250,23 +252,27 @@ def chooseActionForGoals(goals, indent=0):
 def nextAction(goal, requirements, bindings, indent):
     for candidate in requirements[1]:
         subbed = substitute(candidate, bindings)
-        if traceGoals: print ' '*indent, "inspecting requirement", subbed, "from", candidate
+        if traceGoals:
+            print ' '*indent, "inspecting requirement", subbed, "from", candidate
         newBindings = isKnown(subbed)
-        if newBindings != False:
-            if traceGoals: print ' '*indent, candidate, "known with bindings", newBindings
+        if newBindings is not False:
+            if traceGoals:
+                print ' '*indent, candidate, "known with bindings", newBindings
             bindings = dict(bindings.items() + newBindings.items())  # wasteful but succinct
             continue
-        elif isKnownFalse(subbed):  # a part of this goalset has been tried and failed in the past
+        elif isKnownFalse(subbed) is not False:  # a part of this goalset has been tried and failed in the past
             return None
         elif dash.isPrimitive(subbed):
-            if traceGoals: print ' '*indent, "returning primitive", subbed
+            if traceGoals:
+                print ' '*indent, "returning primitive", subbed
             return subbed
         elif isGoal(subbed):
             action = chooseActionForGoals([subbed], indent + 2)
             if action is not None and action[0] == 'known':
                 # This subgoal was achievable from what is already done.
                 # Update bindings
-                if traceGoals: print ' '*indent, candidate, "already achieved"
+                if traceGoals:
+                    print ' '*indent, candidate, "already achieved"
                 bindings = dict(bindings.items() + action[1].items())
                 continue
             else:
@@ -277,7 +283,8 @@ def nextAction(goal, requirements, bindings, indent):
     # If we got here, then we went through all the subactions without needing to do anything,
     # So the goal should be marked as achieved
     knownTuple(substitute(goal,bindings))
-    if traceGoals: print "Marking", substitute(goal,bindings), "as achieved"
+    if traceGoals:
+        print "Marking", substitute(goal,bindings), "as achieved"
     return ['known', bindings]
     
 
@@ -295,6 +302,7 @@ def isKnownFalse(goal):
 # (Simple def used for functional abstraction)
 def knownList():
     return [fact for goal in knownDict for fact in knownDict[goal]]
+
 
 def isIn(goal, adict):
     if goal[0] in adict:
@@ -431,7 +439,6 @@ def preferPlan(planA, planB, initialWorld=None):
         initialWorld=knownList()
     expA = expectedUtility(project(planA, initialWorld))
     expB = expectedUtility(project(planB, initialWorld))
-    print "Utilities", expA, "and", expB
     return expA > expB
 
 
@@ -503,13 +510,11 @@ def utility(world):
 # currentBindings defaults to one, empty, bindings list.
 def allMatches(pattern, world, allBindings=[{}]):
     # Filter the world for the printout
-    print "Looking for ", pattern, "in", [w for w in world if w[0] == pattern[0]], "with", allBindings
     # Punting on 'and' and 'or' for now
     # For a term, extend each bindings list in every possible way
     if isinstance(pattern, (tuple, list)):
         matches =  [b for b in [unify(fact, pattern, bindings) for fact in world for bindings in allBindings]
                     if b is not False]
-        print "matches are", matches
         return matches
     return []
 

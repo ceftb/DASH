@@ -1,7 +1,7 @@
 from dash import readAgent, isKnown, primitiveActions, agentLoop, goalRequirements, goalWeight, preferPlan
 
 import dash
-dash.traceUpdate = True
+dash.traceUpdate = False
 
 import system2
 system2.traceGoals = False
@@ -103,7 +103,7 @@ def preferFirstStep(action):
     if preferPlan(plan, plan[1:]):
         return [{stepVar: plan[0]}]
     else:
-        return [{stepVar: 'doNothing'}]
+        return False #[{stepVar: 'doNothing'}]
 
 
 # Binds the 'remainder' var to the remainder of the plan in the first var
@@ -137,4 +137,5 @@ primitiveActions([['notKnown', notKnown],
                   ['doNothing', succeed]])
 
 
-agentLoop(maxIterations=12)
+agentLoop(maxIterations=200)
+
