@@ -1,5 +1,5 @@
 import system1
-from system2 import goalWeight, goalRequirements, printGoals, knownTuple, known, substitute, chooseAction, readAgent, isConstant, isKnown, preferPlan
+from system2 import goalWeight, goalRequirements, printGoals, knownTuple, knownFalseTuple, known, substitute, chooseAction, readAgent, isConstant, isKnown, preferPlan
 
 primitiveActionDict = dict()
 
@@ -18,12 +18,6 @@ def agentLoop(maxIterations=-1):
     elif maxIterations >= 0 and iteration >= maxIterations:
         print "Finished finite agent cycles:", maxIterations, "with", iteration
 
-def do():
-    # Skipping the other pieces for now,
-    # and the breakdown will probably change as the
-    # agent structure is simplified from DASH 1.
-    return chooseAction()
-
 
 def primitiveActions(l):
     # Add the items into the set of known primitive actions
@@ -34,8 +28,10 @@ def primitiveActions(l):
         else:
             primitiveActionDict[item[0]] = item[1]
 
+
 def isPrimitive(goal):
     return goal[0] in primitiveActionDict
+
 
 def performAction(action):
     if isPrimitive(action):
@@ -43,9 +39,15 @@ def performAction(action):
         return function(action)
 
 traceUpdate = False
+
+
 def updateBeliefs(result, action):
     if traceUpdate:
         print "Updating beliefs based on action", action, "with result", result
+    if not result:
+        knownFalseTuple(action)
     if isinstance(result, list):
         for bindings in result:
-            knownTuple(substitute(action, bindings))   # Mark action as performed/known
+            concreteResult = substitute(action, bindings)
+            knownTuple(concreteResult)   # Mark action as performed/known
+            knownTuple(('performed', concreteResult))   # Adding both lets both idioms be used in the agent code.

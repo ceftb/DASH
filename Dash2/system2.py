@@ -2,30 +2,39 @@
 import dash  # don't import specific names so this module will be compiled first
 import compiler # Testing using the compiler to parse expressions
 
+
 goalWeightDict = dict()
 goalRequirementsDict = dict()
 knownDict = dict()
+knownFalseDict = dict()
 projectionRuleDict = dict()
+utilityRules = []
+
 
 # Read the agent definition in a simpler syntax and create the appropriate definitions
 traceLoad = False
+
+
 def readAgent(string):
     # state is used for multi-line statements like goalRequirements
     # and projection rules
     state = 0
     goalRequirements = 1
     project = 2
+    utility = 3
     lines = []
     for line in string.split('\n'):
         if "#" in line:
             line = line[0:line.find("#")]
         line = line.strip()
-        if state == goalRequirements or state == project:
+        if state in [goalRequirements, project, utility]:
             if line == "":
                 if state == goalRequirements:
                     readGoalRequirements(lines)
                 elif state == project:
                     readProject(lines)
+                elif state == utility:
+                    readUtility(lines)
                 state = 0
             else:
                 lines.append(line)
@@ -41,6 +50,10 @@ def readAgent(string):
         elif line.startswith("project"):
             state = project
             lines = [line]
+        elif line.startswith("utility"):
+            state = utility
+            lines = [line]
+
 
 def readGoalWeight(line):
     # line has form 'goalWeight predicate(arg1, arg2, ..) integer'
@@ -49,11 +62,13 @@ def readGoalWeight(line):
     print "Goal is ", goal
     goalWeight(goal, weight)
 
+
 def readGoalRequirements(lines):
     goal = readGoalTuple(lines[0][lines[0].find(" "):].strip())
     requirements = [readGoalTuple(line) for line in lines[1:]]
     if traceLoad: print "Adding goal requirements for", goal, ":", requirements
     goalRequirements(goal, requirements)
+
 
 def readKnown(line):
     goal = readGoalTuple(line[line.find(" "):].strip())
@@ -65,6 +80,7 @@ def readKnown(line):
 def readGoalTuple(line):
     # It's a compiler module, with a statement node with one Discard object
     return parseToTuple(compiler.parse(line).node.nodes[0].expr)
+
 
 # It's tempting to leave the parse tree with the classes from the compiler
 # module but I'd like to make it modular with abstraction
@@ -83,15 +99,16 @@ def parseToTuple(parse):
         return "_" + parse.value
     else:
         print "Unhandled node type:", parse
-        raise
+        raise BaseException
 
 
 def readPrimitive(line):
     # 'primitive a, b, c' means that a, b and c and primitive actions with their own names as the defining functions
     dash.primitiveActions(line[10:].split(", "))
 
+
 def readProject(lines):
-    print "Reading project rule from", lines
+    print "Reading projection rule from", lines
     goal = readGoalTuple(lines[0][lines[0].find(" "):].strip())
     effects = []
     # To handle multi-line preconditions, group lines into a longLine that
@@ -99,24 +116,55 @@ def readProject(lines):
     longLine = ""
     for line in lines[1:]:
         longLine += line
-        if " + " in line or " - " in line:
+        effectLine = longLine
+        condition = True
+        if "+ " in line or "- " in line:
             if "->" in longLine:
                 [precondLine, effectLine] = longLine.split("->")
-                effects.append(Effect(Effect.add if " + " in line else Effect.delete,
-                                      readGoalTuple(effectLine[3:]),  # should find +/-
-                                      readGoalTuple(precondLine),
-                                      1))   # Not reading probability yet
-            else:
-                effects.append(Effect(Effect.add if " + " in line else Effect.delete,
-                                      readGoalTuple(longLine[3:]), True, 1))
+                condition = readGoalTuple(precondLine)
+            effects.append(readEffectLine(effectLine, condition))
             longLine = ""
     # Store a list of projection rules indexed by the goal
-    if goal not in projectionRuleDict:
-        projectionRuleDict[goal] = []
-    projectionRuleDict[goal].append(effects)
+    head = goal
+    if isinstance(goal, (list, tuple)):
+        head = goal[0]
+    if head not in projectionRuleDict:
+        projectionRuleDict[head] = []
+    projectionRuleDict[head].append((goal, effects))
+
+
+def readEffectLine(line, condition=True):
+    print "Parsing ", line
+    p = compiler.parse(line.strip()).node.nodes[0].expr
+    print "Parse for effect line is ", p
+    # With no probabilities the results are UnaryAdd or UnaryDel, otherwise Add and Del,
+    # Note the condition isn't included here
+    if isinstance(p, compiler.ast.UnaryAdd):
+        return Effect(Effect.add, parseToTuple(p.expr), condition, 1)
+    elif isinstance(p, compiler.ast.UnarySub):
+        return Effect(Effect.delete, parseToTuple(p.expr), condition, 1)
+    elif isinstance(p, compiler.ast.Add):
+        return Effect(Effect.add, parseToTuple(p.right), condition, p.left.value)
+    elif isinstance(p, compiler.ast.Sub):
+        return Effect(Effect.delete, parseToTuple(p.right), condition, p.left.value)
+    else:
+        print "No effects found", line
+        return None
+
+
+# Lines are of the form condition -> incr, and each match to condition increments
+# utility by that amount.
+def readUtility(lines):
+    for line in lines[1:]:
+        print "reading utility from", line
+        [precond, incr] = line.split("->")
+        utilityRules.append([readGoalTuple(precond.strip()), float(incr)])
+    print "Utility rules are", utilityRules
+
 
 def goalWeight(goal, weight):
     goalWeightDict[goal] = weight
+
 
 def goalRequirements(goal, requirements):
     # Treat as append, index by goal name (head)
@@ -125,29 +173,47 @@ def goalRequirements(goal, requirements):
         goalRequirementsDict[goal[0]] = []
     goalRequirementsDict[goal[0]].append((goal, requirements))
 
+
 def printGoals():
     for goal in goalWeightDict:
         print goal, goalWeightDict[goal]
 
 traceKnown = False
 
+
 # Adds 'goal' as a known fact or completed goal
 def knownTuple(t):
-    if t[0] not in knownDict:
-        knownDict[t[0]] = []
-    if t not in knownDict[t[0]]:
+    addTuple(t, knownDict)
+
+
+def knownFalseTuple(t):
+    addTuple(t, knownFalseDict)
+
+
+def addTuple(t, adict):
+    if t[0] not in adict:
+        adict[t[0]] = []
+    if t not in adict[t[0]]:
         if traceKnown: print "recording as known", t
-        knownDict[t[0]].append(t)
+        adict[t[0]].append(t)
+
 
 def known(predicate, arguments):
     knownTuple(tuple([predicate]) + tuple(arguments))  # this allows arguments to be any iterable
+
+
+def knownFalse(predicate, arguments):
+    knownFalseTuple(tuple([predicate]) + tuple(arguments))
+
 
 # Might be subgoal or top-level goal
 def isGoal(goal):
     return goal[0] in goalRequirementsDict
 
+
 def chooseAction():
     return chooseActionForGoals([chooseGoal()])
+
 
 def chooseGoal():
     if goalWeightDict == {}:
@@ -155,21 +221,32 @@ def chooseGoal():
     # Return a goal with highest weight
     return max(goalWeightDict.items(), key = lambda pair: pair[1])[0]
 
+
 # indent is used to print trace information with increasing indentation
 traceGoals = False
 def chooseActionForGoals(goals, indent=0):
-    if goals == None:
+    if goals is None:
         return None
     if traceGoals: print ' '*indent, "Seeking action for goals", goals
     gpb = findGoalRequirements(goals[0])
-    if gpb == None:
+    if gpb == []:
         print "No goal requirements match for ", goals[0]
         return None
-    (goal, requirements, bindings) = gpb
-    # Return the first action in the requirements body, substituting bindings
-    return nextAction(goal, requirements, bindings, indent)
+    if traceGoals: print ' '*indent, "Requirements:", gpb
+    i = 1
+    for (goal, requirements, bindings) in gpb:
+        if traceGoals: print ' '*indent, ' ', 'trying req set', i, goal, requirements, bindings
+        # Return the first unfulfilled action in the requirements body, substituting bindings
+        # but try the next requirements (if any) if there is a knownFalse subgoal in the requirements
+        na =  nextAction(goal, requirements, bindings, indent)
+        if na != False and na is not None:
+            return na
+        i += 1
+    return None
+
 
 # Recursively move through subgoals and return the next primitive action
+# To add: return False if a subgoal is knownFalse
 def nextAction(goal, requirements, bindings, indent):
     for candidate in requirements[1]:
         subbed = substitute(candidate, bindings)
@@ -179,12 +256,14 @@ def nextAction(goal, requirements, bindings, indent):
             if traceGoals: print ' '*indent, candidate, "known with bindings", newBindings
             bindings = dict(bindings.items() + newBindings.items())  # wasteful but succinct
             continue
+        elif isKnownFalse(subbed):  # a part of this goalset has been tried and failed in the past
+            return None
         elif dash.isPrimitive(subbed):
             if traceGoals: print ' '*indent, "returning primitive", subbed
             return subbed
         elif isGoal(subbed):
             action = chooseActionForGoals([subbed], indent + 2)
-            if action != None and action[0] == 'known':  
+            if action is not None and action[0] == 'known':
                 # This subgoal was achievable from what is already done.
                 # Update bindings
                 if traceGoals: print ' '*indent, candidate, "already achieved"
@@ -205,57 +284,90 @@ def nextAction(goal, requirements, bindings, indent):
 # Known kind of conflates other ways of knowing things with knowing that a
 # subgoal has been performed
 def isKnown(goal):
-    if goal[0] in knownDict:
-        for term in knownDict[goal[0]]:
+    return isIn(goal, knownDict)
+
+
+def isKnownFalse(goal):
+    return isIn(goal, knownFalseDict)
+
+
+# Create a list of all the known facts, used for projection
+# (Simple def used for functional abstraction)
+def knownList():
+    return [fact for goal in knownDict for fact in knownDict[goal]]
+
+def isIn(goal, adict):
+    if goal[0] in adict:
+        for term in adict[goal[0]]:
             bindings = unify(goal[1:], term[1:])
             if bindings != False:  # Since {} means success with no new bindings
                 return bindings
     return False
 
+
 def findGoalRequirements(goal):
     if goal[0] in goalRequirementsDict:
+        # Return all possible bindings since we may be backtracking on them.
+        # Later want to use an incrementally-build structure rather than a list.
+        result = []
         for pair in goalRequirementsDict[goal[0]]:
-            bindings = unifyGoal(goal, pair)
-            if bindings != None:
-                return (goal, pair, bindings)
+            bindings = unify(goal, pair[0])
+            if bindings != False:
+                result.append((goal, pair, bindings))
+        return result
     else:
-        return None
+        return []
 
-# Attempt to find a mapping for the variables that works
-def unifyGoal(goal, pair):
-    # Double-check the goal predicate matches, although it should be construction
-    # and also check length of goal and goal requirements head.
-    head = pair[0]
-    if goal[0] != head[0] or len(goal) != len(head):
-        return None
-    return unify(goal[1:], head[1:])
 
-def unify(pattern, candidate):
-    print "unifying ", pattern, "and", candidate
-    bindings = {}
-    # Match the arguments in the goal and the requirements head
-    for (goalarg, matcharg) in zip(pattern, candidate):
-        if isConstant(matcharg):
-            if isConstant(goalarg):
-                if matcharg != goalarg: # constants must match
+# Return bindings that would unify the pattern with the candidate, or False
+def unify(pattern, candidate, bindings=None):
+    if bindings is None: bindings = {}   # Cannot create dict in the argslist, or it's shared between every call
+
+    if isVar(pattern):
+        if pattern == candidate:
+            return bindings
+        elif pattern in bindings and isConstant(bindings[pattern]):  # treat this as if it were the constant its bound to. Don't bind vars to vars to avoid loops
+            return unify(bindings[pattern], candidate, bindings)
+        elif not isVar(candidate):
+            if pattern in bindings: # bound to another variable. Bind them both to this constant
+                bindings[bindings[pattern]] = candidate
+            bindings[pattern] = candidate
+            return bindings
+        elif candidate in bindings:
+            bindings[pattern] = bindings[candidate]
+            return bindings
+        else:
+            bindings[pattern] = candidate
+            return bindings
+    elif isVar(candidate):   # candidate is a variable but pattern is not
+        return unify(candidate, pattern, bindings)  # Use the case above
+    elif isinstance(pattern, (list, tuple)):  # recursively match structures
+        # Assume the first argument is a predicate name which has to be equal
+        if isinstance(candidate, (list, tuple)) and len(pattern) == len(candidate) and pattern[0] == candidate[0]:
+            # Match the arguments in the goal and the requirements head
+            for (goalarg, matcharg) in zip(pattern[1:], candidate[1:]):
+                bindings = unify(goalarg, matcharg, bindings)
+                if bindings is False:
                     return False
-            elif goalarg in bindings:
-                if matcharg != bindings[goalarg]:  # assume bound to another constant
-                    return False
-            else:
-                bindings[goalarg] = matcharg
-        elif matcharg not in bindings: # free variable
-            bindings[matcharg] = goalarg
-        elif goalarg != bindings[matcharg]:
+            return bindings
+        else:
             return False
-    # Just match the head for now
-    print "returns", bindings
-    return bindings
+    elif candidate != pattern: # constants must match
+        return False
+    elif candidate == pattern:
+        return bindings
 
+
+# Just clarifies the code a little
 def isConstant(term):
+    return not isVar(term)
+
+
+def isVar(term):
     # Anything other than a string is assumed to be a constant
     # This test assumes python 2.x
-    return not isinstance(term, basestring) or term.startswith("_")
+    return isinstance(term, basestring) and not term.startswith("_")
+
 
 # Substitute bindings in tuple representation of a term,
 # where the first argument is the predicate.
@@ -265,6 +377,7 @@ def substitute(predicate, bindings):
         args = [substituteArgument(arg,bindings) for arg in predicate[1:]]
         return tuple([predicate[0]] + args)
     return substituteArgument(predicate, bindings)
+
 
 def substituteArgument(arg, bindings):
     if isinstance(arg, list):
@@ -296,8 +409,31 @@ class Effect(object):
         self.precondition = precondition
         self.probability = probability
 
-def preferPlan(planA, planB):
-    return expectedUtility(project(planA)) > expectedUtility(project(planB))
+    def __repr__(self):
+        return "<effect: %s -> %s %s>" % (self.precondition, '+' if self.addOrDelete == self.add else '-', self.term)
+
+    # return a world after this effect happens in the input world (list of facts)
+    def do(self, world, bindings):
+        if isinstance(self.term, (list, tuple)):
+            fact = substitute(self.term, bindings)
+        else:
+            fact = self.term
+        if self.addOrDelete == Effect.add:
+            if fact not in world:
+                world.append(fact)   # surgically alters the list
+        elif fact in world:
+            world.remove(fact)
+        return world
+
+
+def preferPlan(planA, planB, initialWorld=None):
+    if initialWorld == None:  # by default, start from what's known in the world
+        initialWorld=knownList()
+    expA = expectedUtility(project(planA, initialWorld))
+    expB = expectedUtility(project(planB, initialWorld))
+    print "Utilities", expA, "and", expB
+    return expA > expB
+
 
 def project(plan, state=[]):
     worlds = [state]
@@ -306,11 +442,78 @@ def project(plan, state=[]):
         for world in worlds:
             newWorlds = newWorlds + projectStep(step, world)
         worlds = newWorlds
+    print "Projecting", plan, "\n  yields", worlds
     return worlds
+
 
 # Project a single step by finding the appropriate projection rule
 def projectStep(step, world):
-    return [world]
+    #print 'projecting', step, 'on', world
+    head = step   # predicate for the rule, which is the step if it's a string..
+    if isinstance(step, (list, tuple)):
+        head = step[0]  #.. and otherwise the first element
+    if head in projectionRuleDict:
+        rules = projectionRuleDict[head]
+        for rule in rules:
+            bindings = unify(rule[0], step) if isinstance(step, (list, tuple)) else True
+            if bindings != False:
+                #print "Rule", rule, "matches with bindings", bindings
+                for effect in rule[1]:
+                    if effect.precondition == True or matchPrecond(substitute(effect.precondition, bindings), world):
+                        world = effect.do(world, bindings)
+                return [world]
+    # Default effect if no rule matched
+    return [world + [('performed', step)]]
+
+
+def matchPrecond(precond, world):
+    #print "Matching", precond
+    if precond == True:
+        return True
+    if isinstance(precond, (tuple, list)) and precond[0] == 'and':
+        for subPrecond in precond[1:]:
+            if not matchPrecond(subPrecond, world):
+                return False
+        return True
+    elif isinstance(precond, (tuple, list)) and precond[0] == 'or':
+        for subPrecond in precond[1:]:
+            if matchPrecond(subPrecond, world):
+                return True
+        return False
+    elif isinstance(precond, (tuple, basestring)):    # match a single goal
+        return precond in world                       # trying to avoid python2-specific match
+    else:
+        return False
+
 
 def expectedUtility(worlds):
-    return 0
+    # Assume each world has the same weight and return the average utility
+    return sum([utility(world) for world in worlds])/float(len(worlds))
+
+
+def utility(world):
+    total = 0
+    for rule in utilityRules:
+        total += len(allMatches(rule[0], world)) * rule[1]
+    return total
+
+
+# Return a list of bindings list for all the ways a pattern can be matched
+# in a world (list of facts). Not doing any fancy matching, so it's exponential.
+# currentBindings defaults to one, empty, bindings list.
+def allMatches(pattern, world, allBindings=[{}]):
+    # Filter the world for the printout
+    print "Looking for ", pattern, "in", [w for w in world if w[0] == pattern[0]], "with", allBindings
+    # Punting on 'and' and 'or' for now
+    # For a term, extend each bindings list in every possible way
+    if isinstance(pattern, (tuple, list)):
+        matches =  [b for b in [unify(fact, pattern, bindings) for fact in world for bindings in allBindings]
+                    if b is not False]
+        print "matches are", matches
+        return matches
+    return []
+
+
+# Tests
+#print unify(('p', ('p', 'b')), ('p', ('p', '_x')))
+
