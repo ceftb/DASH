@@ -3,13 +3,16 @@ import subprocess
 
 import system2
 system2.traceGoals = True
+system2.traceLoad = False
+system2.traceKnown = False
+system2.traceUnify = False
 
 import dash
-dash.traceUpdate = True
+dash.traceUpdate = False
 
 # WARNING: Don't run this on the open internet! In particular 'server3' etc. are bound on my
 # home ISP by a DNS company used by Time Warner Cable, that I don't want to attack!
-# This variable should be 'False' to the attack is simulated, and should only be set to 'True'
+# This variable should be 'False' if the attack is simulated, and should only be set to 'True'
 # on a testbed such as DETER.
 realAttack = False
 
@@ -187,5 +190,5 @@ primitiveActions([('SQLInjectionReadFile',SQLInjectionReadFile),
                   ('checkSQLVulnerability', sqlMap)])
 
 # Figure out the next action to take
-agentLoop(maxIterations=3)
+agentLoop(maxIterations=10)
 

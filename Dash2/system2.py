@@ -214,14 +214,22 @@ def isGoal(goal):
 
 
 def chooseAction():
-    return chooseActionForGoals([chooseGoal()])
+    goal = chooseGoal()
+    if goal is not None:
+        return chooseActionForGoals([goal])
+    else:
+        return None
 
 
 def chooseGoal():
     if goalWeightDict == {}:
         return None
-    # Return a goal with highest weight
-    return max(goalWeightDict.items(), key = lambda pair: pair[1])[0]
+    # Return a goal with highest weight that is not already achieved (always returns the same one)
+    validGoals = [item for item in goalWeightDict.items() if isKnown(item[0]) is False]
+    if validGoals:
+        return max(validGoals, key=lambda pair: pair[1])[0]
+    else:
+        return None
 
 
 # indent is used to print trace information with increasing indentation
@@ -307,7 +315,7 @@ def knownList():
 def isIn(goal, adict):
     if goal[0] in adict:
         for term in adict[goal[0]]:
-            bindings = unify(goal[1:], term[1:])
+            bindings = unify(goal, term)
             if bindings != False:  # Since {} means success with no new bindings
                 return bindings
     return False
@@ -328,10 +336,15 @@ def findGoalRequirements(goal):
 
 
 # Return bindings that would unify the pattern with the candidate, or False
+traceUnify = False
 def unify(pattern, candidate, bindings=None):
     if bindings is None: bindings = {}   # Cannot create dict in the argslist, or it's shared between every call
-
+    if traceUnify:
+        print "Trying unify", pattern, candidate, bindings
+        
     if isVar(pattern):
+        if traceUnify:
+            print "Pattern is variable:", pattern
         if pattern == candidate:
             return bindings
         elif pattern in bindings and isConstant(bindings[pattern]):  # treat this as if it were the constant its bound to. Don't bind vars to vars to avoid loops
@@ -348,10 +361,14 @@ def unify(pattern, candidate, bindings=None):
             bindings[pattern] = candidate
             return bindings
     elif isVar(candidate):   # candidate is a variable but pattern is not
+        if traceUnify:
+            print "Candidate", candidate, "is variable, not pattern", pattern
         return unify(candidate, pattern, bindings)  # Use the case above
     elif isinstance(pattern, (list, tuple)):  # recursively match structures
         # Assume the first argument is a predicate name which has to be equal
         if isinstance(candidate, (list, tuple)) and len(pattern) == len(candidate) and pattern[0] == candidate[0]:
+            if traceUnify:
+                print "Pattern", pattern, "is a tuple, recursing"
             # Match the arguments in the goal and the requirements head
             for (goalarg, matcharg) in zip(pattern[1:], candidate[1:]):
                 bindings = unify(goalarg, matcharg, bindings)
@@ -359,10 +376,16 @@ def unify(pattern, candidate, bindings=None):
                     return False
             return bindings
         else:
+            if traceUnify:
+                print "Pattern is a tuple but candidate is not, or has different predicate or length:", pattern, candidate
             return False
     elif candidate != pattern: # constants must match
+        if traceUnify:
+            print "Non-matching constants"
         return False
     elif candidate == pattern:
+        if traceUnify:
+            print "Same objects"
         return bindings
 
 
