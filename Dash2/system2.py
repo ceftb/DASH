@@ -75,6 +75,7 @@ def readKnown(line):
     goal = readGoalTuple(line[line.find(" "):].strip())
     knownTuple(goal)
 
+
 # Read a goal as a tuple from the line, which should start with the goal 
 # description, e.g. goal(arg1, arg2, ..). Each arg may be a subgoal.
 # Uses the python compiler's parser
@@ -234,12 +235,14 @@ def chooseGoal():
 
 # indent is used to print trace information with increasing indentation
 traceGoals = False
+
+
 def chooseActionForGoals(goals, indent=0):
     if goals is None:
         return None
     if traceGoals: print ' '*indent, "Seeking action for goals", goals
     gpb = findGoalRequirements(goals[0])
-    if gpb == []:
+    if gpb is []:
         print "No goal requirements match for ", goals[0]
         return None
     if traceGoals: print ' '*indent, "Requirements:", gpb
@@ -293,7 +296,7 @@ def nextAction(goal, requirements, bindings, indent):
     knownTuple(substitute(goal,bindings))
     if traceGoals:
         print "Marking", substitute(goal,bindings), "as achieved"
-    return ['known', bindings]
+    return None
     
 
 # Known kind of conflates other ways of knowing things with knowing that a
