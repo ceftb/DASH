@@ -1,12 +1,14 @@
 # Contains code relating to goal decomposition and mental model projection
 import dash  # don't import specific names so this module will be compiled first
 import compiler # Testing using the compiler to parse expressions
+import time
 
 
 goalWeightDict = dict()
 goalRequirementsDict = dict()
 knownDict = dict()
 knownFalseDict = dict()
+transientDict = dict()
 projectionRuleDict = dict()
 utilityRules = []
 
@@ -54,6 +56,8 @@ def readAgent(string):
         elif line.startswith("utility"):
             state = utility
             lines = [line]
+        elif line.startswith("transient"):
+            readTransient(line)
 
 
 def readGoalWeight(line):
@@ -97,8 +101,11 @@ def parseToTuple(parse):
         return tuple(['and'] + [parseToTuple(x) for x in parse.nodes])
     elif isinstance(parse, compiler.ast.Or):
         return tuple(['or'] + [parseToTuple(x) for x in parse.nodes])
-    elif isinstance(parse, compiler.ast.Const):   # a string constant used
-        return "_" + parse.value
+    elif isinstance(parse, compiler.ast.Const):   # a string or other constant used
+        if isinstance(parse.value, basestring):
+            return "_" + parse.value
+        else:
+            return parse.value
     else:
         print "Unhandled node type:", parse
         raise BaseException
@@ -163,6 +170,17 @@ def readUtility(lines):
         [precond, incr] = line.split("->")
         utilityRules.append([readGoalTuple(precond.strip()), float(incr)])
     print "Utility rules are", utilityRules
+
+
+def readTransient(line):
+    goal = readGoalTuple(line[line.find(" "):].strip())
+    predicate = goal
+    if isinstance(goal, (list,tuple)):
+        predicate = goal[0]
+    if predicate not in transientDict:
+        transientDict[predicate] = []
+    transientDict[predicate].append(goal)
+    print "Transient:", transientDict
 
 
 def goalWeight(goal, weight):
@@ -288,15 +306,17 @@ def nextAction(goal, requirements, bindings, indent):
                 continue
             else:
                 return action
-        else:   # Not adding 'executables' right now
+        else:
             print ' '*indent, subbed, "is not a goal or primitive or already known"
             return None
     # If we got here, then we went through all the subactions without needing to do anything,
     # So the goal should be marked as achieved
-    knownTuple(substitute(goal,bindings))
-    if traceGoals:
-        print "Marking", substitute(goal,bindings), "as achieved"
-    return None
+    subbedGoal = substitute(goal,bindings)
+    if not isTransient(subbedGoal):
+        knownTuple(subbedGoal)
+        if traceGoals:
+            print "Marking", subbedGoal, "as achieved"
+    return ['known', bindings]   # This return value lets the function know when subgoals are achieved vacuously
     
 
 # Known kind of conflates other ways of knowing things with knowing that a
@@ -307,6 +327,10 @@ def isKnown(goal):
 
 def isKnownFalse(goal):
     return isIn(goal, knownFalseDict)
+
+def isTransient(goal):
+    print "checking transient", goal, transientDict
+    return isIn(goal, transientDict)
 
 
 # Create a list of all the known facts, used for projection
@@ -544,6 +568,39 @@ def allMatches(pattern, world, allBindings=[{}]):
         return matches
     return []
 
+
+traceForget = False
+
+
+# This is a primitive built-in to remove all items matching a pattern from
+# knownDict and knowFalseDict
+def forget(action):
+    print "Forgetting", action[1]
+    for pattern in action[1]:
+        if not isinstance(pattern, (tuple, list)):
+            continue
+        predicate = pattern[0]
+        for d in [knownDict, knownFalseDict]:
+            if predicate in d:
+                # not sure if I can modify the list I'm iterating across
+                toRemove = []
+                for fact in d[predicate]:
+                    if unify(pattern, fact) is not False:
+                        if traceForget:
+                            print "Forgetting", fact
+                        toRemove.append(fact)
+                for fact in toRemove:
+                    d[predicate].remove(fact)
+    return [{}]  # succeed as a primitive action, with no bindings
+
+transientDict['forget']=[('forget', 'x')]  # Forget should be transient so you can keep forgetting things
+
+def sleep(action):
+    print "Sleeping", action[1]
+    time.sleep(action[1])
+    return [{}]
+
+transientDict['sleep']=[('sleep', 'x')]  # Sleep should be transient so you can keep sleeping
 
 # Tests
 #print unify(('p', ('p', 'b')), ('p', ('p', '_x')))

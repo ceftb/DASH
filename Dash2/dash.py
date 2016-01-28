@@ -1,5 +1,5 @@
 import system1
-from system2 import goalWeight, goalRequirements, printGoals, knownTuple, knownFalseTuple, known, substitute, chooseAction, readAgent, isConstant, isKnown, preferPlan
+from system2 import goalWeight, goalRequirements, printGoals, knownTuple, knownFalseTuple, known, substitute, chooseAction, readAgent, isConstant, isKnown, preferPlan, forget, isTransient, sleep
 
 primitiveActionDict = dict()
 
@@ -44,11 +44,16 @@ traceUpdate = False
 def updateBeliefs(result, action):
     if traceUpdate:
         print "Updating beliefs based on action", action, "with result", result
-    if not result:
+    if not result and not isTransient(action):
         print "Adding known false", action
         knownFalseTuple(action)
     if isinstance(result, list):
         for bindings in result:
             concreteResult = substitute(action, bindings)
-            knownTuple(concreteResult)   # Mark action as performed/known
-            knownTuple(('performed', concreteResult))   # Adding both lets both idioms be used in the agent code.
+            if not isTransient(concreteResult):
+                knownTuple(concreteResult)   # Mark action as performed/known
+                knownTuple(('performed', concreteResult))   # Adding both lets both idioms be used in the agent code.
+
+# Although 'forget' is defined in system2, it is assigned primitive here because
+# that module is compiled first
+primitiveActions([('forget',forget),['sleep',sleep]])
