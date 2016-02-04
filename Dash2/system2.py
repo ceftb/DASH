@@ -600,8 +600,6 @@ def sleep(action):
     time.sleep(action[1])
     return [{}]
 
-transientDict['sleep']=[('sleep', 'x')]  # Sleep should be transient so you can keep sleeping
-
 # Tests
 #print unify(('p', ('p', 'b')), ('p', ('p', '_x')))
 
