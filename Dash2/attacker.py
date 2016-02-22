@@ -2,7 +2,7 @@ from dash import readAgent, known, primitiveActions, agentLoop, isConstant, know
 import subprocess
 
 import system2
-system2.traceGoals = True
+system2.traceGoals = False
 system2.traceLoad = False
 system2.traceKnown = False
 system2.traceUnify = False
@@ -18,7 +18,7 @@ realAttack = False
 
 readAgent("""
 
-goalWeight readFile(_server3, '/etc/passwd') 1
+goalWeight readFile(_server1, '/etc/passwd') 1
 
 goalRequirements readFile(target, file)
   SQLVulnerability(target, port, baseUrl, parameter)
@@ -70,6 +70,7 @@ def portScanner(action):
         print "Host needs to be bound on calling portScanner:", host
         return False
     if not realAttack:
+        print "**Simulating port scan returning http on port 80"
         return [{portVar: "_80", protocolVar: '_http'}] # simulate a web server
     bindingsList = []
     readingPorts = False
@@ -111,6 +112,7 @@ def sqlMap(action):
     # Remove the prefix exclamation marks
     [host, port, base, parameter] = [arg[1:] for arg in action[1:]]
     if not realAttack:
+        print "** Simulating sql map finding a vulnerability on", host
         return [{}]    # no bindings, just report finding a vulnerability
     proc = None
     call = ["python", SQLMapHome + "/sqlmap.py", "-u", "http://" + host + ":" + port + "/" + base + "?" + parameter + "=1"]
@@ -158,6 +160,7 @@ def SQLInjectionReadFile(args):
     [source, target, targetFile, port, baseUrl, parameter] = [arg[1:] for arg in args[1:]]  # assume constants, remove _
     # Call is very similar to sqlMap above with an extra --file-read argument
     if not realAttack:
+        print "** simulating sql injection attack success for ", target, targetFile, port, baseUrl, parameter
         return [{}]  # simulate success in reading the file (it is stored locally by sqlmap in the real attack)
     result = []
     try:
@@ -185,8 +188,8 @@ def SQLInjectionReadFile(args):
         print "Unable to run sqlmap to read file:", e
     return result
 
-primitiveActions([('SQLInjectionReadFile',SQLInjectionReadFile),
-                  ('portScanner',portScanner),
+primitiveActions([('SQLInjectionReadFile', SQLInjectionReadFile),
+                  ('portScanner', portScanner),
                   ('checkSQLVulnerability', sqlMap)])
 
 # Figure out the next action to take
