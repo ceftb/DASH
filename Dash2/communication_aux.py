@@ -28,6 +28,6 @@
 
 message_types = {
     'register':    0,
-    'perform_action': 1,
+    'send_action': 1,
     'get_updates':   2
     }

@@ -5,9 +5,12 @@ import pickle
 from communication_aux import message_types
 
 class Client:
-    def __init__(self, port = None):
+    def __init__(self, host = None, port = None):
         print "initializing client..."
-        self.server_host = 'localhost'
+        if host == None:
+            self.server_host = 'localhost'
+        else:
+            self.server_host = host
         if port == None:
             self.server_port = 5678
         else:
@@ -25,9 +28,9 @@ class Client:
             while True:
                 k += 1
                 if k % 3 == 0:
-                    self.performAction("look down", [])
+                    self.sendAction("look down", [])
                 elif k % 2 == 0:
-                    self.performAction("look up", [])
+                    self.sendAction("look up", [])
                 else:
                     self.getUpdates([])
 
@@ -92,13 +95,13 @@ class Client:
         return response
 
 
-    def performAction(self, action, aux_data):
+    def sendAction(self, action, aux_data):
 
         payload = pickle.dumps([self.id, action] + aux_data)
         message_len = len(payload)
 
         print "sending following action '%s' to world hub" % action
-        message = struct.pack("!II", message_types['perform_action'], message_len) + payload
+        message = struct.pack("!II", message_types['send_action'], message_len) + payload
 
         self.client.sendall(message)
 
@@ -179,8 +182,6 @@ class Client:
         print "aux data: %s." % aux_data
 
         return response
-
-#action = message_types['perform_action']
 
 if __name__ == "__main__":
     c = Client()

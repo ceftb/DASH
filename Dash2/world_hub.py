@@ -139,23 +139,23 @@ class serveClientThread(threading.Thread):
 
         if message_types['register'] == message_type:
             print 'registering agent...'
+            print "received client registration request. assigning client lowest unassigned id."
+            print "lowest unassigned id is: %d" % serveClientThread.lowest_unassigned_id
+            print "preparing response..."
             with serveClientThread.lock:
-                print "received client registration request. assigning client lowest unassigned id."
-                print "lowest unassigned id is: %d" % serveClientThread.lowest_unassigned_id
-                print "preparing response..."
                 response_payload = pickle.dumps(["success", serveClientThread.lowest_unassigned_id])
-                response_len = len(response_payload)
-                response = struct.pack("!I", response_len) + response_payload
-                self.client.sendall(response)
-                serveClientThread.lowest_unassigned_id += 1
-                print "successfully sent response."
-        elif message_types['perform_action'] == message_type:
+                serveClientThread.lowest_unassigned_id+= 1
+            response_len = len(response_payload)
+            response = struct.pack("!I", response_len) + response_payload
+            self.client.sendall(response)
+            print "successfully sent response."
+        elif message_types['send_action'] == message_type:
             print 'performing action...'
             id = message[0]
             action = message[1]
             aux_data = message[2:]
             with serveClientThread.lock:
-                unserialized_response = self.processAction(id, action, aux_data)
+                unserialized_response = self.sendAction(id, action, aux_data)
             response_payload = pickle.dumps(unserialized_response)
             response_len = len(response_payload)
             response = struct.pack("!I", response_len) + response_payload
@@ -175,13 +175,11 @@ class serveClientThread(threading.Thread):
         else:
             print "uhoh!"
         
-    def processAction(self, id, action, aux_data):
+    def sendAction(self, id, action, aux_data):
         if action == "look up":
-            self.updateState(id, action, aux_data)
-            return ["success", "agent observes blue sky", "agent observes plane", "agent observes birds"]
+            return ["success", "agent observes blue sky", "agent observes plane", "agent observes birds"] + self.updateState(id, action, aux_data) + self.getUpdates(id, aux_data)
         elif action == "look down":
-            self.updateState(id, action, aux_data)
-            return ["success", "agent observes grass"]
+            return ["success", "agent observes grass"] + self.updateState(id, action, aux_data) + self.getUpdates(id, aux_data)
         
     def updateState(self, id, action, aux_data):
         return []
