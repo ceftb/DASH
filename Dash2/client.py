@@ -5,7 +5,19 @@ import pickle
 from communication_aux import message_types
 
 class Client:
+    """
+    Template class for the client agent
+    """
     def __init__(self, host = None, port = None):
+        """ Initialization of the client.
+        It is required to run Client.run() in order to recieve ID from the
+        World Hub.
+        Args:
+            host(string) - default='localhost' #  hostname of the worldhub
+            port(int) - default:5678           # port for opening connections
+        Example:
+            c = Client()
+        """
         print "initializing client..."
         if host == None:
             self.server_host = 'localhost'
@@ -19,11 +31,17 @@ class Client:
         self.id = None
 
     def run(self):
+        """ Registration of the client
+        Client establishes connection, and registers the client with the World
+        Hub.
+        Example:
+            c.run()
+        """
         try:
             self.establishConnection()
             self.register()
             k = 0
-            
+
             # test loop
             while True:
                 k += 1
@@ -40,6 +58,8 @@ class Client:
             print "exiting"
 
     def establishConnection(self):
+        """ Establishes physical connection with the worldhub
+        """
         print "connecting to %s on port %s..." % (self.server_host, self.server_port)
 
         self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -48,7 +68,8 @@ class Client:
         print "successfully connected."
 
     def register(self):
-
+        """ Registers Client on the world hub
+        """
         payload = pickle.dumps([])
         message_len = len(payload)
 
@@ -96,6 +117,14 @@ class Client:
 
 
     def sendAction(self, action, aux_data):
+        """ Send actionin form of message_types['send_action'] to the World Hub
+        And awaits the appropriate response
+        Args:
+            action(string)  #  action to be sent to World Hub
+            aux_data(string) #  auxirilary data about the client
+        Example:
+            #to be added
+        """
 
         payload = pickle.dumps([self.id, action] + aux_data)
         message_len = len(payload)
@@ -141,7 +170,13 @@ class Client:
         return response
 
     def getUpdates(self, aux_data):
-
+        """ Sends request for update with the aux_data and recieves the update
+        from the World Hub
+        Args:
+            aux_data(string)    # Data to be sent to the world hub
+        Example:
+            #to be added
+        """
         payload = pickle.dumps([self.id] + aux_data)
         message_len = len(payload)
 
@@ -184,5 +219,7 @@ class Client:
         return response
 
 if __name__ == "__main__":
+    """ Simplistic command line driver
+    """
     c = Client()
     c.run()
