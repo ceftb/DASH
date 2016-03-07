@@ -1,3 +1,7 @@
 # Contains code managing instinctive behavior and spreading activation
 
-system1Fact = set()
+
+class System1Agent():
+
+    def __init__(self):
+        self.system1Fact = set()
