@@ -61,4 +61,9 @@ class DASHAgent(Client, System2Agent, System1Agent):
                     self.knownTuple(concreteResult)   # Mark action as performed/known
                     self.knownTuple(('performed', concreteResult))   # Adding both lets both idioms be used in the agent code.
 
+    # Generic primitive actions
 
+    # A null action that always succeeds, useful for dummy steps
+    def succeed(self, action):
+        #print "Primitive action", action, "trivially succeeds"
+        return [{'performed': action}]

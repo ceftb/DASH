@@ -186,6 +186,6 @@ known reachable(anywhere, _localhost)
             print "Unable to run sqlmap to read file:", e
         return result
 
-# Figure out the next action to take
+
 if __name__ == "__main__":
-    AttackAgent().agentLoop(maxIterations=10)
+    AttackAgent().agentLoop(maxIterations=10)   # enough iterations for the first attack
