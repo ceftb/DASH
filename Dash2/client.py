@@ -4,7 +4,7 @@ import struct
 import pickle
 from communication_aux import message_types
 
-class Client:
+class Client(object):
     """
     Template class for the client agent
     """
@@ -27,7 +27,7 @@ class Client:
             self.server_port = 5678
         else:
             self.server_port = port
-        self.client = None
+        self.sock = None
         self.id = None
 
     def run(self):
@@ -39,7 +39,7 @@ class Client:
         """
         try:
             self.establishConnection()
-            self.register()
+            self.register([])
             k = 0
 
             # test loop
@@ -54,7 +54,7 @@ class Client:
 
         finally:
             print "closing socket..."
-            self.client.close()
+            self.sock.close()
             print "exiting"
 
     def establishConnection(self):
@@ -62,46 +62,18 @@ class Client:
         """
         print "connecting to %s on port %s..." % (self.server_host, self.server_port)
 
-        self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.client.connect((self.server_host, self.server_port))
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock.connect((self.server_host, self.server_port))
 
         print "successfully connected."
 
-    def register(self):
-        """ Registers Client on the world hub
+    def register(self, aux_data):
+        """ Register with world hub. Essentially, this is used to assign the client a unique id
+        Args:
+            aux_data(list) # any extra information you want to relay to the world hub during registration            
         """
-        payload = pickle.dumps([])
-        message_len = len(payload)
 
-        print "sending registration request to world hub..."
-        message = struct.pack("!II", message_types['register'], message_len) + payload
-
-        self.client.sendall(message)
-
-        bytes_read = 0
-        bytes_expected = 4
-        response_header = ""
-        while bytes_read < bytes_expected:
-            data = self.client.recv(bytes_expected - bytes_read)
-            if data:
-                response_header += data
-                bytes_read += len(data)
-            else:
-                self.client.close()
-        response_len, = struct.unpack("!I", response_header)
-
-        bytes_read = 0
-        bytes_expected = response_len
-        serialized_response = ""
-        while bytes_read < bytes_expected:
-            data = self.client.recv(bytes_expected - bytes_read)
-            if data:
-                serialized_response += data
-                bytes_read += len(data)
-            else:
-                self.client.close()
-
-        response = pickle.loads(serialized_response)
+        response = self.sendAndReceive(message_types['register'], [])
 
         result = response[0]
         self.id  = response[1]
@@ -121,43 +93,12 @@ class Client:
         And awaits the appropriate response
         Args:
             action(string)  #  action to be sent to World Hub
-            aux_data(string) #  auxirilary data about the client
+            aux_data(list) #  auxirilary data about the client
         Example:
             #to be added
         """
 
-        payload = pickle.dumps([self.id, action] + aux_data)
-        message_len = len(payload)
-
-        print "sending following action '%s' to world hub" % action
-        message = struct.pack("!II", message_types['send_action'], message_len) + payload
-
-        self.client.sendall(message)
-
-        bytes_read = 0
-        bytes_expected = 4
-        response_header = ""
-        while bytes_read < bytes_expected:
-            data = self.client.recv(bytes_expected - bytes_read)
-            if data:
-                response_header += data
-                bytes_read += len(data)
-            else:
-                self.client.close()
-        response_len, = struct.unpack("!I", response_header)
-
-        bytes_read = 0
-        bytes_expected = response_len
-        serialized_response = ""
-        while bytes_read < bytes_expected:
-            data = self.client.recv(bytes_expected - bytes_read)
-            if data:
-                serialized_response += data
-                bytes_read += len(data)
-            else:
-                self.client.close()
-
-        response = pickle.loads(serialized_response)
+        response = self.sendAndReceive(message_types['send_action'], [self.id, action] + aux_data)
 
         result = response[0]
         aux_data = response[1:]
@@ -173,49 +114,60 @@ class Client:
         """ Sends request for update with the aux_data and recieves the update
         from the World Hub
         Args:
-            aux_data(string)    # Data to be sent to the world hub
+            aux_data(list)    # Data to be sent to the world hub
         Example:
             #to be added
         """
-        payload = pickle.dumps([self.id] + aux_data)
-        message_len = len(payload)
-
-        print "sending action to world hub..."
-        message = struct.pack("!II", message_types['get_updates'], message_len) + payload
-
-        self.client.sendall(message)
-
-        bytes_read = 0
-        bytes_expected = 4
-        response_header = ""
-        while bytes_read < bytes_expected:
-            data = self.client.recv(bytes_expected - bytes_read)
-            if data:
-                response_header += data
-                bytes_read += len(data)
-            else:
-                self.client.close()
-        response_len, = struct.unpack("!I", response_header)
-
-        bytes_read = 0
-        bytes_expected = response_len
-        serialized_response = ""
-        while bytes_read < bytes_expected:
-            data = self.client.recv(bytes_expected - bytes_read)
-            if data:
-                serialized_response += data
-                bytes_read += len(data)
-            else:
-                self.client.close()
-
-        response = pickle.loads(serialized_response)
+        response = self.sendAndReceive(message_types['get_updates'], [self.id] + aux_data)
 
         aux_data = response[0:]
 
         print "successfully received response..."
-
+        
         print "aux data: %s." % aux_data
 
+        return response
+
+    def sendAndReceive(self, message_type, message_contents):
+        self.sendMessage(message_type, message_contents)
+        return self.receiveResponse()
+
+    def sendMessage(self, message_type, message_contents):
+        # send message header followed by serialized contents
+        serialized_message_contents = pickle.dumps(message_contents)
+        message_len = len(serialized_message_contents)
+        message_header = struct.pack("!II", message_type, message_len)
+        message = message_header + serialized_message_contents
+        return self.sock.sendall(message)
+    
+    def receiveResponse(self):
+        # read header (i.e., find length of response)
+        bytes_read = 0
+        bytes_to_read = 4
+        response_header = ""
+        while bytes_read < bytes_to_read:
+            data = self.sock.recv(bytes_to_read - bytes_read)
+            if data:
+                response_header += data
+                bytes_read += len(data)
+            else:
+                print "trouble receiving message..."
+                self.sock.close()
+        response_len, = struct.unpack("!I", response_header)
+                
+        # read message
+        bytes_read = 0
+        bytes_to_read = response_len
+        serialized_response = ""
+        while bytes_read < bytes_to_read:
+            data = self.sock.recv(bytes_to_read - bytes_read)
+            if data:
+                serialized_response += data
+                bytes_read += len(data)
+            else:
+                self.sock.close()
+        response = pickle.loads(serialized_response)
+        
         return response
 
 if __name__ == "__main__":

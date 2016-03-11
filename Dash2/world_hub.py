@@ -9,6 +9,7 @@ import threading
 import struct
 import pickle
 from communication_aux import message_types
+import communication_aux
 
 class WorldHub:
     def __init__(self, port = None):
@@ -41,7 +42,7 @@ class WorldHub:
         input = [self.server, sys.stdin]
         listening = True
         while listening:
-            input_ready, output_ready, except_ready = select.select(input, [], [])            
+            input_ready, output_ready, except_ready = select.select(input, [], [])
             for s in input_ready:
                 # if a new connection is requested, start a new thread for it
                 if s == self.server:
@@ -52,10 +53,10 @@ class WorldHub:
                 elif s == sys.stdin:
                     user_input = sys.stdin.readline()
                     listening = False
-#                    if user_input == "q\n":
-#                        listening = 0
-#                    else:
-#                        print "if you wish to quit, enter q."
+                    if user_input == "q\n":
+                        listening = 0
+                    else:
+                        print "if you wish to quit, enter q."
         
         # quit
         print "quitting program as requested by user..."
@@ -126,10 +127,11 @@ class serveClientThread(threading.Thread):
                 bytes_read += len(data)
             else:
                 self.client.close()
+        payload = pickle.loads(message)
 
-        print "successfully retrieved payload... returning"
+        print "successfully retrieved payload %s ... returning." % payload
 
-        return [message_type, pickle.loads(message)]
+        return [message_type, payload]
 
     def handleClientRequest(self, message_type, message):
         # 3 types:
@@ -167,10 +169,11 @@ class serveClientThread(threading.Thread):
             action = aux_data = message[1:]
             with serveClientThread.lock:
                 unserialized_response = self.getUpdates(id, aux_data)
-            response_payload = pickle.dumps(unserialized_response)
-            response_len = len(response_payload)
-            response = struct.pack("!I", response_len) + response_payload
-            self.client.sendall(response)
+#            response_payload = pickle.dumps(unserialized_response)
+#            response_len = len(response_payload)
+#            response = struct.pack("!I", response_len) + response_payload
+#            self.client.sendall(response)
+            communication_aux.sendResponseToClient(self.client, unserialized_response)
             print "successfully sent response."
         else:
             print "uhoh!"
