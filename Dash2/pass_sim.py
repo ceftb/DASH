@@ -4,6 +4,7 @@
 # add time belief depreciation element - in services though
 # add counters for memorizations, resets, etc...
 # services will have to handle the password same as old one
+# check termination
 
 ### Create acc
 ##### - add username list as dict username:complexity
@@ -76,11 +77,8 @@ goalRequirements doWork
     setupAccount(service_type)
     signIn(service)
     signOut(service)
+    resetPassword(service)
 
-    resetPassword
-        retrieve username
-        choose newpassword
-        submit info
 """)
 
 
