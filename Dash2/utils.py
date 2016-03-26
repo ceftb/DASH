@@ -40,6 +40,33 @@ def submitInfo(socket, id, username, password):
         return False
 
 
+class requirements():
+    ''' Small class that holds password requirements
+    '''
+    def __init__(self, min_len=6, max_len=30, uppercase=0, numbers=0, symbols=0):
+        self.min_len = min_len
+        self.max_len = max_len
+        self.uppercase = uppercase
+        self.numbers = numbers
+        self.symbols = symbols
+
+    def getLen(self):
+        return [self.min_len, self.max_len]
+    def getUppercase(self):
+        return self.uppercase
+    def getNumerics(self):
+        return self.numbers
+    def getSymbols(self):
+        return self.symbols
+
+    def verify(self, username, password):
+        if len(password) in xrange(min_len, max_len) \
+        and sum(1 for c in password if c.isupper()) < self.uppercase \
+        and sum(1 for c in password if c.isdigit()) < self.numbers \
+        and sum(1 for c in password if not (re.match('^[a-zA-Z0-9]*$', c))) < self.symbols:
+            return True
+        else:
+            return False
 
 
 
