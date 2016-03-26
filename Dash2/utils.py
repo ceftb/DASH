@@ -30,16 +30,6 @@ def initializeContact(socket, id, service_type):
 
 
 
-def submitInfo(socket, id, username, password):
-    # sends username/pass and waits for response
-    sendMessageToWorldHub(socket, 1, [id, 'createAccount', [username, password]])
-    result = getResponseFromWorldHub(socket)
-    if  result[0]
-        return True
-    else:
-        return False
-
-
 class requirements():
     ''' Small class that holds password requirements
     '''

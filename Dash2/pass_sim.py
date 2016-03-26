@@ -12,7 +12,6 @@
 ##### - add password list as dict pass:complexity
 ##### in the code referred to as pass list
 ##### - add update beliefs in the end^
-##### - handle requirements
 
 ### signIn
 ##### - add reset password branch
@@ -32,6 +31,8 @@ import operator
 class PasswordAgent(DASHAgent):
     # add socket
     def __init__(self):
+        DASHAgent.__init__(self)
+
         ### Register the agent and get the id
         sendMessageToWorldHub(0, 4)
         response = getResponseFromWorldHub()
@@ -82,7 +83,7 @@ goalRequirements doWork
 """)
 
 
-    def setupAccount(self, service_type=None, service=None):
+    def setupAccount(self, service_type=None, service=None, requirements=None):
         ''' Should be equivalent to createAccount subgoal in prolog version
         It takes service type as an input, and based on that decides which
         username to use[1]. Then, it picks the password and submits the info.
@@ -129,6 +130,10 @@ goalRequirements doWork
 
         ### choose Password
         desired_pass = random.sample(password_list)
+        # if there are requirements verify that the password complies them
+        if requirements is not None:
+            while not requirements.verify(username, desired_pass):
+                desired_pass = random.sample(password_list)
 
         # if pass is too hard, reuse the hardest one or write it down,
         # the decision is based on memoBias parameter
@@ -148,14 +153,16 @@ goalRequirements doWork
         # If account is be created, update beliefs else repeat
         # I am not sure if it would make more sense to keep beliefs local in this
         # case
-        if submitInfo(self.port, self.id, username, password):
+        sendMessageToWorldHub(socket, 1, [id, 'createAccount', [username, password]])
+        result = getResponseFromWorldHub()
+        if result[0]:
             print 'Success: Account Created'
             if pass not in self.writtenPasswords:
                 sendMessageToWorldHub(self.port, 2, [service, username, password, self.initial_belief])
             else:
                 sendMessageToWorldHub(self.port, 2, [service, username, password, 0.99999)
         else:
-            setupAccount(self, service_type, service)
+            setupAccount(self, service_type, service, result[1])
 
 
 
