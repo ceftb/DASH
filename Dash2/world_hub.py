@@ -127,68 +127,87 @@ class serveClientThread(threading.Thread):
                 bytes_read += len(data)
             else:
                 self.client.close()
-        payload = pickle.loads(message)
+        message_payload = pickle.loads(message)
 
-        print "successfully retrieved payload %s ... returning." % payload
+        print "successfully retrieved payload %s ... returning." % message_payload
 
-        return [message_type, payload]
+        return [message_type, message_payload]
 
-    def handleClientRequest(self, message_type, message):
+    def handleClientRequest(self, message_type, message_payload):
         # 3 types:
         #    0: register id, update state
         #    1: handle action, update state, relay relevant observations to client
         #    2: relay recent observations to client
 
         if message_types['register'] == message_type:
-            print 'registering agent...'
-            print "received client registration request. assigning client lowest unassigned id."
-            print "lowest unassigned id is: %d" % serveClientThread.lowest_unassigned_id
-            print "preparing response..."
-            with serveClientThread.lock:
-                response_payload = pickle.dumps(["success", serveClientThread.lowest_unassigned_id])
-                serveClientThread.lowest_unassigned_id+= 1
-            response_len = len(response_payload)
-            response = struct.pack("!I", response_len) + response_payload
-            self.client.sendall(response)
-            print "successfully sent response."
+            response = self.handleRegisterRequest(message_payload)
         elif message_types['send_action'] == message_type:
-            print 'performing action...'
-            id = message[0]
-            action = message[1]
-            aux_data = message[2:]
-            with serveClientThread.lock:
-                unserialized_response = self.sendAction(id, action, aux_data)
-            response_payload = pickle.dumps(unserialized_response)
-            response_len = len(response_payload)
-            response = struct.pack("!I", response_len) + response_payload
-            self.client.sendall(response)
-            print "successfully sent response."            
+            response = self.handleSendActionRequest(message_payload)
         elif message_types['get_updates'] == message_type:
-            print "getting updates..."
-            id = message[0]
-            action = aux_data = message[1:]
-            with serveClientThread.lock:
-                unserialized_response = self.getUpdates(id, aux_data)
-#            response_payload = pickle.dumps(unserialized_response)
-#            response_len = len(response_payload)
-#            response = struct.pack("!I", response_len) + response_payload
-#            self.client.sendall(response)
-            communication_aux.sendResponseToClient(self.client, unserialized_response)
-            print "successfully sent response."
+            response = self.handleGetUpdatesRequest(message_payload)
         else:
             print "uhoh!"
-        
-    def sendAction(self, id, action, aux_data):
+
+        self.sendMessage(response)
+
+        return
+    
+    def handleRegisterRequest(self, message):
+        print 'handling registration request...'
+        aux_data = message[0:]
+        return self.processRegisterRequestWrapper(aux_data)
+
+    def handleSendActionRequest(self, message):
+        print 'handling send action request...'
+        id = message[0]
+        action = message[1]
+        aux_data = message[2:]
+        return self.processSendActionRequest(id, action, aux_data)
+
+    def handleGetUpdatesRequest(self, message):
+        print 'handling get updates request...'
+        id = message[0]
+        aux_data = message[1:]
+        return self.processGetUpdatesRequest(id, aux_data)
+
+    def processRegisterRequestWrapper(self, aux_data):
+        with serveClientThread.lock:
+            assigned_id = serveClientThread.lowest_unassigned_id
+            serveClientThread.lowest_unassigned_id += 1
+        return self.processRegisterRequest(assigned_id, aux_data)
+
+    ########################################################
+    # most users need not change anything above this point #
+    # remember to acquire lock for critical regions!       #
+    ########################################################
+
+    def processRegisterRequest(self, id, aux_data):
+        return ["success", id]
+            
+    def processSendActionRequest(self, id, action, aux_data):
         if action == "look up":
-            return ["success", "agent observes blue sky", "agent observes plane", "agent observes birds"] + self.updateState(id, action, aux_data) + self.getUpdates(id, aux_data)
+            return ["success", "agent observes blue sky", "agent observes plane", "agent observes birds"] + self.updateState(id, action, aux_data)
         elif action == "look down":
-            return ["success", "agent observes grass"] + self.updateState(id, action, aux_data) + self.getUpdates(id, aux_data)
-        
+            return ["success", "agent observes grass"] + self.updateState(id, action, aux_data)
+
+    def processGetUpdatesRequest(self, id, aux_data):
+        return self.getUpdates(id, aux_data)
+
     def updateState(self, id, action, aux_data):
-        return []
+        updates = self.getUpdates(id, aux_data)
+        return updates
 
     def getUpdates(self, id, aux_data):
-        return []
+        updates = []
+        return updates
+
+    def sendMessage(self, unserialized_message):
+        serialized_message = pickle.dumps(unserialized_message)
+        message_len = len(serialized_message)
+        message = struct.pack("!I", message_len) + serialized_message
+        self.client.sendall(message)
+
+        return
 
 if __name__ == "__main__":
     s = WorldHub()

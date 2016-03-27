@@ -87,7 +87,6 @@ class Client(object):
 
         return response
 
-
     def sendAction(self, action, aux_data):
         """ Send actionin form of message_types['send_action'] to the World Hub
         And awaits the appropriate response
@@ -108,6 +107,8 @@ class Client(object):
         print "result: %s." % result
         print "aux data: %s." % aux_data
 
+        self.processActionResponse(result, aux_data)
+
         return response
 
     def getUpdates(self, aux_data):
@@ -119,14 +120,22 @@ class Client(object):
             #to be added
         """
         response = self.sendAndReceive(message_types['get_updates'], [self.id] + aux_data)
-
         aux_data = response[0:]
 
-        print "successfully received response..."
-        
+        print "successfully received response..."        
         print "aux data: %s." % aux_data
 
-        return response
+        self.processUpdates(aux_data)
+
+        return 
+
+    def processActionResponse(self, result, aux_data):
+        # we should hook in some sort of inference engine here
+        self.processUpdates(aux_data)
+        return
+
+    def processUpdates(self, aux_data):
+        return
 
     def sendAndReceive(self, message_type, message_contents):
         self.sendMessage(message_type, message_contents)

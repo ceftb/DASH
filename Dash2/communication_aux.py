@@ -35,6 +35,14 @@ message_types = {
     'get_updates':   2
     }
 
+
+
+################################################################
+# IMPORTANT!:                                                  #
+# everything under this point is deprecated                    #
+# please use functions from client.py and world_hub.py instead #
+################################################################
+
 def sendMessageToWorldHub(sock, message_type, message_contents):
     # send message header followed by serialized contents
     message_len = len(message_contents)
