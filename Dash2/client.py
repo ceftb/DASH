@@ -30,6 +30,8 @@ class Client(object):
         self.sock = None
         self.id = None
 
+        self.establishConnection()
+
     def run(self):
         """ Registration of the client
         Client establishes connection, and registers the client with the World
@@ -70,7 +72,7 @@ class Client(object):
     def register(self, aux_data):
         """ Register with world hub. Essentially, this is used to assign the client a unique id
         Args:
-            aux_data(list) # any extra information you want to relay to the world hub during registration            
+            aux_data(list) # any extra information you want to relay to the world hub during registration
         """
 
         response = self.sendAndReceive(message_types['register'], [])
@@ -122,12 +124,12 @@ class Client(object):
         response = self.sendAndReceive(message_types['get_updates'], [self.id] + aux_data)
         aux_data = response[0:]
 
-        print "successfully received response..."        
+        print "successfully received response..."
         print "aux data: %s." % aux_data
 
         self.processUpdates(aux_data)
 
-        return 
+        return
 
     def processActionResponse(self, result, aux_data):
         # we should hook in some sort of inference engine here
@@ -148,7 +150,7 @@ class Client(object):
         message_header = struct.pack("!II", message_type, message_len)
         message = message_header + serialized_message_contents
         return self.sock.sendall(message)
-    
+
     def receiveResponse(self):
         # read header (i.e., find length of response)
         bytes_read = 0
@@ -163,7 +165,7 @@ class Client(object):
                 print "trouble receiving message..."
                 self.sock.close()
         response_len, = struct.unpack("!I", response_header)
-                
+
         # read message
         bytes_read = 0
         bytes_to_read = response_len
@@ -176,7 +178,7 @@ class Client(object):
             else:
                 self.sock.close()
         response = pickle.loads(serialized_response)
-        
+
         return response
 
 if __name__ == "__main__":
