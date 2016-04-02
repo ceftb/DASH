@@ -27,15 +27,17 @@ import random
 import utils
 import communication_aux
 import operator
+import sys
 
 class PasswordAgent(DASHAgent):
     # add socket
     def __init__(self):
         DASHAgent.__init__(self)
 
-        ### Register the agent and get the id
-        sendMessageToWorldHub(0, 4)
-        response = getResponseFromWorldHub()
+        response = self.register()
+        if response[0] != "success":
+            print "Error: world hub not reachable - exiting "
+            sys.exit()
         self.id = response[1]
 
         # distribution of probabilities for every service type
@@ -58,6 +60,8 @@ class PasswordAgent(DASHAgent):
         self.knownPasswords = {}
         # list of writen pairs
         self.writtenPasswords = []
+        # USER beliefs
+        self.beliefs = {}
 
         # i'm not really clear about usage of primitive actions vs just defining
         # new goals
@@ -114,8 +118,7 @@ goalRequirements doWork
             # choose the service type, and find the actuall service
             service_type = distPicker(self.serviceProbs, random.random())
             # Decide the service to log into
-            sendMessageToWorldHub(self.port, 1, [id, 'getAccount', service_type])
-            response = getResponseFromWorldHub()
+            response = self.sendAction('getAccount', [service_type])
             service = response[1]   # This should be second entry of the response
 
         ### choose Username
@@ -153,14 +156,13 @@ goalRequirements doWork
         # If account is be created, update beliefs else repeat
         # I am not sure if it would make more sense to keep beliefs local in this
         # case
-        sendMessageToWorldHub(socket, 1, [id, 'createAccount', [username, password]])
-        result = getResponseFromWorldHub()
+        result = self.sendAction('createAccount', [username, password])
         if result[0]:
             print 'Success: Account Created'
             if pass not in self.writtenPasswords:
-                sendMessageToWorldHub(self.port, 2, [service, username, password, self.initial_belief])
+                self.beliefs[service] = [username, password, self.initial_belief]
             else:
-                sendMessageToWorldHub(self.port, 2, [service, username, password, 0.99999)
+                self.beliefs[service] = [username, password, self.initial_belief, 0.9999]
         else:
             setupAccount(self, service_type, service, result[1])
 
@@ -181,14 +183,14 @@ goalRequirements doWork
 
         '''
         sendMessageToWorldHub(self.port, 2, [self.id, 'retrieveInformation', service])
-        response = getResponseFromWorldHub()
+        response = self.sendAction('retrieveInformation', [service])
 
         # If user doesn't have an account proceed in creating it
         if not response[0]:
             print "Redirect: This user has no account - proceed to create it "
             sendMessageToWorldHub(self.port, 2, [self.id, 'getServType', service)]
-            response = getResponseFromWorldHub()
-            setupAccount(self, response[1], service)
+            type_message = self.sendAction('getServType', [service])
+            setupAccount(self, type_message[1], service)
 
         # Select password: esentially the weaker the belief is there is
         # less chance there is that user will just pick one of their known
@@ -206,23 +208,19 @@ goalRequirements doWork
         # Try to signIn; if agent knowed the password, update the strength of
         # belief; analogly it works if user did not know the password (flag == 0)
         # Finally, if failed, repeat the sign in process with the updated beliefs
-        sendMessageToWorldHub(self.prot, 1, [self.id, 'signIn', [username, password]])
-        login_response = getResponseFromWorldHub()
+        login_response = self.sendAction('signIn', [service, username, password])
         if login_response[0]:
             if flag == 1:
-                response[3] += (response[3]*self.strenghteningRate)
-                new_strenght = max(response[3], 0.9999)
-                sendMessageToWorldHub(self.port, 2, \
-                            [service, username, password, new_strenght])
+                self.beliefs[service][2] += (self.beliefs[service][2]*self.strenghteningRate)
+                new_strenght = max(self.beliefs[service][2], 0.9999)
+                self.beliefs[service] = [username, password, new_strenght]
             else:
-                sendMessageToWorldHub(self.port, 2, \
-                            [service, username, password, self.initial_belief)
+                self.beliefs[service] = [username, password, self.initial_belief)
         else:
             if flag == 1:
-                response[3] -= (response[3]*self.forgettingRate)
-                new_strenght = min(response[3], 0.1)
-                sendMessageToWorldHub(self.port, 2, \
-                            [service, username, password, new_strenght])
+                self.beliefs[service][2] -= (self.beliefs[service][2]*self.strenghteningRate)
+                new_strenght = min(self.beliefs[service][2], 0.0001)
+                self.beliefs[service] = [username, password, new_strenght]
             signIn(self, service)
 
 
@@ -235,22 +233,20 @@ goalRequirements doWork
             1. retrieveStatus
             2. signOut
         '''
-        sendMessageToWorldHub(self.port, 1, [self.id, 'retrieveStatus', service])
-        response = getResponseFromWorldHub()
+        response = self.sendAction('retrieveStatus', [service])
         if response[1] == 0:
             print 'Error: User has not been logged in in the first place'
         else:
-            sendMessageToWorldHub(self.port, 1, [self.id, 'signOut', service])
+            self.sendAction('signOut', [service])
             print 'Success: User succesfully logged out'
 
 
 
     def resetPassword(self, service):
-        sendMessageToWorldHub(self.port, 1, [self.id, 'retrieveInformation', service])
-        info_response = getResponseFromWorldHub()
+        info_response = self.beliefs[service]
 
-        username = info_response[1]
-        old_password = info_response[2]
+        username = info_response[0]
+        old_password = info_response[1]
 
 
         ### choose Password
@@ -270,11 +266,9 @@ goalRequirements doWork
             self.writtenPasswords.append(desired_pass)
             del password_list[desired_pass]
 
-        sendMessageToWorldHub(self.port, 1, [self.id, \
-                                'resetPassowrd', service, username, password])
-        status_response = getResponseFromWorldHub()
+        status_response = self.sendAction('resetPassowrd', [service, username, password])
 
-        if status_response[1]:
+        if status_response[0]:
             print 'Success: password reset successfully'
         else:
             #not yet implemented handling of requirements
