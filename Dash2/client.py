@@ -31,17 +31,10 @@ class Client(object):
         self.id = None
 
         self.establishConnection()
-<<<<<<< HEAD
-        
 
     def test(self):
         """
         Registration of the client
-=======
-
-    def run(self):
-        """ Registration of the client
->>>>>>> 53d5ee7f9a242866407c00debab25379ce6145a4
         Client establishes connection, and registers the client with the World
         Hub.
         Example:
@@ -131,13 +124,8 @@ class Client(object):
         response = self.sendAndReceive(message_types['get_updates'], [self.id, aux_data])
         aux_response = response[0]
 
-<<<<<<< HEAD
-        print "successfully received response..."        
-        print "aux data: %s." % aux_response
-=======
         print "successfully received response..."
         print "aux data: %s." % aux_data
->>>>>>> 53d5ee7f9a242866407c00debab25379ce6145a4
 
         self.processUpdates(aux_response)
 
