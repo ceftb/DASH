@@ -30,15 +30,18 @@ class Client(object):
         self.sock = None
         self.id = None
 
-    def run(self):
-        """ Registration of the client
+        self.establishConnection()
+        
+
+    def test(self):
+        """
+        Registration of the client
         Client establishes connection, and registers the client with the World
         Hub.
         Example:
             c.run()
         """
         try:
-            self.establishConnection()
             self.register([])
             k = 0
 
@@ -67,47 +70,47 @@ class Client(object):
 
         print "successfully connected."
 
-    def register(self, aux_data):
+    def register(self, aux_data = []):
         """ Register with world hub. Essentially, this is used to assign the client a unique id
         Args:
             aux_data(list) # any extra information you want to relay to the world hub during registration            
         """
 
-        response = self.sendAndReceive(message_types['register'], [])
+        response = self.sendAndReceive(message_types['register'], [aux_data])
 
         result = response[0]
         self.id  = response[1]
-        aux_data = response[2:]
+        aux_response = response[2]
 
         print "successfully received response..."
 
         print "result: %s." % result
         print "my id: %d." % self.id
-        print "aux data: %s." % aux_data
+        print "aux response: %s." % aux_response
 
         return response
 
-    def sendAction(self, action, aux_data):
+    def sendAction(self, action, aux_data = []):
         """ Send actionin form of message_types['send_action'] to the World Hub
         And awaits the appropriate response
         Args:
             action(string)  #  action to be sent to World Hub
-            aux_data(list) #  auxirilary data about the client
+            aux_data(list) #  auxiliary data about the client
         Example:
             #to be added
         """
 
-        response = self.sendAndReceive(message_types['send_action'], [self.id, action] + aux_data)
+        response = self.sendAndReceive(message_types['send_action'], [self.id, action, aux_data])
 
         result = response[0]
-        aux_data = response[1:]
+        aux_response = response[1]
 
         print "successfully received response..."
 
         print "result: %s." % result
-        print "aux data: %s." % aux_data
+        print "aux response: %s." % aux_response
 
-        self.processActionResponse(result, aux_data)
+        self.processActionResponse(result, aux_response)
 
         return response
 
@@ -119,19 +122,19 @@ class Client(object):
         Example:
             #to be added
         """
-        response = self.sendAndReceive(message_types['get_updates'], [self.id] + aux_data)
-        aux_data = response[0:]
+        response = self.sendAndReceive(message_types['get_updates'], [self.id, aux_data])
+        aux_response = response[0]
 
         print "successfully received response..."        
-        print "aux data: %s." % aux_data
+        print "aux data: %s." % aux_response
 
-        self.processUpdates(aux_data)
+        self.processUpdates(aux_response)
 
         return 
 
-    def processActionResponse(self, result, aux_data):
-        # we should hook in some sort of inference engine here
-        self.processUpdates(aux_data)
+    def processActionResponse(self, result, aux_response):
+        # we may want to hook in some sort of inference engine here
+        self.processUpdates(aux_response)
         return
 
     def processUpdates(self, aux_data):
@@ -183,4 +186,4 @@ if __name__ == "__main__":
     """ Simplistic command line driver
     """
     c = Client()
-    c.run()
+    c.test()

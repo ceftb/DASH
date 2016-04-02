@@ -74,6 +74,8 @@ class serveClientThread(threading.Thread):
         self.client = client
         self.address = address
         self.size = 1024
+    
+        return
 
     def run(self):
 
@@ -151,23 +153,31 @@ class serveClientThread(threading.Thread):
         self.sendMessage(response)
 
         return
+
+    def sendMessage(self, unserialized_message):
+        serialized_message = pickle.dumps(unserialized_message)
+        message_len = len(serialized_message)
+        message = struct.pack("!I", message_len) + serialized_message
+        self.client.sendall(message)
+        
+        return
     
     def handleRegisterRequest(self, message):
         print 'handling registration request...'
-        aux_data = message[0:]
+        aux_data = message[0]
         return self.processRegisterRequestWrapper(aux_data)
 
     def handleSendActionRequest(self, message):
         print 'handling send action request...'
         id = message[0]
         action = message[1]
-        aux_data = message[2:]
+        aux_data = message[2]
         return self.processSendActionRequest(id, action, aux_data)
 
     def handleGetUpdatesRequest(self, message):
         print 'handling get updates request...'
         id = message[0]
-        aux_data = message[1:]
+        aux_data = message[1]
         return self.processGetUpdatesRequest(id, aux_data)
 
     def processRegisterRequestWrapper(self, aux_data):
@@ -176,38 +186,47 @@ class serveClientThread(threading.Thread):
             serveClientThread.lowest_unassigned_id += 1
         return self.processRegisterRequest(assigned_id, aux_data)
 
-    ########################################################
-    # most users need not change anything above this point #
-    # remember to acquire lock for critical regions!       #
-    ########################################################
+    ###########################################################################
+    # - users should not need to change any of the functions above            #
+    # - very unlikely processGetUpdatesRequest would need to be changed       #
+    # - unlikely processRegisterRequest would need to be changed              #
+    # - the remaining 3 functions below will nearly always need to be changed #
+    #                                                                         #
+    # remember to acquire lock for critical regions!                          #    
+    ###########################################################################
 
     def processRegisterRequest(self, id, aux_data):
-        return ["success", id]
-            
-    def processSendActionRequest(self, id, action, aux_data):
-        if action == "look up":
-            return ["success", "agent observes blue sky", "agent observes plane", "agent observes birds"] + self.updateState(id, action, aux_data)
-        elif action == "look down":
-            return ["success", "agent observes grass"] + self.updateState(id, action, aux_data)
+        aux_response = []
+        return ["success", id, aux_response]
 
     def processGetUpdatesRequest(self, id, aux_data):
-        return self.getUpdates(id, aux_data)
+        aux_response = self.getUpdates(id, aux_data)
+        return [aux_response]
+            
+    def processSendActionRequest(self, id, action, aux_data):
+        # sample code:
+        # if action == "look up":
+        #     result = "success"
+        #     aux_response = ["agent observes blue sky", "agent observes plane"]
+        #     aux_response = aux_response + self.updateState(id, action, aux_data) + self.getUpdates(id, aux_data)
+        # elif action == "look down":
+        #     result = "success"
+        #     aux_response = ["agent observes grass"]
+        #     aux_response = aux_response + self.updateState(id, action, aux_data) + self.getUpdates(id, aux_data)
+        # return [result, aux_response]
+
+        # placeholder code
+        result = "success"
+        aux_response = self.updateState(id, action, aux_data) + self.getUpdates(id, aux_data)
+        return [result, aux_response]
 
     def updateState(self, id, action, aux_data):
-        updates = self.getUpdates(id, aux_data)
-        return updates
+        partial_aux_response = []
+        return partial_aux_response
 
     def getUpdates(self, id, aux_data):
         updates = []
         return updates
-
-    def sendMessage(self, unserialized_message):
-        serialized_message = pickle.dumps(unserialized_message)
-        message_len = len(serialized_message)
-        message = struct.pack("!I", message_len) + serialized_message
-        self.client.sendall(message)
-
-        return
 
 if __name__ == "__main__":
     s = WorldHub()
