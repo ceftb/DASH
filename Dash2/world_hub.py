@@ -11,6 +11,7 @@ import pickle
 from communication_aux import message_types
 import communication_aux
 
+
 class WorldHub:
     def __init__(self, port = None):
         print "initializing world hub..."
@@ -46,7 +47,7 @@ class WorldHub:
             for s in input_ready:
                 # if a new connection is requested, start a new thread for it
                 if s == self.server:
-                    c = serveClientThread(self.server.accept())
+                    c = self.createServeClientThread(self.server.accept())
                     c.start()
                     self.threads.append(c)
                 # else if we got input from the keyboard, stop
@@ -63,6 +64,10 @@ class WorldHub:
         self.server.close()
         for c in self.threads:
             c.join()
+
+    # This method is intended to be overridden by subclasses to point to a serveClientThread subclass
+    def createServeClientThread(self, (client, address)):
+        return serveClientThread((client, address))
                     
 class serveClientThread(threading.Thread):
 
@@ -74,7 +79,7 @@ class serveClientThread(threading.Thread):
         self.client = client
         self.address = address
         self.size = 1024
-    
+
         return
 
     def run(self):
@@ -168,7 +173,7 @@ class serveClientThread(threading.Thread):
         return self.processRegisterRequestWrapper(aux_data)
 
     def handleSendActionRequest(self, message):
-        print 'handling send action request...'
+        print 'handling send action request for', self, '...'
         id = message[0]
         action = message[1]
         aux_data = message[2]
@@ -216,6 +221,7 @@ class serveClientThread(threading.Thread):
         # return [result, aux_response]
 
         # placeholder code
+        print 'This is the base class processSendActionRequest'
         result = "success"
         aux_response = self.updateState(id, action, aux_data) + self.getUpdates(id, aux_data)
         return [result, aux_response]

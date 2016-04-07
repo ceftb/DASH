@@ -58,6 +58,7 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
         stdout, stderr = proc.communicate()
         if 'saved' in stderr or 'command not found' in stderr:
             logger.warning('Download ' + f + ' succeeded')
+            print stderr
             return[{}]
         elif 'failed' in stderr:
             logger.warning('Download ' + f + ' failed')

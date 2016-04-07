@@ -78,7 +78,7 @@ class Client(object):
         response = self.sendAndReceive(message_types['register'], [aux_data])
 
         result = response[0]
-        self.id  = response[1]
+        self.id = response[1]
         aux_response = response[2]
 
         print "successfully received response..."

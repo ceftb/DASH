@@ -307,7 +307,6 @@ class System2Agent():
         return self.isIn(goal, self.knownFalseDict)
 
     def isTransient(self, goal):
-        print "checking transient", goal, self.transientDict
         return self.isIn(goal, self.transientDict)
 
     # Need 'not' in there properly as well as deep variable replacement
@@ -334,7 +333,6 @@ class System2Agent():
     # This is a primitive built-in to remove all items matching a pattern from
     # knownDict and knowFalseDict
     def forget(self, action):
-        print "Forgetting", action[1]
         for pattern in action[1]:
             if not isinstance(pattern, (tuple, list)):
                 continue
