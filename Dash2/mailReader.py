@@ -11,6 +11,7 @@ class MailReader(DASHAgent):
 goalWeight doWork 1
 
 goalRequirements doWork
+  sendMail()
   readMail(newmail)
   sleep(1)
   #forget([readMail(x),sleep(x)])  # a built-in that removes matching elements from memory

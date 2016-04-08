@@ -34,11 +34,11 @@ class MailHub(WorldHub):
                     print 'no \'to\' field in message, ignoring:', message
                 elif isinstance(message['to'], str):
                     self.initialize_email(message['to'])
-                    self.mail[message['to']] += message
+                    self.mail[message['to']].append(message)
                 elif isinstance(message['to'], list):
                     for recipient in message['to']:
                         self.initialize_email(recipient)
-                        self.mail[recipient] += message
+                        self.mail[recipient].append(message)
         except:
             print "problem sending mail"
 
@@ -61,19 +61,17 @@ class MailServeClientThread(serveClientThread):
     def processSendActionRequest(self, id, action, aux_data):
         print "mail hub processing action", action, aux_data
         if action == "getMail":
-            self.get_mail()
+            return self.get_mail()
         elif action == "sendMail":
-            self.send_mail(aux_data)
+            return self.send_mail(aux_data)
         else:
             print "Unknown action:", action
 
     def get_mail(self):
-        print 'checking mail for address', self.emailAddress, 'for agent', id
         mail = self.mailHub.get_mail(self.emailAddress)
         return ['success', mail]
 
     def send_mail(self, mail):
-        print 'Sending mail', mail
         self.mailHub.send_mail(mail)
         return ['success', []]
 
