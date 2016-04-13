@@ -54,6 +54,8 @@ class PasswordAgent(DASHAgent):
 
         # initial cong. burden
         self.cognitiveBurden = 0
+        # pairs used - dict {service:[username, password]}
+        self.known = {}
         # usernames used - dict {username:complexity}
         self.knownUsernames = {}
         # passwords used - dict {password:complexity}
@@ -128,7 +130,7 @@ goalRequirements doWork
         # it as we didn't have usernames elaborately in prolog
         if bool(self.knownUsernames):
             username = random.sample(self.knownUsernames)
-        else
+        else:
             username = random.sample(username_list)
 
         ### choose Password
@@ -156,16 +158,19 @@ goalRequirements doWork
         # If account is be created, update beliefs else repeat
         # I am not sure if it would make more sense to keep beliefs local in this
         # case
-        result = self.sendAction('createAccount', [username, password])
-        if result[0]:
+        result = self.sendAction('createAccount', [service, username, password])
+        if result[0] == 'success':
             print 'Success: Account Created'
-            if pass not in self.writtenPasswords:
+            if password not in self.writtenPasswords:
                 self.beliefs[service] = [username, password, self.initial_belief]
             else:
                 self.beliefs[service] = [username, password, self.initial_belief, 0.9999]
-        else:
-            setupAccount(self, service_type, service, result[1])
+        elif result[0] == 'failed:user':
+			print 'Failed: username already exists (should not happen yet)'
+        elif result[0] == 'failed:reqs':
+			setupAccount(self, service_type, service, result[1])
 
+        return 'succes'
 
 
     def signIn(self, service):
@@ -182,40 +187,38 @@ goalRequirements doWork
             3. signIn
 
         '''
-        sendMessageToWorldHub(self.port, 2, [self.id, 'retrieveInformation', service])
-        response = self.sendAction('retrieveInformation', [service])
+		# check if user has account
+        if not bool(self.beliefs[service]):
+			print "User has no beliefs for this account"
 
-        # If user doesn't have an account proceed in creating it
-        if not response[0]:
-            print "Redirect: This user has no account - proceed to create it "
-            sendMessageToWorldHub(self.port, 2, [self.id, 'getServType', service)]
-            type_message = self.sendAction('getServType', [service])
-            setupAccount(self, type_message[1], service)
-
+        belief = self.beliefs[service]
         # Select password: esentially the weaker the belief is there is
         # less chance there is that user will just pick one of their known
         # username/passwords
-        distribution = {'known': 1.0, response[2]: response[3]}
+        distribution = {'known': 1.0, belief[1]:belief[2]}
         if distPicker(distribution, random.random()) == 'known':
             username = random.sample(self.knownUsernames)
             password = random.sample(self.knownPasswords)
             flag = 0
         else:
-            username = response[1]
-            password = response[2]
+            username = belief[0]
+            password = belief[1]
             flag = 1
 
         # Try to signIn; if agent knowed the password, update the strength of
         # belief; analogly it works if user did not know the password (flag == 0)
         # Finally, if failed, repeat the sign in process with the updated beliefs
         login_response = self.sendAction('signIn', [service, username, password])
-        if login_response[0]:
+        if login_response[0] == 'success':
             if flag == 1:
                 self.beliefs[service][2] += (self.beliefs[service][2]*self.strenghteningRate)
                 new_strenght = max(self.beliefs[service][2], 0.9999)
                 self.beliefs[service] = [username, password, new_strenght]
             else:
-                self.beliefs[service] = [username, password, self.initial_belief)
+                self.beliefs[service] = [username, password, self.initial_belief]
+        elif login_response[0] == 'failed:logged_in':
+			signOut(service)
+			#exit loop
         else:
             if flag == 1:
                 self.beliefs[service][2] -= (self.beliefs[service][2]*self.strenghteningRate)
@@ -233,8 +236,9 @@ goalRequirements doWork
             1. retrieveStatus
             2. signOut
         '''
-        response = self.sendAction('retrieveStatus', [service])
-        if response[1] == 0:
+        username = self.beliefs[service][0]
+        response = self.sendAction('retrieveStatus', [service, username])
+        if response[0] == 'failure':
             print 'Error: User has not been logged in in the first place'
         else:
             self.sendAction('signOut', [service])
@@ -273,3 +277,6 @@ goalRequirements doWork
         else:
             #not yet implemented handling of requirements
             print 'Handle requirements'
+
+if __name__ == "__main__":
+    PasswordAgent().agentLoop()

@@ -59,6 +59,21 @@ class requirements():
             return False
 
 
+class service():
+	def __init__(self, service_type, name, requirements):
+		self.type = service_type
+		self.name = name
+		self.requirements = requirements
+
+	def getName():
+		return self.name
+
+	def getRequirements():
+		return self.requirements
+
+	def getServiceType():
+		return self.type
+
 
 ### THis is more elaborate way to pick passwords - to finish
 # def pickPassword(password_list, method=RDM, service_type=None):
