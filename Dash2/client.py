@@ -64,10 +64,13 @@ class Client(object):
         """
         print "connecting to %s on port %s..." % (self.server_host, self.server_port)
 
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.sock.connect((self.server_host, self.server_port))
+        try:
+            self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.sock.connect((self.server_host, self.server_port))
 
-        print "successfully connected."
+            print "successfully connected."
+        except:
+            print "Problem connecting to hub server, continuing without agent communications"
 
     def register(self, aux_data = []):
         """ Register with world hub. Essentially, this is used to assign the client a unique id
