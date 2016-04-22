@@ -30,8 +30,6 @@ class Client(object):
         self.sock = None
         self.id = None
 
-        self.establishConnection()
-
     def test(self):
         """
         Registration of the client
@@ -77,6 +75,12 @@ class Client(object):
         Args:
             aux_data(list) # any extra information you want to relay to the world hub during registration
         """
+
+        print "establishing connection..."
+
+        self.establishConnection()
+        
+        print "registering..."
 
         response = self.sendAndReceive(message_types['register'], [aux_data])
 
