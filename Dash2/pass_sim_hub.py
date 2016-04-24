@@ -1,25 +1,14 @@
-import world_hub
+from exp_world_hub import WorldHub, serveClientThread
 import utils
 
 class ServiceHub(WorldHub):
-	def __init__(self):
-		self.serviceList = {}	# predefined dictionary service_name:service
-		self.serviceDist = {}	# predefined distribution list serv_type:distribution
-		self.knownUsernames = {}	# dictionary service_name:[usernames]
+	# def __init__(self):
+	serviceList = {}	# predefined dictionary service_name:service
+	serviceDist = {}	# predefined distribution list serv_type:distribution
+	knownUsernames = {}	# dictionary service_name:[usernames]
 
-		self.serviceBase = {}	# dictionary service_name:[(username, password)]
-		self.serviceStatus = {}	# dictionary service_name:[username, bool]
-
-	def createServeClientThread(self, (client, address)):
-		return ServiceServeClientThread((client, address), self)
-	# API for password sim
-
-
-class ServiceServeClientThread(serveClientThread):
-	def __init__(self, (client, address), service_hub):
-		ServiceClientThread.__init__(self, (client, address))
-		self.service_hub = service_hub
-
+	serviceBase = {}	# dictionary service_name:[(username, password)]
+	serviceStatus = {}	# dictionary service_name:[username]
 
 	def processSendActionRequest(self, id, action, aux_data):
 		print "Processing Action ", action, aux_data
@@ -51,7 +40,7 @@ class ServiceServeClientThread(serveClientThread):
 			username = aux_data[1]
 			password = aux_data[2]
 			if (username, password) in self.serviceBase[service]:
-				if (username, true) in self.serviceStatus[service]
+				if username in self.service_hub.serviceStatus[service]:
 					print "user logged in successfully to ", service
 					return ('success', [])
 				else:
@@ -63,8 +52,8 @@ class ServiceServeClientThread(serveClientThread):
 		elif action == 'retrieveStatus':
 			service = aux_data[0]
 			username = aux_data[1]
-			if (username, True) in self.service_hub.serviceStatus[service]:
-				self.service_hub.serviceStatus[service].remove((username, True))
+			if username in self.service_hub.serviceStatus[service]:
+				self.service_hub.serviceStatus[service].remove(username)
 				return ('success', [])
 			else:
 				return ('failure', [])
