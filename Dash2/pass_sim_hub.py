@@ -4,7 +4,7 @@ import utils
 class ServiceHub(WorldHub):
 	# def __init__(self):
 	serviceList = {}	# predefined dictionary service_name:service
-	serviceDist = {}	# predefined distribution list serv_type:distribution
+	serviceDist = {'mail': 0.35, 'social_net':0.85, 'bank':1.0}	# predefined distribution list serv_type:distribution
 	knownUsernames = {}	# dictionary service_name:[usernames]
 
 	serviceBase = {}	# dictionary service_name:[(username, password)]
@@ -15,21 +15,21 @@ class ServiceHub(WorldHub):
 
 		if action == 'getAccount':
 			service_type = aux_data[0]
-			return distPicker(self.service_hub.serviceDist[service_type], random.random())
+			return distPicker(self.serviceDist[service_type], random.random())
 
 		elif action == 'createAccount':
 			service = aux_data[0]
 			username = aux_data[1]
 			password = aux_data[2]
-			requirements = self.service_hub.serviceList[service].getRequirements()
+			requirements = self.serviceList[service].getRequirements()
 			if username in self.knownUsernames[service]:
 				print "Failed: username already exists"
 				return('failed:user', [])
 
 			if requirements.verify(username, password):
 				print 'Success: account successfully created on ', service
-				self.service_hub.knownUsernames[service].append(username)
-				self.service_hub.serviceBase[service].append((username, password))
+				self.knownUsernames[service].append(username)
+				self.serviceBase[service].append((username, password))
 				return('success', [])
 			else:
 				print "Failed: password doesn't meet the requirements"
@@ -40,7 +40,7 @@ class ServiceHub(WorldHub):
 			username = aux_data[1]
 			password = aux_data[2]
 			if (username, password) in self.serviceBase[service]:
-				if username in self.service_hub.serviceStatus[service]:
+				if username in self.serviceStatus[service]:
 					print "user logged in successfully to ", service
 					return ('success', [])
 				else:
@@ -52,8 +52,8 @@ class ServiceHub(WorldHub):
 		elif action == 'retrieveStatus':
 			service = aux_data[0]
 			username = aux_data[1]
-			if username in self.service_hub.serviceStatus[service]:
-				self.service_hub.serviceStatus[service].remove(username)
+			if username in self.serviceStatus[service]:
+				self.serviceStatus[service].remove(username)
 				return ('success', [])
 			else:
 				return ('failure', [])
