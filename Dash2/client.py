@@ -43,7 +43,7 @@ class Client(object):
             k = 0
 
             # test loop
-            while True:
+            while k < 100:
                 k += 1
                 if k % 3 == 0:
                     self.sendAction("look down", [])
@@ -52,7 +52,12 @@ class Client(object):
                 else:
                     self.getUpdates([])
 
-        finally:
+            print "closing socket..."
+            self.disconnect([])
+            print "exiting"
+            return
+
+        except:
             print "closing socket..."
             self.sock.close()
             print "exiting"
@@ -137,6 +142,19 @@ class Client(object):
         self.processUpdates(aux_response)
 
         return
+
+    def disconnect(self, aux_data):
+        """ Sends request to disconnect from world hub"
+        Args:
+            aux_data(list)    # Data to be sent to the world hub
+        """
+
+        self.sendMessage(message_types['disconnect'], [self.id, aux_data])
+        
+        print "disconnecting from world hub..."
+        self.sock.shutdown(socket.SHUT_RDWR)
+        self.sock.close()
+        sys.exit(0)
 
     def processActionResponse(self, result, aux_response):
         # we may want to hook in some sort of inference engine here
