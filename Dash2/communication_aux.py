@@ -32,5 +32,6 @@ import pickle
 message_types = {
     'register':    0,
     'send_action': 1,
-    'get_updates':   2
+    'get_updates': 2,
+    'disconnect': 3
     }

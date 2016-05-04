@@ -13,50 +13,6 @@ import communication_aux
 
 
 class WorldHub:
-
-    ###########################################################################
-    # - users should not need to change any of the functions above            #
-    # - very unlikely processGetUpdatesRequest would need to be changed       #
-    # - unlikely processRegisterRequest would need to be changed              #
-    # - the remaining 3 functions below will nearly always need to be changed #
-    #                                                                         #
-    # remember to acquire lock for critical regions!                          #    
-    ###########################################################################
-
-    def processRegisterRequest(self, id, aux_data):
-        aux_response = []
-        return ["success", id, aux_response]
-
-    def processGetUpdatesRequest(self, id, aux_data):
-        aux_response = self.getUpdates(id, aux_data)
-        return [aux_response]
-            
-    def processSendActionRequest(self, id, action, aux_data):
-        # sample code:
-        # if action == "look up":
-        #     result = "success"
-        #     aux_response = ["agent observes blue sky", "agent observes plane"]
-        #     aux_response = aux_response + self.updateState(id, action, aux_data) + self.getUpdates(id, aux_data)
-        # elif action == "look down":
-        #     result = "success"
-        #     aux_response = ["agent observes grass"]
-        #     aux_response = aux_response + self.updateState(id, action, aux_data) + self.getUpdates(id, aux_data)
-        # return [result, aux_response]
-
-        # placeholder code
-        print 'This is the base class processSendActionRequest'
-        result = "success"
-        aux_response = self.updateState(id, action, aux_data) + self.getUpdates(id, aux_data)
-        return [result, aux_response]
-
-    def updateState(self, id, action, aux_data):
-        partial_aux_response = []
-        return partial_aux_response
-
-    def getUpdates(self, id, aux_data):
-        updates = []
-        return updates
-
     def __init__(self, port = None):
         print "initializing world hub..."
         self.host = 'localhost'
@@ -111,19 +67,18 @@ class WorldHub:
 
     # This method is intended to be overridden by subclasses to point to a serveClientThread subclass
     def createServeClientThread(self, (client, address)):
-        return serveClientThread(self, (client, address))
+        return serveClientThread((client, address))
                     
 class serveClientThread(threading.Thread):
 
     lowest_unassigned_id = 0
     lock = threading.Lock()
 
-    def __init__(self, hub, (client, address)):
+    def __init__(self, (client, address)):
         threading.Thread.__init__(self)
         self.client = client
         self.address = address
         self.size = 1024
-        self.hub = hub
 
         return
 
@@ -246,19 +201,38 @@ class serveClientThread(threading.Thread):
     ###########################################################################
 
     def processRegisterRequest(self, id, aux_data):
-        return self.hub.processRegisterRequest(id, aux_data)
+        aux_response = []
+        return ["success", id, aux_response]
 
     def processGetUpdatesRequest(self, id, aux_data):
-        return self.hub.processGetUpdatesRequest(id, aux_data)
+        aux_response = self.getUpdates(id, aux_data)
+        return [aux_response]
             
     def processSendActionRequest(self, id, action, aux_data):
-        return self.hub.processSendActionRequest(id, action, aux_data)
+        # sample code:
+        # if action == "look up":
+        #     result = "success"
+        #     aux_response = ["agent observes blue sky", "agent observes plane"]
+        #     aux_response = aux_response + self.updateState(id, action, aux_data) + self.getUpdates(id, aux_data)
+        # elif action == "look down":
+        #     result = "success"
+        #     aux_response = ["agent observes grass"]
+        #     aux_response = aux_response + self.updateState(id, action, aux_data) + self.getUpdates(id, aux_data)
+        # return [result, aux_response]
+
+        # placeholder code
+        print 'This is the base class processSendActionRequest'
+        result = "success"
+        aux_response = self.updateState(id, action, aux_data) + self.getUpdates(id, aux_data)
+        return [result, aux_response]
 
     def updateState(self, id, action, aux_data):
-        return self.hub.updateState(id, action, aux_data)
+        partial_aux_response = []
+        return partial_aux_response
 
     def getUpdates(self, id, aux_data):
-        return self.hub.getUpdates(id, aux_data)
+        updates = []
+        return updates
 
 if __name__ == "__main__":
     s = WorldHub()

@@ -13,6 +13,55 @@ import communication_aux
 
 
 class WorldHub:
+
+    ###########################################################################
+    # - users should not need to change any of the functions above            #
+    # - very unlikely processGetUpdatesRequest would need to be changed       #
+    # - unlikely processRegisterRequest would need to be changed              #
+    # - the remaining 3 functions below will nearly always need to be changed #
+    #                                                                         #
+    # remember to acquire lock for critical regions!                          #    
+    ###########################################################################
+
+    def processRegisterRequest(self, id, aux_data):
+        aux_response = []
+        return ["success", id, aux_response]
+
+    def processGetUpdatesRequest(self, id, aux_data):
+        aux_response = self.getUpdates(id, aux_data)
+        return [aux_response]
+            
+    def processSendActionRequest(self, id, action, aux_data):
+        # sample code:
+        # if action == "look up":
+        #     result = "success"
+        #     aux_response = ["agent observes blue sky", "agent observes plane"]
+        #     aux_response = aux_response + self.updateState(id, action, aux_data) + self.getUpdates(id, aux_data)
+        # elif action == "look down":
+        #     result = "success"
+        #     aux_response = ["agent observes grass"]
+        #     aux_response = aux_response + self.updateState(id, action, aux_data) + self.getUpdates(id, aux_data)
+        # return [result, aux_response]
+
+        # placeholder code
+        print 'This is the base class processSendActionRequest'
+        result = "success"
+        aux_response = self.updateState(id, action, aux_data) + self.getUpdates(id, aux_data)
+        return [result, aux_response]
+
+    def processDisconnectRequest(self, id, aux_data):
+        print "Client %d has disconnected from the world hub." % id
+        result = "this is ignored"
+        return result
+
+    def updateState(self, id, action, aux_data):
+        partial_aux_response = []
+        return partial_aux_response
+
+    def getUpdates(self, id, aux_data):
+        updates = []
+        return updates
+
     def __init__(self, port = None):
         print "initializing world hub..."
         self.host = 'localhost'
@@ -67,18 +116,19 @@ class WorldHub:
 
     # This method is intended to be overridden by subclasses to point to a serveClientThread subclass
     def createServeClientThread(self, (client, address)):
-        return serveClientThread((client, address))
+        return serveClientThread(self, (client, address))
                     
 class serveClientThread(threading.Thread):
 
     lowest_unassigned_id = 0
     lock = threading.Lock()
 
-    def __init__(self, (client, address)):
+    def __init__(self, hub, (client, address)):
         threading.Thread.__init__(self)
         self.client = client
         self.address = address
         self.size = 1024
+        self.hub = hub
 
         return
 
@@ -97,7 +147,7 @@ class serveClientThread(threading.Thread):
                 # types of messages to consider: register id, process action, update state 
                 self.handleClientRequest(message_type, message)
 
-        finally:
+        except:
             print "closing socket..."
             self.client.close()
             print "exiting client thread"
@@ -152,6 +202,11 @@ class serveClientThread(threading.Thread):
             response = self.handleSendActionRequest(message_payload)
         elif message_types['get_updates'] == message_type:
             response = self.handleGetUpdatesRequest(message_payload)
+        elif message_types['disconnect'] == message_type:
+            self.handleDisconnectRequest(message_payload)
+            self.client.shutdown(socket.SHUT_RDWR)
+            self.client.close()
+            sys.exit(0)
         else:
             print "uhoh!"
 
@@ -185,6 +240,12 @@ class serveClientThread(threading.Thread):
         aux_data = message[1]
         return self.processGetUpdatesRequest(id, aux_data)
 
+    def handleDisconnectRequest(self, message):
+        print 'handling disconnect request...'
+        id = message[0]
+        aux_data = message[1]
+        return self.processDisconnectRequest(id, aux_data)
+
     def processRegisterRequestWrapper(self, aux_data):
         with serveClientThread.lock:
             assigned_id = serveClientThread.lowest_unassigned_id
@@ -201,38 +262,23 @@ class serveClientThread(threading.Thread):
     ###########################################################################
 
     def processRegisterRequest(self, id, aux_data):
-        aux_response = []
-        return ["success", id, aux_response]
+        return self.hub.processRegisterRequest(id, aux_data)
 
     def processGetUpdatesRequest(self, id, aux_data):
-        aux_response = self.getUpdates(id, aux_data)
-        return [aux_response]
+        return self.hub.processGetUpdatesRequest(id, aux_data)
             
     def processSendActionRequest(self, id, action, aux_data):
-        # sample code:
-        # if action == "look up":
-        #     result = "success"
-        #     aux_response = ["agent observes blue sky", "agent observes plane"]
-        #     aux_response = aux_response + self.updateState(id, action, aux_data) + self.getUpdates(id, aux_data)
-        # elif action == "look down":
-        #     result = "success"
-        #     aux_response = ["agent observes grass"]
-        #     aux_response = aux_response + self.updateState(id, action, aux_data) + self.getUpdates(id, aux_data)
-        # return [result, aux_response]
+        return self.hub.processSendActionRequest(id, action, aux_data)
 
-        # placeholder code
-        print 'This is the base class processSendActionRequest'
-        result = "success"
-        aux_response = self.updateState(id, action, aux_data) + self.getUpdates(id, aux_data)
-        return [result, aux_response]
+    def processDisconnectRequest(self, id, aux_data):
+        return self.hub.processDisconnectRequest(id, aux_data)
 
     def updateState(self, id, action, aux_data):
-        partial_aux_response = []
-        return partial_aux_response
+        return self.hub.updateState(id, action, aux_data)
 
     def getUpdates(self, id, aux_data):
-        updates = []
-        return updates
+        return self.hub.getUpdates(id, aux_data)
+
 
 if __name__ == "__main__":
     s = WorldHub()
