@@ -3,29 +3,33 @@ from world_hub import WorldHub, serveClientThread
 
 # This is a subclass of WorldHub that responds to 'checkMail' actions from clients with random mail.
 class MailHub(WorldHub):
-    def __init__(self):
-        WorldHub.__init__(self)
+    mail = {}
+    emailAddresses = {}
+    
+    #def __init__(self):
+        #WorldHub.__init__(self)
+        #self.emailAddresses = {}
         # The mail is a dictionary with email addresses as keys and a list of unread mail as the body
-        self.mail = {}
-
-    def createServeClientThread(self, (client, address)):
-        return MailServeClientThread((client, address), self)
+        #self.mail = {}
 
     # API for email
 
     # Initialize does nothing if the email address is already in the mail dictionary
-    def initialize_email(self, address):
-        if address not in self.mail:
+    def initialize_email(self, id, recipient):
+        sender = self.emailAddresses[id]
+        if sender in self.mail and recipient not in self.mail[sender]:
+            self.mail[sender][recipient] = []
+
+    def get_mail(self, id):
+        if id in self.emailAddresses:
+            address =  self.emailAddresses[id]
+            mail = self.mail[address]
             self.mail[address] = []
+            return ['success', mail]
+        else:
+            return ['fail',[]]
 
-    def get_mail(self, address):
-        if address not in self.mail:
-            return -1
-        mail = self.mail[address]
-        self.mail[address] = []
-        return mail
-
-    def send_mail(self, mail):
+    def send_mail(self, id, mail):
         # Put each message in the appropriate mailboxes. The 'to' field can be a single string or a list.
         # If the email doesn't exist yet it is created, so agents can have mail waiting when they start up.
         try:
@@ -33,48 +37,31 @@ class MailHub(WorldHub):
                 if 'to' not in message:
                     print 'no \'to\' field in message, ignoring:', message
                 elif isinstance(message['to'], str):
-                    self.initialize_email(message['to'])
-                    self.mail[message['to']].append(message)
+                    self.initialize_email(id, message['to'])
+                    print "mail = %s" % self.mail
+                    self.mail[self.emailAddresses[id]][message['to']].append(message)
                 elif isinstance(message['to'], list):
                     for recipient in message['to']:
-                        self.initialize_email(recipient)
-                        self.mail[recipient].append(message)
+                        self.initialize_email(id, recipient)
+                        self.mail[selfemailAddresses[id]][recipient].append(message)
+            return ['success', []]
         except:
             print "problem sending mail"
+            return ['fail', []]
 
-
-
-
-# This subclass of serveClientThread handles the work of a persistent client/server pairing
-# and can maintain state for the client agent. Shared world state should then be handled with
-# static variables I guess.
-class MailServeClientThread(serveClientThread):
-    def __init__(self, (client, address), mail_hub):
-        serveClientThread.__init__(self, (client, address))
-        self.mailHub = mail_hub
-        self.emailAddress = None
-
-    def processRegisterRequest(self, agent_id, aux_data):
-        self.emailAddress = aux_data[0]
-        return ['success', agent_id, []]
+    def processRegisterRequest(self, id, aux_data):
+        self.emailAddresses[id] = aux_data[0]
+        self.mail[aux_data[0]] = {}
+        return ['success', id, []]
 
     def processSendActionRequest(self, id, action, aux_data):
         print "mail hub processing action", action, aux_data
         if action == "getMail":
-            return self.get_mail()
+            return self.get_mail(id)
         elif action == "sendMail":
-            return self.send_mail(aux_data)
+            return self.send_mail(id, aux_data)
         else:
             print "Unknown action:", action
-
-    def get_mail(self):
-        mail = self.mailHub.get_mail(self.emailAddress)
-        return ['success', mail]
-
-    def send_mail(self, mail):
-        self.mailHub.send_mail(mail)
-        return ['success', []]
-
 
 if __name__ == "__main__":
     MailHub().run()
