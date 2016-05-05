@@ -125,7 +125,7 @@ class Client(object):
 
         return response
 
-    def getUpdates(self, aux_data):
+    def getUpdates(self, aux_data = []):
         """ Sends request for update with the aux_data and recieves the update
         from the World Hub
         Args:
@@ -143,7 +143,7 @@ class Client(object):
 
         return
 
-    def disconnect(self, aux_data):
+    def disconnect(self, aux_data = []):
         """ Sends request to disconnect from world hub"
         Args:
             aux_data(list)    # Data to be sent to the world hub

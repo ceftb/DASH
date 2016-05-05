@@ -14,14 +14,24 @@ import communication_aux
 
 class WorldHub:
 
-    ###########################################################################
-    # - users should not need to change any of the functions above            #
-    # - very unlikely processGetUpdatesRequest would need to be changed       #
-    # - unlikely processRegisterRequest would need to be changed              #
-    # - the remaining 3 functions below will nearly always need to be changed #
-    #                                                                         #
-    # remember to acquire lock for critical regions!                          #    
-    ###########################################################################
+    lowest_unassigned_id = 0
+    lock = threading.Lock()
+
+    ############################################################
+    # you should only need to modify a few world hub functions #
+    #                                                          #
+    # usually you'll only need to modify:                      #
+    #  - processRegisterRequest                                # 
+    #  - processGetUpdatesRequest                              #
+    #  - processSendActionRequest                              #
+    #  - updateState                                           #
+    #  - getUpdates                                            #
+    #                                                          #
+    # you might also modify:                                   #
+    #  - processDisconnectRequest                              #
+    #                                                          #
+    # remember to acquire lock for critical regions!           #
+    ############################################################
 
     def processRegisterRequest(self, id, aux_data):
         aux_response = []
@@ -61,6 +71,10 @@ class WorldHub:
     def getUpdates(self, id, aux_data):
         updates = []
         return updates
+
+    ####################################################################
+    # you probably shouldn't need to modify anything after this point! #
+    ####################################################################
 
     def __init__(self, port = None):
         print "initializing world hub..."
@@ -119,9 +133,6 @@ class WorldHub:
         return serveClientThread(self, (client, address))
                     
 class serveClientThread(threading.Thread):
-
-    lowest_unassigned_id = 0
-    lock = threading.Lock()
 
     def __init__(self, hub, (client, address)):
         threading.Thread.__init__(self)
@@ -247,19 +258,16 @@ class serveClientThread(threading.Thread):
         return self.processDisconnectRequest(id, aux_data)
 
     def processRegisterRequestWrapper(self, aux_data):
-        with serveClientThread.lock:
-            assigned_id = serveClientThread.lowest_unassigned_id
-            serveClientThread.lowest_unassigned_id += 1
+        with self.hub.lock:
+            assigned_id = self.hub.lowest_unassigned_id
+            self.hub.lowest_unassigned_id += 1
         return self.processRegisterRequest(assigned_id, aux_data)
 
-    ###########################################################################
-    # - users should not need to change any of the functions above            #
-    # - very unlikely processGetUpdatesRequest would need to be changed       #
-    # - unlikely processRegisterRequest would need to be changed              #
-    # - the remaining 3 functions below will nearly always need to be changed #
-    #                                                                         #
-    # remember to acquire lock for critical regions!                          #    
-    ###########################################################################
+    ######################################################################
+    # the following functions are wrappers that call world hub functions #
+    #                                                                    #
+    # you probably shouldn't need to modify them                         #
+    ######################################################################
 
     def processRegisterRequest(self, id, aux_data):
         return self.hub.processRegisterRequest(id, aux_data)

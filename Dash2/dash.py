@@ -30,6 +30,8 @@ class DASHAgent(Client, System2Agent, System1Agent):
             print "No action chosen"
         elif maxIterations >= 0 and iteration >= maxIterations:
             print "Finished finite agent cycles:", maxIterations, "with", iteration
+        print "Disconnecting from world hub and exiting simulation..."
+        self.disconnect()
 
     def primitiveActions(self, l):
         # Add the items into the set of known primitive actions
