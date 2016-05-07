@@ -16,15 +16,18 @@ class MailHub(WorldHub):
 
     # Initialize does nothing if the email address is already in the mail dictionary
     def initialize_email(self, id, recipient):
+        if id not in self.emailAddresses:
+            print id, "not in email addresses: ", self.emailAddresses
+            return
         sender = self.emailAddresses[id]
         if sender in self.mail and recipient not in self.mail[sender]:
             self.mail[sender][recipient] = []
 
     def get_mail(self, id):
         if id in self.emailAddresses:
-            address =  self.emailAddresses[id]
+            address = self.emailAddresses[id]
             mail = self.mail[address]
-            self.mail[address] = []
+            self.mail[address] = {}     # a dictionary, not a list
             return ['success', mail]
         else:
             return ['fail',[]]
@@ -38,12 +41,11 @@ class MailHub(WorldHub):
                     print 'no \'to\' field in message, ignoring:', message
                 elif isinstance(message['to'], str):
                     self.initialize_email(id, message['to'])
-                    print "mail = %s" % self.mail
                     self.mail[self.emailAddresses[id]][message['to']].append(message)
                 elif isinstance(message['to'], list):
                     for recipient in message['to']:
                         self.initialize_email(id, recipient)
-                        self.mail[selfemailAddresses[id]][recipient].append(message)
+                        self.mail[self.emailAddresses[id]][recipient].append(message)
             return ['success', []]
         except:
             print "problem sending mail"
