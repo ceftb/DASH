@@ -149,12 +149,13 @@ class Client(object):
             aux_data(list)    # Data to be sent to the world hub
         """
 
-        self.sendMessage(message_types['disconnect'], [self.id, aux_data])
+        if self.sock is not None:
+            self.sendMessage(message_types['disconnect'], [self.id, aux_data])
         
-        print "disconnecting from world hub..."
-        self.sock.shutdown(socket.SHUT_RDWR)
-        self.sock.close()
-        sys.exit(0)
+            print "disconnecting from world hub..."
+            self.sock.shutdown(socket.SHUT_RDWR)
+            self.sock.close()
+        #sys.exit(0)  # Should not automatically kill the process
 
     def processActionResponse(self, result, aux_response):
         # we may want to hook in some sort of inference engine here

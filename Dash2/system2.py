@@ -2,6 +2,7 @@
 import dash  # don't import specific names so this module will be compiled first
 import compiler # Testing using the compiler to parse expressions
 import time
+import collections
 
 class System2Agent():
 
@@ -514,7 +515,7 @@ def substituteArgument(arg, bindings):
         return [substituteArgument(x, bindings) for x in arg]
     elif isinstance(arg, tuple):
         return tuple([substituteArgument(x, bindings) for x in arg])
-    elif arg not in bindings:
+    elif not isinstance(arg, collections.Hashable) or arg not in bindings:
         return arg
     else:
         return bindings[arg]
