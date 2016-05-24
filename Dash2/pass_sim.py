@@ -24,7 +24,7 @@
 from dash import DASHAgent, isConstant
 import subprocess
 import random
-import utils
+from utils import distPicker
 import communication_aux
 import operator
 import sys
@@ -39,6 +39,9 @@ class PasswordAgent(DASHAgent):
             print "Error: world hub not reachable - exiting "
             sys.exit()
         self.id = response[1]
+
+        # Added by Jim based on bruno_user.pl
+        self.password_list = ['p', 'P', 'pw', 'Pw', 'pw1', 'Pw1', 'pass', 'Pass', 'pas1', 'Pas1', 'pass1', 'Pass1', 'PaSs1', 'password', 'P4ssW1', 'PassWord', 'PaSs12', 'PaSsWord', 'PaSsW0rd', 'P@SsW0rd', 'PassWord1', 'PaSsWord1', 'P4ssW0rd!', 'P4SsW0rd!', 'PaSsWord12', 'P@SsWord12', 'P@SsWoRd12', 'PaSsWord!2', 'P@SsWord!234', 'P@SsWord!234', 'MyP4SsW0rd!', 'MyP4SsW0rd!234', 'MyP@SsW0rd!234', 'MyPaSsWoRd!234?', 'MyPaSsW0Rd!234?', 'MyS3cUReP@SsW0rd!2345', 'MyV3ryL0ngS3cUReP@SsW0rd!2345?']
 
         # distribution of probabilities for every service type
         self.serviceProbs = {'mail': 0.35, 'social_net':0.85, 'bank':1.0}
@@ -134,11 +137,11 @@ goalRequirements doWork
             username = random.sample(username_list)
 
         ### choose Password
-        desired_pass = random.sample(password_list)
+        desired_pass = random.sample(self.password_list)
         # if there are requirements verify that the password complies them
         if requirements is not None:
             while not requirements.verify(username, desired_pass):
-                desired_pass = random.sample(password_list)
+                desired_pass = random.sample(self.password_list)
 
         # if pass is too hard, reuse the hardest one or write it down,
         # the decision is based on memoBias parameter
@@ -166,9 +169,9 @@ goalRequirements doWork
             else:
                 self.beliefs[service] = [username, password, self.initial_belief, 0.9999]
         elif result[0] == 'failed:user':
-			print 'Failed: username already exists (should not happen yet)'
+            print 'Failed: username already exists (should not happen yet)'
         elif result[0] == 'failed:reqs':
-			setupAccount(self, service_type, service, result[1])
+            self.setupAccount(service_type, service, result[1])
 
         return 'succes'
 
@@ -217,14 +220,14 @@ goalRequirements doWork
             else:
                 self.beliefs[service] = [username, password, self.initial_belief]
         elif login_response[0] == 'failed:logged_in':
-			signOut(service)
+			self.signOut(service)
 			#exit loop
         else:
             if flag == 1:
                 self.beliefs[service][2] -= (self.beliefs[service][2]*self.strenghteningRate)
                 new_strenght = min(self.beliefs[service][2], 0.0001)
                 self.beliefs[service] = [username, password, new_strenght]
-            signIn(self, service)
+            self.signIn(service)
 
 
     def signOut(self, service):

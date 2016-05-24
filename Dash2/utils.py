@@ -1,6 +1,6 @@
 import communication_aux
 import operator
-
+import re
 
 def distPicker(distribution, r):
     ''' Function takes distribution of services and a value;
@@ -23,10 +23,10 @@ def distPicker(distribution, r):
 
 #### PASSWORD SIMULATION AGENT
 
-def initializeContact(socket, id, service_type):
-    ''' Helper function to get the actuall service '''
-    sendMessageToWorldHub(self.port, 1, [id, 'getAccount']) # send service type
-    return getResponseFromWorldHub(self.port) # recieve actuall service
+#def initializeContact(socket, id, service_type):
+#    ''' Helper function to get the actuall service '''
+#    sendMessageToWorldHub(self.port, 1, [id, 'getAccount']) # send service type
+#    return getResponseFromWorldHub(self.port) # recieve actuall service
 
 
 
@@ -42,15 +42,18 @@ class requirements():
 
     def getLen(self):
         return [self.min_len, self.max_len]
+
     def getUppercase(self):
         return self.uppercase
+
     def getNumerics(self):
         return self.numbers
+
     def getSymbols(self):
         return self.symbols
 
     def verify(self, username, password):
-        if len(password) in xrange(min_len, max_len) \
+        if len(password) in xrange(self.min_len, self.max_len) \
         and sum(1 for c in password if c.isupper()) < self.uppercase \
         and sum(1 for c in password if c.isdigit()) < self.numbers \
         and sum(1 for c in password if not (re.match('^[a-zA-Z0-9]*$', c))) < self.symbols:
@@ -60,19 +63,19 @@ class requirements():
 
 
 class service():
-	def __init__(self, service_type, name, requirements):
-		self.type = service_type
-		self.name = name
-		self.requirements = requirements
+    def __init__(self, service_type, name, requirements):
+        self.type = service_type
+        self.name = name
+        self.requirements = requirements
 
-	def getName():
-		return self.name
+    def getName(self):
+        return self.name
 
-	def getRequirements():
-		return self.requirements
+    def getRequirements(self):
+        return self.requirements
 
-	def getServiceType():
-		return self.type
+    def getServiceType(self):
+        return self.type
 
 
 ### THis is more elaborate way to pick passwords - to finish
