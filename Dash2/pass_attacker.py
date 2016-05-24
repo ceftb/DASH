@@ -18,7 +18,7 @@ goalRequirements attack
     findUncompromisedSite(site)
     directAttack(site)
     sleep(1)
-    forget([chooseAttack(x), findWebsite(x), directAttack(x), sleep(x)])
+    forget([chooseAttack(x), findUncompromisedSite(x), directAttack(x), sleep(x)])
 
 goalRequirements attack
     chooseAttack(_indirect)
@@ -26,7 +26,7 @@ goalRequirements attack
     findCompromisedSite(comp)
     reusePassword(comp, site)
     sleep(1)
-    forget([chooseAttack(x), findWebsite(x), findCompromisedSite(x), reusePassword(x,y), sleep(x)])
+    forget([chooseAttack(x), findUncompromisedSite(x), findCompromisedSite(x), reusePassword(x,y), sleep(x)])
 
 # If chooseAttack fails in both clauses (since the calls are independent), just try again as long as there's
 # something left to attack
