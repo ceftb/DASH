@@ -2,37 +2,16 @@ from dash import DASHAgent, isConstant
 import subprocess
 
 
-class SimilarityAttackAgent(DASHAgent):
+class AttackAgent(DASHAgent):
 
     SQLMapHome = "/users/blythe/attack/sqlmap"
 
     agentDef = """
 
-goalWeight readFile(_server1, '/etc/passwd') 1
+goalWeight doWork 1         # repeat the proces
 
-goalRequirements readFile(target, file)
-  SQLVulnerability(target, port, baseUrl, parameter)
-  reachable(attackLoc, target)
-  SQLInjectionReadFile(attackLoc, target, file, port, baseUrl, parameter)
-
-goalRequirements SQLVulnerability(target, port, baseUrl, parameter)
-  likelyVulnerability(target, port, baseUrl, parameter)
-  service(target, port, protocol)
-  checkSQLVulnerability(target, port, baseUrl, parameter)
-  httpStyle(protocol)
-
-goalRequirements service(target, port, protocol)
-  portScanner(target, port, protocol)
-
-# this predicate means the information is known, and also records
-# that a subgoal has been achieved
-known likelyVulnerability(_server1, _80, 'cards.php', _select)
-known likelyVulnerability(_server3, _80, 'cards.php', _select)
-known likelyVulnerability(_localhost, _80, 'index.html', _name)
-
-known reachable(anywhere, _server1)
-known reachable(anywhere, _server3)
-known reachable(anywhere, _localhost)
+goalRequirements doWork
+    bruteForce(test)
 
 """
 
@@ -44,13 +23,17 @@ known reachable(anywhere, _localhost)
         # on a testbed such as DETER.
         self.realAttack = False
 
+        result = self.register()
+
         # This says what values from portScanner are likely to be attackable through http/sql injection
         for protocol in ['http', 'http-alt', 'http-proxy', 'sun-answerbook']:
             self.known('httpStyle', ['_' + protocol])
 
-        self.primitiveActions([('SQLInjectionReadFile', self.SQLInjectionReadFile),
-                  ('portScanner', self.portScanner),
-                  ('checkSQLVulnerability', self.sqlMap)])
+        # self.primitiveActions([('SQLInjectionReadFile', self.SQLInjectionReadFile),
+        #           ('portScanner', self.portScanner),
+        #           ('checkSQLVulnerability', self.sqlMap)])
+
+        self.primitiveActions([('bruteForce', self.bruteForce)])
 
         self.readAgent(self.agentDef)
 
@@ -103,6 +86,14 @@ known reachable(anywhere, _localhost)
                     bindingsList.append({})   # constants all match, record success
         print "portscanner:", bindingsList
         return bindingsList
+
+    def bruteForce(self, action):
+        users = {'user1':'pass1', 'user2':'pass2'}
+        for user in users:
+            print users[user]
+        result = self.sendAction('bruteForce');
+
+
 
     def sqlMap(self, action):
         print "Called sql map with action", action
@@ -188,4 +179,4 @@ known reachable(anywhere, _localhost)
 
 
 if __name__ == "__main__":
-    SimilarityAttackAgent().agentLoop(maxIterations=10)   # enough iterations for the first attack
+    AttackAgent().agentLoop()   # enough iterations for the first attack

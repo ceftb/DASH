@@ -42,7 +42,7 @@ transient attack
         self.primitiveActions([('findUncompromisedSite', self.find_unc_site), ('directAttack', self.direct_attack),
                                ('chooseAttack', self.choose_attack), ('findCompromisedSite', self.find_compromised_site),
                                ('reusePassword', self.reuse_password)])
-        #self.register()     # Register with the running password agent hub
+        self.register()     # Register with the running password agent hub
 
         self.compromised_sites = []  # If a site is compromised, I guess we assume the attacker knows all user/pwd combos there
         self.failed = []
@@ -92,6 +92,7 @@ transient attack
         site = call[2]
         self.uncompromised_sites.remove(site)
         self.compromised_sites.append(site)
+        [status, data] = self.sendAction('findUncompromisedSite')
         return [{}]
 
 

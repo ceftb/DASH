@@ -133,5 +133,7 @@ goalRequirements doWork
 
 
 if __name__ == "__main__":
-    SimilarityAgent().agentLoop()
-    SimilarityAgent().agentLoop()
+    agent1 = SimilarityAgent
+    agent2 = SimilarityAgent
+    agent1.agentLoop()
+    agent2.agentLoop()
