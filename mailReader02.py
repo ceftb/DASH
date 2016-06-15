@@ -44,6 +44,7 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
             return []
 
     def process_mail(self, call):
+        mail = call[1]['subject']
         if mail == "buyTickets":
             print 'buys plane tickets', call
             return [{}]
