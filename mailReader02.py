@@ -50,6 +50,8 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
         elif mail == 'cancelFlight':
             print 'cancels flight'
             return [{}]
+        else:
+            return[]
 
 
 if __name__ == "__main__":
