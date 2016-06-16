@@ -1,4 +1,5 @@
 from dash import DASHAgent
+from system2 import isVar
 
 
 class MailReader(DASHAgent):
@@ -13,32 +14,35 @@ goalRequirements doWork
     flightToBuy(flight)
     buyFlight(flight)
     sleep(1)
-    forget([flightToBuy(x),buyFlight(x)])
+    forget([flightToBuy(x),buyFlight(x),sleep(x)])
 
 goalRequirements doWork
   sendMail()
   readMail(newmail)
   processMail(newmail)
   sleep(1)
-  forget([sendMail(),readMail(x),sleep(x)])  # a built-in that removes matching elements from memory
+  forget([sendMail(),readMail(x),sleep(x),flightToBuy(x),buyFlight(x)])  # a built-in that removes matching elements from memory
 
 transient doWork     # Agent will forget goal's achievement or failure as soon as it happens
 """)
-        self.primitiveActions([('readMail', self.read_mail), ('sendMail', self.send_mail), ('processMail', self.process_mail)])
+        self.primitiveActions([('readMail', self.read_mail), ('sendMail', self.send_mail), ('processMail', self.process_mail),
+                               ('flightToBuy', self.flight_to_buy), ('buyFlight', self.buy_flight)])
 
         # Using this as a counter in the email that gets sent
         self.mailCounter = 0
+        self.flights_to_buy = []     # flights that have been requested but not yet bought
 
     def flight_to_buy(self,call):
-        status = call[1]
-        if status == 'success':
-            print " flight tickets to Europe" or "flight tickets to Australia"
-        else:
-            return[]
-   
+        var = call[1]
+        if not isVar(var):
+            return []
+        result = [{var: flight} for flight in self.flights_to_buy]
+        return result
+
     def buy_flight(self,call):
         if flight_to_buy == 'success':
             print 'buys flight tickets'
+            return [{}]
         else:
             return[]
     
@@ -61,7 +65,7 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
         mail = call[1]['subject']
         if mail == "buyTickets":
             print 'buys plane tickets', call
-            self.flights_to_buy.append(1)
+            self.flights_to_buy.append(['New York', 'Friday'])
             return [{}]
         elif mail == 'cancelFlight':
             print 'cancels flight'
