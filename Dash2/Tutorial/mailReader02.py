@@ -23,19 +23,19 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
 
     def read_mail(self, call):
         mail_var = call[1]
-        [status, data] = self.sendAction("getMail")
+        #[status, data] = self.sendAction("getMail")
         print 'response to getMail is', status, data
         if status == "success":
             print "read mail success with", data
-            return [{mail_var: data}]
+            #return [{mail_var: data}]
         else:
             return []
 
     def send_mail(self, call):
         print 'send mail call', call
-        [status, data] = self.sendAction("sendMail",
-                                         [{'to': 'mailagent@amail.com', 'subject': 'test',
-                                           'body': 'this is test message ' + str(self.mailCounter)}])
+        #[status, data] = self.sendAction("sendMail",
+                                        # [{'to': 'mailagent@amail.com', 'subject': 'test',
+                                          # 'body': 'this is test message ' + str(self.mailCounter)}])
         self.mailCounter += 1
         if status == "success":
             print 'send mail success with data', data
