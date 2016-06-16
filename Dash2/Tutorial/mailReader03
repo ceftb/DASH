@@ -44,15 +44,20 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
             return [{}]
         else:
             return []
-
-    def process_mail(self, call):
+            
+def process_mail(self, call):
+        print call
+        mail = call[1]['subject']
         if mail == "buyTickets":
             print 'buys plane tickets', call
+            self.flights_to_buy.append(1)
             return [{}]
         elif mail == 'cancelFlight':
             print 'cancels flight'
             return [{}]
+        else:
+            return[]
 
 
 if __name__ == "__main__":
-MailReader().agentLoop()
+    MailReader().agentLoop()
