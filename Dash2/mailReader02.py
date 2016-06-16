@@ -10,6 +10,12 @@ class MailReader(DASHAgent):
 goalWeight doWork 1
 
 goalRequirements doWork
+  flightToBuy(flight)   # binds 'flight' to a flight to be bought if there is one, otherwise fails.
+  buyFlight(flight)
+  sleep(1)
+  forget([flightToBuy(x),buyFlight(x)]
+
+goalRequirements doWork
   sendMail()
   readMail(newmail)
   processMail(newmail)
@@ -22,6 +28,7 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
 
         # Using this as a counter in the email that gets sent
         self.mailCounter = 0
+        self.flights_to_buy = []
 
     def read_mail(self, call):
         mail_var = call[1]
@@ -46,6 +53,8 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
         mail = call[1]['subject']
         if mail == "buyTickets":
             print 'buys plane tickets', call
+            # Store the flight in flights_to_buy
+            self.flights_to_buy.append(1)
             return [{}]
         elif mail == 'cancelFlight':
             print 'cancels flight'
