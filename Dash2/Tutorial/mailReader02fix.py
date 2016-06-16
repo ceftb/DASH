@@ -8,13 +8,20 @@ class MailReader(DASHAgent):
 
         self.readAgent("""
 goalWeight doWork 1
-goalRequirements doWork
 
+goalRequirements doWork
+    flightToBuy(flight)
+    buyFlight(flight)
+    sleep(1)
+    forget([flightToBuy(x),buyFlight(x)])
+
+goalRequirements doWork
   sendMail()
   readMail(newmail)
   processMail(newmail)
   sleep(1)
   forget([sendMail(),readMail(x),sleep(x)])  # a built-in that removes matching elements from memory
+
 transient doWork     # Agent will forget goal's achievement or failure as soon as it happens
 """)
         self.primitiveActions([('readMail', self.read_mail), ('sendMail', self.send_mail), ('processMail', self.process_mail)])
