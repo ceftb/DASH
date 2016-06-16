@@ -29,6 +29,19 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
         # Using this as a counter in the email that gets sent
         self.mailCounter = 0
 
+    def flight_to_buy(self,call):
+        status = call[1]
+        if status == 'success':
+            print " flight tickets to Europe" or "flight tickets to Australia"
+        else:
+            return[]
+   
+    def buy_flight(self,call):
+        if flight_to_buy == 'success':
+            print 'buys flight tickets'
+        else:
+            return[]
+    
     def read_mail(self, call):
         mail_var = call[1]
         [status, data] = ["", {'subject': 'buyTickets'}]
@@ -48,6 +61,7 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
         mail = call[1]['subject']
         if mail == "buyTickets":
             print 'buys plane tickets', call
+            self.flights_to_buy.append(1)
             return [{}]
         elif mail == 'cancelFlight':
             print 'cancels flight'
