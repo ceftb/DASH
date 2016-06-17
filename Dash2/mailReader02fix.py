@@ -65,7 +65,7 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
     def process_mail(self, call):
         possible_destinations = ['New York', 'Paris', 'London', 'Shanghai']
         print [random.choice(possible_destinations), 'Friday']
-        return [random.choice(possible_destinations), 'Friday']
+        return [random.choice(possible_destinations), 'Friday']   #when running on terminal, it appears to only choose a destination once, and not repeat this action
 
     
     # def process_mail(self, call):
