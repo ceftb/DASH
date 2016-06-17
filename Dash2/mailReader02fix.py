@@ -1,5 +1,6 @@
 from dash import DASHAgent
 from system2 import isVar
+import random
 
 
 class MailReader(DASHAgent):
@@ -60,18 +61,25 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
         print 'send mail success with data', data
         return [{}]
 
+    
     def process_mail(self, call):
-        print call
-        mail = call[1]['subject']
-        if mail == "buyTickets":
-            print 'buys plane tickets', call
-            self.flights_to_buy.append(['New York', 'Friday'])
-            return [{}]
-        elif mail == 'cancelFlight':
-            print 'cancels flight'
-            return [{}]
-        else:
-            return[]
+        possible_destinations = ['New York', 'Paris', 'London', 'Shanghai']
+        print [random.choice(possible_destinations), 'Friday']
+        return [random.choice(possible_destinations), 'Friday']
+
+    
+    # def process_mail(self, call):
+    #     print call
+    #     mail = call[1]['subject']
+    #     if mail == "buyTickets":
+    #         print 'buys plane tickets', call
+    #         self.flights_to_buy.append(['New York', 'Friday'])
+    #         return [{}]
+    #     elif mail == 'cancelFlight':
+    #         print 'cancels flight'
+    #         return [{}]
+    #     else:
+    #         return[]
 
 
 if __name__ == "__main__":
