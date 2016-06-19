@@ -75,9 +75,11 @@ transient attack
     # or where the agent has failed, and attack the rest.
     # For now, use an internal list of sites
     def find_unc_site(self, call):
+        [status, data] = self.sendAction('findUncompromisedSite')
         return bind_random_element(call, self.uncompromised_sites)
 
     def find_compromised_site(self, call):
+        [status, data] = self.sendAction('findCompromisedSite')
         return bind_random_element(call, self.compromised_sites)
 
     def direct_attack(self, call):
@@ -85,6 +87,7 @@ transient attack
         site = call[1]
         self.uncompromised_sites.remove(site)
         self.compromised_sites.append(site)
+        [status, data] = self.sendAction('directAttack')
         return [{}]   # Success with empty bindings
 
     def reuse_password(self, call):    # call is (reusePassword, comp, site)
@@ -92,7 +95,7 @@ transient attack
         site = call[2]
         self.uncompromised_sites.remove(site)
         self.compromised_sites.append(site)
-        [status, data] = self.sendAction('findUncompromisedSite')
+        [status, data] = self.sendAction('reusePassword')
         return [{}]
 
 
