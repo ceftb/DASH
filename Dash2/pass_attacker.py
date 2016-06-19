@@ -76,6 +76,7 @@ transient attack
     # For now, use an internal list of sites
     def find_unc_site(self, call):
         [status, data] = self.sendAction('findUncompromisedSite')
+        # return data
         return bind_random_element(call, self.uncompromised_sites)
 
     def find_compromised_site(self, call):
