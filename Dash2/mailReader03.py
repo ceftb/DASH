@@ -1,4 +1,6 @@
 from dash import DASHAgent
+from System2 import isVar
+import random
 
 
 class MailReader(DASHAgent):
@@ -8,6 +10,12 @@ class MailReader(DASHAgent):
 
         self.readAgent("""
 goalWeight doWork 1
+
+goalRequirements doWork
+flightToBuy(flight)
+buyFlight(flight)
+sleep(1)
+forget([flightToBuy(x),buyFlight(x),sleep(x)])
 
 goalRequirements doWork
   sendMail()
@@ -22,6 +30,22 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
 
         # Using this as a counter in the email that gets sent
         self.mailCounter = 0
+        self.flights_to_buy = [] 
+        
+    def flight_to_buy(self, call):
+        var = call[1]
+        if not isVar(var):
+            return[]
+        result = [{var: flight} for flight in self.flights_to_buy]
+        return result
+        
+    def buy_flight(self, call):
+        if flight_to_buy == 'success':
+            print 'buys flight tickets'
+            return [{}]
+        else:
+            return[]
+    
 
     def read_mail(self, call):
         mail_var = call[1]
@@ -46,17 +70,24 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
             return []
             
 def process_mail(self, call):
-        print call
-        mail = call[1]['subject']
-        if mail == "buyTickets":
-            print 'buys plane tickets', call
-            self.flights_to_buy.append(1)
-            return [{}]
-        elif mail == 'cancelFlight':
-            print 'cancels flight'
-            return [{}]
-        else:
-            return[]
+    possible_destinations = ['New York','Paris','London','Shanghai']
+    print[random.choice(possible_destinations), 'Friday']
+    return[random.choice(possible_destinations), 'Friday']
+        
+        
+        
+        
+        # print call
+        # mail = call[1]['subject']
+        # if mail == "buyTickets":
+        #     print 'buys plane tickets', call
+        #     self.flights_to_buy.append(1)
+        #     return [{}]
+        # elif mail == 'cancelFlight':
+        #     print 'cancels flight'
+        #     return [{}]
+        # else:
+        #     return[]
 
 
 if __name__ == "__main__":
