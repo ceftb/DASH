@@ -70,9 +70,18 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
             return []
             
 def process_mail(self, call):
-    possible_destinations = ['New York','Paris','London','Shanghai']
-    print[random.choice(possible_destinations), 'Friday']
-    return[random.choice(possible_destinations), 'Friday']
+    print call
+    mail = call[1]['subject']
+    if mail == 'buyTickets':
+        possible_destinations = ['New York','Paris','London','Shanghai']
+        print['buy tickets', random.choice(possible_destinations), 'Friday'], call
+        self.flights_to_buy.append([random.choice(possible_destinations),'Friday'])
+            return[{}]
+    elif mail == 'cancelFlights':
+        print 'cancels flight'
+        return [{}]
+    else:
+        return[]
         
         
         
