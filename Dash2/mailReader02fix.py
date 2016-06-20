@@ -22,7 +22,7 @@ goalRequirements doWork
   readMail(newmail)
   processMail(newmail)
   sleep(1)
-  forget([sendMail(),readMail(x),sleep(x),flightToBuy(x),buyFlight(x)])  # a built-in that removes matching elements from memory
+  forget([sendMail(),readMail(x),processMail(x),sleep(x),flightToBuy(x),buyFlight(x)])  # a built-in that removes matching elements from memory
 
 transient doWork     # Agent will forget goal's achievement or failure as soon as it happens
 """)
