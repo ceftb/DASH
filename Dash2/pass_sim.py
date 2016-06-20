@@ -22,10 +22,8 @@
 
 
 from dash import DASHAgent, isConstant
-import subprocess
 import random
 from utils import distPicker
-import communication_aux
 import operator
 import sys
 
@@ -52,26 +50,35 @@ class PasswordAgent(DASHAgent):
         # forgetting rate - percent of belief lost
         self.forgettingRate = 0.15
         # strenghtening rate
-        self.strenghteningRate = 0.2
+        self.strengtheningRate = 0.2
 
 
         # initial cong. burden
         self.cognitiveBurden = 0
+        # These were copied from bruno_user.pl in lib/logic - check for comments there.
+        self.cognitiveThreshold = 68
+        self.recallThreshold = 0.5
+        self.passwordReusePriority = 'long'
+        self.passwordReuseThreshold = 54
+        self.passwordForgetRateStoppingCriterion = 0.0005
         # pairs used - dict {service:[username, password]}
         self.known = {}
-        # usernames used - dict {username:complexity}
-        self.knownUsernames = {}
-        # passwords used - dict {password:complexity}
-        self.knownPasswords = {}
+        # usernames used - dict {username:complexity} (I changed to just a list - Jim)
+        self.knownUsernames = []
+        # passwords used - dict {password:complexity} (I changed to just a list - Jim)
+        self.knownPasswords = []
         # list of writen pairs
         self.writtenPasswords = []
         # USER beliefs
         self.beliefs = {}
 
+        # This is used below so I added it here to make the code run. Not sure how it should interact with the variables above
+        self.username_list = ['user1', 'user12', 'admin']
+
         # i'm not really clear about usage of primitive actions vs just defining
         # new goals
         self.primitiveActions([
-        ('checkTermination', self.connectToWorldHub),
+        ('checkTermination', self.check_termination),
         ('setupAccount', self.setupAccount),
         ('signIn', self.signIn),
         ('signOut', self.signOut),
@@ -84,15 +91,19 @@ goalWeight doWork 1         # repeat the proces
 
 goalRequirements doWork
     checkTermination(criterion, beliefs)
+
+goalRequirements doWork
     setupAccount(service_type)
     signIn(service)
     signOut(service)
     resetPassword(service)
 
+# This means that every iteration it will need to be re-achieved
+transient doWork
+
 """)
 
-
-    def setupAccount(self, service_type=None, service=None, requirements=None):
+    def setupAccount(self, call):
         ''' Should be equivalent to createAccount subgoal in prolog version
         It takes service type as an input, and based on that decides which
         username to use[1]. Then, it picks the password and submits the info.
@@ -131,32 +142,12 @@ goalRequirements doWork
         # else pick one from list of predefined usernames
         # here we should add some logic for cognitive burden but I didn't play with
         # it as we didn't have usernames elaborately in prolog
-        if bool(self.knownUsernames):
-            username = random.sample(self.knownUsernames)
+        if self.knownUsernames:
+            username = random.choice(self.knownUsernames)
         else:
-            username = random.sample(username_list)
+            username = random.choice(self.username_list)
 
-        ### choose Password
-        desired_pass = random.sample(self.password_list)
-        # if there are requirements verify that the password complies them
-        if requirements is not None:
-            while not requirements.verify(username, desired_pass):
-                desired_pass = random.sample(self.password_list)
-
-        # if pass is too hard, reuse the hardest one or write it down,
-        # the decision is based on memoBias parameter
-        # maybe add some distance heuristics later
-        if (password_list[desired_pass] + self.cognitiveBurden) < self.cogThreshold:
-            password = desired_pass
-            # add to the list of known pass, and remove from potential passes
-            self.knownPasswords[desired_pass] = password_list[desired_pass]
-            del password_list[desired_pass]
-        elif distPicker(self.memoBias, random.random()) == 'reuse':
-            password = max(stats.iteritems(), key=operator.itemgetter(1))[0]
-        else:
-            password = desired_pass
-            self.writtenPasswords.append(desired_pass)
-            del password_list[desired_pass]
+        password = self.choose_password(username, requirements)
 
         # If account is be created, update beliefs else repeat
         # I am not sure if it would make more sense to keep beliefs local in this
@@ -173,8 +164,7 @@ goalRequirements doWork
         elif result[0] == 'failed:reqs':
             self.setupAccount(service_type, service, result[1])
 
-        return 'succes'
-
+        return [{}]
 
     def signIn(self, service):
         ''' This should be equivalent to singIn subgoal in prolog version
@@ -190,9 +180,9 @@ goalRequirements doWork
             3. signIn
 
         '''
-		# check if user has account
+        # check if user has account
         if not bool(self.beliefs[service]):
-			print "User has no beliefs for this account"
+            print "User has no beliefs for this account"
 
         belief = self.beliefs[service]
         # Select password: esentially the weaker the belief is there is
@@ -220,15 +210,14 @@ goalRequirements doWork
             else:
                 self.beliefs[service] = [username, password, self.initial_belief]
         elif login_response[0] == 'failed:logged_in':
-			self.signOut(service)
-			#exit loop
+            self.signOut(service)
+            #exit loop
         else:
             if flag == 1:
                 self.beliefs[service][2] -= (self.beliefs[service][2]*self.strenghteningRate)
                 new_strenght = min(self.beliefs[service][2], 0.0001)
                 self.beliefs[service] = [username, password, new_strenght]
             self.signIn(service)
-
 
     def signOut(self, service):
         ''' This should be equivalent to the signOut subgoal in prolog
@@ -247,39 +236,58 @@ goalRequirements doWork
             self.sendAction('signOut', [service])
             print 'Success: User succesfully logged out'
 
-
-
     def resetPassword(self, service):
         info_response = self.beliefs[service]
 
         username = info_response[0]
         old_password = info_response[1]
 
+        password = self.choose_password(username)
 
-        ### choose Password
-        desired_pass = random.sample(password_list)
-        # if pass is too hard, reuse the hardest one or write it down,
-        # the decision is based on memoBias parameter
-        # maybe add some distance heuristics later
-        if (password_list[desired_pass] + self.cognitiveBurden) < self.cogThreshold:
-            password = desired_pass
-            # add to the list of known pass, and remove from potential passes
-            self.knownPasswords[desired_pass] = password_list[desired_pass]
-            del password_list[desired_pass]
-        elif distPicker(self.memoBias, random.random()) == 'reuse':
-            password = max(stats.iteritems(), key=operator.itemgetter(1))[0]
-        else:
-            password = desired_pass
-            self.writtenPasswords.append(desired_pass)
-            del password_list[desired_pass]
-
-        status_response = self.sendAction('resetPassowrd', [service, username, password])
+        status_response = self.sendAction('resetPassword', [service, username, password])
 
         if status_response[0]:
             print 'Success: password reset successfully'
         else:
             #not yet implemented handling of requirements
             print 'Handle requirements'
+
+    # Will be about password forget rate stopping criterion, but for now just false
+    def check_termination(self):
+        return []
+
+    # Extracted by Jim from setUpAccount and resetPassword
+    def choose_password(self, username, requirements=None):
+                ### choose Password
+        desired_pass = random.choice(self.password_list)
+        # if there are requirements verify that the password complies them
+        if requirements is not None:
+            while not requirements.verify(username, desired_pass):
+                desired_pass = random.choice(self.password_list)
+
+        # if pass is too hard, reuse the hardest one or write it down,
+        # the decision is based on memoBias parameter
+        # maybe add some distance heuristics later
+        if (self.password_complexity(desired_pass) + self.cognitiveBurden) < self.cognitiveThreshold:
+            password = desired_pass
+            # add to the list of known pass, and remove from potential passes
+            if desired_pass not in self.knownPasswords:
+                self.knownPasswords.append(desired_pass)
+            self.password_list.remove(desired_pass)
+        elif distPicker(self.memoBias, random.random()) == 'reuse':
+            password = max(stats.iteritems(), key=operator.itemgetter(1))[0]
+        else:
+            password = desired_pass
+            self.writtenPasswords.append(desired_pass)
+            self.password_list.remove(desired_pass)
+        return password
+
+    # Should return a measure of the complexity of the password by our usual standards.
+    # Here I'm just using the length to get this up and running (Jim)
+    def password_complexity(self, password):
+        return len(password)
+
+
 
 if __name__ == "__main__":
     PasswordAgent().agentLoop()
