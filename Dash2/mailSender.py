@@ -13,31 +13,32 @@ class MailSender(DASHAgent):
 goalWeight doWork 1
 
 goalRequirements doWork
-sendMail(trip)
-receiveMail(trip)
-getFlight(trip)
-sleep(1)
-forget([sendMail(x),chooseFlight(x),buyFlight(x),sleep(x)])
+  chooseTrip(trip)
+  sendMail(trip)
+  sleep(1)
+  forget([sendMail(x),chooseTrip(x),sleep(x)])
 
 transient doWork     # Agent will forget goal's achievement or failure as soon as it happens
                        """)
-        self.primitiveActions([('sendMail', self.send_mail), ('recieveMail', self.receive_Mail),
-                               ('getFlight', self.get_flight)])
+        self.primitiveActions([('sendMail', self.send_mail), ('chooseTrip', self.choose_trip)])
         self.mailCounter = 0
-
 
     def send_mail(self, call):
         print 'send mail call', call
-        possible_destinations = ['New York','Paris','London','Shanghai']
         [status, data] = self.sendAction("sendMail",
                                          [{'to': 'flightagent@amail.com', 'subject': 'buyTickets',
-                                           'body': 'I want to go to',random.choice(possible_destinations) + str(self.mailCounter)}])
+                                           'body': 'I want to go to ' + call[1] + str(self.mailCounter)}])
         self.mailCounter += 1
         if status == "success":
             print 'send mail success with data', data
             return [{}]
         else:
             return []
+
+    # Bind call variable to destination
+    def choose_trip(self, call):
+        possible_destinations = ['New York','Paris','London','Shanghai']
+        return [{call[1]: random.choice(possible_destinations)}]
 
 
     # def receive_mail(self, call):
@@ -74,4 +75,4 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
 
 
 if __name__ == "__main__":
-    MailSender().agentLoop()
+    MailSender().agentLoop(3)

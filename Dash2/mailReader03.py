@@ -19,17 +19,15 @@ goalRequirements doWork
   forget([flightToBuy(x),buyFlight(x),sleep(x)])
 
 goalRequirements doWork
-  sendMail()
   readMail(newmail)
   processMail(newmail)
   sleep(1)
-  forget([sendMail(),readMail(x),sleep(x),flightToBuy(x)])  # a built-in that removes matching elements from memory
+  forget([readMail(x),processMail(x),sleep(x),flightToBuy(x)])  # a built-in that removes matching elements from memory
 
 transient doWork     # Agent will forget goal's achievement or failure as soon as it happens
                        """)
-        self.primitiveActions([('readMail', self.read_mail), ('sendMail', self.send_mail),
-                               ('processMail', self.process_mail), ('flightToBuy', self.flight_to_buy),
-                               ('buyFlight', self.buy_flight)])
+        self.primitiveActions([('readMail', self.read_mail), ('processMail', self.process_mail),
+                               ('flightToBuy', self.flight_to_buy), ('buyFlight', self.buy_flight)])
 
         # Using this as a counter in the email that gets sent
         self.mailCounter = 0
@@ -62,7 +60,7 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
         print 'send mail call', call
         [status, data] = self.sendAction("sendMail",
                                          [{'to': 'mailagent@amail.com', 'subject': 'buyTickets',
-                                           'body': 'this is test message ' + str(self.mailCounter)}])
+                                           'body': 'I want to go to Pittsburgh' + str(self.mailCounter)}])
         self.mailCounter += 1
         if status == "success":
             print 'send mail success with data', data
@@ -76,10 +74,14 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
         for address in mail_list:
             for mail in mail_list[address]:
                 if mail['subject'] == 'buyTickets':
-                    possible_destinations = ['New York','Paris','London','Shanghai']
-                    print['buy tickets', random.choice(possible_destinations), 'Friday'], call
-                    self.flights_to_buy.append([random.choice(possible_destinations),'Friday'])
-                elif mail['subject'] == 'cancelFlights':
+                    # Body should be 'I want to go to ' + destination (which currently includes an email serial number)
+                    ix = mail['body'].find('I want to go to')
+                    if ix == -1:
+                        return []    # Can't read the destination: fail
+                    destination = mail['body'][ix + 15]
+                    print['buy tickets', destination, 'Friday'], call
+                    self.flights_to_buy.append([destination,'Friday'])
+                elif mail['subject'] == 'cancelFlight':
                     print 'cancels flight'
                 else:
                     print 'unknown request:', mail['subject']
@@ -87,4 +89,4 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
 
 
 if __name__ == "__main__":
-    MailReader().agentLoop()
+    MailReader().agentLoop(7)
