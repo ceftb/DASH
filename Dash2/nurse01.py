@@ -1,6 +1,7 @@
 
 from dash import DASHAgent
 import time
+import random
 
 start_time = time.time()
 
@@ -39,23 +40,26 @@ goalRequirements findComputer(computer)
         self.primitiveActions([('pickPatient', self.pick_patient), ('findRightMedication', self.find_right_medication),
                                ('logOn', self.log_on)])
 
-    def log_on(self, call):
-        print 'logs on successfully' #try to have some variables like tiredness/frustration/busy/rightbed
+    def log_on(self,call):
+        print 'logs on successfully' #try to have some variables like tiredness/frustration/busy/rightbed, so could be unsuccessful or cant find computer or something
         return[{}]
-
-    def find_right_medication(self, call):
-        while time <= 5:
-            print 'still logged in, right medication', call
-            return [{}]
-        if time > 5:
-            print 'login to a different patient account, wrong medication', call # or login again.
-            return [{}]
-        else:
-            print 'must log in again'
-            return []
+        #or doesn't?
 
 
-# maybe add some sort of variable to account for human error, even if logged in successfully and
+    def find_right_medication(self,call):
+        if logon = 'success':
+            while time <= 5:
+                patient_numbers = ['patient1','patient2','patient3','patient4']
+                print 'still logged in, right medication for patient 1', call
+                return [{}]
+            if time > 5:
+                print 'login to a different patient account' +  'random.choice(patient_numbers)', call # or login again.
+                return [{}]
+            else:
+                print 'must log in again'
+                return []
+
+# maybe add some sort of variable to account for human error, even if logged in successfully 
 
 
 if __name__ == '__main__':
