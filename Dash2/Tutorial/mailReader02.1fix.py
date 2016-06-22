@@ -1,3 +1,7 @@
+import sys
+sys.path.insert(0,'...')
+
+
 from dash import DASHAgent
 from system2 import isVar
 import random
