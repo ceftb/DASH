@@ -5,7 +5,6 @@ import time
 start_time = time.time()
 
 
-
 class Nurse(DASHAgent):
 
     def _init_(self):
@@ -13,24 +12,38 @@ class Nurse(DASHAgent):
 
         self.readAgent("""
 
-
 goalWeight doWork 1
 
 goalRequirements doWork
-    findRightMedication(computer)
-    logOn(computer)
+    pickPatient(patient)
+    findMedications(patient, medications)
+    deliverMedications(patient, medications)
+    logDelivery(patient, medications)
+
+goalRequirements findMedications(patient, medications)
+    findComputer(computer)
+    readSpreadsheet(patient, computer, medications)
+
+goalRequirements logDelivery(patient, medications)
+    findComputer(computer)
+    writeSpreadsheet(patient, computer, medications)
+
+goalRequirements findComputer(computer)
+    alreadyLoggedOn(computer)
+
+goalRequirements findComputer(computer)
+    logIn(computer)
 
     """)
 
-        self.primitiveActions([('findRightMedication', self.find_right_medication),('logOn', self.log_on)])
+        self.primitiveActions([('pickPatient', self.pick_patient), ('findRightMedication', self.find_right_medication),
+                               ('logOn', self.log_on)])
 
-    def log_on(self,call):
+    def log_on(self, call):
         print 'logs on successfully' #try to have some variables like tiredness/frustration/busy/rightbed
         return[{}]
 
-
-
-    def find_right_medication(self,call):
+    def find_right_medication(self, call):
         while time <= 5:
             print 'still logged in, right medication', call
             return [{}]
@@ -45,5 +58,5 @@ goalRequirements doWork
 # maybe add some sort of variable to account for human error, even if logged in successfully and
 
 
-if _name_ == '_main_':
-    nurse().agentLoop()
+if __name__ == '__main__':
+    Nurse().agentLoop()
