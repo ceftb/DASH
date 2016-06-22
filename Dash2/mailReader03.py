@@ -72,13 +72,13 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
         print call
         mail_list = call[1]
         for address in mail_list:
-            for mail in mail_list[address]:
+            for mail in mail_list:
                 if mail['subject'] == 'buyTickets':
                     # Body should be 'I want to go to ' + destination (which currently includes an email serial number)
                     ix = mail['body'].find('I want to go to')
                     if ix == -1:
                         return []    # Can't read the destination: fail
-                    destination = mail['body'][ix + 15]
+                    destination = mail['body'][ix + 16:]
                     print['buy tickets', destination, 'Friday'], call
                     self.flights_to_buy.append([destination,'Friday'])
                 elif mail['subject'] == 'cancelFlight':
@@ -89,4 +89,4 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
 
 
 if __name__ == "__main__":
-    MailReader().agentLoop(7)
+    MailReader().agentLoop()

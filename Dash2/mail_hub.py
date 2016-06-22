@@ -4,7 +4,7 @@ from world_hub import WorldHub, serveClientThread
 # This is a subclass of WorldHub that responds to 'checkMail' actions from clients with random mail.
 class MailHub(WorldHub):
     mail = {}
-    emailAddresses = {}
+    emailAddress = {}
     
     #def __init__(self):
         #WorldHub.__init__(self)
@@ -15,53 +15,59 @@ class MailHub(WorldHub):
     # API for email
 
     # Initialize does nothing if the email address is already in the mail dictionary
-    def initialize_email(self, id, recipient):
-        if id not in self.emailAddresses:
-            print id, "not in email addresses: ", self.emailAddresses
+    def initialize_email(self, sender_id, recipient):
+        if sender_id not in self.emailAddress:
+            print "sender", sender_id, "not in email addresses: ", self.emailAddress, "not sending"
             return
-        sender = self.emailAddresses[id]
-        if sender in self.mail and recipient not in self.mail[sender]:
-            self.mail[sender][recipient] = []
+        sender = self.emailAddress[sender_id]
+        if recipient not in self.mail:
+            self.mail[recipient] = []
 
     def get_mail(self, id):
-        if id in self.emailAddresses:
-            address = self.emailAddresses[id]
+        if id in self.emailAddress:
+            address = self.emailAddress[id]
             mail = self.mail[address]
-            self.mail[address] = {}     # a dictionary, not a list
+            print 'mail for ' + address + ' is ' + str(mail)
+            self.mail[address] = []
             return ['success', mail]
         else:
-            return ['fail',[]]
+            return ['fail', []]
 
     def send_mail(self, id, mail):
         # Put each message in the appropriate mailboxes. The 'to' field can be a single string or a list.
         # If the email doesn't exist yet it is created, so agents can have mail waiting when they start up.
         try:
             for message in mail:
+                if 'from' not in message:
+                    message['from'] = self.emailAddress[id]
                 if 'to' not in message:
-                    print 'no \'to\' field in message, ignoring:', message
+                    print 'no \'to\' field in message, not sending:', message
                 elif isinstance(message['to'], str):
                     self.initialize_email(id, message['to'])
-                    self.mail[self.emailAddresses[id]][message['to']].append(message)
+                    self.mail[message['to']].append(message)
                 elif isinstance(message['to'], list):
                     for recipient in message['to']:
                         self.initialize_email(id, recipient)
-                        self.mail[self.emailAddresses[id]][recipient].append(message)
+                        self.mail[recipient].append(message)
             return ['success', []]
         except:
             print "problem sending mail"
             return ['fail', []]
 
     def processRegisterRequest(self, id, aux_data):
-        self.emailAddresses[id] = aux_data[0]
-        self.mail[aux_data[0]] = {}
+        address = aux_data[0]
+        self.emailAddress[id] = address
+        # Someone may have already sent this agent mail before registration, so don't lose it
+        if address not in self.mail:
+            self.mail[address] = {}
         return ['success', id, []]
 
-    def processSendActionRequest(self, id, action, aux_data):
+    def processSendActionRequest(self, agent_id, action, aux_data):
         print "mail hub processing action", action, aux_data
         if action == "getMail":
-            return self.get_mail(id)
+            return self.get_mail(agent_id)
         elif action == "sendMail":
-            return self.send_mail(id, aux_data)
+            return self.send_mail(agent_id, aux_data)
         else:
             print "Unknown action:", action
 

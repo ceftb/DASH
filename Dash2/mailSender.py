@@ -75,4 +75,4 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
 
 
 if __name__ == "__main__":
-    MailSender().agentLoop(3)
+    MailSender().agentLoop()
