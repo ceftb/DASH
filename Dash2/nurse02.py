@@ -9,6 +9,7 @@ class Nurse(DASHAgent):
 
     def _init_(self):
         DASHAgent.__init__(self)
+        self.register([nurse]) #not sure how to register, not email
 
         self.readAgent("""
 
@@ -42,9 +43,9 @@ goalRequirements findComputer(computer)
                                ('alreadyLoggedOn', self.already_logged_on), ('logIn', self.log_in)])
 
     def pick_patient(self,call):
-        list = ('joe','harry','david','bob')
-        print ('successfully looks up medication for',list[0])
-        list.pop() # probably need to import something, can't figure out what
+        patientlist = ('joe','harry','david','bob')
+        print ('successfully looks up medication for',patientlist[0])
+        patientlist.pop() # probably need to import something, can't figure out what
         return[{}] #do you still need this with pop?
 
 
