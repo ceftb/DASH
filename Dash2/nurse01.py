@@ -2,12 +2,13 @@
 from dash import DASHAgent
 import time
 import random
+import pop #don't know what needs to be imported
 from collections import deque
 
 start_time = time.time()
 
 
-class Nurse(DASHAgent):
+class Nurse(DASHAgent):       #keeps saying its trying to connect to the world hub
 
     def _init_(self):
         DASHAgent.__init__(self)
@@ -44,11 +45,10 @@ goalRequirements findComputer(computer)
                                ('alreadyLoggedOn', self.already_logged_on), ('logIn', self.log_in)])
 
     def pick_patient(self,call):
-        list = ('joe','harry','david','bob')
-        print ('successfully looks up medication for',list[0])
-        list.pop() # probably need to import something, can't figure out what
+        patientlist = ('joe','harry','david','bob')
+        print ('successfully looks up medication for', patientlist[0])
+        patientlist.pop() # probably need to import something, can't figure out what
         return[{}] #do you still need this with pop?
-
 
     def find_medications(self, call):
         medications = ['percocet','codeine','insulin','zithromycin']
@@ -92,7 +92,6 @@ goalRequirements findComputer(computer)
             print'login to new computer'
             return[{}]
 
-
     # def log_on(self,call):
     #     print 'logs on successfully' #try to have some variables like tiredness/frustration/busy/rightbed, so could be unsuccessful or cant find computer or something
     #     return[{}]
@@ -113,7 +112,6 @@ goalRequirements findComputer(computer)
     #             return []
 
 # maybe add some sort of variable to account for human error, even if logged in successfully 
-
 
 if __name__ == '__main__':
     Nurse().agentLoop()
