@@ -2,10 +2,13 @@
 from dash import DASHAgent
 import time
 import random
-import pop #don't know what needs to be imported
-from collections import deque
+#import pop #don't know what needs to be imported
+#from collections import deque
+#use mock? yield?
+#Monitor records time and value(SimPy)
 
-start_time = time.time()
+start_time = time.time()  #is time passing for the person standard, or specific to agents? U
+
 
 
 class Nurse(DASHAgent):       #keeps saying its trying to connect to the world hub
@@ -47,7 +50,7 @@ goalRequirements findComputer(computer)
     def pick_patient(self,call):
         patientlist = ('joe','harry','david','bob')
         print ('successfully looks up medication for', patientlist[0])
-        patientlist.pop() # probably need to import something, can't figure out what
+        #patientlist.pop() # probably need to import something, can't figure out what
         return[{}] #do you still need this with pop?
 
     def find_medications(self, call):
@@ -58,11 +61,20 @@ goalRequirements findComputer(computer)
 
     def deliver_medications(self, call):
         print 'delivers medication to patient'
+         #maybe this for time
+        # if 'joe':
+        #     time = 4
+        # elif 'harry':
+        #     time = 3
+        # elif 'david':
+        #     time = 2
+        # elif 'bob':
+        #     time = 5
         return[]
 
     def log_delivery(self, call):
         print "logs delivery of medications into computer"
-        return[]
+        return[{}]
 
     def find_computer(self, call):
         # computer = call[1]
@@ -71,10 +83,11 @@ goalRequirements findComputer(computer)
         # elif computer is 'unavailable':
         #     print 'logs in, but logs another nurse out'
         print 'logs in successfully into a computer' #in this case their is only 1 computer
-        return []
+        return [{}]
 
     def read_spreadsheet(self, call):
         print 'successfully logs into computer and reads the patient spreadsheet'
+        return [{}]
 
     def  write_spreadsheet(self, call):
         patient = pick_patient
