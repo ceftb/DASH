@@ -2,6 +2,7 @@
 from dash import DASHAgent
 import time
 import random
+import xlwt
 #import pop #don't know what needs to be imported
 #from collections import deque
 #use mock? yield?
@@ -46,6 +47,48 @@ goalRequirements findComputer(computer)
                                self.deliver_medications), ('logDelivery', self.log_delivery), ('findComputer', self.find_computer),
                                ('readSpreadsheet', self.read_spreadsheet), ('writeSpreadsheet', self.write_spreadsheet),
                                ('alreadyLoggedOn', self.already_logged_on), ('logIn', self.log_in)])
+
+    def output(selffilename, sheet, list1, list2, x, y):
+        book = xlwt.Workbook() # attempt tp put in the excel sheet
+        sh = book.add_sheet(sheet)
+        #sheet1 = book.add_sheet("Sheet1")
+
+        variables = [x, y]
+        x_desc = 'patient'
+        y_desc = 'medication'
+        desc = [x_desc, y_desc]
+
+        col1_name = 'patient'
+        col2_name = 'medication'
+
+        for n, v_desc, v in enumerate(zip(desc,variables)):
+            sh.write(n,0, v_desc)
+            sh.write(n, 1, v)
+
+        n+=1
+
+        sh.write(n,0, col1_name)
+        sh.write(n, 1, col2_name)
+
+        for m, e1 in enumerate(list1, n+1):
+            sh.write(m,0,e1)
+
+        for m, e2 in enumerate(list2, n+1):
+            sh.write(m, 1, e2)
+
+        book.save(filename)
+
+        #^ from overflow. Other source: https://automatetheboringstuff.com/chapter12/
+
+        # sheet1.write(1, 'patient', 'medication')
+        # sheet1.write(2, 'patient','medication')
+        # sheet1.write(3, 'patient','medication')
+
+        # i=4
+        #
+        # for n in list1:
+        #     i = i+1
+        #     sheet1.write(i, 0, n)
 
     def pick_patient(self,call):
         patientlist = ('joe','harry','david','bob')
