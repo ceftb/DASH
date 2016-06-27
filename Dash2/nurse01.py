@@ -48,7 +48,7 @@ transient doWork
     """)
 
         self.primitiveActions([('pickPatient', self.pick_patient), ('deliverMedications',
-                               self.deliver_medications), ('findComputer', self.find_computer),
+                               self.deliver_medications),
                                ('readSpreadsheet', self.read_spreadsheet), ('writeSpreadsheet', self.write_spreadsheet),
                                ('alreadyLoggedOn', self.already_logged_on), ('logIn', self.log_in)])
 
@@ -125,14 +125,14 @@ transient doWork
         #     time = 5
         return [{}]
 
-    def find_computer(self, call):
-        # computer = call[1]
-        # if computer is 'available': #is there a way to assign a probability to this?
-        #     print ' logs into computer successfully'
-        # elif computer is 'unavailable':
-        #     print 'logs in, but logs another nurse out'
-        print 'logs in successfully into a computer' #in this case their is only 1 computer
-        return [{call[1]: 1}]    # Just using '1' to denote the only computer we need to worry about in this version
+    # def find_computer(self, call):
+    #     # computer = call[1]
+    #     # if computer is 'available': #is there a way to assign a probability to this?
+    #     #     print ' logs into computer successfully'
+    #     # elif computer is 'unavailable':
+    #     #     print 'logs in, but logs another nurse out'
+    #     print 'logs in successfully into a computer' #in this case their is only 1 computer
+    #     return [{call[1]: 1}]    # Just using '1' to denote the only computer we need to worry about in this version
 
     def read_spreadsheet(self, call):
         medications = ['_percocet', '_codeine', '_insulin', '_zithromycin']
@@ -145,15 +145,14 @@ transient doWork
         print ['opens spreadsheet and write patient info:', medications, patient]  # in hub version, somehow have to actually record it
         return [{}]
 
+
     def already_logged_on(self, call):
-        if time < 5:
-            print 'already logged into computer'
-            return[{}]
+        print 'already logged into computer'
+        return[{call[1]: 'stays logged in'}]   #random.random() This is always true.Next one never happens
 
     def log_in(self, call):
-        if time > 5:
-            print'login to new computer'
-            return[{}]
+        print'login to new computer'
+        return[{call[1]: 'logged in to new'}]
 
     # def log_on(self,call):
     #     print 'logs on successfully' #try to have some variables like tiredness/frustration/busy/rightbed, so could be unsuccessful or cant find computer or something
