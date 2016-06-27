@@ -2,7 +2,7 @@
 from dash import DASHAgent
 import time
 import random
-import xlwt
+#import xlwt
 #import pop #don't know what needs to be imported
 #from collections import deque
 #use mock? yield?
@@ -14,7 +14,7 @@ start_time = time.time()  #is time passing for the person standard, or specific 
 
 class Nurse(DASHAgent):       #keeps saying its trying to connect to the world hub
 
-    def _init_(self):
+    def __init__(self):
         DASHAgent.__init__(self)
 
         self.readAgent("""
@@ -26,6 +26,8 @@ goalRequirements doWork
     findMedications(patient, medications)
     deliverMedications(patient, medications)
     logDelivery(patient, medications)
+    forget([pickPatient(x), findMedications(x, y), deliverMedications(x, y), logDelivery(x, y), findMedications(p, m)])
+    forget([findComputer(c), readSpreadsheet(p, c, m), writeSpreadsheet(p, c, m)])
 
 goalRequirements findMedications(patient, medications)
     findComputer(computer)
@@ -41,12 +43,17 @@ goalRequirements findComputer(computer)
 goalRequirements findComputer(computer)
     logIn(computer)
 
+transient doWork
+
     """)
 
-        self.primitiveActions([('pickPatient', self.pick_patient), ('findMedications', self.find_medications),('deliverMedications',
-                               self.deliver_medications), ('logDelivery', self.log_delivery), ('findComputer', self.find_computer),
+        self.primitiveActions([('pickPatient', self.pick_patient), ('deliverMedications',
+                               self.deliver_medications), ('findComputer', self.find_computer),
                                ('readSpreadsheet', self.read_spreadsheet), ('writeSpreadsheet', self.write_spreadsheet),
                                ('alreadyLoggedOn', self.already_logged_on), ('logIn', self.log_in)])
+
+        self.patient_list = ['_joe', '_harry', '_david', '_bob']
+
 
     def output(selffilename, sheet, list1, list2, x, y):
         book = xlwt.Workbook() # attempt tp put in the excel sheet
@@ -90,21 +97,24 @@ goalRequirements findComputer(computer)
         #     i = i+1
         #     sheet1.write(i, 0, n)
 
-    def pick_patient(self,call):
-        patientlist = ('joe','harry','david','bob')
-        print ('successfully looks up medication for', patientlist[0])
-        #patientlist.pop() # probably need to import something, can't figure out what
-        return[{}] #do you still need this with pop?
+    def pick_patient(self, call):
+        if self.patient_list:
+            patient = self.patient_list.pop() # probably need to import something, can't figure out what
+            print ('successfully looks up medication for', patient)
+            return [{call[1]: patient}]
+        else:
+            print "No more patients!"
+            return []
 
-    def find_medications(self, call):
-        medications = ['percocet','codeine','insulin','zithromycin']
-        #x = random.choice(medications) - attempt to find someway to reference this later
-        print ['find list of medications', random.choice(medications)], call
-        return [{call[1]: random.choice(medications)}]
+#    def find_medications(self, call):
+#        medications = ['percocet', 'codeine', 'insulin', 'zithromycin']
+#        #x = random.choice(medications) - attempt to find someway to reference this later
+#        print ['find list of medications', random.choice(medications)], call
+#        return [{call[2]: random.choice(medications)}]
 
     def deliver_medications(self, call):
         print 'delivers medication to patient'
-         #maybe this for time
+        #maybe this for time
         # if 'joe':
         #     time = 4
         # elif 'harry':
@@ -113,11 +123,7 @@ goalRequirements findComputer(computer)
         #     time = 2
         # elif 'bob':
         #     time = 5
-        return[]
-
-    def log_delivery(self, call):
-        print "logs delivery of medications into computer"
-        return[{}]
+        return [{}]
 
     def find_computer(self, call):
         # computer = call[1]
@@ -126,17 +132,18 @@ goalRequirements findComputer(computer)
         # elif computer is 'unavailable':
         #     print 'logs in, but logs another nurse out'
         print 'logs in successfully into a computer' #in this case their is only 1 computer
-        return [{}]
+        return [{call[1]: 1}]    # Just using '1' to denote the only computer we need to worry about in this version
 
     def read_spreadsheet(self, call):
-        print 'successfully logs into computer and reads the patient spreadsheet'
-        return [{}]
+        medications = ['_percocet', '_codeine', '_insulin', '_zithromycin']
+        print 'successfully logs into computer and reads the patient spreadsheet', call
+        (predicate, patient, computer, medications_variable) = call
+        return [{medications_variable: random.choice(medications)}]
 
-    def  write_spreadsheet(self, call):
-        patient = pick_patient
-        medications = deliver_medications  # somehow, actually record patient and med info
-        print ['opens spreadsheet and write patient info:', (medications), (patient)]  # in hub version, somehow have to actually record it
-        return []
+    def write_spreadsheet(self, call):
+        (predicate, patient, computer, medications) = call
+        print ['opens spreadsheet and write patient info:', medications, patient]  # in hub version, somehow have to actually record it
+        return [{}]
 
     def already_logged_on(self, call):
         if time < 5:
