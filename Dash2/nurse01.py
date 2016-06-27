@@ -7,6 +7,7 @@ import random
 #from collections import deque
 #use mock? yield?
 #Monitor records time and value(SimPy)
+import random
 
 start_time = time.time()  #is time passing for the person standard, or specific to agents? U
 
@@ -147,12 +148,17 @@ transient doWork
 
 
     def already_logged_on(self, call):
-        print 'already logged into computer'
-        return[{call[1]: 'stays logged in'}]   #random.random() This is always true.Next one never happens
+        if random.randint(0,1):
+            print 'already logged into computer'
+            return[{call[1]: 'stays logged in'}]   #random.random() This is always true.Next one never happens
+        else:
+            return []
+
 
     def log_in(self, call):
         print'login to new computer'
         return[{call[1]: 'logged in to new'}]
+
 
     # def log_on(self,call):
     #     print 'logs on successfully' #try to have some variables like tiredness/frustration/busy/rightbed, so could be unsuccessful or cant find computer or something
