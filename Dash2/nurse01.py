@@ -27,8 +27,8 @@ goalRequirements doWork
     findMedications(patient, medications)
     deliverMedications(patient, medications)
     logDelivery(patient, medications)
-    forget([pickPatient(x), findMedications(x, y), deliverMedications(x, y), logDelivery(x, y), findMedications(p, m)])
-    forget([findComputer(c), readSpreadsheet(p, c, m), writeSpreadsheet(p, c, m)])
+    forget([pickPatient(x), findMedications(x, y), deliverMedications(x, y), logDelivery(x, y)])
+    forget([alreadyLoggedOn(c), logIn(c), findComputer(c), readSpreadsheet(p, c, m), writeSpreadsheet(p, c, m)])
 
 goalRequirements findMedications(patient, medications)
     findComputer(computer)
@@ -53,9 +53,10 @@ transient doWork
                                self.deliver_medications),
                                ('readSpreadsheet', self.read_spreadsheet), ('writeSpreadsheet', self.write_spreadsheet),
                                ('alreadyLoggedOn', self.already_logged_on), ('logIn', self.log_in), ('logOut', self.log_out)])
-        # self.register()
+        self.register()
 
         self.patient_list = ['_joe', '_harry', '_david', '_bob']
+        self.computer = None    # computer the agent believes it's logged into
 
 
     def output(selffilename, sheet, list1, list2, x, y):
@@ -149,28 +150,27 @@ transient doWork
         return [{}]
 
     def log_out(self, call):
-        print 'logout of computer'
-        close_computers = self.sendAction('logout of a computer')
-        if close_computers[data] == 'success':
-            self.sendAction('logout', data)   #somehow data needs to be the computer number
-        return[{call[1]: 'logged out'}]
+        print 'logout of computer', call[1]
+        self.sendAction('logout', [call[1]])
+        self.computer = None
+        return[{}]     # call[1] was a constant, there is nothing to bind here
 
     def already_logged_on(self, call):
-        if random.randint(0,1):
-            print 'already logged into computer'
-            return[{call[1]: 'stays logged in'}]   #random.random() This is always true.Next one never happens
-        else:
+        if self.computer is None:
             return []
+        else:
+            return [{call[1]: self.computer}]
 
     def log_in(self, call):
-        print 'login to new computer'
         open_computers = self.sendAction("findOpenComputers")
         if open_computers[0] == 'success' and open_computers[1] != []:
             # ok, we have some computers, pick one at random
-            self.sendAction("login", [random.choice(open_computers[1])])
+            self.computer = random.choice(open_computers[1])
         else: # No open computers. Pick one at random which will log someone else off
-            self.sendAction("login", [random.randint(1,10)])
-        return[{call[1]: 'logged in to new'}]
+            self.computer = random.randint(1,10)
+        print 'login to new computer:', self.computer
+        self.sendAction("login", [self.computer])
+        return[{call[1]: self.computer}]
 
 
     # def log_on(self,call):

@@ -93,8 +93,6 @@ class Client(object):
         self.id = response[1]
         aux_response = response[2]
 
-        print "successfully received response..."
-
         print "result: %s." % result
         print "my id: %d." % self.id
         print "aux response: %s." % aux_response
@@ -111,15 +109,24 @@ class Client(object):
             #to be added
         """
 
+        if self.sock is None:
+            print 'Client sent an action, but there is no connection to a hub. Check if register() was called.'
+            return None
+
         response = self.sendAndReceive(message_types['send_action'], [self.id, action, aux_data])
 
-        result = response[0]
-        aux_response = response[1]
+        # Allow for the result to be a list, e.g. ['success', [data]], or just an object, e.g. 'fail'.
+        if isinstance(response, (list, tuple)):
+            result = response[0]
+            if len(response) > 1:
+                aux_response = response[1]
+            else:
+                aux_response = []
+        else:
+            result = response
+            aux_response = []
 
-        print "successfully received response..."
-
-        print "result: %s." % result
-        print "aux response: %s." % aux_response
+        print "successfully received response:", result, (", aux response:", aux_response) if aux_response != [] else ""
 
         self.processActionResponse(result, aux_response)
 
