@@ -1,5 +1,9 @@
+import Idx
+
 
 class NurseHub:
 
+    self.computer_list = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+
  def trackComputers(self):
-     computers = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+   computer_list = [computers[i] for i in Idx]
