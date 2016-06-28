@@ -1,3 +1,5 @@
+
+
 from world_hub import WorldHub
 
 
@@ -7,11 +9,12 @@ class NurseHub(WorldHub):
         WorldHub.__init__(self)
         self.number_of_computers = 10
         self.logged_on = [None for i in range(0, self.number_of_computers)]
+        self.logged_out = [None for i in range(0, self.number_of_computers)]
 
     def processSendActionRequest(self, agent_id, action, data):
         print "nurse hub processing action", action, data
         if action == "findOpenComputers":    # return a list of computers that noone is logged into
-            # something like ['success', [i for i in range(1, self.number_of_computers+1) if self.logged_on[i-1] == None]]
+         'success', [i for i in range(1, self.number_of_computers+1)] if self.logged_on[i-1] is None
         elif action == "login":
             return self.login(agent_id, data)
         elif action == "logout":
@@ -25,5 +28,10 @@ class NurseHub(WorldHub):
         return ['success']
 
     def logout(self, agent_id, data):
-        # Marley to implement
+        print "Logging out", agent_id, 'with', data
+        self.logged_out[data[0]-1] = agent_id
+        return ['success']
 
+
+        # Marley to implement
+ # something like ['success', [i for i in range(1, self.number_of_computers+1) if self.logged_on[i-1] == None]

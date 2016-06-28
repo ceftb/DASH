@@ -52,8 +52,8 @@ transient doWork
         self.primitiveActions([('pickPatient', self.pick_patient), ('deliverMedications',
                                self.deliver_medications),
                                ('readSpreadsheet', self.read_spreadsheet), ('writeSpreadsheet', self.write_spreadsheet),
-                               ('alreadyLoggedOn', self.already_logged_on), ('logIn', self.log_in)])
-        self.register()
+                               ('alreadyLoggedOn', self.already_logged_on), ('logIn', self.log_in), ('logOut', self.log_out)])
+        # self.register()
 
         self.patient_list = ['_joe', '_harry', '_david', '_bob']
 
@@ -147,6 +147,13 @@ transient doWork
         (predicate, patient, computer, medications) = call
         print ['opens spreadsheet and write patient info:', medications, patient]  # in hub version, somehow have to actually record it
         return [{}]
+
+    def log_out(self, call):
+        print 'logout of computer'
+        close_computers = self.sendAction('logout of a computer')
+        if close_computers == 'success':
+            number_of_computers = total + 1
+        return[{}]
 
     def already_logged_on(self, call):
         if random.randint(0,1):
