@@ -151,9 +151,9 @@ transient doWork
     def log_out(self, call):
         print 'logout of computer'
         close_computers = self.sendAction('logout of a computer')
-        if close_computers == 'success':
-            number_of_computers = total + 1
-        return[{}]
+        if close_computers[data] == 'success':
+            self.sendAction('logout', data)   #somehow data needs to be the computer number
+        return[{call[1]: 'logged out'}]
 
     def already_logged_on(self, call):
         if random.randint(0,1):
