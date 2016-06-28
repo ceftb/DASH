@@ -37,6 +37,7 @@ goalRequirements findMedications(patient, medications)
 goalRequirements logDelivery(patient, medications)
     findComputer(computer)
     writeSpreadsheet(patient, computer, medications)
+    logOut(computer)
 
 goalRequirements findComputer(computer)
     alreadyLoggedOn(computer)
@@ -52,6 +53,7 @@ transient doWork
                                self.deliver_medications),
                                ('readSpreadsheet', self.read_spreadsheet), ('writeSpreadsheet', self.write_spreadsheet),
                                ('alreadyLoggedOn', self.already_logged_on), ('logIn', self.log_in)])
+        self.register()
 
         self.patient_list = ['_joe', '_harry', '_david', '_bob']
 
@@ -146,7 +148,6 @@ transient doWork
         print ['opens spreadsheet and write patient info:', medications, patient]  # in hub version, somehow have to actually record it
         return [{}]
 
-
     def already_logged_on(self, call):
         if random.randint(0,1):
             print 'already logged into computer'
@@ -154,9 +155,14 @@ transient doWork
         else:
             return []
 
-
     def log_in(self, call):
-        print'login to new computer'
+        print 'login to new computer'
+        open_computers = self.sendAction("findOpenComputers")
+        if open_computers[0] == 'success' and open_computers[1] != []:
+            # ok, we have some computers, pick one at random
+            self.sendAction("login", [random.choice(open_computers[1])])
+        else: # No open computers. Pick one at random which will log someone else off
+            self.sendAction("login", [random.randint(1,10)])
         return[{call[1]: 'logged in to new'}]
 
 
