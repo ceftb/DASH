@@ -131,7 +131,8 @@ class WorldHub:
     # This method is intended to be overridden by subclasses to point to a serveClientThread subclass
     def createServeClientThread(self, (client, address)):
         return serveClientThread(self, (client, address))
-                    
+
+
 class serveClientThread(threading.Thread):
 
     def __init__(self, hub, (client, address)):

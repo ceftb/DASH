@@ -1,6 +1,6 @@
 
-
 from world_hub import WorldHub
+import random
 
 
 class NurseHub(WorldHub):
@@ -10,6 +10,7 @@ class NurseHub(WorldHub):
         self.number_of_computers = 10
         self.logged_on = [None for i in range(0, self.number_of_computers)]
         self.logged_out = [None for i in range(0, self.number_of_computers)]
+        self.possible_medications = ['_percocet', '_codeine', '_insulin', '_zithromycin']
 
     def processSendActionRequest(self, agent_id, action, data):
         print "nurse hub processing action", action, data
@@ -21,6 +22,10 @@ class NurseHub(WorldHub):
             return self.login(agent_id, data)
         elif action == "logout":
             return self.logout(agent_id, data)
+        elif action == "readSpreadsheet":
+            return self.read_spreadsheet(agent_id, data)
+        elif action == "writeSpreadsheet":
+            return self.write_spreadsheet(agent_id, data)
         else:
             print "Unknown action:", action
 
@@ -33,6 +38,13 @@ class NurseHub(WorldHub):
         print "Logging out", agent_id, 'with', data
         self.logged_on[data[0]-1] = None
         self.logged_out[data[0]-1] = agent_id
+        return 'success'
+
+    def read_spreadsheet(self, agent_id, data):
+        return 'success', random.choice(self.possible_medications)
+
+    def write_spreadsheet(self, agent_id, data):
+        # Don't really do anything for now. A log of the hub actions would record this write action for analysis
         return 'success'
 
 

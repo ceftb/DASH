@@ -132,14 +132,15 @@ class Client(object):
             result = response
             aux_response = []
 
-        print "Received response:", result, ", aux response: " + str(aux_response) if aux_response != [] else ""
+        print "hub action", action, str(aux_data) if aux_data else "", \
+            "received response:", result, ", aux response: " + str(aux_response) if aux_response != [] else ""
 
         self.processActionResponse(result, aux_response)
 
         return response
 
     def getUpdates(self, aux_data=[]):
-        """ Sends request for update with the aux_data and recieves the update
+        """ Sends request for update with the aux_data and receives the update
         from the World Hub
         Args:
             aux_data(list)    # Data to be sent to the world hub

@@ -17,8 +17,7 @@ goalRequirements doWork
     findMedications(patient, medications)
     deliverMedications(patient, medications)
     logDelivery(patient, medications)
-    forget([pickPatient(x), findMedications(x, y), deliverMedications(x, y), logDelivery(x, y), alreadyLoggedOn(c), \
-            logIn(c), findComputer(c), readSpreadsheet(p, c, m), writeSpreadsheet(p, c, m)])
+    forget([pickPatient(x), findMedications(x, y), deliverMedications(x, y), logDelivery(x, y), alreadyLoggedOn(c), logIn(c), logOut(c), findComputer(c), readSpreadsheet(p, c, m), writeSpreadsheet(p, c, m)])
 
 goalRequirements findMedications(patient, medications)
     findComputer(computer)
@@ -39,10 +38,11 @@ transient doWork
 
     """)
 
-        self.primitiveActions([('pickPatient', self.pick_patient), ('deliverMedications',
-                               self.deliver_medications),
+        self.primitiveActions([('pickPatient', self.pick_patient), ('deliverMedications', self.deliver_medications),
                                ('readSpreadsheet', self.read_spreadsheet), ('writeSpreadsheet', self.write_spreadsheet),
-                               ('alreadyLoggedOn', self.already_logged_on), ('logIn', self.log_in), ('logOut', self.log_out)])
+                               ('alreadyLoggedOn', self.already_logged_on), ('logIn', self.log_in),
+                               ('logOut', self.log_out)])
+        # self.traceAction = True  # uncomment to see more about the internal actions chosen by the agent
         self.register()
 
         self.patient_list = ['_joe', '_harry', '_david', '_bob']
@@ -119,16 +119,21 @@ transient doWork
     #     print 'logs in successfully into a computer' #in this case their is only 1 computer
     #     return [{call[1]: 1}]    # Just using '1' to denote the only computer we need to worry about in this version
 
-    def read_spreadsheet(self, call):
-        medications = ['_percocet', '_codeine', '_insulin', '_zithromycin']
-        print 'reads the patient spreadsheet', call
-        (predicate, patient, computer, medications_variable) = call
-        return [{medications_variable: random.choice(medications)}]
+    def read_spreadsheet(self, (predicate, patient, computer, medications_variable)):
+        print 'reading the patient spreadsheet for', patient, 'on', computer
+        result = self.sendAction("readSpreadsheet", [patient, computer])   # returns the medication for the patient
+        if result is not None and result[0] == 'success':
+            return [{medications_variable: result[1]}]
+        else:
+            return []
 
-    def write_spreadsheet(self, call):
-        (predicate, patient, computer, medications) = call
-        print 'opens spreadsheet and write patient info:', medications, patient  # in hub version, somehow have to actually record it
-        return [{}]
+    def write_spreadsheet(self, (predicate, patient, computer, medication)):
+        print 'opening spreadsheet and writing patient info:', medication, patient, 'on', computer
+        result = self.sendAction("writeSpreadsheet", [patient, computer, medication])
+        if result == 'success':
+            return [{}]
+        else:  # somehow failed to write via the hub
+            return []
 
     def log_out(self, (logout, computer)):
         print 'logout of computer', computer
@@ -136,13 +141,13 @@ transient doWork
         self.computer = None
         return[{}]     # call[1] was a constant, there is nothing to bind here
 
-    def already_logged_on(self, call):
+    def already_logged_on(self, (goal, computer_var)):
         if self.computer is None:
             return []
         else:
-            return [{call[1]: self.computer}]
+            return [{computer_var: self.computer}]
 
-    def log_in(self, call):
+    def log_in(self, (login, computer_variable)):
         open_computers = self.sendAction("findOpenComputers")
         if open_computers[0] == 'success' and open_computers[1] != []:
             # ok, we have some computers, pick one at random
@@ -157,7 +162,7 @@ transient doWork
                 return []
         print 'login to', 'open' if open else 'occupied', 'computer:', self.computer
         self.sendAction("login", [self.computer])
-        return[{call[1]: self.computer}]
+        return[{computer_variable: self.computer}]
 
 
     # def log_on(self,call):
