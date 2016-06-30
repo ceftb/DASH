@@ -1,19 +1,9 @@
 
 from dash import DASHAgent
-import time
-import random
-#import xlwt
-#import pop #don't know what needs to be imported
-#from collections import deque
-#use mock? yield?
-#Monitor records time and value(SimPy)
 import random
 
-start_time = time.time()  #is time passing for the person standard, or specific to agents? U
 
-
-
-class Nurse(DASHAgent):       #keeps saying its trying to connect to the world hub
+class Nurse(DASHAgent):
 
     def __init__(self):
         DASHAgent.__init__(self)
@@ -27,8 +17,8 @@ goalRequirements doWork
     findMedications(patient, medications)
     deliverMedications(patient, medications)
     logDelivery(patient, medications)
-    forget([pickPatient(x), findMedications(x, y), deliverMedications(x, y), logDelivery(x, y)])
-    forget([alreadyLoggedOn(c), logIn(c), findComputer(c), readSpreadsheet(p, c, m), writeSpreadsheet(p, c, m)])
+    forget([pickPatient(x), findMedications(x, y), deliverMedications(x, y), logDelivery(x, y), alreadyLoggedOn(c), \
+            logIn(c), findComputer(c), readSpreadsheet(p, c, m), writeSpreadsheet(p, c, m)])
 
 goalRequirements findMedications(patient, medications)
     findComputer(computer)
@@ -59,53 +49,53 @@ transient doWork
         self.computer = None    # computer the agent believes it's logged into
 
 
-    def output(selffilename, sheet, list1, list2, x, y):
-        book = xlwt.Workbook() # attempt tp put in the excel sheet
-        sh = book.add_sheet(sheet)
-        #sheet1 = book.add_sheet("Sheet1")
+#    def output(selffilename, sheet, list1, list2, x, y):
+#        book = xlwt.Workbook() # attempt tp put in the excel sheet
+#        sh = book.add_sheet(sheet)
+#        #sheet1 = book.add_sheet("Sheet1")
+#
+#        variables = [x, y]
+#        x_desc = 'patient'
+#        y_desc = 'medication'
+#        desc = [x_desc, y_desc]
+#
+#        col1_name = 'patient'
+#        col2_name = 'medication'
+#
+#        for n, v_desc, v in enumerate(zip(desc,variables)):
+#            sh.write(n,0, v_desc)
+#            sh.write(n, 1, v)
+#
+#        n+=1
+#
+#        sh.write(n,0, col1_name)
+#        sh.write(n, 1, col2_name)
+#
+#        for m, e1 in enumerate(list1, n+1):
+#            sh.write(m,0,e1)
+#
+#        for m, e2 in enumerate(list2, n+1):
+#            sh.write(m, 1, e2)
+#
+#        book.save(filename)
+#
+#        #^ from overflow. Other source: https://automatetheboringstuff.com/chapter12/
+#
+#        # sheet1.write(1, 'patient', 'medication')
+#        # sheet1.write(2, 'patient','medication')
+#        # sheet1.write(3, 'patient','medication')
+#
+#        # i=4
+#        #
+#        # for n in list1:
+#        #     i = i+1
+#        #     sheet1.write(i, 0, n)
 
-        variables = [x, y]
-        x_desc = 'patient'
-        y_desc = 'medication'
-        desc = [x_desc, y_desc]
-
-        col1_name = 'patient'
-        col2_name = 'medication'
-
-        for n, v_desc, v in enumerate(zip(desc,variables)):
-            sh.write(n,0, v_desc)
-            sh.write(n, 1, v)
-
-        n+=1
-
-        sh.write(n,0, col1_name)
-        sh.write(n, 1, col2_name)
-
-        for m, e1 in enumerate(list1, n+1):
-            sh.write(m,0,e1)
-
-        for m, e2 in enumerate(list2, n+1):
-            sh.write(m, 1, e2)
-
-        book.save(filename)
-
-        #^ from overflow. Other source: https://automatetheboringstuff.com/chapter12/
-
-        # sheet1.write(1, 'patient', 'medication')
-        # sheet1.write(2, 'patient','medication')
-        # sheet1.write(3, 'patient','medication')
-
-        # i=4
-        #
-        # for n in list1:
-        #     i = i+1
-        #     sheet1.write(i, 0, n)
-
-    def pick_patient(self, call):
+    def pick_patient(self, (goal, patient_variable)):
         if self.patient_list:
             patient = self.patient_list.pop() # probably need to import something, can't figure out what
-            print ('successfully looks up medication for', patient)
-            return [{call[1]: patient}]
+            print 'successfully looks up medication for', patient
+            return [{patient_variable: patient}]
         else:
             print "No more patients!"
             return []
@@ -116,17 +106,8 @@ transient doWork
 #        print ['find list of medications', random.choice(medications)], call
 #        return [{call[2]: random.choice(medications)}]
 
-    def deliver_medications(self, call):
-        print 'delivers medication to patient'
-        #maybe this for time
-        # if 'joe':
-        #     time = 4
-        # elif 'harry':
-        #     time = 3
-        # elif 'david':
-        #     time = 2
-        # elif 'bob':
-        #     time = 5
+    def deliver_medications(self, (goal, patient, medication)):
+        print 'delivers', medication, 'to patient', patient
         return [{}]
 
     # def find_computer(self, call):
@@ -140,18 +121,18 @@ transient doWork
 
     def read_spreadsheet(self, call):
         medications = ['_percocet', '_codeine', '_insulin', '_zithromycin']
-        print 'successfully logs into computer and reads the patient spreadsheet', call
+        print 'reads the patient spreadsheet', call
         (predicate, patient, computer, medications_variable) = call
         return [{medications_variable: random.choice(medications)}]
 
     def write_spreadsheet(self, call):
         (predicate, patient, computer, medications) = call
-        print ['opens spreadsheet and write patient info:', medications, patient]  # in hub version, somehow have to actually record it
+        print 'opens spreadsheet and write patient info:', medications, patient  # in hub version, somehow have to actually record it
         return [{}]
 
-    def log_out(self, call):
-        print 'logout of computer', call[1]
-        self.sendAction('logout', [call[1]])
+    def log_out(self, (logout, computer)):
+        print 'logout of computer', computer
+        self.sendAction('logout', [computer])
         self.computer = None
         return[{}]     # call[1] was a constant, there is nothing to bind here
 
@@ -166,9 +147,15 @@ transient doWork
         if open_computers[0] == 'success' and open_computers[1] != []:
             # ok, we have some computers, pick one at random
             self.computer = random.choice(open_computers[1])
-        else: # No open computers. Pick one at random which will log someone else off
-            self.computer = random.randint(1,10)
-        print 'login to new computer:', self.computer
+            open_computer = True
+        else:  # No open computers. Pick one at random which will log someone else off
+            all_computers = self.sendAction("findAllComputers")
+            if all_computers[0] == 'success' and all_computers[1] != []:
+                open_computer = False
+                self.computer = random.choice(all_computers[1])
+            else:  # can't find any computers on the hub!
+                return []
+        print 'login to', 'open' if open else 'occupied', 'computer:', self.computer
         self.sendAction("login", [self.computer])
         return[{call[1]: self.computer}]
 

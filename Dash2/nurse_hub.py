@@ -15,6 +15,8 @@ class NurseHub(WorldHub):
         print "nurse hub processing action", action, data
         if action == "findOpenComputers":    # return a list of computers that noone is logged into
             return 'success', [i for i in range(1, self.number_of_computers+1) if self.logged_on[i-1] is None]
+        elif action == "findAllComputers":   # return a list of all computers, whether another agent is logged in or not
+            return 'success', range(1, self.number_of_computers + 1)
         elif action == "login":
             return self.login(agent_id, data)
         elif action == "logout":

@@ -4,7 +4,8 @@ import compiler # Testing using the compiler to parse expressions
 import time
 import collections
 
-class System2Agent():
+
+class System2Agent:
 
     def __init__(self):
         self.goalWeightDict = dict()
@@ -12,7 +13,7 @@ class System2Agent():
         self.knownDict = dict()
         self.knownFalseDict = dict()
         self.transientDict = dict()
-        self.transientDict['forget']=[('forget', 'x')]  # Forget should be transient so you can keep forgetting things
+        self.transientDict['forget'] = [('forget', 'x')]  # Forget should be transient so you can keep forgetting things
         self.projectionRuleDict = dict()
         self.utilityRules = []
 
@@ -63,6 +64,8 @@ class System2Agent():
                 lines = [line]
             elif line.startswith("transient"):
                 self.readTransient(line)
+            elif line != "":
+                print "unrecognized line in readAgent:", line
 
     def readGoalWeight(self, line):
         # line has form 'goalWeight predicate(arg1, arg2, ..) integer'
@@ -226,6 +229,7 @@ class System2Agent():
 
     def chooseGoal(self):
         if self.goalWeightDict == {}:
+            print 'empty weight dict'
             return None
         # Return a goal with highest weight that is not already achieved (always returns the same one)
         validGoals = [item for item in self.goalWeightDict.items() if self.isKnown(item[0]) is False]

@@ -1,8 +1,8 @@
 import socket
-import sys
 import struct
 import pickle
 from communication_aux import message_types
+
 
 class Client(object):
     """
@@ -19,16 +19,17 @@ class Client(object):
             c = Client()
         """
         print "initializing client..."
-        if host == None:
+        if host is None:
             self.server_host = 'localhost'
         else:
             self.server_host = host
-        if port == None:
+        if port is None:
             self.server_port = 5678
         else:
             self.server_port = port
         self.sock = None
         self.id = None
+        self.connected = False
 
     def test(self):
         """
@@ -70,9 +71,10 @@ class Client(object):
         try:
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.sock.connect((self.server_host, self.server_port))
-
+            self.connected = True
             print "successfully connected."
         except:
+            self.connected = False
             print "Problem connecting to hub server, continuing without agent communications"
 
     def register(self, aux_data = []):
@@ -84,6 +86,10 @@ class Client(object):
         print "establishing connection..."
 
         self.establishConnection()
+
+        if not self.connected:
+            print "no connection established, agent not registered"
+            return None
         
         print "registering..."
 
@@ -99,7 +105,7 @@ class Client(object):
 
         return response
 
-    def sendAction(self, action, aux_data = []):
+    def sendAction(self, action, aux_data=[]):
         """ Send actionin form of message_types['send_action'] to the World Hub
         And awaits the appropriate response
         Args:
@@ -109,7 +115,7 @@ class Client(object):
             #to be added
         """
 
-        if self.sock is None:
+        if self.sock is None or not self.connected:
             print 'Client sent an action, but there is no connection to a hub. Check if register() was called.'
             return None
 
@@ -126,13 +132,13 @@ class Client(object):
             result = response
             aux_response = []
 
-        print "successfully received response:", result, (", aux response:", aux_response) if aux_response != [] else ""
+        print "Received response:", result, ", aux response: " + str(aux_response) if aux_response != [] else ""
 
         self.processActionResponse(result, aux_response)
 
         return response
 
-    def getUpdates(self, aux_data = []):
+    def getUpdates(self, aux_data=[]):
         """ Sends request for update with the aux_data and recieves the update
         from the World Hub
         Args:
@@ -150,7 +156,7 @@ class Client(object):
 
         return
 
-    def disconnect(self, aux_data = []):
+    def disconnect(self, aux_data=[]):
         """ Sends request to disconnect from world hub"
         Args:
             aux_data(list)    # Data to be sent to the world hub
@@ -159,7 +165,7 @@ class Client(object):
         if self.sock is not None:
             self.sendMessage(message_types['disconnect'], [self.id, aux_data])
         
-            print "disconnecting from world hub..."
+            print "disconnecting from world hub."
             self.sock.shutdown(socket.SHUT_RDWR)
             self.sock.close()
         #sys.exit(0)  # Should not automatically kill the process
