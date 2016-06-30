@@ -1,5 +1,5 @@
 import sys
-sys.path.insert(0,'...')
+sys.path.insert(0, '..')
 
 
 from dash import DASHAgent
@@ -37,11 +37,10 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
         self.mailCounter = 0
         self.flights_to_buy = []     # flights that have been requested but not yet bought
 
-    def flight_to_buy(self,call):
-        var = call[1]
-        if not isVar(var):
+    def flight_to_buy(self, (goal_name, flight_variable)):
+        if not isVar(flight_variable):
             return []
-        result = [{var: flight} for flight in self.flights_to_buy]
+        result = [{flight_variable: flight} for flight in self.flights_to_buy]
         return result
 
     def buy_flight(self,call):
