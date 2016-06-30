@@ -1,6 +1,7 @@
 from dash import DASHAgent
 from system2 import isVar
-import random
+import sys
+sys.path.insert(0, '..')
 
 
 class MailReader(DASHAgent):
@@ -16,13 +17,13 @@ goalRequirements doWork
   flightToBuy(flight)
   buyFlight(flight)
   sleep(1)
-  forget([flightToBuy(x),buyFlight(x),sleep(x)])
+  forget([flightToBuy(x), buyFlight(x), sleep(x)])
 
 goalRequirements doWork
   readMail(newmail)
   processMail(newmail)
   sleep(1)
-  forget([readMail(x),processMail(x),sleep(x),flightToBuy(x)])  # a built-in that removes matching elements from memory
+  forget([readMail(x), processMail(x), sleep(x), flightToBuy(x)])  # a built-in that removes matching elements from memory
 
 transient doWork     # Agent will forget goal's achievement or failure as soon as it happens
                        """)
@@ -30,24 +31,21 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
                                ('flightToBuy', self.flight_to_buy), ('buyFlight', self.buy_flight)])
 
         # Using this as a counter in the email that gets sent
-        self.mailCounter = 0
         self.flights_to_buy = []
+        self.mailCounter = 0
         
-    def flight_to_buy(self, call):
-        var = call[1]
-        if not isVar(var):
+    def flight_to_buy(self, (goal, flight_variable)):
+        if not isVar(flight_variable):
             return[]
-        result = [{var: flight} for flight in self.flights_to_buy]
+        result = [{flight_variable: flight} for flight in self.flights_to_buy]
         return result
         
-    def buy_flight(self,call):
-        flight = call[1]
+    def buy_flight(self, (goal, flight)):
         print 'buys flight tickets for', flight
         self.flights_to_buy.remove(flight)
         return [{}]
 
-    def read_mail(self, call):
-        mail_var = call[1]
+    def read_mail(self, (goal, mail_var)):
         [status, data] = self.sendAction("getMail")
         print 'response to getMail is', status, data
         if status == "success":
@@ -68,9 +66,8 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
         else:
             return []
             
-    def process_mail(self, call):
-        print call
-        mail_list = call[1]
+    def process_mail(self, (goal, mail_list)):
+        print 'processing', mail_list
         for address in mail_list:
             for mail in mail_list:
                 if mail['subject'] == 'buyTickets':
@@ -79,7 +76,7 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
                     if ix == -1:
                         return []    # Can't read the destination: fail
                     destination = mail['body'][ix + 16:]
-                    print['buy tickets', destination, 'Friday'], call
+                    print'buy tickets', destination, 'Friday', mail
                     self.flights_to_buy.append([destination,'Friday'])
                 elif mail['subject'] == 'cancelFlight':
                     print 'cancels flight'
