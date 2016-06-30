@@ -8,7 +8,6 @@ class MailSender(DASHAgent):
         DASHAgent.__init__(self)
         self.register(['flightbuyer@amail.com'])
 
-
         self.readAgent("""
 goalWeight doWork 1
 
@@ -23,11 +22,11 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
         self.primitiveActions([('sendMail', self.send_mail), ('chooseTrip', self.choose_trip)])
         self.mailCounter = 0
 
-    def send_mail(self, call):
-        print 'send mail call', call
+    def send_mail(self, (goal, trip)):
+        print 'send mail for trip to', trip
         [status, data] = self.sendAction("sendMail",
                                          [{'to': 'flightagent@amail.com', 'subject': 'buyTickets',
-                                           'body': 'I want to go to ' + call[1] + str(self.mailCounter)}])
+                                           'body': 'I want to go to ' + trip + str(self.mailCounter)}])
         self.mailCounter += 1
         if status == "success":
             print 'send mail success with data', data
@@ -36,9 +35,9 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
             return []
 
     # Bind call variable to destination
-    def choose_trip(self, call):
+    def choose_trip(self, (goal, trip_variable)):
         possible_destinations = ['New York','Paris','London','Shanghai']
-        return [{call[1]: random.choice(possible_destinations)}]
+        return [{trip_variable: random.choice(possible_destinations)}]
 
 
     # def receive_mail(self, call):
@@ -71,7 +70,6 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
     #                 else:
     #                     print 'unknown request:', mail['subject']
     #         return [{}]
-
 
 
 if __name__ == "__main__":
