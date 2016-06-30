@@ -1,3 +1,6 @@
+import sys
+sys.path.insert(0, '..')
+
 from world_hub import WorldHub, serveClientThread
 
 
@@ -23,9 +26,9 @@ class MailHub(WorldHub):
         if recipient not in self.mail:
             self.mail[recipient] = []
 
-    def get_mail(self, id):
-        if id in self.emailAddress:
-            address = self.emailAddress[id]
+    def get_mail(self, agent_id):
+        if agent_id in self.emailAddress:
+            address = self.emailAddress[agent_id]
             mail = self.mail[address]
             print 'mail for ' + address + ' is ' + str(mail)
             self.mail[address] = []
@@ -33,21 +36,21 @@ class MailHub(WorldHub):
         else:
             return ['fail', []]
 
-    def send_mail(self, id, mail):
+    def send_mail(self, agent_id, mail):
         # Put each message in the appropriate mailboxes. The 'to' field can be a single string or a list.
         # If the email doesn't exist yet it is created, so agents can have mail waiting when they start up.
         try:
             for message in mail:
                 if 'from' not in message:
-                    message['from'] = self.emailAddress[id]
+                    message['from'] = self.emailAddress[agent_id]
                 if 'to' not in message:
                     print 'no \'to\' field in message, not sending:', message
                 elif isinstance(message['to'], str):
-                    self.initialize_email(id, message['to'])
+                    self.initialize_email(agent_id, message['to'])
                     self.mail[message['to']].append(message)
                 elif isinstance(message['to'], list):
                     for recipient in message['to']:
-                        self.initialize_email(id, recipient)
+                        self.initialize_email(agent_id, recipient)
                         self.mail[recipient].append(message)
             return ['success', []]
         except:
