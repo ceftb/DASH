@@ -1,7 +1,7 @@
-from dash import DASHAgent
-from system2 import isVar
 import sys
 sys.path.insert(0, '..')
+from dash import DASHAgent
+from system2 import isVar
 
 
 class MailReader(DASHAgent):
@@ -47,9 +47,8 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
 
     def read_mail(self, (goal, mail_var)):
         [status, data] = self.sendAction("getMail")
-        print 'response to getMail is', status, data
         if status == "success":
-            print "read mail success with", data
+            print "successfully read mail:", data
             return [{mail_var: data}]
         else:
             return []

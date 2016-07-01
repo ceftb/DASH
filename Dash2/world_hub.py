@@ -55,9 +55,8 @@ class WorldHub:
 
         # placeholder code
         print 'This is the base class processSendActionRequest'
-        result = "success"
         aux_response = self.updateState(id, action, aux_data) + self.getUpdates(id, aux_data)
-        return [result, aux_response]
+        return ['success', aux_response]
 
     def processDisconnectRequest(self, id, aux_data):
         print "Client %d has disconnected from the world hub." % id

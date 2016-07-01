@@ -57,13 +57,13 @@ class MailHub(WorldHub):
             print "problem sending mail"
             return ['fail', []]
 
-    def processRegisterRequest(self, id, aux_data):
+    def processRegisterRequest(self, agent_id, aux_data):
         address = aux_data[0]
-        self.emailAddress[id] = address
+        self.emailAddress[agent_id] = address
         # Someone may have already sent this agent mail before registration, so don't lose it
         if address not in self.mail:
             self.mail[address] = {}
-        return ['success', id, []]
+        return ['success', agent_id, []]
 
     def processSendActionRequest(self, agent_id, action, aux_data):
         print "mail hub processing action", action, aux_data

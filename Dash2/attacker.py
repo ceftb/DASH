@@ -61,11 +61,10 @@ known reachable(anywhere, _localhost)
     # there can only be one argument. Will fix.
 
     # 'action' is a term, e.g. ('portScanner', '_server1', _80, 'protocol')
-    def portScanner(self, action):
+    def portScanner(self, (goal, host, portVar, protocolVar)):
         # Will expand to a call to nmap here
-        print "called portScanner with", action
+        print "called portScanner with", host, portVar, protocolVar
         # Host needs to be bound
-        [host, portVar, protocolVar] = action[1:]
         if not isConstant(host):
             print "Host needs to be bound on calling portScanner:", host
             return False
@@ -92,7 +91,7 @@ known reachable(anywhere, _localhost)
                 # This returns all the results that match.
                 # Also records every result just so nmap isn't run more than
                 # necessary if a different port or protocol is explored later.
-                self.knownTuple((action[0], host, port, protocol))
+                self.knownTuple((goal, host, port, protocol))
                 if not isConstant(portVar) and not isConstant(protocolVar):
                     bindingsList.append({portVar: port, protocolVar: protocol})
                 elif portVar == port and not isConstant(protocolVar):
@@ -115,7 +114,7 @@ known reachable(anywhere, _localhost)
         proc = None
         call = ["python", self.SQLMapHome + "/sqlmap.py", "-u", "http://" + host + ":" + port + "/" + base + "?" + parameter + "=1"]
         try:
-            proc = subprocess.Popen(call,stdin=subprocess.PIPE,stdout=subprocess.PIPE)
+            proc = subprocess.Popen(call, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
         except BaseException as e:
             print "Unable to run sqlmap:", e
             return []
@@ -163,8 +162,8 @@ known reachable(anywhere, _localhost)
         result = []
         try:
             call = ["python", self.SQLMapHome + "/sqlmap.py", "-u",
-            "http://" + target + ":" + port + "/" + baseUrl + "?" + parameter + "=1",
-            "--file-read=" + targetFile]
+                    "http://" + target + ":" + port + "/" + baseUrl + "?" + parameter + "=1",
+                    "--file-read=" + targetFile]
             proc = subprocess.Popen(call, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
             # The java sends three carriage returns - here I look for lines asking questions and send them
             # On second thoughts, no
