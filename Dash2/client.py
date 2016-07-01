@@ -8,7 +8,7 @@ class Client(object):
     """
     Template class for the client agent
     """
-    def __init__(self, host = None, port = None):
+    def __init__(self, host=None, port=None):
         """ Initialization of the client.
         It is required to run Client.run() in order to recieve ID from the
         World Hub.
@@ -77,7 +77,7 @@ class Client(object):
             self.connected = False
             print "Problem connecting to hub server, continuing without agent communications"
 
-    def register(self, aux_data = []):
+    def register(self, aux_data=[]):
         """ Register with world hub. Essentially, this is used to assign the client a unique id
         Args:
             aux_data(list) # any extra information you want to relay to the world hub during registration

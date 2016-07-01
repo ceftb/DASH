@@ -1,23 +1,26 @@
 import communication_aux
 import operator
+import random
 import re
 
-def distPicker(distribution, r):
+
+def distPicker(distribution, r=random.random()):
     ''' Function takes distribution of services and a value;
     then returns the value for that particular range
 
     Input:
-        distribution (dict)
+        distribution (list of pairs)
         r (float)
     Output
         value (type)
     '''
     previous = 0.0
-    for key, value in distribution.iteritems():
-        if r in range(previous, key):
-            return value
+    # This used to use a dictionary and iteritems, but the order of that is not guaranteed
+    for item, value in distribution:
+        if previous <= r <= value:
+            return item
         else:
-            previous = key
+            previous = value
 
 
 
@@ -29,8 +32,7 @@ def distPicker(distribution, r):
 #    return getResponseFromWorldHub(self.port) # recieve actuall service
 
 
-
-class requirements():
+class Requirements:
     ''' Small class that holds password requirements
     '''
     def __init__(self, min_len=6, max_len=30, uppercase=0, numbers=0, symbols=0):
@@ -62,7 +64,7 @@ class requirements():
             return False
 
 
-class service():
+class Service:
     def __init__(self, service_type, name, requirements):
         self.type = service_type
         self.name = name

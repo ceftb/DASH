@@ -493,6 +493,7 @@ class Effect(object):
             world.remove(fact)
         return world
 
+
 # Just clarifies the code a little
 def isConstant(term):
     return not isVar(term)

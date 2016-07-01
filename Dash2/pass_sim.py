@@ -21,7 +21,7 @@
 ##### finish elaborate pass choosing
 
 
-from dash import DASHAgent, isConstant
+from dash import DASHAgent, isConstant, isVar
 import random
 from utils import distPicker
 import operator
@@ -41,15 +41,15 @@ class PasswordAgent(DASHAgent):
         # Added by Jim based on bruno_user.pl
         self.password_list = ['p', 'P', 'pw', 'Pw', 'pw1', 'Pw1', 'pass', 'Pass', 'pas1', 'Pas1', 'pass1', 'Pass1', 'PaSs1', 'password', 'P4ssW1', 'PassWord', 'PaSs12', 'PaSsWord', 'PaSsW0rd', 'P@SsW0rd', 'PassWord1', 'PaSsWord1', 'P4ssW0rd!', 'P4SsW0rd!', 'PaSsWord12', 'P@SsWord12', 'P@SsWoRd12', 'PaSsWord!2', 'P@SsWord!234', 'P@SsWord!234', 'MyP4SsW0rd!', 'MyP4SsW0rd!234', 'MyP@SsW0rd!234', 'MyPaSsWoRd!234?', 'MyPaSsW0Rd!234?', 'MyS3cUReP@SsW0rd!2345', 'MyV3ryL0ngS3cUReP@SsW0rd!2345?']
 
-        # distribution of probabilities for every service type
-        self.serviceProbs = {'mail': 0.35, 'social_net':0.85, 'bank':1.0}
+        # distribution of probabilities for every service type. Used to be dictionaries, but then order is not guaranteed
+        self.serviceProbs = [('mail', 0.35), ('social_net', 0.85), ('bank', 1.0)]
         # bias between memorizing or writing down
-        self.memoBias = {'reuse': 0.5, 'write_down': 1.0}
-        # initial strenght of beliefs
+        self.memoBias = [('reuse', 0.5), ('write_down', 1.0)]
+        # initial strength of beliefs
         self.initial_belief = 0.65
         # forgetting rate - percent of belief lost
         self.forgettingRate = 0.15
-        # strenghtening rate
+        # strengthening rate
         self.strengtheningRate = 0.2
 
 
@@ -93,7 +93,7 @@ goalRequirements doWork
     checkTermination(criterion, beliefs)
 
 goalRequirements doWork
-    setupAccount(service_type)
+    setupAccount(service_type, service)
     signIn(service)
     signOut(service)
     resetPassword(service)
@@ -103,7 +103,9 @@ transient doWork
 
 """)
 
-    def setupAccount(self, call):
+    # service_type_var may be unbound or bound to a requested service_type. service_var is unbound
+    # and will be bound to the result of setting up the service
+    def setupAccount(self, (goal, service_type_var, service_var)):
         ''' Should be equivalent to createAccount subgoal in prolog version
         It takes service type as an input, and based on that decides which
         username to use[1]. Then, it picks the password and submits the info.
@@ -130,12 +132,13 @@ transient doWork
         [1] we might add the fact that banks usually don't really let you pick
         password, which additionally adds to the cognitive burden.
         '''
-        if service_type is None:
+        if isVar(service_type_var):
             # choose the service type, and find the actuall service
             service_type = distPicker(self.serviceProbs, random.random())
-            # Decide the service to log into
-            response = self.sendAction('getAccount', [service_type])
-            service = response[1]   # This should be second entry of the response
+
+        # Decide the service to log into
+        [status, service] = self.sendAction('getAccount', [service_type])
+        print 'getaccount result:', status, service
 
         ### choose Username
         # if the list of existing usernames is not empty, pick one at random,
@@ -147,7 +150,7 @@ transient doWork
         else:
             username = random.choice(self.username_list)
 
-        password = self.choose_password(username, requirements)
+        password = self.choose_password(username, service.getRequirements())
 
         # If account is be created, update beliefs else repeat
         # I am not sure if it would make more sense to keep beliefs local in this
@@ -164,9 +167,12 @@ transient doWork
         elif result[0] == 'failed:reqs':
             self.setupAccount(service_type, service, result[1])
 
-        return [{}]
+        if isVar(service_type_var):
+            return [{service_type_var: service_type, service_var: service}]
+        else:
+            return [{service_var: service}]
 
-    def signIn(self, service):
+    def signIn(self, (goal, service)):
         ''' This should be equivalent to singIn subgoal in prolog version
         User looks for service beliefs on the worldHub, and based on the strength
         of his belief tries either one of the known passwords or the password for
@@ -204,9 +210,9 @@ transient doWork
         login_response = self.sendAction('signIn', [service, username, password])
         if login_response[0] == 'success':
             if flag == 1:
-                self.beliefs[service][2] += (self.beliefs[service][2]*self.strenghteningRate)
-                new_strenght = max(self.beliefs[service][2], 0.9999)
-                self.beliefs[service] = [username, password, new_strenght]
+                self.beliefs[service][2] += (self.beliefs[service][2]*self.strengtheningRate)
+                new_strength = max(self.beliefs[service][2], 0.9999)
+                self.beliefs[service] = [username, password, new_strength]
             else:
                 self.beliefs[service] = [username, password, self.initial_belief]
         elif login_response[0] == 'failed:logged_in':
@@ -214,12 +220,12 @@ transient doWork
             #exit loop
         else:
             if flag == 1:
-                self.beliefs[service][2] -= (self.beliefs[service][2]*self.strenghteningRate)
-                new_strenght = min(self.beliefs[service][2], 0.0001)
-                self.beliefs[service] = [username, password, new_strenght]
+                self.beliefs[service][2] -= (self.beliefs[service][2]*self.strengtheningRate)
+                new_strength = min(self.beliefs[service][2], 0.0001)
+                self.beliefs[service] = [username, password, new_strength]
             self.signIn(service)
 
-    def signOut(self, service):
+    def signOut(self, (goal, service)):
         ''' This should be equivalent to the signOut subgoal in prolog
         It checks if the user is logged in, and if so, it sends a message to log
         him out.
@@ -236,7 +242,7 @@ transient doWork
             self.sendAction('signOut', [service])
             print 'Success: User succesfully logged out'
 
-    def resetPassword(self, service):
+    def resetPassword(self, (goal, service)):
         info_response = self.beliefs[service]
 
         username = info_response[0]
@@ -253,7 +259,7 @@ transient doWork
             print 'Handle requirements'
 
     # Will be about password forget rate stopping criterion, but for now just false
-    def check_termination(self):
+    def check_termination(self, call):
         return []
 
     # Extracted by Jim from setUpAccount and resetPassword
@@ -274,8 +280,9 @@ transient doWork
             if desired_pass not in self.knownPasswords:
                 self.knownPasswords.append(desired_pass)
             self.password_list.remove(desired_pass)
-        elif distPicker(self.memoBias, random.random()) == 'reuse':
-            password = max(stats.iteritems(), key=operator.itemgetter(1))[0]
+        elif distPicker(self.memoBias) == 'reuse' and self.knownPasswords:
+            #password = max(stats.iteritems(), key=operator.itemgetter(1))[0]
+            password = max(self.knownPasswords, key=self.password_complexity)
         else:
             password = desired_pass
             self.writtenPasswords.append(desired_pass)
