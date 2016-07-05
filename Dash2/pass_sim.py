@@ -78,14 +78,14 @@ class PasswordAgent(DASHAgent):
         # i'm not really clear about usage of primitive actions vs just defining
         # new goals
         self.primitiveActions([
-        ('checkTermination', self.check_termination),
-        ('setupAccount', self.setupAccount),
-        ('signIn', self.signIn),
-        ('signOut', self.signOut),
-        ('resetPassword', self.resetPassword)
-        ])
+                               ('checkTermination', self.check_termination),
+                               ('setupAccount', self.setupAccount),
+                               ('signIn', self.signIn),
+                               ('signOut', self.signOut),
+                               ('resetPassword', self.resetPassword)
+                               ])
 
-        self.readAgent( """
+        self.readAgent("""
 
 goalWeight doWork 1         # repeat the proces
 
@@ -102,6 +102,8 @@ goalRequirements doWork
 transient doWork
 
 """)
+        self.trace_action = True
+
 
     # service_type_var may be unbound or bound to a requested service_type. service_var is unbound
     # and will be bound to the result of setting up the service
@@ -137,7 +139,7 @@ transient doWork
             service_type = distPicker(self.serviceProbs, random.random())
 
         # Decide the service to log into
-        [status, service] = self.sendAction('getAccount', [service_type])
+        [status, service, requirements] = self.sendAction('getAccount', [service_type])
         print 'getaccount result:', status, service
 
         ### choose Username
@@ -150,12 +152,13 @@ transient doWork
         else:
             username = random.choice(self.username_list)
 
-        password = self.choose_password(username, service.getRequirements())
+        password = self.choose_password(username, requirements)
 
         # If account is be created, update beliefs else repeat
         # I am not sure if it would make more sense to keep beliefs local in this
         # case
         result = self.sendAction('createAccount', [service, username, password])
+        print 'create account result:', result
         if result[0] == 'success':
             print 'Success: Account Created'
             if password not in self.writtenPasswords:
@@ -187,76 +190,76 @@ transient doWork
 
         '''
         # check if user has account
-        if not bool(self.beliefs[service]):
+        if service not in self.beliefs or not self.beliefs[service]:
             print "User has no beliefs for this account"
 
-        belief = self.beliefs[service]
-        # Select password: esentially the weaker the belief is there is
-        # less chance there is that user will just pick one of their known
-        # username/passwords
-        distribution = {'known': 1.0, belief[1]:belief[2]}
-        if distPicker(distribution, random.random()) == 'known':
-            username = random.sample(self.knownUsernames)
-            password = random.sample(self.knownPasswords)
-            flag = 0
+        [username, password, belief] = self.beliefs[service]
+        # Select password: essentially the weaker the belief is the greater the chance
+        # that user will just pick one of their known username/passwords
+        distribution = [(password, belief), ('known', 1.0)]
+        if distPicker(distribution, random.random()) == 'known' and self.knownUsernames and self.knownPasswords:
+            changed_password = True
+            username = random.choice(self.knownUsernames)
+            password = random.choice(self.knownPasswords)
         else:
-            username = belief[0]
-            password = belief[1]
-            flag = 1
+            changed_password = False
 
         # Try to signIn; if agent knowed the password, update the strength of
-        # belief; analogly it works if user did not know the password (flag == 0)
+        # belief; analogously it works if user did not know the password (flag == 0)
         # Finally, if failed, repeat the sign in process with the updated beliefs
         login_response = self.sendAction('signIn', [service, username, password])
         if login_response[0] == 'success':
-            if flag == 1:
+            if changed_password:
                 self.beliefs[service][2] += (self.beliefs[service][2]*self.strengtheningRate)
-                new_strength = max(self.beliefs[service][2], 0.9999)
+                new_strength = min(self.beliefs[service][2], 0.9999)   # used to be 'max' but I think 'min' was intended
                 self.beliefs[service] = [username, password, new_strength]
             else:
                 self.beliefs[service] = [username, password, self.initial_belief]
+            return [{}]
         elif login_response[0] == 'failed:logged_in':
             self.signOut(service)
-            #exit loop
+            return []
         else:
-            if flag == 1:
+            if changed_password:
                 self.beliefs[service][2] -= (self.beliefs[service][2]*self.strengtheningRate)
-                new_strength = min(self.beliefs[service][2], 0.0001)
+                new_strength = max(self.beliefs[service][2], 0.0001)  # used to be 'min' but I think 'max' was intended
                 self.beliefs[service] = [username, password, new_strength]
-            self.signIn(service)
+            return self.signIn(service)
 
     def signOut(self, (goal, service)):
-        ''' This should be equivalent to the signOut subgoal in prolog
+        """ This should be equivalent to the signOut subgoal in prolog
         It checks if the user is logged in, and if so, it sends a message to log
         him out.
 
         Defined Actions:
             1. retrieveStatus
             2. signOut
-        '''
+        """
         username = self.beliefs[service][0]
         response = self.sendAction('retrieveStatus', [service, username])
         if response[0] == 'failure':
-            print 'Error: User has not been logged in in the first place'
+            print 'Error: User was not logged in'
+            return []
         else:
-            self.sendAction('signOut', [service])
-            print 'Success: User succesfully logged out'
+            self.sendAction('signOut', [service, username])
+            print 'Success: User successfully logged out'
+            return [{}]
 
     def resetPassword(self, (goal, service)):
-        info_response = self.beliefs[service]
+        print 'agent beliefs for service', service, 'are', self.beliefs[service]
+        [username, old_password, belief] = self.beliefs[service]
 
-        username = info_response[0]
-        old_password = info_response[1]
+        new_password = self.choose_password(username)
 
-        password = self.choose_password(username)
+        status_response = self.sendAction('resetPassword', [service, username, old_password, new_password])
 
-        status_response = self.sendAction('resetPassword', [service, username, password])
-
-        if status_response[0]:
+        if status_response[0] == 'success':
             print 'Success: password reset successfully'
+            return [{}]
         else:
             #not yet implemented handling of requirements
-            print 'Handle requirements'
+            print 'Reset password failed: Handle requirements'
+            return []
 
     # Will be about password forget rate stopping criterion, but for now just false
     def check_termination(self, call):
@@ -266,10 +269,15 @@ transient doWork
     def choose_password(self, username, requirements=None):
                 ### choose Password
         desired_pass = random.choice(self.password_list)
-        # if there are requirements verify that the password complies them
+        # if there are requirements verify that the password complies with them
         if requirements is not None:
-            while not requirements.verify(username, desired_pass):
+            maxTries = 100
+            while not requirements.verify(username, desired_pass) and maxTries > 0:
+                print 'password', desired_pass, 'not verified against', requirements
                 desired_pass = random.choice(self.password_list)
+                maxTries -= 1
+
+        # Currently just carries on with a bad password after that many tries.
 
         # if pass is too hard, reuse the hardest one or write it down,
         # the decision is based on memoBias parameter
@@ -293,7 +301,6 @@ transient doWork
     # Here I'm just using the length to get this up and running (Jim)
     def password_complexity(self, password):
         return len(password)
-
 
 
 if __name__ == "__main__":
