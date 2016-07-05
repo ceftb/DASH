@@ -91,12 +91,14 @@ goalWeight doWork 1         # repeat the proces
 
 goalRequirements doWork
     checkTermination(criterion, beliefs)
+    forget([checkTermination(c, b)])
 
 goalRequirements doWork
     setupAccount(service_type, service)
     signIn(service)
     signOut(service)
     resetPassword(service)
+    forget([setupAccount(st,s), signIn(s), signOut(s), resetPassword(s)])
 
 # This means that every iteration it will need to be re-achieved
 transient doWork
@@ -157,23 +159,32 @@ transient doWork
         # If account is be created, update beliefs else repeat
         # I am not sure if it would make more sense to keep beliefs local in this
         # case
-        result = self.sendAction('createAccount', [service, username, password])
-        print 'create account result:', result
-        if result[0] == 'success':
+        [status, data] = self.sendAction('createAccount', [service, username, password])
+        print 'create account result:', [status, data]
+        if status == 'success':
             print 'Success: Account Created'
             if password not in self.writtenPasswords:
                 self.beliefs[service] = [username, password, self.initial_belief]
             else:
                 self.beliefs[service] = [username, password, self.initial_belief, 0.9999]
-        elif result[0] == 'failed:user':
-            print 'Failed: username already exists (should not happen yet)'
-        elif result[0] == 'failed:reqs':
-            self.setupAccount(service_type, service, result[1])
-
-        if isVar(service_type_var):
-            return [{service_type_var: service_type, service_var: service}]
+            if isVar(service_type_var):
+                return [{service_type_var: service_type, service_var: service}]
+            else:
+                return [{service_var: service}]
+        elif status == 'failed:user':
+            print 'Failed to create account: username already exists'
+            # Should succeed in 'setting up' the account though
+            if isVar(service_type_var):
+                return [{service_type_var: service_type, service_var: service}]
+            else:
+                return [{service_var: service}]
+        elif status == 'failed:reqs':
+            #self.setupAccount(service_type, service, result[1])
+            return []
         else:
-            return [{service_var: service}]
+            print 'unknown result for creating account'
+            return []
+
 
     def signIn(self, (goal, service)):
         ''' This should be equivalent to singIn subgoal in prolog version
@@ -224,7 +235,7 @@ transient doWork
                 self.beliefs[service][2] -= (self.beliefs[service][2]*self.strengtheningRate)
                 new_strength = max(self.beliefs[service][2], 0.0001)  # used to be 'min' but I think 'max' was intended
                 self.beliefs[service] = [username, password, new_strength]
-            return self.signIn(service)
+            return self.signIn((goal, service))
 
     def signOut(self, (goal, service)):
         """ This should be equivalent to the signOut subgoal in prolog
@@ -255,6 +266,11 @@ transient doWork
 
         if status_response[0] == 'success':
             print 'Success: password reset successfully'
+            if new_password in self.writtenPasswords:
+                self.beliefs[service] = [username, new_password, self.initial_belief, 0.999]
+            else:
+                self.beliefs[service] = [username, new_password, self.initial_belief]
+            print 'new beliefs:', self.beliefs[service]
             return [{}]
         else:
             #not yet implemented handling of requirements
@@ -268,6 +284,9 @@ transient doWork
     # Extracted by Jim from setUpAccount and resetPassword
     def choose_password(self, username, requirements=None):
                 ### choose Password
+        # Note - this fails when the password_list is exhausted, which happens because passwords are moved
+        # from this list to the knownPasswords list. I'm not sure what the correct behavior is here -
+        # is it to choose something from that list when this one is empty? - Jim
         desired_pass = random.choice(self.password_list)
         # if there are requirements verify that the password complies with them
         if requirements is not None:

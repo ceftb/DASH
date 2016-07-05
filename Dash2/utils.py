@@ -23,7 +23,6 @@ def distPicker(distribution, r=random.random()):
             previous = value
 
 
-
 #### PASSWORD SIMULATION AGENT
 
 #def initializeContact(socket, id, service_type):
