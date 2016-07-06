@@ -115,9 +115,8 @@ class WorldHub:
                 # else if we got input from the keyboard, stop
                 elif s == sys.stdin:
                     user_input = sys.stdin.readline()
-                    listening = False
                     if user_input == "q\n":
-                        listening = 0
+                        listening = False
                     else:
                         print "if you wish to quit, enter q."
         
