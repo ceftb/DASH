@@ -26,6 +26,12 @@ class ServiceHub(WorldHub):
             return self.retrieve_status(aux_data)
         elif action == 'resetPassword':
             return self.reset_password(aux_data)
+        elif action == 'listAllSites':
+            return self.list_all_sites()
+        elif action == 'directAttack':
+            return self.direct_attack(agent_id, aux_data)
+        elif action == 'getUserPWList':
+            return self.get_user_pw_list(agent_id, aux_data)
 
     def reset_password(self, aux_data):
         [service_name, username, old_password, new_password] = aux_data
@@ -99,6 +105,27 @@ class ServiceHub(WorldHub):
         result = distPicker(self.serviceDist[service_type])
         print 'get account result', result
         return 'success', result.get_name(), result.get_requirements()
+
+    def list_all_sites(self):
+        return 'success', self.service_dictionary.keys()
+
+    def direct_attack(self, agent_id, aux_data):
+        # Currently toss a coin with the same weights for any site. Later vary probabilities
+        # based on the site and perhaps the attacker competence.
+        if random.random() < 0.5:
+            service = self.service_dictionary[aux_data[0]]
+            service.compromised_by.append(agent_id)
+            return 'success'
+        else:
+            return 'fail'
+
+    def get_user_pw_list(self, agent_id, aux_data):
+        service = self.service_dictionary[aux_data[0]]
+        # Check that this agent successfully compromised this site
+        if agent_id in service.compromised_by:
+            return 'success', [(user, service.user_name_passwords[user]) for user in service.user_name_passwords]
+        else:
+            return 'fail', []
 
     # Create a service distribution for each service type. (I put it in the hub so all agents will
     # see the same set of services - Jim).

@@ -9,7 +9,6 @@ import threading
 import struct
 import pickle
 from communication_aux import message_types
-import communication_aux
 
 
 class WorldHub:
@@ -75,10 +74,10 @@ class WorldHub:
     # you probably shouldn't need to modify anything after this point! #
     ####################################################################
 
-    def __init__(self, port = None):
+    def __init__(self, port=None):
         print "initializing world hub..."
         self.host = 'localhost'
-        if port == None:
+        if port is None:
             self.port = 5678
         else:
             self.port = port

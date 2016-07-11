@@ -95,6 +95,7 @@ class Service:
             self.requirements = create_requirements(requirements)
         self.user_name_passwords = {}    # dict of user names and passwords used on this service
         self.user_status = {}    # dict of status of user on service, e.g. 'logged_in'
+        self.compromised_by = []  # agents who have compromised this service, and can read the passwords
 
     def __str__(self):
         return "[" + str(self.name) + ", requirements=" + str(self.requirements) + "]"

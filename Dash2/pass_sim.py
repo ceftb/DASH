@@ -138,7 +138,7 @@ transient doWork
         '''
         if isVar(service_type_var):
             # choose the service type, and find the actuall service
-            service_type = distPicker(self.serviceProbs, random.random())
+            service_type = distPicker(self.serviceProbs)
 
         # Decide the service to log into
         [status, service, requirements] = self.sendAction('getAccount', [service_type])
@@ -208,7 +208,7 @@ transient doWork
         # Select password: essentially the weaker the belief is the greater the chance
         # that user will just pick one of their known username/passwords
         distribution = [(password, belief), ('known', 1.0)]
-        if distPicker(distribution, random.random()) == 'known' and self.knownUsernames and self.knownPasswords:
+        if distPicker(distribution) == 'known' and self.knownUsernames and self.knownPasswords:
             changed_password = True
             username = random.choice(self.knownUsernames)
             password = random.choice(self.knownPasswords)
