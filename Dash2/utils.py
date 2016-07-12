@@ -4,7 +4,8 @@ import random
 import re
 
 
-def distPicker(distribution, r=random.random()):
+# r used to have a default, but if it's used then the same 'random' value is used each time.
+def distPicker(distribution, r):
     ''' Function takes distribution of services and a value;
     then returns the value for that particular range
 

@@ -33,6 +33,31 @@ class ServiceHub(WorldHub):
         elif action == 'getUserPWList':
             return self.get_user_pw_list(agent_id, aux_data)
 
+    # Use disconnect of a client as an excuse to print out all the usernames and passwords to debug reuse attacks
+    # Also prints out the number of reuse opportunities and the probability of a random reuse attack succeeding
+    def processDisconnectRequest(self, agent_id, aux_data):
+        user_pwd_hosts = dict()
+        reuse_possibilities = 0     # Total number of reuses that might be tried - every u/p combo on every other host
+        print 'user', agent_id, 'disconnected, here are the current users'
+        for name in self.service_dictionary:
+            print name
+            upw = self.service_dictionary[name].user_name_passwords
+            for user in upw:
+                print '  ', user, upw[user]
+                if user not in user_pwd_hosts:
+                    user_pwd_hosts[user] = dict()
+                if upw[user] not in user_pwd_hosts[user]:
+                    user_pwd_hosts[user][upw[user]] = [name]
+                else:
+                    user_pwd_hosts[user][upw[user]].append(name)
+            reuse_possibilities += len(upw) * (len(user_pwd_hosts) - 1)
+        reuse_opportunities = 0
+        for user in user_pwd_hosts:
+            for pwd in user_pwd_hosts[user]:
+                reuse_opportunities += len(user_pwd_hosts[user][pwd]) - 1
+        print reuse_opportunities, 'reuse opportunities out of', reuse_possibilities, 'options'
+
+
     def reset_password(self, aux_data):
         [service_name, username, old_password, new_password] = aux_data
         service = self.service_dictionary[service_name]
@@ -102,7 +127,7 @@ class ServiceHub(WorldHub):
 
     def get_account(self, aux_data):
         service_type = aux_data[0]
-        result = distPicker(self.serviceDist[service_type])
+        result = distPicker(self.serviceDist[service_type], random.random())
         print 'get account result', result
         return 'success', result.get_name(), result.get_requirements()
 

@@ -13,20 +13,19 @@ class PasswordAgentAttacker(DASHAgent):
 
 goalWeight attack 1
 
-goalRequirements attack
-    chooseAttack(_direct)
-    findUncompromisedSite(site)
-    directAttack(site)
-    sleep(1)
-    forget([chooseAttack(x), findUncompromisedSite(x), directAttack(x), sleep(x)])
-
+# The agent prefers an indirect attack if possible since it is perhaps cheaper
 goalRequirements attack
     chooseAttack(_indirect)
     findUncompromisedSite(site)
     findCompromisedSite(comp)
     reusePassword(comp, site)
-    sleep(1)
-    forget([chooseAttack(x), findUncompromisedSite(x), findCompromisedSite(x), reusePassword(x,y), sleep(x)])
+    forget([chooseAttack(x), findUncompromisedSite(x), findCompromisedSite(x), reusePassword(x,y)])
+
+goalRequirements attack
+    chooseAttack(_direct)
+    findUncompromisedSite(site)
+    directAttack(site)
+    forget([chooseAttack(x), findUncompromisedSite(x), directAttack(x)])
 
 # If chooseAttack fails in both clauses (since the calls are independent), just try again as long as there's
 # something left to attack
@@ -46,9 +45,18 @@ transient attack
         self.uncompromised_sites = set() #['bank1', 'bank2', 'mail1', 'mail2', 'amazon', 'youtube']
         self.compromised_sites = set()  # If a site is compromised, I guess we assume the attacker knows all user/pwd combos there
         self.failed = []
+        self.failed_direct = 0
+        self.successful_direct = 0
+        self.failed_indirect = 0
+        self.successful_indirect = 0
 
         #self.traceAction = True
         #self.traceGoals = True
+
+    # At the end of a run, print out how many successful and failed direct and indirect attacks took place
+    def printStatistics(self):
+        print 'direct:', self.successful_direct, 'succesful,', self.failed_direct, 'failed'
+        print 'indirect:', self.successful_indirect, 'succesful,', self.failed_indirect, 'failed'
 
     # Decide which style of attack to try next. Binds the main variable to either _direct or _indirect
     def choose_attack(self, (goal, term)):
@@ -85,8 +93,8 @@ transient attack
         [status, data] = self.sendAction('listAllSites')
         # This call is made every time in case new sites have been added in the hub. Filter out the ones
         # that are already compromised (using set difference). Return a list of bindings, one for each possible site.
-        print 'all sites: ', data
         self.uncompromised_sites = set(data) - self.compromised_sites
+        print 'uncompromised sites: ', self.uncompromised_sites, 'compromised sites', self.compromised_sites
         return [{site_var: unc_site} for unc_site in self.uncompromised_sites]
 
     def find_compromised_site(self, (goal, site_var)):
@@ -101,30 +109,36 @@ transient attack
         if status == 'success':
             self.uncompromised_sites.remove(site)
             self.compromised_sites.add(site)
+            self.successful_direct += 1
             return [{}]   # Success with empty bindings
         else:
+            self.failed_direct += 1
             return []
 
     def reuse_password(self, (goal, comp, site)):    # call is (reusePassword, comp, site)
         [status, list_of_pairs] = self.sendAction('getUserPWList', [comp])   # will fail if site wasn't compromised
         # Pick a pair at random and try to log in (low success rate)
         if status == 'success' and list_of_pairs:
-            (user, password) = random.choice
+            (user, password) = random.choice(list_of_pairs)
             status = self.sendAction('signIn', [site, user, password])
             if status[0] == 'success':
                 self.uncompromised_sites.remove(site)
                 self.compromised_sites.add(site)
                 print 'successfully reused', user, password, 'from', comp, 'on', site
+                self.successful_indirect += 1
                 return [{}]
             else:
                 print 'failed attempt to reuse', user, password, 'from', comp, 'on', site
+                self.failed_indirect += 1
                 return []
         else:
-            print 'site', comp, 'was not compromised after all'
+            print 'site', comp, 'was not compromised after all or there were no users'
             return []
 
 
 
 
 if __name__ == "__main__":
-    PasswordAgentAttacker().agentLoop()
+    pa = PasswordAgentAttacker()
+    pa.agentLoop()    # ends when all the sites are compromised
+    pa.printStatistics()

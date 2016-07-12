@@ -137,8 +137,8 @@ transient doWork
         password, which additionally adds to the cognitive burden.
         '''
         if isVar(service_type_var):
-            # choose the service type, and find the actuall service
-            service_type = distPicker(self.serviceProbs)
+            # choose the service type, and find the actual service
+            service_type = distPicker(self.serviceProbs, random.random())
 
         # Decide the service to log into
         [status, service, requirements] = self.sendAction('getAccount', [service_type])
@@ -208,15 +208,15 @@ transient doWork
         # Select password: essentially the weaker the belief is the greater the chance
         # that user will just pick one of their known username/passwords
         distribution = [(password, belief), ('known', 1.0)]
-        if distPicker(distribution) == 'known' and self.knownUsernames and self.knownPasswords:
+        if distPicker(distribution, random.random()) == 'known' and self.knownUsernames and self.knownPasswords:
             changed_password = True
             username = random.choice(self.knownUsernames)
             password = random.choice(self.knownPasswords)
         else:
             changed_password = False
 
-        # Try to signIn; if agent knowed the password, update the strength of
-        # belief; analogously it works if user did not know the password (flag == 0)
+        # Try to signIn; if agent knew the password, update the strength of
+        # belief; analogously it works if user did not know the password.
         # Finally, if failed, repeat the sign in process with the updated beliefs
         login_response = self.sendAction('signIn', [service, username, password])
         if login_response[0] == 'success':
@@ -287,13 +287,15 @@ transient doWork
         # Note - this fails when the password_list is exhausted, which happens because passwords are moved
         # from this list to the knownPasswords list. I'm not sure what the correct behavior is here -
         # is it to choose something from that list when this one is empty? - Jim
-        desired_pass = random.choice(self.password_list)
+        # I've added code below that uses the 'password_list' if there are still values on it, and otherwise picks
+        # a known password.
+        desired_pass = random.choice(self.password_list) if self.password_list else random.choice(self.knownPasswords)
         # if there are requirements verify that the password complies with them
         if requirements is not None:
             maxTries = 100
             while not requirements.verify(username, desired_pass) and maxTries > 0:
                 print 'password', desired_pass, 'not verified against', requirements
-                desired_pass = random.choice(self.password_list)
+                desired_pass = random.choice(self.password_list) if self.password_list else random.choice(self.knownPasswords)
                 maxTries -= 1
 
         # Currently just carries on with a bad password after that many tries.
@@ -306,8 +308,9 @@ transient doWork
             # add to the list of known pass, and remove from potential passes
             if desired_pass not in self.knownPasswords:
                 self.knownPasswords.append(desired_pass)
-            self.password_list.remove(desired_pass)
-        elif distPicker(self.memoBias) == 'reuse' and self.knownPasswords:
+            if desired_pass in self.password_list:
+                self.password_list.remove(desired_pass)
+        elif distPicker(self.memoBias, random.random()) == 'reuse' and self.knownPasswords:
             #password = max(stats.iteritems(), key=operator.itemgetter(1))[0]
             password = max(self.knownPasswords, key=self.password_complexity)
         else:
@@ -323,4 +326,4 @@ transient doWork
 
 
 if __name__ == "__main__":
-    PasswordAgent().agentLoop()
+    PasswordAgent().agentLoop(1000)
