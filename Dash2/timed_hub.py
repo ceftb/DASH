@@ -10,10 +10,17 @@ import struct
 import pickle
 from communication_aux import message_types
 import communication_aux
+import Queue
 
 import time
 
 class WorldHub:
+    
+    # items in event queue have form (time, id, action, aux_data)
+    
+    current_time = 0
+    event_queue = Queue.PriorityQueue(0)
+    time_increment = 0.5
 
     lowest_unassigned_id = 0
     lock = threading.Lock()
@@ -55,10 +62,36 @@ class WorldHub:
         # return [result, aux_response]
 
         # placeholder code
+
         print 'This is the base class processSendActionRequest'
         result = "success"
         aux_response = self.updateState(id, action, aux_data) + self.getUpdates(id, aux_data)
+
+        print 'Assuming aux_data is of form [time, aux_remainder]'
+        print 'Adding action to event queue'
+        print 'Acquiring lock...'
+
+        with self.lock:
+            print 'Acquired lock...'
+            event_time = aux_data[0]
+            print 'Event time = %s, current time = %s' % (event_time, self.current_time)
+            aux_rem = aux_data[1:]
+            print "comparing current time to event time..."
+            if self.current_time <= event_time:
+                self.event_queue.put((event_time, id, action, aux_rem))
+                print 'Successfully added action to queue'
+            else:
+                print 'Could not add action to queue as time has passed.'
+            
         return [result, aux_response]
+
+    # note that we process the action here, not process the action REQUEST as before
+    # that is, the current time is equal to the time the agent wished to perform the action
+    # and so, we carry out the action.
+    def processAction(self, id, time, action, aux_rem):
+        print "Processing action %s by %s at time %s." % (action, id, time)
+
+        return
 
     def processDisconnectRequest(self, id, aux_data):
         print "Client %d has disconnected from the world hub." % id
@@ -77,17 +110,18 @@ class WorldHub:
     # you probably shouldn't need to modify anything after this point! #
     ####################################################################
 
-    def __init__(self, port = None):
+    def __init__(self, port=None):
         print "initializing world hub..."
         self.host = 'localhost'
-        if port == None:
+        if port is None:
             self.port = 5678
         else:
             self.port = port
         self.backlog = 5
         self.server = None
         self.threads = []
-        self.run_flag = False
+        self.sim_started = False
+        self.sim_finished = False
 
     def run(self):
         # attempt to open a socket with initialized values.
@@ -109,8 +143,8 @@ class WorldHub:
         try:
             # listen for new connections.
             print "successfully opened socket. listening for new connections..."
-            print "to start the simulation, press enter s."
-            print "if you wish to quit the server program, enter q."
+            print "to start the simulation enter s."
+            print "to quit the simulation enter q."
             input = [self.server, sys.stdin]
             listening = True
             while listening:
@@ -125,9 +159,8 @@ class WorldHub:
                     elif s == sys.stdin:
                         user_input = sys.stdin.readline()
                         if user_input == "s\n":
-                            self.run_flag = True
-                        if user_input == "q\n":
-                            #self.run_flag = False
+                            self.sim_started = True
+                        elif user_input == "q\n":
                             listening = False
                         else:
                             print "if you wish to start the simulation, enter s"
@@ -139,7 +172,7 @@ class WorldHub:
             self.server.close()
             for c in self.threads:
                 c.join()
-            self.run_flag = False
+            self.sim_finished = True
             simulator.join()
             print "successfully quit program."
 
@@ -150,7 +183,7 @@ class WorldHub:
             self.server.close()
             for c in self.threads:
                 c.join()
-            self.run_flag = False
+            self.sim_finished = True
             simulator.join()
             print "successfully quit program."
 
@@ -325,14 +358,34 @@ class simulatorThread(threading.Thread):
 
     def run(self):
         i = 0
-        while not self.hub.run_flag:
-            print "waiting for simulation to begin. enter s to begin simulation.\n"
-            time.sleep(1)
-        while self.hub.run_flag:
-            time.sleep(0.01)
-            print "%d" % i
-            ++i
 
+        print 'simulator thread waiting for signal to start...'
+        
+        # no reason to waste resources here waiting for the simulation to begin... so, sleep
+        while not self.hub.sim_started and not self.hub.sim_finished:
+            time.sleep(1)
+
+        print 'starting simulator thread...'
+
+        # at this point either the simulation has started or finished
+        # if the simulation has not yet finished, we process actions on the event queue
+        while not self.hub.sim_finished:
+
+            # simulate all events/actions at current time
+            while not self.hub.event_queue.empty() and self.hub.event_queue.queue[0][0] == self.hub.current_time:
+                action = self.hub.event_queue.get()
+                self.hub.processAction(action[1], action[0], action[2], action[3])
+            
+            time.sleep(1)
+            with self.hub.lock:
+                # increment time by specified time increment or to the time of the next event in queue--- whatever occurs sooner
+                if self.hub.event_queue.empty():
+                    self.hub.current_time = self.hub.current_time + self.hub.time_increment
+                else:
+                    self.hub.current_time = min(self.hub.current_time + self.hub.time_increment, self.hub.event_queue.queue[0][0])
+            time.sleep(0.01)
+            print "current time = %s" % self.hub.current_time
+        
 if __name__ == "__main__":
     s = WorldHub()
     s.run()
