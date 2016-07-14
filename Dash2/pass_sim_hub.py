@@ -11,28 +11,6 @@ class ServiceHub(WorldHub):
         self.service_dictionary = {}   # dictionary service_name:service built at startup
         self.serviceDist = self.create_services(['mail', 'bank', 'social_net'])
 
-    def processSendActionRequest(self, agent_id, action, aux_data):
-        print "Processing Action ", action, aux_data
-
-        if action == 'getAccount':
-            return self.get_account(aux_data)
-        elif action == 'createAccount':
-            return self.create_account(aux_data)
-        elif action == 'signIn':
-            return self.sign_in(aux_data)
-        elif action == 'signOut':
-            return self.sign_out(aux_data)
-        elif action == 'retrieveStatus':
-            return self.retrieve_status(aux_data)
-        elif action == 'resetPassword':
-            return self.reset_password(aux_data)
-        elif action == 'listAllSites':
-            return self.list_all_sites()
-        elif action == 'directAttack':
-            return self.direct_attack(agent_id, aux_data)
-        elif action == 'getUserPWList':
-            return self.get_user_pw_list(agent_id, aux_data)
-
     # Use disconnect of a client as an excuse to print out all the usernames and passwords to debug reuse attacks
     # Also prints out the number of reuse opportunities and the probability of a random reuse attack succeeding
     def processDisconnectRequest(self, agent_id, aux_data):
@@ -57,8 +35,7 @@ class ServiceHub(WorldHub):
                 reuse_opportunities += len(user_pwd_hosts[user][pwd]) - 1
         print reuse_opportunities, 'reuse opportunities out of', reuse_possibilities, 'options'
 
-
-    def reset_password(self, aux_data):
+    def reset_password(self, agent_id, aux_data):
         [service_name, username, old_password, new_password] = aux_data
         service = self.service_dictionary[service_name]
         if service is None:
@@ -69,7 +46,7 @@ class ServiceHub(WorldHub):
         else:
             return 'fail', 'username and password do not match'
 
-    def retrieve_status(self, aux_data):
+    def retrieve_status(self, agent_id, aux_data):
         # succeed if the user is logged in, otherwise fail
         [service_name, username] = aux_data
         service = self.service_dictionary[service_name]
@@ -80,7 +57,7 @@ class ServiceHub(WorldHub):
         else:
             return 'failure'
 
-    def sign_out(self, aux_data):
+    def sign_out(self, agent_id, aux_data):
         [service_name, username] = aux_data
         service = self.service_dictionary[service_name]
         if service is None:
@@ -91,7 +68,7 @@ class ServiceHub(WorldHub):
         else:
             return 'failure'
 
-    def sign_in(self, aux_data):
+    def sign_in(self, agent_id, aux_data):
         [service_name, username, password] = aux_data
         service = self.service_dictionary[service_name]
         if service is None:
@@ -108,7 +85,7 @@ class ServiceHub(WorldHub):
             print "user \'", username, "\' failed to log in: password and username do not match"
             return 'failed:unknown_password', []
 
-    def create_account(self, aux_data):
+    def create_account(self, agent_id, aux_data):
         [service_name, username, password] = aux_data
         service = self.service_dictionary[service_name]
         if service is None:
@@ -125,13 +102,13 @@ class ServiceHub(WorldHub):
             print "Create account failed on", service, ": password doesn't meet the requirements ", requirements
             return 'failed:reqs', [requirements]
 
-    def get_account(self, aux_data):
+    def get_account(self, agent_id, aux_data):
         service_type = aux_data[0]
         result = distPicker(self.serviceDist[service_type], random.random())
         print 'get account result', result
         return 'success', result.get_name(), result.get_requirements()
 
-    def list_all_sites(self):
+    def list_all_sites(self, agent_id, aux_data):
         return 'success', self.service_dictionary.keys()
 
     def direct_attack(self, agent_id, aux_data):

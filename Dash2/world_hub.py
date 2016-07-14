@@ -8,6 +8,7 @@ import sys
 import threading
 import struct
 import pickle
+import re
 from communication_aux import message_types
 
 
@@ -39,36 +40,31 @@ class WorldHub:
     def processGetUpdatesRequest(self, id, aux_data):
         aux_response = self.getUpdates(id, aux_data)
         return [aux_response]
-            
-    def processSendActionRequest(self, id, action, aux_data):
-        # sample code:
-        # if action == "look up":
-        #     result = "success"
-        #     aux_response = ["agent observes blue sky", "agent observes plane"]
-        #     aux_response = aux_response + self.updateState(id, action, aux_data) + self.getUpdates(id, aux_data)
-        # elif action == "look down":
-        #     result = "success"
-        #     aux_response = ["agent observes grass"]
-        #     aux_response = aux_response + self.updateState(id, action, aux_data) + self.getUpdates(id, aux_data)
-        # return [result, aux_response]
 
-        # placeholder code
-        print 'This is the base class processSendActionRequest'
-        aux_response = self.updateState(id, action, aux_data) + self.getUpdates(id, aux_data)
+    # The default processSendActionRequest looks at the name of the action and tries to map it to a method
+    # on the hub object, either with the same name or with a name that has camel case turned to underscores,
+    # e.g. "LogMeIn" -> log_me_in. The method is called with the agent_id and the data
+    def processSendActionRequest(self, agent_id, action, data):
+        if hasattr(self, action) and callable(getattr(self, action)):
+            return getattr(self, action)(agent_id, data)
+        underscore_action = convert_camel(action)
+        if hasattr(self, underscore_action) and callable(getattr(self, underscore_action)):
+            return getattr(self, underscore_action)(agent_id, data)
+        # fallthrough code
+        print 'Calling base class processSendActionRequest since neither', action, "nor", underscore_action, \
+            "were found as methods"
+        aux_response = self.updateState(agent_id, action, data) + self.getUpdates(agent_id, data)
         return ['success', aux_response]
 
     def processDisconnectRequest(self, id, aux_data):
         print "Client %d has disconnected from the world hub." % id
-        result = "this is ignored"
-        return result
+        return "this is ignored"
 
     def updateState(self, id, action, aux_data):
-        partial_aux_response = []
-        return partial_aux_response
+        return []
 
     def getUpdates(self, id, aux_data):
-        updates = []
-        return updates
+        return []
 
     ####################################################################
     # you probably shouldn't need to modify anything after this point! #
@@ -284,6 +280,17 @@ class serveClientThread(threading.Thread):
 
     def getUpdates(self, id, aux_data):
         return self.hub.getUpdates(id, aux_data)
+
+
+first_cap_re = re.compile('(.)([A-Z][a-z]+)')
+all_cap_re = re.compile('([a-z0-9])([A-Z])')
+
+
+# Convert CamelCase to camel_case etc.
+def convert_camel(name):
+    s1 = first_cap_re.sub(r'\1_\2', name)
+    return all_cap_re.sub(r'\1_\2', s1).lower()
+
 
 
 if __name__ == "__main__":
