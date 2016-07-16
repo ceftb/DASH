@@ -36,7 +36,7 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
         
     def flight_to_buy(self, (goal, flight_variable)):
         if not isVar(flight_variable):
-            return[]
+            return []
         result = [{flight_variable: flight} for flight in self.flights_to_buy]
         return result
         
@@ -67,20 +67,19 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
             
     def process_mail(self, (goal, mail_list)):
         print 'processing', mail_list
-        for address in mail_list:
-            for mail in mail_list:
-                if mail['subject'] == 'buyTickets':
-                    # Body should be 'I want to go to ' + destination (which currently includes an email serial number)
-                    ix = mail['body'].find('I want to go to')
-                    if ix == -1:
-                        return []    # Can't read the destination: fail
-                    destination = mail['body'][ix + 16:]
-                    print'buy tickets', destination, 'Friday', mail
-                    self.flights_to_buy.append([destination,'Friday'])
-                elif mail['subject'] == 'cancelFlight':
-                    print 'cancels flight'
-                else:
-                    print 'unknown request:', mail['subject']
+        for mail in mail_list:
+            if mail['subject'] == 'buyTickets':
+                # Body should be 'I want to go to ' + destination (which currently includes an email serial number)
+                ix = mail['body'].find('I want to go to')
+                if ix == -1:
+                    return []    # Can't read the destination: fail
+                destination = mail['body'][ix + 16:]
+                print'buy tickets', destination, 'Friday', mail
+                self.flights_to_buy.append([destination,'Friday'])
+            elif mail['subject'] == 'cancelFlight':
+                print 'cancels flight'
+            else:
+                print 'unknown request:', mail['subject']
         return [{}]
 
 
