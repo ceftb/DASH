@@ -528,8 +528,11 @@ def substituteArgument(arg, bindings):
 
 # Return bindings that would unify the pattern with the candidate, or False
 traceUnify = False
+
+
 def unify(pattern, candidate, bindings=None):
-    if bindings is None: bindings = {}   # Cannot create dict in the argslist, or it's shared between every call
+    if bindings is None:
+        bindings = {}   # Cannot create dict in the argslist, or it's shared between every call
     if traceUnify:
         print "Trying unify", pattern, candidate, bindings
 
@@ -538,7 +541,7 @@ def unify(pattern, candidate, bindings=None):
             print "Pattern is variable:", pattern
         if pattern == candidate:
             return bindings
-        elif pattern in bindings and isConstant(bindings[pattern]):  # treat this as if it were the constant its bound to. Don't bind vars to vars to avoid loops
+        elif pattern in bindings and isConstant(bindings[pattern]):  # treat this as if it were the constant it's bound to. Don't bind vars to vars to avoid loops
             return unify(bindings[pattern], candidate, bindings)
         elif not isVar(candidate):
             if pattern in bindings: # bound to another variable. Bind them both to this constant
@@ -557,7 +560,7 @@ def unify(pattern, candidate, bindings=None):
         return unify(candidate, pattern, bindings)  # Use the case above
     elif isinstance(pattern, (list, tuple)):  # recursively match structures
         # Assume the first argument is a predicate name which has to be equal
-        if isinstance(candidate, (list, tuple)) and len(pattern) == len(candidate) and pattern[0] == candidate[0]:
+        if isinstance(candidate, (list, tuple)) and len(pattern) == len(candidate) and (not pattern or pattern[0] == candidate[0]):
             if traceUnify:
                 print "Pattern", pattern, "is a tuple, recursing"
             # Match the arguments in the goal and the requirements head
@@ -570,7 +573,7 @@ def unify(pattern, candidate, bindings=None):
             if traceUnify:
                 print "Pattern is a tuple but candidate is not, or has different predicate or length:", pattern, candidate
             return False
-    elif candidate != pattern: # constants must match
+    elif candidate != pattern:  # constants must match
         if traceUnify:
             print "Non-matching constants"
         return False
