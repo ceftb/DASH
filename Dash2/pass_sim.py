@@ -72,7 +72,8 @@ class PasswordAgent(DASHAgent):
         # USER beliefs
         self.beliefs = {}
 
-        # This is used below so I added it here to make the code run. Not sure how it should interact with the variables above
+        # This is used below so I added it here to make the code run.
+        # Not sure how it should interact with the variables above
         self.username_list = ['user1', 'user12', 'admin']
 
         # i'm not really clear about usage of primitive actions vs just defining

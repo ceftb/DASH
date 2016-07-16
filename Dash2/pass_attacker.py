@@ -55,8 +55,8 @@ transient attack
 
     # At the end of a run, print out how many successful and failed direct and indirect attacks took place
     def printStatistics(self):
-        print 'direct:', self.successful_direct, 'succesful,', self.failed_direct, 'failed'
-        print 'indirect:', self.successful_indirect, 'succesful,', self.failed_indirect, 'failed'
+        print 'direct:', self.successful_direct, 'successful,', self.failed_direct, 'failed'
+        print 'indirect:', self.successful_indirect, 'successful,', self.failed_indirect, 'failed'
 
     # Decide which style of attack to try next. Binds the main variable to either _direct or _indirect
     def choose_attack(self, (goal, term)):
@@ -134,8 +134,6 @@ transient attack
         else:
             print 'site', comp, 'was not compromised after all or there were no users'
             return []
-
-
 
 
 if __name__ == "__main__":
