@@ -121,12 +121,12 @@ class WorldHub:
         for c in self.threads:
             c.join()
 
-    # This method is intended to be overridden by subclasses to point to a serveClientThread subclass
+    # This method is intended to be overridden by subclasses to point to a ServeClientThread subclass
     def createServeClientThread(self, (client, address)):
-        return serveClientThread(self, (client, address))
+        return ServeClientThread(self, (client, address))
 
 
-class serveClientThread(threading.Thread):
+class ServeClientThread(threading.Thread):
 
     def __init__(self, hub, (client, address)):
         threading.Thread.__init__(self)
@@ -275,8 +275,12 @@ class serveClientThread(threading.Thread):
     def processDisconnectRequest(self, id, aux_data):
         return self.hub.processDisconnectRequest(id, aux_data)
 
-    def updateState(self, id, action, aux_data):
-        return self.hub.updateState(id, action, aux_data)
+    # I don't know why this was here...
+    # Are there instances where we'd want the client to simply change 
+    # world state without performing an action?
+    # And if so, why not just send action = None or something instead?
+#    def updateState(self, id, action, aux_data):
+#        return self.hub.updateState(id, action, aux_data)
 
     def getUpdates(self, id, aux_data):
         return self.hub.getUpdates(id, aux_data)

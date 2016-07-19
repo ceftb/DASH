@@ -105,13 +105,12 @@ class Client(object):
 
         return response
 
-    def sendAction(self, action, data=[], time="asap"):
+    def sendAction(self, action, aux_data=[]):
         """ Send actionin form of message_types['send_action'] to the World Hub
         And awaits the appropriate response
         Args:
             action(string)  #  action to be sent to World Hub
             aux_data(list) #  auxiliary data about the client
-            time("asap" or int) #  time to perform action
         Example:
             #to be added
         """
@@ -120,7 +119,7 @@ class Client(object):
             print 'Client sent an action, but there is no connection to a hub. Check if register() was called.'
             return None
 
-        response = self.sendAndReceive(message_types['send_action'], [self.id, action, data, time])
+        response = self.sendAndReceive(message_types['send_action'], [self.id, action, aux_data])
 
         # Allow for the result to be a list, e.g. ['success', [data]], or just an object, e.g. 'fail'.
         if isinstance(response, (list, tuple)):
@@ -133,7 +132,7 @@ class Client(object):
             result = response
             aux_response = []
 
-        print "hub action", action, str(data) if data else "", \
+        print "hub action", action, str(aux_data) if aux_data else "", \
             "received response:", result, ", aux response: " + str(aux_response) if aux_response != [] else ""
 
         self.processActionResponse(result, aux_response)
