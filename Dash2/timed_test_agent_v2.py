@@ -45,9 +45,9 @@ transient doWork
     def wake_up(self, (goal, ph)):
         if self.is_first_day:
             wake_up_time = "asap"
+            self.is_first_day = False
         else:
             wake_up_time = 24 * math.floor((self.time+2)/24) + 6
-            self.is_first_day = False
             self.time = wake_up_time
         print "woke up..."
         self.sendAction(goal, [], wake_up_time)
