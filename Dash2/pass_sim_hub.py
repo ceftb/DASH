@@ -35,8 +35,7 @@ class ServiceHub(WorldHub):
                 reuse_opportunities += len(user_pwd_hosts[user][pwd]) - 1
         print reuse_opportunities, 'reuse opportunities out of', reuse_possibilities, 'options'
 
-    def reset_password(self, agent_id, aux_data):
-        [service_name, username, old_password, new_password] = aux_data
+    def reset_password(self, agent_id, (service_name, username, old_password, new_password)):
         service = self.service_dictionary[service_name]
         if service is None:
             return 'fail', 'no such service'
@@ -46,9 +45,8 @@ class ServiceHub(WorldHub):
         else:
             return 'fail', 'username and password do not match'
 
-    def retrieve_status(self, agent_id, aux_data):
+    def retrieve_status(self, agent_id, (service_name, username)):
         # succeed if the user is logged in, otherwise fail
-        [service_name, username] = aux_data
         service = self.service_dictionary[service_name]
         if service is None:
             return 'failure'
@@ -57,8 +55,7 @@ class ServiceHub(WorldHub):
         else:
             return 'failure'
 
-    def sign_out(self, agent_id, aux_data):
-        [service_name, username] = aux_data
+    def sign_out(self, agent_id, (service_name, username)):
         service = self.service_dictionary[service_name]
         if service is None:
             return 'failure', 'no service with that name'
@@ -68,8 +65,7 @@ class ServiceHub(WorldHub):
         else:
             return 'failure'
 
-    def sign_in(self, agent_id, aux_data):
-        [service_name, username, password] = aux_data
+    def sign_in(self, agent_id, (service_name, username, password)):
         service = self.service_dictionary[service_name]
         if service is None:
             return 'failed:no_such_service'
@@ -85,8 +81,7 @@ class ServiceHub(WorldHub):
             print "user \'", username, "\' failed to log in: password and username do not match"
             return 'failed:unknown_password', []
 
-    def create_account(self, agent_id, aux_data):
-        [service_name, username, password] = aux_data
+    def create_account(self, agent_id, (service_name, username, password)):
         service = self.service_dictionary[service_name]
         if service is None:
             return 'failed:no_such_service', []
@@ -103,8 +98,7 @@ class ServiceHub(WorldHub):
             return 'failed:reqs', [requirements]
 
     def get_account(self, agent_id, aux_data):
-        service_type = aux_data[0]
-        result = distPicker(self.serviceDist[service_type], random.random())
+        result = distPicker(self.serviceDist[aux_data[0]], random.random())
         print 'get account result', result
         return 'success', result.get_name(), result.get_requirements()
 

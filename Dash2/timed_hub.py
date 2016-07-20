@@ -49,7 +49,7 @@ class WorldHub:
         aux_response = self.getUpdates(id, aux_data)
         return [aux_response]
             
-    def processSendActionRequest(self, id, action, aux_data):
+    def processSendActionRequest(self, id, action, data, action_time):
         # sample code:
         # if action == "look up":
         #     result = "success"
@@ -65,20 +65,18 @@ class WorldHub:
 
         print 'This is the base class processSendActionRequest'
         result = "success"
-        aux_response = self.updateState(id, action, aux_data) + self.getUpdates(id, aux_data)
+        aux_response = self.updateState(id, action, data, action_time) + self.getUpdates(id, data)
 
-        print 'Assuming aux_data is of form [time, aux_remainder]'
         print 'Adding action to event queue'
         print 'Acquiring lock...'
 
         with self.lock:
             print 'Acquired lock...'
-            event_time = aux_data[0]
-            print 'Event time = %s, current time = %s' % (event_time, self.current_time)
-            aux_rem = aux_data[1:]
-            print "comparing current time to event time..."
-            if self.current_time <= event_time:
-                self.event_queue.put((event_time, id, action, aux_rem))
+            print 'Action time = %s, current time = %s' % (action_time, self.current_time)
+            if action_time == "asap":
+                action_time = self.current_time 
+            if self.current_time <= action_time:
+                self.event_queue.put((action_time, id, action, data))
                 print 'Successfully added action to queue'
             else:
                 print 'Could not add action to queue as time has passed.'
@@ -88,7 +86,7 @@ class WorldHub:
     # note that we process the action here, not process the action REQUEST as before
     # that is, the current time is equal to the time the agent wished to perform the action
     # and so, we carry out the action.
-    def processAction(self, id, time, action, aux_rem):
+    def processAction(self, id, time, action, data):
         print "Processing action %s by %s at time %s." % (action, id, time)
 
         return
@@ -98,7 +96,7 @@ class WorldHub:
         result = "this is ignored"
         return result
 
-    def updateState(self, id, action, aux_data):
+    def updateState(self, id, action, data, time):
         partial_aux_response = []
         return partial_aux_response
 
@@ -188,13 +186,13 @@ class WorldHub:
             print "successfully quit program."
 
     def createServeClientThread(self, (client, address)):
-        return serveClientThread(self, (client, address))
+        return ServeClientThread(self, (client, address))
 
     def createSimulatorThread(self):
-        return simulatorThread(self)
+        return SimulatorThread(self)
 
                     
-class serveClientThread(threading.Thread):
+class ServeClientThread(threading.Thread):
 
     def __init__(self, hub, (client, address)):
         threading.Thread.__init__(self)
@@ -304,8 +302,9 @@ class serveClientThread(threading.Thread):
         print 'handling send action request for', self, '...'
         id = message[0]
         action = message[1]
-        aux_data = message[2]
-        return self.processSendActionRequest(id, action, aux_data)
+        data = message[2]
+        time = message[3]
+        return self.processSendActionRequest(id, action, data, time)
 
     def handleGetUpdatesRequest(self, message):
         print 'handling get updates request...'
@@ -337,19 +336,23 @@ class serveClientThread(threading.Thread):
     def processGetUpdatesRequest(self, id, aux_data):
         return self.hub.processGetUpdatesRequest(id, aux_data)
             
-    def processSendActionRequest(self, id, action, aux_data):
-        return self.hub.processSendActionRequest(id, action, aux_data)
+    def processSendActionRequest(self, id, action, data, time):
+        return self.hub.processSendActionRequest(id, action, data, time)
 
     def processDisconnectRequest(self, id, aux_data):
         return self.hub.processDisconnectRequest(id, aux_data)
 
-    def updateState(self, id, action, aux_data):
-        return self.hub.updateState(id, action, aux_data)
+    # I don't know why this was here...
+    # Are there instances where we'd want the client to simply change
+    # world state without performing an action?
+    # And if so, why not just send action = None or something instead?
+#   def updateState(self, id, action, aux_data):
+#       return self.hub.updateState(id, action, aux_data)
 
     def getUpdates(self, id, aux_data):
         return self.hub.getUpdates(id, aux_data)
 
-class simulatorThread(threading.Thread):
+class SimulatorThread(threading.Thread):
 
     def __init__(self, hub):
         threading.Thread.__init__(self)
@@ -376,7 +379,7 @@ class simulatorThread(threading.Thread):
                 action = self.hub.event_queue.get()
                 self.hub.processAction(action[1], action[0], action[2], action[3])
             
-            time.sleep(1)
+            time.sleep(0.25)
             with self.hub.lock:
                 # increment time by specified time increment or to the time of the next event in queue--- whatever occurs sooner
                 if self.hub.event_queue.empty():

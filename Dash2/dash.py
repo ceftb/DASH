@@ -18,22 +18,25 @@ class DASHAgent(Client, System2Agent, System1Agent):
         self.primitiveActions([('forget', self.forget), ['sleep', self.sleep]])
 
     # This is in the java part in the old agent
-    def agentLoop(self, maxIterations=-1):
-        nextAction = self.chooseAction()
+    def agentLoop(self, max_iterations=-1, disconnect_at_end=True):
+        next_action = self.chooseAction()
         iteration = 0
-        while nextAction is not None and (maxIterations < 0 or iteration < maxIterations):
+        while next_action is not None and (max_iterations < 0 or iteration < max_iterations):
             if self.traceAction:
-                print "Next action is ", nextAction
-            result = self.performAction(nextAction)
-            self.updateBeliefs(result, nextAction)
-            nextAction = self.chooseAction()
+                print "Next action is ", next_action
+            result = self.performAction(next_action)
+            self.updateBeliefs(result, next_action)
+            next_action = self.chooseAction()
             iteration += 1
-        if nextAction is None:
+        if next_action is None:
             print "No action chosen"
-        elif maxIterations >= 0 and iteration >= maxIterations:
-            print "Finished finite agent cycles:", maxIterations, "with", iteration
+        elif 0 <= max_iterations <= iteration:
+            print "Finished finite agent cycles:", max_iterations, "with", iteration
         print "Exiting simulation."
-        self.disconnect()
+        if disconnect_at_end:
+            self.disconnect()
+        # return the action chosen so the caller can tell if there is more for the agent to do
+        return next_action
 
     def primitiveActions(self, l):
         # Add the items into the set of known primitive actions

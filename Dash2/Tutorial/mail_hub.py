@@ -26,15 +26,15 @@ class MailHub(WorldHub):
         if recipient not in self.mail:
             self.mail[recipient] = []
 
-    def get_mail(self, agent_id):
+    def get_mail(self, agent_id, data):
         if agent_id in self.emailAddress:
             address = self.emailAddress[agent_id]
             mail = self.mail[address]
             print 'mail for ' + address + ' is ' + str(mail)
             self.mail[address] = []
-            return ['success', mail]
+            return 'success', mail
         else:
-            return ['fail', []]
+            return 'fail', []
 
     def send_mail(self, agent_id, mail):
         # Put each message in the appropriate mailboxes. The 'to' field can be a single string or a list.
@@ -52,10 +52,10 @@ class MailHub(WorldHub):
                     for recipient in message['to']:
                         self.initialize_email(agent_id, recipient)
                         self.mail[recipient].append(message)
-            return ['success', []]
+            return 'success', []
         except:
             print "problem sending mail"
-            return ['fail', []]
+            return 'fail', []
 
     def processRegisterRequest(self, agent_id, aux_data):
         address = aux_data[0]
@@ -64,15 +64,6 @@ class MailHub(WorldHub):
         if address not in self.mail:
             self.mail[address] = {}
         return ['success', agent_id, []]
-
-    def processSendActionRequest(self, agent_id, action, aux_data):
-        print "mail hub processing action", action, aux_data
-        if action == "getMail":
-            return self.get_mail(agent_id)
-        elif action == "sendMail":
-            return self.send_mail(agent_id, aux_data)
-        else:
-            print "Unknown action:", action
 
 if __name__ == "__main__":
     MailHub().run()

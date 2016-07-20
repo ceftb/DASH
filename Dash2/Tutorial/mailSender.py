@@ -1,3 +1,6 @@
+import sys
+sys.path.insert(0, '..')
+
 from dash import DASHAgent
 import random
 
@@ -15,7 +18,7 @@ goalRequirements doWork
   chooseTrip(trip)
   sendMail(trip)
   sleep(1)
-  forget([sendMail(x),chooseTrip(x),sleep(x)])
+  forget([sendMail(x), chooseTrip(x), sleep(x)])
 
 transient doWork     # Agent will forget goal's achievement or failure as soon as it happens
                        """)
@@ -24,7 +27,7 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
 
     def send_mail(self, (goal, trip)):
         print 'send mail for trip to', trip
-        [status, data] = self.sendAction("sendMail",
+        status, data = self.sendAction("sendMail",
                                          [{'to': 'flightagent@amail.com', 'subject': 'buyTickets',
                                            'body': 'I want to go to ' + trip + str(self.mailCounter)}])
         self.mailCounter += 1
@@ -36,40 +39,8 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
 
     # Bind call variable to destination
     def choose_trip(self, (goal, trip_variable)):
-        possible_destinations = ['New York','Paris','London','Shanghai']
+        possible_destinations = ['New York', 'Paris', 'London', 'Shanghai']
         return [{trip_variable: random.choice(possible_destinations)}]
-
-
-    # def receive_mail(self, call):
-    #     mail_var = call[1]
-    #     [status, data] = self.sendAction("getMail")
-    #     print 'response to getMail is', status, data
-    #     if status == "success":
-    #         print "read mail success with", data
-    #         return [{mail_var: data}]
-    #     else:
-    #         return []
-    #
-    # def get_flight(self, call):
-    #     flight = call[1]
-    #         print 'buys flight tickets for', trip
-    #         self.flights_to_buy.remove(trip)
-    #         return [{}]
-    #
-    # def process_mail(self, call):
-    #         print call
-    #         mail_list = call[1]
-    #         for address in mail_list:
-    #             for mail in mail_list[address]:
-    #                 if mail['subject'] == 'buyTickets':
-    #                     possible_destinations = ['New York','Paris','London','Shanghai']
-    #                     print['buy tickets', random.choice(possible_destinations), 'Friday'], call
-    #                     self.flights_to_buy.append([random.choice(possible_destinations),'Friday'])
-    #                 elif mail['subject'] == 'cancelFlights':
-    #                     print 'cancels flight'
-    #                 else:
-    #                     print 'unknown request:', mail['subject']
-    #         return [{}]
 
 
 if __name__ == "__main__":
