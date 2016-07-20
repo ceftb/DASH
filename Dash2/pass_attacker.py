@@ -7,6 +7,14 @@ from system2 import isVar
 
 class PasswordAgentAttacker(DASHAgent):
 
+    #probability that a an attacker will reuse passwords across services
+    #percentage taken from Bruno's prolog version
+    reuseRisk = 0.40
+
+    #scalar to determin probability that a password is vulnerable
+    #scalar taken from Bruno's prolog version
+    inherentRisk = 0.2
+
     def __init__(self):
         DASHAgent.__init__(self)
         self.readAgent("""
@@ -61,13 +69,13 @@ transient attack
     # Decide which style of attack to try next. Binds the main variable to either _direct or _indirect
     def choose_attack(self, (goal, term)):
         if term == "_direct":
-            if not self.compromised_sites or random.random() < 0.5:
+            if not self.compromised_sites or random.random() > self.reuseRisk:
                 print 'making a direct attack'
                 return [{}]
             else:
                 return []
         elif term == "_indirect":
-            if self.compromised_sites and random.random() > 0.5:
+            if self.compromised_sites and random.random() < self.reuseRisk:
                 print 'making an indirect attack'
                 return [{}]
             else:
@@ -76,8 +84,8 @@ transient attack
             if not self.compromised_sites:
                 print 'choosing direct attack since there are no compromised sites'
                 return [{term: '_direct'}] # Must choose direct if no sites are compromised yet
-            elif random.random() < 0.5:   #
-                print 'choosing direct attack randomly'
+            elif random.random() > reuseRisk:   #
+                print 'choosing direct attack (60% chance)'
                 return [{term: '_direct'}]
             else:
                 print 'choosing indirect attack randomly'
