@@ -11,7 +11,7 @@ class TimedTestAgent(DASHAgent):
     def __init__(self):
         DASHAgent.__init__(self)
 
-#        self.traceGoals = True
+        #  self.traceGoals = True
         self.register()
 
         self.readAgent("""
@@ -22,8 +22,9 @@ goalRequirements doWork
     wakeUp(placeholder)
     run(placeholder)
     eat(meal)
+    forget([eat(x)])
     sleep(placeholder)
-    forget([wakeUp(x), run(x), eat(x), sleep(x)])
+    forget([wakeUp(x), run(x), sleep(x)])
 
 goalRequirements doWork
     wakeUp(placeholder)
@@ -31,7 +32,6 @@ goalRequirements doWork
     sleep(placeholder)
     forget([wakeUp(x), run(x), eat(x), sleep(x)])
 
-transient eat
 transient doWork
     """)
 
@@ -75,7 +75,7 @@ transient doWork
             self.eat_state = 3
             eat_time = 24 * math.floor(self.time/24) + random.randint(18, 20)
         else:
-            print "eat primitive action: shouldn't be here..."
+            print "eat primitive action: no more meals - failing..."
             return None
 
         print "eating...", goal, meal_var
