@@ -29,10 +29,9 @@ class DASHAgent(Client, System2Agent, System1Agent):
             next_action = self.chooseAction()
             iteration += 1
         if next_action is None:
-            print "No action chosen"
+            print "Exiting simulation: no action chosen"
         elif 0 <= max_iterations <= iteration:
-            print "Finished finite agent cycles:", max_iterations, "with", iteration
-        print "Exiting simulation."
+            print "Exiting simulation: finished finite agent cycles:", iteration, "of max", max_iterations
         if disconnect_at_end:
             self.disconnect()
         # return the action chosen so the caller can tell if there is more for the agent to do

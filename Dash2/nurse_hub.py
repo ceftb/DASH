@@ -1,8 +1,9 @@
 
 from world_hub import WorldHub
 import random
+import sys
 
-class Event():
+class Event:
     def __init__(self, agent, computer, patient, medication, spreadsheet_loaded):
         self.agent = agent
         self.computer = computer
@@ -14,10 +15,14 @@ class Event():
         return "Agent " + str(self.agent) + " recorded giving " + self.medication + " to " + self.patient +\
                " on computer " + str(self.computer) + " in spreadsheet for " + self.spreadsheet_loaded
 
+
 class NurseHub(WorldHub):
 
-    def __init__(self, number_of_computers=10, number_of_possible_medications=10):
-        WorldHub.__init__(self)
+    def __init__(self, number_of_computers=10, number_of_possible_medications=10, port=None):
+        WorldHub.__init__(self, port=port)
+        self.init_world(number_of_computers, number_of_possible_medications)
+
+    def init_world(self, number_of_computers, number_of_possible_medications):
         # Initialize the computers to all be available.
         self.number_of_computers = number_of_computers
         self.logged_on = [None for i in range(0, self.number_of_computers)]
@@ -61,18 +66,23 @@ class NurseHub(WorldHub):
         return 'success', self.medication_for_patient[real_patient]
 
     def write_spreadsheet(self, agent_id, (patient, computer, medication)):
-        nh.writeEvents.append(Event(agent_id, computer, patient, medication, self.spreadsheet_loaded[computer-1]))
+        self.writeEvents.append(Event(agent_id, computer, patient, medication, self.spreadsheet_loaded[computer-1]))
         return 'success'
 
     def print_events(self):
-        print 'Event summary:'
+        print len(self.writeEvents), 'events:'
         for event in self.writeEvents:
             print event
-        print len([e for e in self.writeEvents if e.patient != e.spreadsheet_loaded]), "entries on the wrong spreadsheet"
+        print len([e for e in self.writeEvents if e.patient != e.spreadsheet_loaded]), \
+            "entries on the wrong spreadsheet out of", len(self.writeEvents)
 
 
 if __name__ == "__main__":
-    nh = NurseHub()
+    # Take port as a command-line argument
+    if len(sys.argv) > 1:
+        nh = NurseHub(port=int(sys.argv[1]))
+    else:
+        nh = NurseHub()
     nh.run()
     # When the hub is stopped with 'q', print out the results
     nh.print_events()

@@ -1,7 +1,7 @@
 import sys
 sys.path.insert(0, '..')
 
-from world_hub import WorldHub, serveClientThread
+from world_hub import WorldHub
 
 
 # This is a subclass of WorldHub that responds to 'checkMail' actions from clients with random mail.

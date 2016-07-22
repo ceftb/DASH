@@ -14,6 +14,9 @@ class System2Agent:
         self.knownFalseDict = dict()
         self.transientDict = dict()
         self.transientDict['forget'] = [('forget', 'x')]  # Forget should be transient so you can keep forgetting things
+        # Commenting out the line above will break something, but I need to be able to get past a 'forget'
+        # clause in the middle of some goal requirements, which will never happen if forget is transient.
+        # I think the best answer right now might be to add some judicious forget([forget(x)]) statements
         self.projectionRuleDict = dict()
         self.utilityRules = []
 
@@ -242,21 +245,34 @@ class System2Agent:
         if goals is None:
             return None
         if self.traceGoals:
-            print ' '*indent, "Seeking action for goals", goals
+            print '  '*indent, "Seeking action for goals", goals
         gpb = self.findGoalRequirements(goals[0])
         if gpb is []:
             print "No goal requirements match for ", goals[0]
             return None
         if self.traceGoals:
-            print ' '*indent, "Requirements:", gpb
+            print '  '*indent, "Requirements:", gpb
         i = 1
         for (goal, requirements, bindings) in gpb:
             if self.traceGoals:
-                print ' '*indent, ' ', 'trying req set', i, goal, requirements, bindings
+                print '  '*indent, '  ', 'trying req set', i, goal, requirements, bindings
             # Return the first unfulfilled action in the requirements body, substituting bindings
             # but try the next requirements (if any) if there is a knownFalse subgoal in the requirements
+            # 7/21/16 - wasn't substituting bindings so trying that (then moved back since didn't solve specific problem)
             na = self.nextAction(goal, requirements, bindings, indent)
             if na is not False and na is not None:
+                # If the 'action' is the symbol 'known', then the main goal was achieved through
+                # this goalRequirements clause. We need to compose the bindings so bindings for the 'local variables'
+                # in the goal requirements clause propagate to those of the higher goal in the goal tree
+                # and to any subsequent actions in its clause
+                if na[0] == 'known':
+                    composed_bindings = dict([(x, na[1][bindings[x]] if bindings[x] in na[1] else bindings[x])
+                                              for x in bindings]
+                                             + [(x, na[1][x]) for x in na[1] if x not in bindings])
+                    if self.traceGoals:
+                        print '  '*indent, '  ', 'req set', i, 'succeeded with main bindings', bindings,\
+                            'and local bindings', na[1], 'and composed bindings', composed_bindings
+                    na[1] = composed_bindings
                 return na
             i += 1
         return None
@@ -267,32 +283,36 @@ class System2Agent:
         for candidate in requirements[1]:
             subbed = substitute(candidate, bindings)
             if self.traceGoals:
-                print ' '*indent, "inspecting requirement", subbed, "from", candidate
-            newBindings = self.isKnown(subbed)
-            if newBindings is not False:
+                print '  '*indent, "inspecting requirement", subbed, "from", candidate
+            known_bindings = self.isKnown(subbed)
+            if known_bindings is not False:
                 if self.traceGoals:
-                    print ' '*indent, candidate, "known with bindings", newBindings
-                bindings = dict(bindings.items() + newBindings.items())  # wasteful but succinct
+                    print '  '*indent, candidate, "subbed as", subbed, "and known with bindings", known_bindings
+                bindings = dict(bindings.items() + known_bindings.items())  # wasteful but succinct
+                if self.traceGoals:
+                    print '  '*indent, "Bindings are now", bindings
                 continue
             elif self.isKnownFalse(subbed) is not False:  # a part of this goalset has been tried and failed in the past
                 return None
             elif self.isPrimitive(subbed):
                 if self.traceGoals:
-                    print ' '*indent, "returning primitive", subbed
+                    print '  '*indent, "returning primitive", subbed
                 return subbed
             elif self.isGoal(subbed):
                 action = self.chooseActionForGoals([subbed], indent + 2)
                 if action is not None and action[0] == 'known':
                     # This subgoal was achievable from what is already done.
                     # Update bindings
-                    if self.traceGoals:
-                        print ' '*indent, candidate, "already achieved"
+                    old_bindings = bindings
                     bindings = dict(bindings.items() + action[1].items())
+                    if self.traceGoals:
+                        print '  '*indent, candidate, "already achieved"
+                        print '  '*indent, "from subgoaling, old bindings were", old_bindings, "and now are", bindings
                     continue
                 else:
                     return action
             else:
-                print ' '*indent, subbed, "is not a goal or primitive or already known"
+                print '  '*indent, subbed, "is not a goal or primitive or already known"
                 return None
         # If we got here, then we went through all the subactions without needing to do anything,
         # So the goal should be marked as achieved
@@ -338,6 +358,7 @@ class System2Agent:
     # This is a primitive built-in to remove all items matching a pattern from
     # knownDict and knowFalseDict
     def forget(self, action):
+        forgotten = []
         for pattern in action[1]:
             if not isinstance(pattern, (tuple, list)):
                 continue
@@ -345,24 +366,25 @@ class System2Agent:
             for d in [self.knownDict, self.knownFalseDict]:
                 if predicate in d:
                     # not sure if I can modify the list I'm iterating across
-                    toRemove = []
+                    to_remove = []
                     for fact in d[predicate]:
                         if unify(pattern, fact) is not False:
                             if self.traceForget:
                                 print "Forgetting", fact
-                            toRemove.append(fact)
-                    for fact in toRemove:
+                            to_remove.append(fact)
+                    for fact in to_remove:
                         d[predicate].remove(fact)
+                        forgotten.append(fact)
         return [{}]  # succeed as a primitive action, with no bindings
 
     def findGoalRequirements(self, goal):
         if goal[0] in self.goalRequirementsDict:
             # Return all possible bindings since we may be backtracking on them.
-            # Later want to use an incrementally-build structure rather than a list.
+            # Later want to use an incrementally-built structure rather than a list.
             result = []
             for pair in self.goalRequirementsDict[goal[0]]:
                 bindings = unify(goal, pair[0])
-                if bindings != False:
+                if bindings != False:      # to include empty bindings
                     result.append((goal, pair, bindings))
             return result
         else:
