@@ -3,6 +3,7 @@ from world_hub import WorldHub
 import random
 import sys
 
+
 class Event:
     def __init__(self, agent, computer, patient, medication, spreadsheet_loaded):
         self.agent = agent
@@ -20,9 +21,11 @@ class NurseHub(WorldHub):
 
     def __init__(self, number_of_computers=10, number_of_possible_medications=10, port=None):
         WorldHub.__init__(self, port=port)
-        self.init_world(number_of_computers, number_of_possible_medications)
+        self.init_world(None, (number_of_computers, number_of_possible_medications))
 
-    def init_world(self, number_of_computers, number_of_possible_medications):
+    # agent_id is a bogus argument so an agent can call this as an action on the hub and we can also
+    # call it on the hub. Will fix.
+    def init_world(self, agent_id, (number_of_computers, number_of_possible_medications)):
         # Initialize the computers to all be available.
         self.number_of_computers = number_of_computers
         self.logged_on = [None for i in range(0, self.number_of_computers)]
@@ -75,6 +78,11 @@ class NurseHub(WorldHub):
             print event
         print len([e for e in self.writeEvents if e.patient != e.spreadsheet_loaded]), \
             "entries on the wrong spreadsheet out of", len(self.writeEvents)
+
+    # This is not a method the agent should use, but the experimental harness can call it to examine
+    # the data after a run
+    def show_events(self, agent_id, data):
+        return self.writeEvents
 
 
 if __name__ == "__main__":
