@@ -84,7 +84,7 @@ transient attack
             if not self.compromised_sites:
                 print 'choosing direct attack since there are no compromised sites'
                 return [{term: '_direct'}] # Must choose direct if no sites are compromised yet
-            elif random.random() > reuseRisk:   #
+            elif random.random() > self.reuseRisk:   #
                 print 'choosing direct attack (60% chance)'
                 return [{term: '_direct'}]
             else:

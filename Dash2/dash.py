@@ -19,14 +19,16 @@ class DASHAgent(Client, System2Agent, System1Agent):
 
     # This is in the java part in the old agent
     def agentLoop(self, max_iterations=-1, disconnect_at_end=True):
-        next_action = self.chooseAction()
+        self.spreading_activation()
+        next_action = self.choose_action()
         iteration = 0
         while next_action is not None and (max_iterations < 0 or iteration < max_iterations):
             if self.traceAction:
                 print "Next action is ", next_action
             result = self.performAction(next_action)
-            self.updateBeliefs(result, next_action)
-            next_action = self.chooseAction()
+            self.update_beliefs(result, next_action)
+            self.spreading_activation()
+            next_action = self.choose_action()
             iteration += 1
         if next_action is None:
             print "Exiting simulation: no action chosen"
@@ -36,6 +38,9 @@ class DASHAgent(Client, System2Agent, System1Agent):
             self.disconnect()
         # return the action chosen so the caller can tell if there is more for the agent to do
         return next_action
+
+    def choose_action(self):
+        return self.choose_action_by_reasoning()
 
     def primitiveActions(self, l):
         # Add the items into the set of known primitive actions
@@ -54,19 +59,22 @@ class DASHAgent(Client, System2Agent, System1Agent):
             function = self.primitiveActionDict[action[0]]
             return function(action)
 
-    def updateBeliefs(self, result, action):
+    def update_beliefs(self, result, action):
         if self.traceUpdate:
             print "Updating beliefs based on action", action, "with result", result
         if not result and not self.isTransient(action):
             if self.traceUpdate:
                 print "Adding known false", action
             self.knownFalseTuple(action)
+            self.add_activation(action, 0.3)  # smaller bump for a failed action
         if isinstance(result, list):
             for bindings in result:
-                concreteResult = substitute(action, bindings)
-                if not self.isTransient(concreteResult):
-                    self.knownTuple(concreteResult)   # Mark action as performed/known
-                    self.knownTuple(('performed', concreteResult))   # Adding both lets both idioms be used in the agent code.
+                concrete_result = substitute(action, bindings)
+                print '*** subst', action, ',', bindings, ',', concrete_result
+                if not self.isTransient(concrete_result):
+                    self.knownTuple(concrete_result)   # Mark action as performed/known
+                    self.knownTuple(('performed', concrete_result))   # Adding both lets both idioms be used in the agent code.
+                self.add_activation(concrete_result, 0.8)
 
     # Generic primitive actions
 

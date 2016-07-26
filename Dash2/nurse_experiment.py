@@ -1,8 +1,5 @@
-import threading
-import time
 from client import Client
 import nurse01
-import nurse_hub
 from nurse_hub import Event
 
 # Set up a bunch of nurses to run 'at the same time' by running each for a small number of steps until done
@@ -10,16 +7,6 @@ from nurse_hub import Event
 
 # To see the results, start a nurse_hub, run this file and then type 'q' at the nurse hub. The hub will print
 # a list of actions, and the number of times an agent wrote to the wrong spreadsheet.
-
-
-# Run a nurse hub in a separate thread
-class NurseThread(threading.Thread):
-    def run(self):
-        self.nurse_hub = nurse_hub.NurseHub()
-        self.nurse_hub.run()
-
-#t = NurseThread()
-#t.start()
 
 
 # Each of n nurses is given a different list of k patients
@@ -48,7 +35,7 @@ def trial(num_nurses=20, num_patients=5):
     print misses, "entries on the wrong spreadsheet out of", len(events)
 
     # Finally clear out the data on the hub
-    experiment_client.sendAction("initWorld", [10, 10])
+    experiment_client.sendAction("initWorld", (10, 10))
     return misses
 
 # Finally close up the server.
@@ -58,6 +45,6 @@ def trial(num_nurses=20, num_patients=5):
 
 data = [trial() for i in range(0,5)]
 
-time.sleep(1)   # let everything else that is printing stuff out settle down
+#time.sleep(1)   # let everything else that is printing stuff out settle down
 
 print 'miss data', data

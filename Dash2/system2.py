@@ -223,7 +223,7 @@ class System2Agent:
     def isGoal(self, goal):
         return goal[0] in self.goalRequirementsDict
 
-    def chooseAction(self):
+    def choose_action_by_reasoning(self):
         goal = self.chooseGoal()
         if goal is not None:
             return self.chooseActionForGoals([goal])
@@ -532,16 +532,16 @@ def isVar(term):
 # Needs to support structure in the term arguments.
 def substitute(predicate, bindings):
     if isinstance(predicate, (list, tuple)):
-        args = [substituteArgument(arg,bindings) for arg in predicate[1:]]
+        args = [substitute_argument(arg, bindings) for arg in predicate[1:]]
         return tuple([predicate[0]] + args)
-    return substituteArgument(predicate, bindings)
+    return substitute_argument(predicate, bindings)
 
 
-def substituteArgument(arg, bindings):
+def substitute_argument(arg, bindings):
     if isinstance(arg, list):
-        return [substituteArgument(x, bindings) for x in arg]
+        return [substitute_argument(x, bindings) for x in arg]
     elif isinstance(arg, tuple):
-        return tuple([substituteArgument(x, bindings) for x in arg])
+        return tuple([substitute_argument(x, bindings) for x in arg])
     elif not isinstance(arg, collections.Hashable) or arg not in bindings:
         return arg
     else:
