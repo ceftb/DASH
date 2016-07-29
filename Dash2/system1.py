@@ -8,38 +8,57 @@
 
 
 class Node:
-    node_id = -1
-    activation = 0
-    fact = None
-    neighbors = []
-    change_since_update = 0
+    default_decay = 0.1  # activation goes down by this much each cycle in the absence of spreading activation
 
-    def __init__(self, node_id, fact, activation=0, neighbors=[]):
+    def __init__(self, node_id, fact, activation=0, decay=default_decay, neighbors=None):
         self.node_id = node_id
         self.fact = fact
+        self.decay = decay
         self.activation = activation
-        self.neighbors = neighbors
+        # neighbors is a list of pairs (node, link_strength)
+        self.neighbors = [] if neighbors is None else neighbors
+        # This keeps track of whether activation should be passed to neighbors so we don't loop
+        self.change_since_update = 0
 
     def __str__(self):
         return "N" + str(self.node_id) + ": " + str(self.fact) + ", " + str(self.activation)\
-               + "nx: " + str([n.node_id for n in self.neighbors])
+               + ", nx: " + str([link[0].node_id for link in self.neighbors])
 
     def __repr__(self):
         return self.__str__()
 
     def update(self, activation_increment):
+        self.activation += activation_increment
+        if self.activation < 0:
+            self.activation = 0
         self.change_since_update += activation_increment
 
     def spread(self):
         if self.change_since_update != 0:
             for neighbor in self.neighbors:
-                neighbor.update(self.change_since_update/3)
+                neighbor[0].update(self.change_since_update/3 * neighbor[1])
             self.change_since_update = 0
+
+    def apply_decay(self):
+        self.update(0 - self.decay)
+
+    # link_strength says how the neighbor is affected by changes to this node. Currently using just +/- 1
+    # to designate a positive or negative connection, but the link magnitude is also used in spreading.
+    def add_neighbor(self, node, link_strength=1):
+        self.neighbors.append((node, link_strength))
+
+    def node_to_action(self):
+        if self.fact[0] == 'action':
+            return self.fact[1:]
+        else:
+            return 0
 
 
 class System1Agent:
     nodes = set()
-    fact_node_dict = dict()
+    action_nodes = set()  # subset of nodes that suggest an action, for efficiency
+    fact_node_dict = dict()  # maps node facts to nodes
+    neighbor_rules = dict()  # maps node fact predicates to lambdas
 
     trace_add_activation = False
 
@@ -58,13 +77,20 @@ class System1Agent:
         for node in self.nodes:
             node.spread()
 
+    def system1_decay(self):
+        for node in self.nodes:
+            node.apply_decay()
+
     def nodes_over_threshold(self, threshold=0.5):
         return [n for n in self.nodes if n.activation >= threshold]
 
-    # Turn a fact into a unique key by removing spaces and writing brackets into a string
+    def actions_over_threshold(self, threshold=0.5):
+        return [n for n in self.action_nodes if n.activation >= threshold]
+
+    # Turn a fact into a unique key by writing brackets and elements into a string
     # so ('hi', ('there', 'you')) becomes "[hi[there,you]]"
     def fact_to_key(self, fact):
-        if isinstance(fact, (list,tuple)):
+        if isinstance(fact, (list, tuple)):
             result = "["
             for sub_fact in fact:
                 result += ("," if len(result) > 1 else "") + self.fact_to_key(sub_fact)
@@ -76,11 +102,23 @@ class System1Agent:
     def fact_to_node(self, fact):
         key = self.fact_to_key(fact)
         if key not in self.fact_node_dict:
-            self.fact_node_dict[key] = Node(len(self.nodes) + 1, fact)
-            self.nodes.add(self.fact_node_dict[key])
+            node = Node(len(self.nodes) + 1, fact)
+            self.fact_node_dict[key] = node
+            self.nodes.add(node)
+            self.create_and_link_neighbors(node)
+            if fact[0] == 'action':
+                self.action_nodes.add(node)
         return self.fact_node_dict[key]
+
+    # Apply neighbor creation rules to create or link nodes
+    def create_and_link_neighbors(self, node):
+        if node.fact[0] in self.neighbor_rules:
+            for rule in self.neighbor_rules[node.fact[0]]:
+                rule(node)
 
     # Create a spreading activation rule, that sets up neighbors for nodes that match the rule
     # and reinforcement strengths.
-    def create_spread_rule(self, node_pattern, action):
-        pass
+    def create_neighbor_rule(self, node_pattern, action):
+        if node_pattern not in self.neighbor_rules:
+            self.neighbor_rules[node_pattern] = []
+        self.neighbor_rules[node_pattern].append(action)

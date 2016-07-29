@@ -1,5 +1,4 @@
 from system1 import System1Agent
-#from system2 import goalWeight, goalRequirements, printGoals, knownTuple, knownFalseTuple, known, substitute, chooseAction, readAgent, isConstant, isKnown, preferPlan, forget, isTransient, sleep
 from system2 import System2Agent, substitute, isConstant, isVar
 from client import Client
 
@@ -11,6 +10,9 @@ class DASHAgent(Client, System2Agent, System1Agent):
         System2Agent.__init__(self)
         System1Agent.__init__(self)
         self.primitiveActionDict = dict()
+        # Activation threshold at which actions suggested by system 1 will be considered over deliberation
+        # A low threshold will produce more 'impulsive' actions
+        self.system1_threshold = 0.1
         self.traceUpdate = False
         self.traceAction = False
         # Although 'forget' is defined in system2, it is assigned primitive here because
@@ -29,6 +31,7 @@ class DASHAgent(Client, System2Agent, System1Agent):
             self.update_beliefs(result, next_action)
             self.spreading_activation()
             next_action = self.choose_action()
+            self.system1_decay()
             iteration += 1
         if next_action is None:
             print "Exiting simulation: no action chosen"
@@ -40,7 +43,17 @@ class DASHAgent(Client, System2Agent, System1Agent):
         return next_action
 
     def choose_action(self):
-        return self.choose_action_by_reasoning()
+        system1_actions = self.actions_over_threshold(threshold=self.system1_threshold)
+        if system1_actions and self.reject_reasoning(system1_actions):
+            return system1_actions[0].node_to_action()  # will ultimately choose
+        system2_action = self.choose_action_by_reasoning()
+        # For now always go with the result of reasoning if it was performed
+        return system2_action
+
+    # If system1 proposes some actions, should the agent just go with them or opt to employ deliberative reasoning?
+    def reject_reasoning(self, system1_action_nodes):
+        # print 'considering system1 suggested actions ', [n.fact[1:] for n in system1_action_nodes]
+        return True  # try system 1 if it's available
 
     def primitiveActions(self, l):
         # Add the items into the set of known primitive actions
@@ -70,7 +83,6 @@ class DASHAgent(Client, System2Agent, System1Agent):
         if isinstance(result, list):
             for bindings in result:
                 concrete_result = substitute(action, bindings)
-                print '*** subst', action, ',', bindings, ',', concrete_result
                 if not self.isTransient(concrete_result):
                     self.knownTuple(concrete_result)   # Mark action as performed/known
                     self.knownTuple(('performed', concrete_result))   # Adding both lets both idioms be used in the agent code.
