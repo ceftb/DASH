@@ -106,9 +106,17 @@ class ServiceHub(WorldHub):
         return 'success', self.service_dictionary.keys()
 
     def direct_attack(self, agent_id, aux_data):
-        # Currently toss a coin with the same weights for any site. Later vary probabilities
-        # based on the site and perhaps the attacker competence.
-        if random.random() < 0.5:
+        # Currently arbitrary probabilities based on the service type
+        # TODO: consider the attacker competence
+        service_type = self.service_dictionary[aux_data[0]].get_service_type()
+        if "bank" in service_type:
+            prob = 0.1
+        elif "mail" in service_type:
+            prob = 0.25
+        else:
+            prob = 0.6
+
+        if random.random() < prob:
             service = self.service_dictionary[aux_data[0]]
             service.compromised_by.append(agent_id)
             return 'success'
