@@ -69,13 +69,13 @@ transient attack
     # Decide which style of attack to try next. Binds the main variable to either _direct or _indirect
     def choose_attack(self, (goal, term)):
         if term == "_direct":
-            if not self.compromised_sites or random.random() > self.reuseRisk:
+            if not self.compromised_sites or (random.random() > self.reuseRisk):
                 print 'making a direct attack'
                 return [{}]
             else:
                 return []
         elif term == "_indirect":
-            if self.compromised_sites and random.random() < self.reuseRisk:
+            if self.compromised_sites and (random.random() < self.reuseRisk):
                 print 'making an indirect attack'
                 return [{}]
             else:
@@ -84,11 +84,11 @@ transient attack
             if not self.compromised_sites:
                 print 'choosing direct attack since there are no compromised sites'
                 return [{term: '_direct'}] # Must choose direct if no sites are compromised yet
-            elif random.random() > self.reuseRisk:   #
+            elif (random.random() > self.reuseRisk):   #
                 print 'choosing direct attack (60% chance)'
                 return [{term: '_direct'}]
             else:
-                print 'choosing indirect attack randomly'
+                print 'choosing indirect attack (40% chance)'
                 return [{term: '_indirect'}]
         else:  # some constant that is not an attack style
             return []
