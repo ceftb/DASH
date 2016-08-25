@@ -105,10 +105,10 @@ class ServiceHub(WorldHub):
     def list_all_sites(self, agent_id, aux_data):
         return 'success', self.service_dictionary.keys()
 
-    def direct_attack(self, agent_id, aux_data):
+    def direct_attack(self, agent_id, (service_name)):
         # Currently arbitrary probabilities based on the service type
         # TODO: consider the attacker competence
-        service_type = self.service_dictionary[aux_data[0]].get_service_type()
+        service_type = self.service_dictionary[service_name].get_service_type()
         if "bank" in service_type:
             prob = 0.1
         elif "mail" in service_type:
@@ -117,14 +117,14 @@ class ServiceHub(WorldHub):
             prob = 0.6
 
         if random.random() < prob:
-            service = self.service_dictionary[aux_data[0]]
+            service = self.service_dictionary[service_name]
             service.compromised_by.append(agent_id)
             return 'success'
         else:
             return 'fail'
 
-    def get_user_pw_list(self, agent_id, aux_data):
-        service = self.service_dictionary[aux_data[0]]
+    def get_user_pw_list(self, agent_id, (service_name)):
+        service = self.service_dictionary[service_name]
         # Check that this agent successfully compromised this site
         if agent_id in service.compromised_by:
             return 'success', [(user, service.user_name_passwords[user]) for user in service.user_name_passwords]

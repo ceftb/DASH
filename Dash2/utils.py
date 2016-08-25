@@ -62,11 +62,12 @@ class Requirements:
     def get_symbols(self):
         return self.symbols
 
+    # Changed to treat numbers, uppercase and symbols as minimum constraints, not maximums
     def verify(self, username, password):   # I guess username might be part of the verification process in the future
         if self.min_len <= len(password) <= self.max_len \
-           and (self.uppercase == 0 or sum(1 for c in password if c.isupper()) <= self.uppercase) \
-           and (self.numbers == 0 or sum(1 for c in password if c.isdigit()) <= self.numbers) \
-           and (self.symbols == 0 or sum(1 for c in password if not (re.match('^[a-zA-Z0-9]*$', c))) <= self.symbols):
+           and (self.uppercase == 0 or sum(1 for c in password if c.isupper()) >= self.uppercase) \
+           and (self.numbers == 0 or sum(1 for c in password if c.isdigit()) >= self.numbers) \
+           and (self.symbols == 0 or sum(1 for c in password if not (re.match('^[a-zA-Z0-9]*$', c))) >= self.symbols):
             return True
         else:
             return False
@@ -79,6 +80,10 @@ def create_requirements(strength):
         return Requirements(min_len=1 + rand(4), max_len=64)
     elif strength == 'average':
         return Requirements()
+    elif strength == 'strong':
+        # High max len because was having trouble when min and max got close, and that's not
+        # realistic to most constraints out there.
+        return Requirements(min_len=6 + rand(8), max_len=80, numbers=1)
 
 
 # This is shorthand to make create_requirements above more readable
@@ -92,8 +97,11 @@ class Service:
         self.name = name
         self.requirements = requirements
         # Use 'weak', 'average' and 'strong' as shorthand for a distribution of requirements
-        if requirements in ['weak', 'average', 'good', 'strong']:
+        if requirements in ['weak', 'average', 'strong']:
             self.requirements = create_requirements(requirements)
+        else:
+            print 'warning, unrecognized requirements strength', requirements, 'using average'
+            self.requirements = create_requirements('average')
         self.user_name_passwords = {}    # dict of user names and passwords used on this service
         self.user_status = {}    # dict of status of user on service, e.g. 'logged_in'
         self.compromised_by = []  # agents who have compromised this service, and can read the passwords

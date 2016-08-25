@@ -66,7 +66,7 @@ class PasswordAgent(DASHAgent):
         # usernames used - dict {username:complexity} (I changed to just a list - Jim)
         self.knownUsernames = []
         # passwords used - dict {password:complexity} (I changed to just a list - Jim)
-        self.knownPasswords = []
+        self.known_passwords = []
         # list of writen pairs
         self.writtenPasswords = []
         # USER beliefs
@@ -86,6 +86,7 @@ class PasswordAgent(DASHAgent):
                                ('resetPassword', self.resetPassword)
                                ])
 
+        # The agent goal description is short, because the rational task is not that important here.
         self.readAgent("""
 
 goalWeight doWork 1         # repeat the proces
@@ -209,10 +210,10 @@ transient doWork
         # Select password: essentially the weaker the belief is the greater the chance
         # that user will just pick one of their known username/passwords
         distribution = [(password, belief), ('known', 1.0)]
-        if distPicker(distribution, random.random()) == 'known' and self.knownUsernames and self.knownPasswords:
+        if distPicker(distribution, random.random()) == 'known' and self.knownUsernames and self.known_passwords:
             changed_password = True
             username = random.choice(self.knownUsernames)
-            password = random.choice(self.knownPasswords)
+            password = random.choice(self.known_passwords)
         else:
             changed_password = False
 
@@ -290,30 +291,50 @@ transient doWork
         # is it to choose something from that list when this one is empty? - Jim
         # I've added code below that uses the 'password_list' if there are still values on it, and otherwise picks
         # a known password.
-        desired_pass = random.choice(self.password_list) if self.password_list else random.choice(self.knownPasswords)
+        list_of_new = self.password_list
+        list_of_old = self.known_passwords
+        if list_of_new:
+            desired_pass = random.choice(self.password_list)
+            list_of_new = [x for x in list_of_new if x is not desired_pass]  # constructive not surgical
+        elif self.known_passwords:
+            desired_pass = random.choice(self.known_passwords)
+            list_of_old = [x for x in list_of_old if x is not desired_pass]  # constructive not surgical
         # if there are requirements verify that the password complies with them
         if requirements is not None:
+            # will run through every unused password, then every used one, so maxTries is more of a timeout
+            # for long lists
             maxTries = 100
             while not requirements.verify(username, desired_pass) and maxTries > 0:
-                print 'password', desired_pass, 'not verified against', requirements
-                desired_pass = random.choice(self.password_list) if self.password_list else random.choice(self.knownPasswords)
+                print 'password', desired_pass, 'chosen from', len(list_of_new), len(list_of_old), \
+                    'not verified against', requirements
+                if list_of_new:
+                    desired_pass = random.choice(list_of_new)
+                    list_of_new = [x for x in list_of_new if x is not desired_pass]
+                elif list_of_old:
+                    desired_pass = random.choice(list_of_old)
+                    list_of_old = [x for x in list_of_old if x is not desired_pass]
+                else:
+                    break  # no more passwords to try
                 maxTries -= 1
-
-        # Currently just carries on with a bad password after that many tries.
 
         # if pass is too hard, reuse the hardest one or write it down,
         # the decision is based on memoBias parameter
         # maybe add some distance heuristics later
-        if (self.password_complexity(desired_pass) + self.cognitiveBurden) < self.cognitiveThreshold:
+        new_password_verified = True if requirements is None else requirements.verify(username, desired_pass)
+
+        if new_password_verified and \
+            (self.password_complexity(desired_pass) + self.cognitiveBurden) < self.cognitiveThreshold:
             password = desired_pass
             # add to the list of known pass, and remove from potential passes
-            if desired_pass not in self.knownPasswords:
-                self.knownPasswords.append(desired_pass)
+            if desired_pass not in self.known_passwords:
+                self.known_passwords.append(desired_pass)
             if desired_pass in self.password_list:
                 self.password_list.remove(desired_pass)
-        elif distPicker(self.memoBias, random.random()) == 'reuse' and self.knownPasswords:
+        elif self.known_passwords and \
+                (not new_password_verified or distPicker(self.memoBias, random.random()) == 'reuse'):
+            # We have to reuse if we didn't find a good enough new password.
             #password = max(stats.iteritems(), key=operator.itemgetter(1))[0]
-            password = max(self.knownPasswords, key=self.password_complexity)
+            password = max(self.known_passwords, key=self.password_complexity)
         else:
             password = desired_pass
             self.writtenPasswords.append(desired_pass)
