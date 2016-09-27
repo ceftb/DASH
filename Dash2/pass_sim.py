@@ -334,6 +334,8 @@ transient doWork
                 (not new_password_verified or distPicker(self.memoBias, random.random()) == 'reuse'):
             # We have to reuse if we didn't find a good enough new password.
             #password = max(stats.iteritems(), key=operator.itemgetter(1))[0]
+            # .. but actually we tried to reuse above, so we need to add something that synthesizes a password
+            # here, e.g. adding numbers or characters if that is the problem, etc.
             password = max(self.known_passwords, key=self.password_complexity)
         else:
             password = desired_pass

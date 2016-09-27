@@ -1,6 +1,7 @@
 from system1 import System1Agent
 from system2 import System2Agent, substitute, isConstant, isVar
 from client import Client
+import re
 
 
 class DASHAgent(Client, System2Agent, System1Agent):
@@ -64,12 +65,36 @@ class DASHAgent(Client, System2Agent, System1Agent):
             else:
                 self.primitiveActionDict[item[0]] = item[1]
 
+    # A primitive action is declared in primitiveActionDict, or it might be a method
+    # on the agent with the same name, or the same name with camelCase converted to underscores
     def isPrimitive(self, goal):
-        return goal[0] in self.primitiveActionDict
+        predicate = goal[0]
+        # Protect some predicates from being treated as primitive by this permissive method
+        if predicate in ['known']:
+            return False
+        if predicate in self.primitiveActionDict:
+            return True
+        if hasattr(self, predicate) and callable(getattr(self, predicate)):
+            return True
+        underscore_action = convert_camel(predicate)
+        if hasattr(self, underscore_action) and callable(getattr(self, underscore_action)):
+            return True
+        return False
 
+    # This format is now inefficient since we have different ways that a predicate can be a primitive action
     def performAction(self, action):
         if self.isPrimitive(action):
-            function = self.primitiveActionDict[action[0]]
+            predicate = action[0]
+            if predicate in self.primitiveActionDict:
+                function = self.primitiveActionDict[action[0]]
+            elif hasattr(self, predicate) and callable(getattr(self, predicate)):
+                function = getattr(self, predicate)
+            else:
+                underscore_action = convert_camel(predicate)
+                if hasattr(self, underscore_action) and callable(getattr(self, underscore_action)):
+                    function = getattr(self, underscore_action)
+                else:
+                    return
             return function(action)
 
     def update_beliefs(self, result, action):
@@ -94,3 +119,12 @@ class DASHAgent(Client, System2Agent, System1Agent):
     def succeed(self, action):
         #print "Primitive action", action, "trivially succeeds"
         return [{'performed': action}]
+
+
+first_cap_re = re.compile('(.)([A-Z][a-z]+)')
+all_cap_re = re.compile('([a-z0-9])([A-Z])')
+
+
+def convert_camel(name):
+    s1 = first_cap_re.sub(r'\1_\2', name)
+    return all_cap_re.sub(r'\1_\2', s1).lower()

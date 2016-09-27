@@ -98,8 +98,8 @@ class WorldHub:
         print "successfully opened socket. listening for new connections..."
         print "if you wish to quit the server program, enter q"
         input = [self.server, sys.stdin]
-        listening = True
-        while listening:
+        self.listening = True  # An instance variable so that we can break this loop from outside if necessary
+        while self.listening:
             input_ready, output_ready, except_ready = select.select(input, [], [])
             for s in input_ready:
                 # if a new connection is requested, start a new thread for it
@@ -109,9 +109,10 @@ class WorldHub:
                     self.threads.append(c)
                 # else if we got input from the keyboard, stop
                 elif s == sys.stdin:
-                    user_input = sys.stdin.readline()
+                    user_input = \
+                        sys.stdin.readline()
                     if user_input == "q\n":
-                        listening = False
+                        self.listening = False
                     else:
                         print "if you wish to quit, enter q."
         
@@ -294,7 +295,6 @@ all_cap_re = re.compile('([a-z0-9])([A-Z])')
 def convert_camel(name):
     s1 = first_cap_re.sub(r'\1_\2', name)
     return all_cap_re.sub(r'\1_\2', s1).lower()
-
 
 
 if __name__ == "__main__":

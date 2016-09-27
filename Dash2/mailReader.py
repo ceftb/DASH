@@ -20,18 +20,13 @@ goalRequirements doWork
 transient doWork     # Agent will forget goal's achievement or failure as soon as it happens
 
                        """)
-        self.primitiveActions([('readMail', self.read_mail), ('sendMail', self.send_mail),
-                               ('processMail', self.process_mail), ('click', self.click_link_in_mail)])
+        self.primitiveActions([('click', self.click_link_in_mail)])
         self.register(['mailagent@amail.com'])    # Register with the running mail_hub
 
         # Threshold at which actions suggested by system 1 are chosen. At 0.3 this scenario uses only goal-directed
         # actions. At 0.2 the agent clicks a link in the email once, then carries on with the goal.
         # At 0.1 it clicks it twice.
         self.system1_threshold = 0.3
-
-        #self.traceGoals = True
-        #self.traceUpdate = True
-        #self.trace_add_activation = True
 
         # Using this as a counter in the email that gets sent
         self.mailCounter = 0
@@ -70,8 +65,8 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
 
     # System 1 support
 
-    # Create neighbor nodes for a node that represents a read_mail action, and so binds a list of emails
-    # For each email that has a link, suggest an action to click on it
+    # Create neighbor nodes for a node that represents a read_mail action, and binds a list of emails
+    # For each email that has a link (right now just for each email), suggest an action to click on it
     def create_mail_nodes(self, node):
         for mail in node.fact[1]:
             node.add_neighbor(self.fact_to_node(['mail', mail]))

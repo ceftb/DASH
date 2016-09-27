@@ -13,7 +13,7 @@ goalRequirements doWork
   flightToBuy(flight)   # binds 'flight' to a flight to be bought if there is one, otherwise fails.
   buyFlight(flight)
   sleep(1)
-  forget([flightToBuy(x),buyFlight(x)]
+  forget([flightToBuy(x),buyFlight(x)])
 
 goalRequirements doWork
   sendMail()

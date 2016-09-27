@@ -84,11 +84,11 @@ transient attack
             if not self.compromised_sites:
                 print 'choosing direct attack since there are no compromised sites'
                 return [{term: '_direct'}] # Must choose direct if no sites are compromised yet
-            elif (random.random() > self.reuseRisk):   #
-                print 'choosing direct attack (60% chance)'
+            elif random.random() > self.reuseRisk:   #
+                print 'choosing direct attack (', (1 - self.reuseRisk), 'chance)'
                 return [{term: '_direct'}]
             else:
-                print 'choosing indirect attack (40% chance)'
+                print 'choosing indirect attack (', self.reuseRisk, 'chance)'
                 return [{term: '_indirect'}]
         else:  # some constant that is not an attack style
             return []
