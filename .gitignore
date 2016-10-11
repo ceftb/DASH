@@ -3,3 +3,9 @@
 # Package Files #
 *.war
 *.ear
+
+*.pyc
+*.DS_Store
+
+target/
+env.sh
