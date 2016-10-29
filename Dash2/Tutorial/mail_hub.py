@@ -22,7 +22,6 @@ class MailHub(WorldHub):
         if sender_id not in self.emailAddress:
             print "sender", sender_id, "not in email addresses: ", self.emailAddress, "not sending"
             return
-        sender = self.emailAddress[sender_id]
         if recipient not in self.mail:
             self.mail[recipient] = []
 
@@ -53,8 +52,9 @@ class MailHub(WorldHub):
                         self.initialize_email(agent_id, recipient)
                         self.mail[recipient].append(message)
             return 'success', []
-        except:
-            print "problem sending mail"
+        except Exception as e:
+            print "problem sending mail:", e
+            print 'mail is', self.mail
             return 'fail', []
 
     def processRegisterRequest(self, agent_id, aux_data):
@@ -62,7 +62,7 @@ class MailHub(WorldHub):
         self.emailAddress[agent_id] = address
         # Someone may have already sent this agent mail before registration, so don't lose it
         if address not in self.mail:
-            self.mail[address] = {}
+            self.mail[address] = []
         return ['success', agent_id, []]
 
 if __name__ == "__main__":

@@ -3,7 +3,7 @@ from dash import DASHAgent
 
 class MailReader(DASHAgent):
 
-    def __init__(self):
+    def __init__(self, address):
         DASHAgent.__init__(self)
 
         self.readAgent("""
@@ -11,7 +11,7 @@ class MailReader(DASHAgent):
 goalWeight doWork 1
 
 goalRequirements doWork
-  sendMail('mailagent@amail.com', _test, 'this is a test message')
+  sendMail(_self, _test, 'this is a test message', 'http://click.here')
   readMail(newmail)
   processMail(newmail)
 #  sleep(1)
@@ -21,7 +21,9 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
 
                        """)
         self.primitiveActions([('click', self.click_link_in_mail)])
-        self.register(['mailagent@amail.com'])    # Register with the running mail_hub
+
+        self.address = address
+        self.register([address])    # Register with the running mail_hub
 
         # Threshold at which actions suggested by system 1 are chosen. At 0.3 this scenario uses only goal-directed
         # actions. At 0.2 the agent clicks a link in the email once, then carries on with the goal.
@@ -30,6 +32,9 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
 
         # Using this as a counter in the email that gets sent
         self.mailCounter = 0
+
+        # This is a list of the urls that are clicked
+        self.urls_clicked = []
 
         # Adding spreading activation rules by code until the language for them is set
 
@@ -45,9 +50,12 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
         else:
             return []
 
-    def send_mail(self, (send_mail, to, subject, body)):
+    # Adding a 'url' to the mail message so that we can record clicks. The message can be any structured object,
+    # although the mail_hub looks for a 'to' field to route it.
+    def send_mail(self, (send_mail, to, subject, body, url)):
         result = self.sendAction("sendMail",
-                                 [{'to': to[1:], 'subject': subject[1:], 'body': body[1:] + str(self.mailCounter)}])
+                                 [{'to': self.address if to == '_self' else to[1:], 'subject': subject[1:],
+                                   'body': body[1:] + str(self.mailCounter), 'url': url[1:]}])
         self.mailCounter += 1
         if result is not None and result[0] == "success":
             return [{}]
@@ -61,6 +69,8 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
     # This one isn't called through system 2 reasoning, but by system 1
     def click_link_in_mail(self, (predicate, mail)):
         print 'clicked link in', mail
+        if 'url' in mail:
+            self.urls_clicked.append(mail['url'])
         return [{}]
 
     # System 1 support
@@ -70,11 +80,12 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
     def create_mail_nodes(self, node):
         for mail in node.fact[1]:
             node.add_neighbor(self.fact_to_node(['mail', mail]))
-            node.add_neighbor(self.fact_to_node(['action', 'click', mail]))
+            # Turning off the urge to click a link right now for testing
+            #node.add_neighbor(self.fact_to_node(['action', 'click', mail]))
 
 
 if __name__ == "__main__":
-    mr = MailReader()
+    mr = MailReader('mailagent1@amail.com')
     mr.agentLoop()
     # Print out the system 1 nodes at the end
     print 'nodes:'

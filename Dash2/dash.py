@@ -16,6 +16,7 @@ class DASHAgent(Client, System2Agent, System1Agent):
         self.system1_threshold = 0.1
         self.traceUpdate = False
         self.traceAction = False
+        self.traceLoop = True
         # Although 'forget' is defined in system2, it is assigned primitive here because
         # that module is compiled first
         self.primitiveActions([('forget', self.forget), ['sleep', self.sleep]])
@@ -34,9 +35,9 @@ class DASHAgent(Client, System2Agent, System1Agent):
             next_action = self.choose_action()
             self.system1_decay()
             iteration += 1
-        if next_action is None:
+        if self.traceLoop and next_action is None:
             print "Exiting simulation: no action chosen"
-        elif 0 <= max_iterations <= iteration:
+        elif self.traceLoop and 0 <= max_iterations <= iteration:
             print "Exiting simulation: finished finite agent cycles:", iteration, "of max", max_iterations
         if disconnect_at_end:
             self.disconnect()
@@ -53,7 +54,7 @@ class DASHAgent(Client, System2Agent, System1Agent):
 
     # If system1 proposes some actions, should the agent just go with them or opt to employ deliberative reasoning?
     def reject_reasoning(self, system1_action_nodes):
-        # print 'considering system1 suggested actions ', [n.fact[1:] for n in system1_action_nodes]
+        print 'considering system1 suggested actions ', [n.fact[1:] for n in system1_action_nodes]
         return True  # try system 1 if it's available
 
     def primitiveActions(self, l):
