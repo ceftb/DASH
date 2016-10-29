@@ -29,7 +29,7 @@ class MailHub(WorldHub):
         if agent_id in self.emailAddress:
             address = self.emailAddress[agent_id]
             mail = self.mail[address]
-            print 'mail for ' + address + ' is ' + str(mail)
+            #print 'mail for ' + address + ' is ' + str(mail)
             self.mail[address] = []
             return 'success', mail
         else:

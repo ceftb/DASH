@@ -30,6 +30,7 @@ class Client(object):
         self.sock = None
         self.id = None
         self.connected = False
+        self.traceAction = False
 
     def test(self):
         """
@@ -106,11 +107,11 @@ class Client(object):
         return response
 
     def sendAction(self, action, data=[], time="asap"):
-        """ Send actionin form of message_types['send_action'] to the World Hub
+        """ Send action in form of message_types['send_action'] to the World Hub
         And awaits the appropriate response
         Args:
             action(string)  #  action to be sent to World Hub
-            aux_data(list) #  auxiliary data about the client
+            data(list) #  auxiliary data about the client
             time("asap" or int) #  time to perform action
         Example:
             #to be added
@@ -133,8 +134,9 @@ class Client(object):
             result = response
             aux_response = []
 
-        print "hub action", action, str(data) if data else "", \
-            "received response:", result, ", aux response: " + str(aux_response) if aux_response != [] else ""
+        if self.traceAction:
+            print "hub action", action, str(data) if data else "", \
+                "received response:", result, ", aux response: " + str(aux_response) if aux_response != [] else ""
 
         self.processActionResponse(result, aux_response)
 
