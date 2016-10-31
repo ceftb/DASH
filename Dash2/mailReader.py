@@ -6,30 +6,30 @@ class MailReader(DASHAgent):
     def __init__(self, address):
         DASHAgent.__init__(self)
 
-        self.traceLoad = True
-        self.traceGoals = True
         self.readAgent("""
 
 goalWeight doWork 1
 
+# This runs forever. While the agent is waiting for new mail, readMail will succeed with an empty list that is then processed.
 goalRequirements doWork
-  sendMailFromStack
+  sendMailFromStack(mail)
   readMail(newmail)
   processMail(newmail)
+  forget([sendMailFromStack(x), haveMailInStack(x), sendMail(x), readMail(x), processMail(x), sleep(x)])
+# Turned off sleep for the experiment harness, so it runs quickly.
 #  sleep(1)
-#  forget([sendMail(),readMail(x),sleep(x)])  # a built-in that removes matching elements from memory
 
 # This line can replace the first line in the doWork clause above, but commenting it there messes up the reader
 #   sendMail(_self, _test, 'this is a test message', 'http://click.here')
 
 
 # Send mail if there is any, otherwise succeed without doing anything
-goalRequirements sendMailFromStack
+goalRequirements sendMailFromStack(mail)
   haveMailInStack(mail)
   sendMail(mail)
 
-goalRequirements sendMailFromStack
-  succeed
+goalRequirements sendMailFromStack(mail)
+  succeedM(mail)
 
 transient doWork     # Agent will forget goal's achievement or failure as soon as it happens
 
@@ -42,10 +42,13 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
         # Stack of emails to send. This way it is easy enough to task the agent with a set of emails, even dynamically.
         # Setting up with an initial mail to test. Should be the same behavior as with fixed email in the goal.
         self.mail_stack = [{'to': self.address, 'subject': 'test', 'body': 'this is a test message',
+                            'url': 'http://click.here'},
+                           {'to': self.address, 'subject': 'test', 'body': 'this is a second test message',
                             'url': 'http://click.here'}]
 
-        # Using this as a counter in the email that gets sent
-        self.mailCounter = 0
+        # Keep track of the number of emails read and sent
+        self.mails_read = 0
+        self.mails_sent = 0
 
         # This is a list of the urls that are clicked
         self.urls_clicked = []
@@ -65,13 +68,16 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
     # If there is mail in the stack, return the first object
     def have_mail_in_stack(self, (predicate, mail_var)):
         if self.mail_stack:
-            return [{mail_var: self.mail_stack.pop(0)}]
+            #print 'mail in stack:', self.mail_stack
+            return [{mail_var: [self.mail_stack.pop(0)]}]  # return as a list so the generic mail sending function could send more than one message in principle
         else:
+            #print 'no mail in stack'
             return []
 
     def read_mail(self, (predicate, mail_var)):
         [status, data] = self.sendAction("getMail")
         if status == "success":
+            self.mails_read += len(data)
             return [{mail_var: data}]
         else:
             return []
@@ -83,11 +89,11 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
             (send_mail, to, subject, body, url) = goal
             result = self.sendAction("sendMail",
                                      [{'to': self.address if to == '_self' else to[1:], 'subject': subject[1:],
-                                      'body': body[1:] + str(self.mailCounter), 'url': url[1:]}])
+                                      'body': body[1:] + str(self.mails_sent), 'url': url[1:]}])
         else:  # Just one argument, assumed to be an email message in dictionary form as expected by the hub
             result = self.sendAction("sendMail", goal[1])
 
-        self.mailCounter += 1
+        self.mails_sent += 1
         if result is not None and result[0] == "success":
             return [{}]
         else:
@@ -104,7 +110,8 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
             self.urls_clicked.append(mail['url'])
         return [{}]
 
-    def succeed(self, goal):
+    def succeed_m(self, goal):
+        #print 'calling succeed'
         return [{}]
 
     # System 1 support
@@ -120,7 +127,7 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
 
 if __name__ == "__main__":
     mr = MailReader('mailagent1@amail.com')
-    mr.agentLoop()
+    mr.agentLoop(20)
     # Print out the system 1 nodes at the end
     print 'nodes:'
     for node in mr.nodes:
