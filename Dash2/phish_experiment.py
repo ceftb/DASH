@@ -1,14 +1,20 @@
 # Uses the mailReader.py agent and the Tutorial mail_hub to create an experiment with n agents
 # reading and sending mail, with known email addresses, and k attacker agents sending phish.
 # Based on nurse_experiment.py (probably should extract a reusable test harness from this).
+from random import sample
 
 import mailReader
 
+def trial(num_workers=100, num_recipients=4, num_phishers=1, phish_targets=20, max_rounds=20):
 
-def trial(num_workers=100, num_phishers=1, max_rounds=20):
+    #workers = [mailReader.MailReader('mailagent'+str(i+1)+'@amail.com') for i in range(0, num_workers)]
+    workers = []
+    for i in range (0, num_workers):
+        workers.append(mailReader.MailReader('mailagent'+str(i+1)+'@amail.com'))
+        choose_recipients(workers[i], i, num_workers, num_recipients)
 
-    workers = [mailReader.MailReader('mailagent'+str(i+1)+'@amail.com') for i in range(0, num_workers)]
     phisher = mailReader.MailReader('phisher@bmail.com')
+    choose_victims(phisher, phish_targets, num_workers)
     phisher.active = True
 
     # dovetail the worker and phisher agents until they're all finished
@@ -38,6 +44,9 @@ def trial(num_workers=100, num_phishers=1, max_rounds=20):
                     finished_workers.add(w)
         if phisher.active:
             next_action = phisher.agentLoop(max_iterations=1, disconnect_at_end=False)  # don't disconnect since will run again
+            # total_mail_stack += len(phisher.mail_stack)
+            # total_mails_read += phisher.mails_read
+            # total_mails_sent += phisher.mails_sent
             if next_action is None:
                 phisher.active = False
         if total_mail_stack == last_mail_stack and total_mails_read == last_mails_read and total_mails_sent == last_mails_sent:
@@ -56,6 +65,27 @@ def trial(num_workers=100, num_phishers=1, max_rounds=20):
     for w in workers:
         print w.address, w.mails_read, w.mails_sent, w.urls_clicked
     print 'phisher:', phisher.address, phisher.mails_sent, phisher.urls_clicked
+
+def choose_recipients(agent, worker_i, num_workers, num_recipients):
+    recipients = sample([i for i in range(0, num_workers) if i != worker_i], num_recipients)
+
+    stack = []
+    for i in range(0, num_recipients):
+        stack.append({'to': 'mailagent'+str(recipients[i]+1)+'@amail.com', 'subject': 'test',
+                      'body': 'this is a test message',
+                      'url': 'http://click.here'})
+    agent.mail_stack = stack
+
+def choose_victims(phisher, num_victims, num_workers):
+    victims = sample(range(0, num_workers), num_victims)
+
+    stack = []
+    for i in range(0, num_victims):
+        stack.append({'to': 'mailagent'+str(victims[i] + 1) + '@amail.com', 'subject': 'test',
+                      'body': 'this is a test message',
+                      'url': 'http://click.here'})
+    print stack
+    phisher.mail_stack = stack
 
 
 # Run it once
