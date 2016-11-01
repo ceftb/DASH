@@ -8,8 +8,22 @@ class MailReader(DASHAgent):
 
         # Ultimately it makes sense to house Big-5 personality information and the way it might interact with
         # dual processing in a separate class to be inherited, but for this rapid prototyping I will keep it here
-        # for now.
+        # along with other potentially-relevant demographic information for now.
+        # These dimensions are assumed to be on a scale from 0 to 1.
+        self.extraversion = 0.5
+        self.agreeableness = 0.5
+        self.conscientiousness = 0.5
+        self.emotional_stability = 0.5
+        self.openness = 0.5
 
+        # Other features of importance
+        self.gender = 'Male'
+
+        self.competence_with_internet = 0.5  # general level of competence e.g. Alseadoon et al. 12
+
+
+        # Might be found from the balloon assessment test for example.
+        self.impulsivity = 0.5
 
         self.readAgent("""
 
@@ -50,6 +64,13 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
                             'attachment': 'budget.xlsx'},
                            {'to': self.address, 'subject': 'test', 'body': 'this is a second test message',
                             'attachment': 'budget.xlsx'}]
+
+        self.work_colleagues = []  # set of people that work-related email might be sent of forwarded to or expected to come from
+        self.leisure_colleagues = []  # set of people that leisure-related email might be sent of forwarded to or expected to come from
+
+        # probability that email deemed to be legitimate leisure mail will be forwarded to a friend. Shortly this
+        # should be calculated based on agreeableness, extraversion and conscientiousness.
+        self.leisure_forward_probability = 0.5
 
         # Keep track of the number of emails read and sent
         self.mails_read = 0
@@ -107,9 +128,32 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
         else:
             return []
 
+    # At the moment all of the agent's work process for work-related email as well as response to phishing email
+    # (which might present as work-related or as social/leisure) is handled in this primitive method.
     def process_mail(self, (predicate, mail)):
         #print 'processing', mail
+
+        # First the agent decides whether the mail is phish or legitimate based on mental model and personality traits
+        # (and at some point perhaps fatigue, cognitive budget etc.)
+        # If the agent decides the mail is phish, no further action is taken.
+        if self.decide_phish(mail):
+            return [{}]
+
+        # Work-related mail includes tags that describe what should be done with it, in order to embed an organizational
+        # process in the mail. e.g., this should be forwarded and recipient should formulate a reply to the original
+        # sender. I'll come up with a simple language to generate this path. Alternatively the email could just
+        # include probabilities for each of the actions leading to kind of a markov mail process with the same overall
+        # activity. Might be fine.
+
+        # Leisure-related mail is forwarded with probability determined from personality and gender to a subset of the
+        # agent's friend group. It keeps a 'forward' trail in the mail to avoid sending the same email to someone twice.
+
+        # THe probabilitiy of opening an attachment in either is related to openness, but is much higher in work-related email.
+
         return [{}]
+
+    def decide_phish(self, mail):
+        return True
 
     # This one isn't called through system 2 reasoning, but by system 1
     def click_link_in_mail(self, (predicate, mail)):
