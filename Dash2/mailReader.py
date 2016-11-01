@@ -6,6 +6,11 @@ class MailReader(DASHAgent):
     def __init__(self, address):
         DASHAgent.__init__(self)
 
+        # Ultimately it makes sense to house Big-5 personality information and the way it might interact with
+        # dual processing in a separate class to be inherited, but for this rapid prototyping I will keep it here
+        # for now.
+
+
         self.readAgent("""
 
 goalWeight doWork 1
@@ -42,9 +47,9 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
         # Stack of emails to send. This way it is easy enough to task the agent with a set of emails, even dynamically.
         # Setting up with an initial mail to test. Should be the same behavior as with fixed email in the goal.
         self.mail_stack = [{'to': self.address, 'subject': 'test', 'body': 'this is a test message',
-                            'url': 'http://click.here'},
+                            'attachment': 'budget.xlsx'},
                            {'to': self.address, 'subject': 'test', 'body': 'this is a second test message',
-                            'url': 'http://click.here'}]
+                            'attachment': 'budget.xlsx'}]
 
         # Keep track of the number of emails read and sent
         self.mails_read = 0
@@ -52,6 +57,9 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
 
         # This is a list of the urls that are clicked
         self.urls_clicked = []
+
+        # And a list of the attachments that have been opened
+        self.attachments_opened = []
 
         # Adding spreading activation rules by code until the language for them is set
 
@@ -108,6 +116,11 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
         #print 'clicked link in', mail
         if 'url' in mail:
             self.urls_clicked.append(mail['url'])
+        return [{}]
+
+    def open_attachment_in_mail(self, (predicate, mail)):
+        if 'attachment' in mail:
+            self.attachments_opened.append(mail['attachment'])
         return [{}]
 
     def succeed_m(self, goal):
