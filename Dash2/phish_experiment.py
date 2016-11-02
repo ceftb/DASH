@@ -99,7 +99,6 @@ def choose_recipients(agent, worker_i, num_workers, num_recipients):
 
         stack.append(mail)
 
-    print "worker " + str(stack)
     agent.mail_stack = stack
 
 def choose_victims(phisher, num_victims, num_workers):
@@ -124,7 +123,6 @@ def choose_victims(phisher, num_victims, num_workers):
 
         stack.append(mail)
 
-    print "phisher " + str(stack)
     phisher.mail_stack = stack
 
 
