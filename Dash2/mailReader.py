@@ -71,6 +71,8 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
         # probability that email deemed to be legitimate leisure mail will be forwarded to a friend. Shortly this
         # should be calculated based on agreeableness, extraversion and conscientiousness.
         self.leisure_forward_probability = 0.5
+        self.work_reply_probability = 0.5
+
 
         # Keep track of the number of emails read and sent
         self.mails_read = 0

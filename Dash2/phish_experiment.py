@@ -4,6 +4,16 @@
 from random import sample
 
 import mailReader
+import random
+
+BIG_5_LOWER = 0.2
+BIG_5_UPPER = 0.9
+REPLY_LOWER = 0
+REPLY_UPPER = 0.8
+WORK_REPLY_LOWER = 0
+WORK_REPLY_UPPER = 0.8
+LEISURE_FWD_LOWER = 0
+LEISURE_FWD_UPPER = 0.8
 
 def trial(num_workers=100, num_recipients=4, num_phishers=1, phish_targets=20, max_rounds=20):
 
@@ -11,6 +21,7 @@ def trial(num_workers=100, num_recipients=4, num_phishers=1, phish_targets=20, m
     workers = []
     for i in range (0, num_workers):
         workers.append(mailReader.MailReader('mailagent'+str(i+1)+'@amail.com'))
+        choose_gender_personality(workers[i])
         choose_recipients(workers[i], i, num_workers, num_recipients)
 
     phisher = mailReader.MailReader('phisher@bmail.com')
@@ -67,25 +78,66 @@ def trial(num_workers=100, num_recipients=4, num_phishers=1, phish_targets=20, m
     print 'phisher:', phisher.address, phisher.mails_sent, phisher.urls_clicked
 
 def choose_recipients(agent, worker_i, num_workers, num_recipients):
+    # reset recipients
+    del agent.work_colleagues[:]
+    del agent.leisure_colleagues[:]
     recipients = sample([i for i in range(0, num_workers) if i != worker_i], num_recipients)
+    mode_options = ['leisure', 'work']
 
     stack = []
     for i in range(0, num_recipients):
-        stack.append({'to': 'mailagent'+str(recipients[i]+1)+'@amail.com', 'subject': 'test',
-                      'body': 'this is a test message',
-                      'url': 'http://click.here'})
+        mode = random.choice(mode_options)
+        mail = {'to': 'mailagent' + str(recipients[i] + 1) + '@amail.com', 'subject': 'test',
+                'mode': mode,
+                'body': 'this is a test message',
+                'attachment': 'budget.xlsx'}
+
+        if mode == 'leisure':
+            agent.leisure_colleagues.append('mailagent'+str(recipients[i]+1)+'@amail.com')
+        else:
+            agent.work_colleagues.append('mailagent'+str(recipients[i]+1)+'@amail.com')
+
+        stack.append(mail)
+
+    print "worker " + str(stack)
     agent.mail_stack = stack
 
 def choose_victims(phisher, num_victims, num_workers):
+    # reset victims
+    del phisher.work_colleagues[:]
+    del phisher.leisure_colleagues[:]
     victims = sample(range(0, num_workers), num_victims)
+    mode_options = ['leisure', 'work']
 
     stack = []
     for i in range(0, num_victims):
-        stack.append({'to': 'mailagent'+str(victims[i] + 1) + '@amail.com', 'subject': 'test',
-                      'body': 'this is a test message',
-                      'url': 'http://click.here'})
-    print stack
+        mode = random.choice(mode_options)
+        mail = {'to': 'mailagent' + str(victims[i] + 1) + '@amail.com', 'subject': 'test',
+                'mode': mode,
+                'body': 'this is a test message',
+                'attachment': 'budget.xlsx'}
+
+        if mode == 'leisure':
+            phisher.leisure_colleagues.append('mailagent'+str(victims[i]+1)+'@amail.com')
+        else:
+            phisher.work_colleagues.append('mailagent'+str(victims[i]+1)+'@amail.com')
+
+        stack.append(mail)
+
+    print "phisher " + str(stack)
     phisher.mail_stack = stack
+
+
+def choose_gender_personality(worker):
+    genders = ['Male', 'Female']
+    worker.gender = random.choice(genders)
+    worker.extraversion = random.uniform(BIG_5_LOWER, BIG_5_UPPER)
+    worker.agreeableness = random.uniform(BIG_5_LOWER, BIG_5_UPPER)
+    worker.conscientiousness = random.uniform(BIG_5_LOWER, BIG_5_UPPER)
+    worker.emotional_stability = random.uniform(BIG_5_LOWER, BIG_5_UPPER)
+    worker.openness = random.uniform(BIG_5_LOWER, BIG_5_UPPER)
+    worker.leisure_forward_probability = random.uniform(LEISURE_FWD_LOWER, LEISURE_FWD_UPPER)
+    worker.work_reply_probability = random.uniform(WORK_REPLY_LOWER, WORK_REPLY_UPPER)
 
 
 # Run it once
