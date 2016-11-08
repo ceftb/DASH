@@ -1,3 +1,4 @@
+import random
 from dash import DASHAgent
 
 
@@ -94,6 +95,9 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
         # Reading email creates a list of emails. Add activation to each separate email node in system 1.
         self.create_neighbor_rule('readMail', self.create_mail_nodes)
 
+        # Record phish that are identified as such (i.e. emails from bmail.com, not amail.com addresses).
+        self.phish_identified = []
+
     # primitive actions
 
     # If there is mail in the stack, return the first object
@@ -150,12 +154,21 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
         # Leisure-related mail is forwarded with probability determined from personality and gender to a subset of the
         # agent's friend group. It keeps a 'forward' trail in the mail to avoid sending the same email to someone twice.
 
-        # THe probabilitiy of opening an attachment in either is related to openness, but is much higher in work-related email.
+        # The probability of opening an attachment in either is related to openness, but is much higher in work-related email.
 
         return [{}]
 
     def decide_phish(self, mail):
-        return True
+        # If the mail is legit, it is never identified as phish
+        for message in mail:
+            if 'amail.com' in message['from']:
+                return False
+            # for now, accept 1 in 10 phishing emails
+            elif random.random() < 0.1:
+                return False
+            else:
+                self.phish_identified.add(message)
+                return True
 
     # This one isn't called through system 2 reasoning, but by system 1
     def click_link_in_mail(self, (predicate, mail)):

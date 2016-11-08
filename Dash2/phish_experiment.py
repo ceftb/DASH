@@ -77,6 +77,7 @@ def trial(num_workers=100, num_recipients=4, num_phishers=1, phish_targets=20, m
         print w.address, w.mails_read, w.mails_sent, w.urls_clicked
     print 'phisher:', phisher.address, phisher.mails_sent, phisher.urls_clicked
 
+
 def choose_recipients(agent, worker_i, num_workers, num_recipients):
     # reset recipients
     del agent.work_colleagues[:]
@@ -90,7 +91,7 @@ def choose_recipients(agent, worker_i, num_workers, num_recipients):
         mail = {'to': 'mailagent' + str(recipients[i] + 1) + '@amail.com', 'subject': 'test',
                 'mode': mode,
                 'body': 'this is a test message',
-                'attachment': 'budget.xlsx'}
+                'attachment': 'budget.xlsx' if mode == 'work' else 'kittens.jpeg'}
 
         if mode == 'leisure':
             agent.leisure_colleagues.append('mailagent'+str(recipients[i]+1)+'@amail.com')
