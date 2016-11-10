@@ -142,6 +142,10 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
     def process_mail(self, (predicate, mail)):
         #print 'processing', mail
 
+        # Succeed if there's no mail
+        if not mail:
+            return [{}]
+
         # Treat each message separately
         for message in mail:
 
