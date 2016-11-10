@@ -5,6 +5,7 @@ from random import sample
 
 import mailReader
 import random
+import numpy
 
 BIG_5_LOWER = 0.2
 BIG_5_UPPER = 0.9
@@ -15,7 +16,8 @@ WORK_REPLY_UPPER = 0.8
 LEISURE_FWD_LOWER = 0
 LEISURE_FWD_UPPER = 0.8
 
-def trial(num_workers=100, num_recipients=4, num_phishers=1, phish_targets=20, max_rounds=20):
+def trial(objective, num_workers=100, num_recipients=4, num_phishers=1,
+          phish_targets=20, max_rounds=20):
 
     #workers = [mailReader.MailReader('mailagent'+str(i+1)+'@amail.com') for i in range(0, num_workers)]
     workers = []
@@ -41,6 +43,7 @@ def trial(num_workers=100, num_recipients=4, num_phishers=1, phish_targets=20, m
     last_mails_read = 0
     last_mail_stack = 0
     generations_since_change = 0
+
     while len(workers) > len(finished_workers) and round <= max_rounds and generations_since_change < 4:
         total_mail_stack = 0
         total_mails_read = 0
@@ -77,6 +80,11 @@ def trial(num_workers=100, num_recipients=4, num_phishers=1, phish_targets=20, m
         print w.address, w.mails_read, w.mails_sent, w.urls_clicked
     print 'phisher:', phisher.address, phisher.mails_sent, phisher.urls_clicked
 
+    if objective == 'number':
+        return (numpy.mean([len(w.attachments_opened) for w in workers]))
+
+    elif objective == 'time':
+        return 0
 
 def choose_recipients(agent, worker_i, num_workers, num_recipients):
     # reset recipients
@@ -140,5 +148,15 @@ def choose_gender_personality(worker):
     worker.work_reply_probability = random.uniform(WORK_REPLY_LOWER, WORK_REPLY_UPPER)
 
 
+def run_trials(num_trials, objective):
+    output = []
+    for _ in range(num_trials):
+        output.append(trial(objective))
+
+     # mean median, variance
+    return [numpy.mean(output), numpy.median(output), numpy.var(output)]
+
 # Run it once
-trial()
+# trial()
+
+print run_trials(5, 'number')
