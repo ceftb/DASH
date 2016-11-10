@@ -62,10 +62,10 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
 
         # Stack of emails to send. This way it is easy enough to task the agent with a set of emails, even dynamically.
         # Setting up with an initial mail to test. Should be the same behavior as with fixed email in the goal.
-        self.mail_stack = [{'to': self.address, 'subject': 'test', 'body': 'this is a test message',
-                            'attachment': 'budget.xlsx'},
-                           {'to': self.address, 'subject': 'test', 'body': 'this is a second test message',
-                            'attachment': 'budget.xlsx'}]
+        self.mail_stack = [{'to': self.address, 'forwarders': [],
+                            'subject': 'test', 'body': 'this is a test message', 'attachment': 'budget.xlsx'},
+                           {'to': self.address, 'forwarders': [],
+                            'subject': 'test', 'body': 'this is a second test message', 'attachment': 'budget.xlsx'}]
 
         self.work_colleagues = []  # set of people that work-related email might be sent of forwarded to or expected to come from
         self.leisure_colleagues = []  # set of people that leisure-related email might be sent of forwarded to or expected to come from
@@ -151,23 +151,26 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
             # still forward the message or open the attachment depending on personality and expertise.
             phishiness = self.score_phishiness(message)
             if phishiness > self.phishiness_threshold:
+                self.phish_identified.append(message)
                 return [{}]
 
             # With some fixed probability the agent forwards a work email to another work colleague, including
             # the sender as a reply
-            if message['mode'] == 'work' and random.random() < self.work_forward_probability:
+            if message['mode'] == 'work' and self.work_colleagues and random.random() < self.work_forward_probability:
                 new_message = copy.copy(message)
                 new_message['to'] = random.choice(self.work_colleagues)
                 self.mail_stack.append(new_message)
             # Leisure-related mail is forwarded with probability determined from personality and gender to a subset of the
             # agent's friend group. It keeps a 'forward' trail in the mail to avoid sending the same email to someone twice.
             # (forward trail nyi).
-            elif message['mode'] == 'leisure' and random.random() < self.leisure_forward_probability:
+            elif message['mode'] == 'leisure' and self.leisure_colleagues and random.random() < self.leisure_forward_probability:
                 new_message = copy.copy(message)
                 new_message['to'] = random.choice(self.leisure_colleagues)
                 self.mail_stack.append(new_message)
 
             # The probability of opening an attachment in either is related to openness, but is much higher in work-related email.
+            if self.decide_to_open(message, phishiness):
+                self.attachments_opened.append(message['attachment'])
 
         return [{}]
 
@@ -178,10 +181,17 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
             return 0
         # for now, accept 1 in 10 phishing emails
         elif random.random() < 0.1:
-            return 0
+            # Return a random number above the threshold
+            return self.phishiness_threshold + (1 - self.phishiness_threshold) * random.random()
         else:
-            self.phish_identified.add(message)
-            return 1
+            # return a random number below the threshold
+            return self.phishiness_threshold * random.random()
+
+    def decide_to_open(self, message, phishiness):
+        # Some combination of phishiness score, agreeableness, openness
+        if random.random() < (self.agreeableness + self.extraversion + self.openness) / 3 - phishiness:
+            return True
+        return False
 
     # This one isn't called through system 2 reasoning, but by system 1
     def click_link_in_mail(self, (predicate, mail)):
