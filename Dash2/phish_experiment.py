@@ -102,6 +102,7 @@ def choose_recipients(agent, worker_i, num_workers, num_recipients):
 
     agent.mail_stack = stack
 
+
 def choose_victims(phisher, num_victims, num_workers):
     # reset victims
     del phisher.work_colleagues[:]

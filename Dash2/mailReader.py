@@ -1,4 +1,5 @@
 import random
+import copy
 from dash import DASHAgent
 
 
@@ -69,10 +70,12 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
         self.work_colleagues = []  # set of people that work-related email might be sent of forwarded to or expected to come from
         self.leisure_colleagues = []  # set of people that leisure-related email might be sent of forwarded to or expected to come from
 
+        self.phishiness_threshold = 0.5  # messages are score from 0 to 1 and rejected as phish if they score over this threshold
+
         # probability that email deemed to be legitimate leisure mail will be forwarded to a friend. Shortly this
         # should be calculated based on agreeableness, extraversion and conscientiousness.
         self.leisure_forward_probability = 0.5
-        self.work_reply_probability = 0.5
+        self.work_forward_probability = 0.5
 
 
         # Keep track of the number of emails read and sent
@@ -139,36 +142,46 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
     def process_mail(self, (predicate, mail)):
         #print 'processing', mail
 
-        # First the agent decides whether the mail is phish or legitimate based on mental model and personality traits
-        # (and at some point perhaps fatigue, cognitive budget etc.)
-        # If the agent decides the mail is phish, no further action is taken.
-        if self.decide_phish(mail):
-            return [{}]
+        # Treat each message separately
+        for message in mail:
 
-        # Work-related mail includes tags that describe what should be done with it, in order to embed an organizational
-        # process in the mail. e.g., this should be forwarded and recipient should formulate a reply to the original
-        # sender. I'll come up with a simple language to generate this path. Alternatively the email could just
-        # include probabilities for each of the actions leading to kind of a markov mail process with the same overall
-        # activity. Might be fine.
+            # First the agent scores the message on phishiness based on mental model and personality traits
+            # (and at some point perhaps fatigue, cognitive budget etc.)
+            # If the agent decides the mail is too phishy, no further action is taken. Otherwise it might
+            # still forward the message or open the attachment depending on personality and expertise.
+            phishiness = self.score_phishiness(message)
+            if phishiness > self.phishiness_threshold:
+                return [{}]
 
-        # Leisure-related mail is forwarded with probability determined from personality and gender to a subset of the
-        # agent's friend group. It keeps a 'forward' trail in the mail to avoid sending the same email to someone twice.
+            # With some fixed probability the agent forwards a work email to another work colleague, including
+            # the sender as a reply
+            if message['mode'] == 'work' and random.random() < self.work_forward_probability:
+                new_message = copy.copy(message)
+                new_message['to'] = random.choice(self.work_colleagues)
+                self.mail_stack.append(new_message)
+            # Leisure-related mail is forwarded with probability determined from personality and gender to a subset of the
+            # agent's friend group. It keeps a 'forward' trail in the mail to avoid sending the same email to someone twice.
+            # (forward trail nyi).
+            elif message['mode'] == 'leisure' and random.random() < self.leisure_forward_probability:
+                new_message = copy.copy(message)
+                new_message['to'] = random.choice(self.leisure_colleagues)
+                self.mail_stack.append(new_message)
 
-        # The probability of opening an attachment in either is related to openness, but is much higher in work-related email.
+            # The probability of opening an attachment in either is related to openness, but is much higher in work-related email.
 
         return [{}]
 
-    def decide_phish(self, mail):
+    # For now, 1's and 0's without regard to personality or other factors.
+    def score_phishiness(self, message):
         # If the mail is legit, it is never identified as phish
-        for message in mail:
-            if 'amail.com' in message['from']:
-                return False
-            # for now, accept 1 in 10 phishing emails
-            elif random.random() < 0.1:
-                return False
-            else:
-                self.phish_identified.add(message)
-                return True
+        if 'amail.com' in message['from']:
+            return 0
+        # for now, accept 1 in 10 phishing emails
+        elif random.random() < 0.1:
+            return 0
+        else:
+            self.phish_identified.add(message)
+            return 1
 
     # This one isn't called through system 2 reasoning, but by system 1
     def click_link_in_mail(self, (predicate, mail)):
