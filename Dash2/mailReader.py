@@ -174,6 +174,7 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
 
             # The probability of opening an attachment in either is related to openness, but is much higher in work-related email.
             if self.decide_to_open(message, phishiness):
+                #print 'opening', message['attachment']
                 self.attachments_opened.append(message['attachment'])
 
         return [{}]
@@ -183,8 +184,8 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
         # If the mail is legit, it is never identified as phish
         if 'amail.com' in message['from']:
             return 0
-        # for now, accept 1 in 10 phishing emails
-        elif random.random() < 0.1:
+        # for now, accept 1 in 2 phishing emails
+        elif random.random() < 0.5:
             # Return a random number above the threshold
             return self.phishiness_threshold + (1 - self.phishiness_threshold) * random.random()
         else:
