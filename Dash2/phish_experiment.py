@@ -6,6 +6,9 @@ from random import sample
 import mailReader
 import random
 import numpy
+import sys
+
+from datetime import datetime
 
 BIG_5_LOWER = 0.2
 BIG_5_UPPER = 0.9
@@ -30,6 +33,11 @@ def trial(objective, num_workers=100, num_recipients=4, num_phishers=1,
     choose_victims(phisher, phish_targets, num_workers)
     phisher.active = True
 
+    # Used as an objective
+    phished = False
+    phish_start_time = datetime.now()
+    phish_end_time = datetime.now()
+
     # dovetail the worker and phisher agents until they're all finished
     finished_workers = set()
     for w in workers:
@@ -51,6 +59,11 @@ def trial(objective, num_workers=100, num_recipients=4, num_phishers=1,
         for w in workers:
             if w not in finished_workers:
                 next_action = w.agentLoop(max_iterations=1, disconnect_at_end=False)  # don't disconnect since will run again
+
+                if (not phished) and (len(w.attachments_opened) > 0) and (w.attachments_opened.__contains__("phish.xlsx")):
+                    phished = True
+                    phish_end_time = datetime.now()
+
                 total_mail_stack += len(w.mail_stack)
                 total_mails_read += w.mails_read
                 total_mails_sent += w.mails_sent
@@ -81,10 +94,21 @@ def trial(objective, num_workers=100, num_recipients=4, num_phishers=1,
     print 'phisher:', phisher.address, phisher.mails_sent, phisher.urls_clicked
 
     if objective == 'number':
-        return (numpy.mean([len(w.attachments_opened) for w in workers]))
+        phish_attachments_opened = []
+        for w in workers:
+            worker_attachments_opened = 0
+            for attachment in w.attachments_opened:
+                if attachment == "phish.xlsx":
+                    worker_attachments_opened += 1
+            phish_attachments_opened.append(worker_attachments_opened)
+
+        return numpy.mean(phish_attachments_opened)
 
     elif objective == 'time':
-        return 0
+        if phished:
+            return (phish_end_time-phish_start_time).total_seconds()
+        else:
+            return -1
 
 def choose_recipients(agent, worker_i, num_workers, num_recipients):
     # reset recipients
@@ -124,7 +148,7 @@ def choose_victims(phisher, num_victims, num_workers):
         mail = {'to': 'mailagent' + str(victims[i] + 1) + '@amail.com', 'subject': 'test',
                 'mode': mode,
                 'body': 'this is a test message',
-                'attachment': 'budget.xlsx'}
+                'attachment': 'phish.xlsx'}
 
         if mode == 'leisure':
             phisher.leisure_colleagues.append('mailagent'+str(victims[i]+1)+'@amail.com')
@@ -148,15 +172,24 @@ def choose_gender_personality(worker):
     worker.work_reply_probability = random.uniform(WORK_REPLY_LOWER, WORK_REPLY_UPPER)
 
 
-def run_trials(num_trials, objective):
+def run_trials(num_trials, objective, num_workers=100, num_recipients=4,
+               num_phishers=1, phish_targets=20, max_rounds=20):
     output = []
     for _ in range(num_trials):
-        output.append(trial(objective))
+        trial_output = trial(objective, num_workers, num_recipients,
+                             num_phishers, phish_targets, max_rounds)
+        if trial_output == -1:
+            continue # no phish has occured -> ignore
+        output.append(trial_output)
 
-     # mean median, variance
+    if len(output) == 0:
+        return None
+
     return [numpy.mean(output), numpy.median(output), numpy.var(output)]
 
 # Run it once
 # trial()
-
-print run_trials(5, 'number')
+num_trials = 5
+max_num_rounds = 5
+print run_trials(num_trials, 'number', max_rounds=max_num_rounds)
+print str(num_trials) + " trials run, max_rounds = " + str(max_num_rounds)
