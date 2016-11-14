@@ -101,10 +101,15 @@ def trial(objective, num_workers=100, num_recipients=4, num_phishers=1,
                 if attachment == "phish.xlsx":
                     worker_attachments_opened += 1
             phish_attachments_opened.append(worker_attachments_opened)
-
+        
+        for w in workers:
+            w.disconnect()
+        
         return numpy.mean(phish_attachments_opened)
 
     elif objective == 'time':
+        for w in workers:
+            w.disconnect()
         if phished:
             return (phish_end_time-phish_start_time).total_seconds()
         else:
