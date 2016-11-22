@@ -74,7 +74,8 @@ class System2Agent:
         # line has form 'goalWeight predicate(arg1, arg2, ..) integer'
         goal = self.readGoalTuple(line[line.find(" "):line.rfind(" ")].strip())
         weight = int(line[line.rfind(" "):].strip())
-        print "Goal is ", goal
+        if self.traceLoad:
+            print "Goal is ", goal
         self.goalWeight(goal, weight)
 
     def readGoalRequirements(self, lines):
@@ -182,7 +183,8 @@ class System2Agent:
         if predicate not in self.transientDict:
             self.transientDict[predicate] = []
         self.transientDict[predicate].append(goal)
-        print "Transient:", self.transientDict
+        if self.traceLoad:
+            print "Transient:", self.transientDict
 
     def goalWeight(self, goal, weight):
         self.goalWeightDict[goal] = weight

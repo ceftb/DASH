@@ -19,12 +19,13 @@ WORK_REPLY_UPPER = 0.8
 LEISURE_FWD_LOWER = 0
 LEISURE_FWD_UPPER = 0.8
 
-def trial(objective, num_workers=100, num_recipients=4, num_phishers=1,
+
+def trial(objective, num_workers=20, num_recipients=4, num_phishers=1,
           phish_targets=20, max_rounds=20):
 
     #workers = [mailReader.MailReader('mailagent'+str(i+1)+'@amail.com') for i in range(0, num_workers)]
     workers = []
-    for i in range (0, num_workers):
+    for i in range(0, num_workers):
         workers.append(mailReader.MailReader('mailagent'+str(i+1)+'@amail.com'))
         choose_gender_personality(workers[i])
         choose_recipients(workers[i], i, num_workers, num_recipients)
@@ -43,7 +44,7 @@ def trial(objective, num_workers=100, num_recipients=4, num_phishers=1,
     for w in workers:
         w.traceLoop = False
     phisher.traceLoop = False
-    round = 1
+    iteration = 1
     total_mail_stack = 0
     total_mails_read = 0
     total_mails_sent = 0
@@ -52,17 +53,17 @@ def trial(objective, num_workers=100, num_recipients=4, num_phishers=1,
     last_mail_stack = 0
     generations_since_change = 0
 
-    while len(workers) > len(finished_workers) and round <= max_rounds and generations_since_change < 4:
-        total_mail_stack = 0
-        total_mails_read = 0
-        total_mails_sent = 0
+    while len(workers) > len(finished_workers) and iteration <= max_rounds and generations_since_change < 4:
+        #total_mail_stack = 0  # I'm not sure why these were zeroed on each round
+        #total_mails_read = 0
+        #total_mails_sent = 0
         for w in workers:
             if w not in finished_workers:
                 next_action = w.agentLoop(max_iterations=1, disconnect_at_end=False)  # don't disconnect since will run again
 
                 if (not phished) and (len(w.attachments_opened) > 0) and (w.attachments_opened.__contains__("phish.xlsx")):
                     phished = True
-                    phish_end_time = datetime.now()
+                    phish_end_time = iteration  # datetime.now() we should use the iteration, not real-time, here
 
                 total_mail_stack += len(w.mail_stack)
                 total_mails_read += w.mails_read
@@ -80,12 +81,12 @@ def trial(objective, num_workers=100, num_recipients=4, num_phishers=1,
             generations_since_change += 1
         else:
             generations_since_change = 0
-        print 'round', round, 'total stack', total_mail_stack, 'total read', total_mails_read, \
+        print 'round', iteration, 'total stack', total_mail_stack, 'total read', total_mails_read, \
             'total_sent', total_mails_sent, 'generations since change:', generations_since_change
         last_mail_stack = total_mail_stack
         last_mails_sent = total_mails_sent
         last_mails_read = total_mails_read
-        round += 1
+        iteration += 1
 
     # Print some statistics about the run
     print 'worker, number of emails received, sent, clicked links:'
@@ -114,6 +115,7 @@ def trial(objective, num_workers=100, num_recipients=4, num_phishers=1,
             return (phish_end_time-phish_start_time).total_seconds()
         else:
             return -1
+
 
 def choose_recipients(agent, worker_i, num_workers, num_recipients):
     # reset recipients
@@ -194,7 +196,7 @@ def run_trials(num_trials, objective, num_workers=100, num_recipients=4,
 
 # Run it once
 # trial()
-num_trials = 5
+num_trials = 3
 max_num_rounds = 5
 print run_trials(num_trials, 'number', max_rounds=max_num_rounds)
 print str(num_trials) + " trials run, max_rounds = " + str(max_num_rounds)

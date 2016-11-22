@@ -8,6 +8,8 @@ class MailReader(DASHAgent):
     def __init__(self, address):
         DASHAgent.__init__(self)
 
+        self.trace_client = False
+
         # Ultimately it makes sense to house Big-5 personality information and the way it might interact with
         # dual processing in a separate class to be inherited, but for this rapid prototyping I will keep it here
         # along with other potentially-relevant demographic information for now.
@@ -58,6 +60,7 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
         self.primitiveActions([('click', self.click_link_in_mail)])
 
         self.address = address
+        print 'registering', address
         self.register([address])    # Register with the running mail_hub
 
         # Stack of emails to send. This way it is easy enough to task the agent with a set of emails, even dynamically.
