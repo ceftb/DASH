@@ -13,8 +13,8 @@ class Event:
         self.spreadsheet_loaded = spreadsheet_loaded
 
     def __str__(self):
-        return "Agent " + str(self.agent) + " recorded giving " + self.medication + " to " + self.patient +\
-               " on computer " + str(self.computer) + " in spreadsheet for " + self.spreadsheet_loaded
+        return "N" + str(self.agent) + " recorded " + self.medication + " to " + self.patient +\
+               " on C" + str(self.computer) + " in S:" + self.spreadsheet_loaded
 
 
 class NurseHub(WorldHub):

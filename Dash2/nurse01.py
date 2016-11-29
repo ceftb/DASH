@@ -6,7 +6,7 @@ import sys
 
 class Nurse(DASHAgent):
 
-    def __init__(self, patients=['_joe', '_harry', '_david', '_bob'], prob_check_spreadsheet=0):
+    def __init__(self, ident=0, patients=['_joe', '_harry', '_david', '_bob'], prob_check_spreadsheet=0):
         DASHAgent.__init__(self)
 
         self.readAgent("""
@@ -30,7 +30,7 @@ goalRequirements logDelivery(patient, medications)
     findComputer(computer, session2)
     loadSpreadsheet2(patient, computer, session2)
     writeSpreadsheet(patient, computer, medications)
-    # logOut(computer)   # Skip logging out to see what happens
+    logOut(computer)
 
 goalRequirements findComputer(computer, session)
     alreadyLoggedOn(computer, session)
@@ -51,10 +51,12 @@ transient doWork
         # self.traceAction = True  # uncomment to see more about the internal actions chosen by the agent
         # self.traceGoals = True
         # self.traceForget = True
+        self.id = ident
         self.register()
 
         self.patient_list = patients
         self.computer = None    # computer the agent believes it's logged into
+        self.history = []  # history of the agent's actions
 
     def pick_patient(self, (goal, patient_variable)):
         if self.patient_list:
@@ -62,11 +64,10 @@ transient doWork
             print 'starting to work on', patient
             return [{patient_variable: patient}]
         else:
-            print "No more patients!"
             return []
 
     def deliver_medications(self, (goal, patient, medication)):
-        print 'delivers', medication, 'to patient', patient
+        print self.id, 'delivers', medication, 'to patient', patient
         return [{}]
 
     def load_spreadsheet(self, (predicate, patient, computer, session)):
@@ -75,7 +76,7 @@ transient doWork
         return [{}]
 
     def read_spreadsheet(self, (predicate, patient, computer, medications_variable)):
-        print 'reading the patient spreadsheet for', patient, 'on', computer
+        print self.id, 'reading the patient spreadsheet for', patient, 'on', computer
         [status, medication] = self.sendAction("readSpreadsheet", [patient, computer])   # returns the medication for the patient
         if status == 'success':
             return [{medications_variable: medication}]
@@ -83,7 +84,7 @@ transient doWork
             return []
 
     def write_spreadsheet(self, (predicate, patient, computer, medication)):
-        print 'opening spreadsheet and writing patient info:', medication, patient, 'on', computer
+        print self.id, 'opening spreadsheet and writing patient info:', medication, patient, 'on', computer
         result = self.sendAction("writeSpreadsheet", [patient, computer, medication])
         if result == 'success':
             return [{}]
@@ -91,17 +92,17 @@ transient doWork
             return []
 
     def log_out(self, (logout, computer)):
-        print 'logout of computer', computer
+        print self.id, 'logs out of computer', computer
         self.sendAction('logout', [computer])
         self.computer = None
         return[{}]     # call[1] was a constant, there is nothing to bind here
 
     def already_logged_on(self, (goal, computer_var, session_var)):
         if self.computer is None:
-            print 'not already logged on to a computer'
+            #print 'not already logged on to a computer'
             return []
         else:
-            print 'already logged onto', self.computer
+            print self.id, 'already logged onto', self.computer
             return [{computer_var: self.computer, session_var: "_old"}]  # mark as an old session if already logged in
 
     def log_in(self, (login, computer_variable, session_var)):
@@ -117,7 +118,7 @@ transient doWork
                 self.computer = random.choice(all_computers[1])
             else:  # can't find any computers on the hub!
                 return []
-        print 'login to', 'open' if open else 'occupied', 'computer:', self.computer
+        print self.id, 'login to', 'open' if open else 'occupied', 'computer:', self.computer
         self.sendAction("login", [self.computer])
         return[{computer_variable: self.computer, session_var: "_new"}]  # mark as a new session if we just logged in
 
