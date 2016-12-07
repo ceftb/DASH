@@ -16,7 +16,8 @@ class Trial(object):
     # The trial's stopping criterion is met. By default, it checks each agent for a stopping
     # criterion and stops if either all the agents are ready to stop or a max iteration level is reached.
     def should_stop(self):
-        if self.iteration >= self.max_iterations:
+        if self.max_iterations > 0 and self.iteration >= self.max_iterations:
+            print 'reached end of iterations for trial'
             return True
         if self.agents:
             for a in self.agents:
@@ -54,5 +55,5 @@ class Trial(object):
         pass
 
     def output(self):  # overridden with a function to compute and return the output from the trial
-        return 1
+        return self    # By default, store the trial and the user can access information that is saved there
 

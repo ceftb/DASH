@@ -6,7 +6,7 @@ import numbers
 
 
 class Event:
-    def __init__(self, agent, event_type, computer, patient, medication, spreadsheet_loaded):
+    def __init__(self, agent, event_type, computer, patient=None, medication=None, spreadsheet_loaded=None):
         self.type = event_type  # login, logout, walk away, load spreadsheet, read spreadsheet, write to spreadsheet
         self.agent = agent
         self.computer = computer
@@ -15,8 +15,10 @@ class Event:
         self.spreadsheet_loaded = spreadsheet_loaded
 
     def __str__(self):
-        return "N" + str(self.agent) + " recorded " + self.medication + " to " + self.patient +\
-               " on C" + str(self.computer) + " in S:" + self.spreadsheet_loaded
+        return "N" + str(self.agent) + " " + self.type + " " + \
+               ((self.medication + " to " + self.patient) if self.type == "write" else "") +\
+               " on C" + str(self.computer) +\
+               ("" if self.spreadsheet_loaded is None else (" in S:" + self.spreadsheet_loaded))
 
 
 class NurseHub(WorldHub):
@@ -72,14 +74,18 @@ class NurseHub(WorldHub):
             target_computer = random.choice(list_of_computers)
             self.logged_on[target_computer-1] = agent_id
             self.present[target_computer-1] = agent_id
+            self.events.append(Event(agent_id, "login", target_computer))
             return target_computer
+        self.events.append(Event(agent_id, "login", 'fail'))
         return 'fail'
 
     def logout(self, agent_id, data):
         print "Logging out", agent_id, 'with', data
         if isinstance(data[0], numbers.Number):
-            self.logged_on[data[0]-1] = None
-            self.logged_out[data[0]-1] = agent_id
+            computer = data[0]-1
+            self.logged_on[computer] = None
+            self.logged_out[computer] = agent_id
+            self.events.append(Event(agent_id, "logout", computer+1))
             return 'success'
         else:
             return 'fail'
@@ -91,6 +97,7 @@ class NurseHub(WorldHub):
             return 'fail'
         if self.present[data-1] == agent_id:
             self.present[data-1] = None
+            self.events.append(Event(agent_id, "walk_away", data))
             return 'success'
         else:
             return 'fail'
@@ -115,18 +122,20 @@ class NurseHub(WorldHub):
             return 'no_patient_loaded', None, None
         if real_patient not in self.medication_for_patient:
             self.medication_for_patient[real_patient] = random.choice(self.possible_medications)
+        self.events.append(Event(agent_id, "read", computer, patient=patient, spreadsheet_loaded=real_patient))
         return 'success', self.medication_for_patient[real_patient], real_patient
 
     def write_spreadsheet(self, agent_id, (patient, computer, medication)):
         if self.check_present(agent_id, computer):
             print "Writing event", agent_id, computer, patient, medication, self.spreadsheet_loaded[computer-1]
-            self.events.append(Event(agent_id, "write", computer, patient, medication, self.spreadsheet_loaded[computer-1]))
+            self.events.append(Event(agent_id, "write", computer, patient=patient, medication=medication,
+                                     spreadsheet_loaded=self.spreadsheet_loaded[computer-1]))
             return 'success', self.spreadsheet_loaded[computer-1]
         else:
             return 'computer_blocked', self.spreadsheet_loaded[computer-1]
 
     def check_present(self, agent_id, computer):
-        if self.present[computer-1] == None:
+        if self.present[computer-1] is None:
             self.present[computer-1] = agent_id
         return self.present[computer-1] == agent_id
 
@@ -149,6 +158,7 @@ if __name__ == "__main__":
         nh = NurseHub(port=int(sys.argv[1]))
     else:
         nh = NurseHub()
+    nh.trace_handler = False  # don't print out all the message lengths and types
     nh.run()
     # When the hub is stopped with 'q', print out the results
     nh.print_events()

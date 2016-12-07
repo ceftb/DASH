@@ -80,6 +80,9 @@ class WorldHub:
         self.backlog = 5
         self.server = None
         self.threads = []
+        self.trace_handler = True
+        self.save_request_history = False
+        self.request_history = True
 
     def run(self):
         # attempt to open a socket with initialized values.
@@ -105,6 +108,7 @@ class WorldHub:
                 # if a new connection is requested, start a new thread for it
                 if s == self.server:
                     c = self.createServeClientThread(self.server.accept())
+                    c.trace_handler = self.trace_handler
                     c.start()
                     self.threads.append(c)
                 # else if we got input from the keyboard, stop
@@ -135,6 +139,7 @@ class ServeClientThread(threading.Thread):
         self.address = address
         self.size = 1024
         self.hub = hub
+        self.trace_handler = True
 
         return
 
@@ -144,10 +149,11 @@ class ServeClientThread(threading.Thread):
             while True:
                 # determine what the client wants
                 [message_type, message] = self.getClientRequest()
-                
-                print "received following information in client request:"
-                print "message type: %s" % message_type
-                print "message: %s" % message
+
+                if self.trace_handler:
+                    print "received following information in client request:"
+                    print "message type: %s" % message_type
+                    print "message: %s" % message
                 
                 # do something with the message....
                 # types of messages to consider: register id, process action, update state 
@@ -161,7 +167,8 @@ class ServeClientThread(threading.Thread):
     # read message and return a list of form [client_id, message_type, message_contents]
     def getClientRequest(self):
         # read first 4 bytes for message len
-        print "getting message type and message length..."
+        if self.trace_handler:
+            print "getting message type and message length..."
         bytes_read = 0
         bytes_expected = 8
         message_header = ""
@@ -175,11 +182,13 @@ class ServeClientThread(threading.Thread):
                 running = 0
         message_type, message_len = struct.unpack("!II", message_header)
 
-        print "message type: %d" % message_type
-        print "message len: %d" % message_len
+        if self.trace_handler:
+            print "message type: %d" % message_type
+            print "message len: %d" % message_len
 
-        # read payload 
-        print "getting payload..."
+        # read payload
+        if self.trace_handler:
+            print "getting payload..."
         bytes_read = 0
         bytes_expected = message_len
         message = ""
@@ -192,7 +201,8 @@ class ServeClientThread(threading.Thread):
                 self.client.close()
         message_payload = pickle.loads(message)
 
-        print "successfully retrieved payload %s ... returning." % message_payload
+        if self.trace_handler:
+            print "successfully retrieved payload %s ... returning." % message_payload
 
         return [message_type, message_payload]
 

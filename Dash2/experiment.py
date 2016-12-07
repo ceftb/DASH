@@ -7,6 +7,8 @@ from trial import Trial
 
 class Experiment(object):
     def __init__(self, trial_class=Trial, num_trials=3):
+        self.goal = ""  # The goal is a declarative representation of the aim of the experiment.
+                        # It is used where possible to automate experiment setup and some amount of validation.
         self.trial_class = trial_class
         self.num_trials = num_trials
         self.trial_outputs = []

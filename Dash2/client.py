@@ -18,6 +18,7 @@ class Client(object):
         Example:
             c = Client()
         """
+        self.trace_client = True
         print "initializing client..."
         if host is None:
             self.server_host = 'localhost'
@@ -67,16 +68,19 @@ class Client(object):
     def establishConnection(self):
         """ Establishes physical connection with the worldhub
         """
-        print "connecting to %s on port %s..." % (self.server_host, self.server_port)
+        if self.trace_client:
+            print "connecting to %s on port %s..." % (self.server_host, self.server_port)
 
         try:
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.sock.connect((self.server_host, self.server_port))
             self.connected = True
-            print "successfully connected."
+            if self.trace_client:
+                print "successfully connected."
         except:
             self.connected = False
-            print "Problem connecting to hub server, continuing without agent communications"
+            if self.trace_client:  # Maybe should print this anyway
+                print "Problem connecting to hub server, continuing without agent communications"
 
     def register(self, aux_data=[]):
         """ Register with world hub. Essentially, this is used to assign the client a unique id
@@ -84,15 +88,17 @@ class Client(object):
             aux_data(list) # any extra information you want to relay to the world hub during registration
         """
 
-        print "establishing connection..."
+        if self.trace_client:
+            print "establishing connection..."
 
         self.establishConnection()
 
         if not self.connected:
             print "no connection established, agent not registered"
             return None
-        
-        print "registering..."
+
+        if self.trace_client:
+            print "registering..."
 
         response = self.sendAndReceive(message_types['register'], [aux_data])
 
@@ -100,9 +106,10 @@ class Client(object):
         self.id = response[1]
         aux_response = response[2]
 
-        print "result: %s." % result
-        print "my id: %d." % self.id
-        print "aux response: %s." % aux_response
+        if self.trace_client:
+            print "result: %s." % result
+            print "my id: %d." % self.id
+            print "aux response: %s." % aux_response
 
         return response
 
@@ -124,7 +131,11 @@ class Client(object):
         response = self.sendAndReceive(message_types['send_action'], [self.id, action, data, time])
 
         # Allow for the result to be a list, e.g. ['success', [data]], or just an object, e.g. 'fail'.
+        # However if the return object is a list it must have the first form.
         if isinstance(response, (list, tuple)):
+            if len(response) == 0:
+                print 'malformed response from server'
+                return response
             result = response[0]
             if len(response) > 1:
                 aux_response = response[1]
@@ -153,8 +164,9 @@ class Client(object):
         response = self.sendAndReceive(message_types['get_updates'], [self.id, aux_data])
         aux_response = response[0]
 
-        print "successfully received response..."
-        print "aux data: %s." % aux_data
+        if self.trace_client:
+            print "successfully received response..."
+            print "aux data: %s." % aux_data
 
         self.processUpdates(aux_response)
 
@@ -168,8 +180,9 @@ class Client(object):
 
         if self.sock is not None:
             self.sendMessage(message_types['disconnect'], [self.id, aux_data])
-        
-            print "disconnecting from world hub."
+
+            if self.trace_client:
+                print "disconnecting from world hub."
             self.sock.shutdown(socket.SHUT_RDWR)
             self.sock.close()
         #sys.exit(0)  # Should not automatically kill the process
