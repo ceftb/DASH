@@ -1,42 +1,50 @@
+from experiment import Experiment
+from trial import Trial
 from client import Client
 import nurse01
 from nurse_hub import Event
 
-# Set up a bunch of nurses to run 'at the same time' by running each for a small number of steps until done
-# (dovetailing!)
+# To see the results, start a nurse_hub and run this file.
 
-# To see the results, start a nurse_hub, run this file and then type 'q' at the nurse hub. The hub will print
-# a list of actions, and the number of times an agent wrote to the wrong spreadsheet.
+class NurseTrial(Trial):
 
+    def __init__(self, num_nurses=20, num_patients=5, num_computers=10, num_medications=10):
+        Trial.__init__(self)
+        self.iteration = 0  # crashes if not defined even if not used (to fix)
+        self.max_iterations = -1
+        self.num_nurses = num_nurses
+        self.num_patients = num_patients
+        self.num_computers = num_computers
+        self.num_medications = num_medications
+        self.experiment_client = Client()
+        self.agents = []
+        self.misses = []
+        self.events = []
 
-# Each of n nurses is given a different list of k patients
-def trial(num_nurses=20, num_patients=5, num_computers=10, num_medications=10):
-    # Clear out/initialize the data on the hub
-    experiment_client = Client()
-    experiment_client.register()
-    experiment_client.sendAction("initWorld", (num_computers, num_medications))
+    def initialize(self):
+        # Clear out/initialize the data on the hub
+        self.experiment_client.register()
+        self.experiment_client.sendAction("initWorld", (self.num_computers, self.num_medications))
 
-    # Set up the agents
-    nurses = [nurse01.Nurse(ident=n, patients=["_p_" + str(n) + "_" + str(p) for p in range(1, num_patients + 1)])
-              for n in range(0, num_nurses)]
-    finished_agents = set()
-    for nurse in nurses:
-        nurse.traceLoop = False
+        # Set up the agents. Each of n nurses is given a different list of k patients
+        self.agents = [nurse01.Nurse(ident=n, patients=["_p_" + str(n) + "_" + str(p) for p in range(1, self.num_patients + 1)])
+                       for n in range(0, self.num_nurses)]
+        for agent in self.agents:
+            agent.active = True
 
-    # Run each nurse until it runs out of things to do. Stop when all nurses have finished.
-    while len(nurses) > len(finished_agents):
-        for nurse in nurses:
-            if nurse not in finished_agents:
-                final_action = nurse.agentLoop(max_iterations=1, disconnect_at_end=False)  # don't disconnect since will run again
-                if final_action is None:
-                    finished_agents.add(nurse)
+    def process_after_agent_action(self, agent, action):
+        if action is None:
+            print 'agent', agent, 'action is None, stopping'
+            agent.active = False
 
-    for nurse in nurses:
-        nurse.disconnect()
+    def agent_should_stop(self, agent):
+        return not agent.active
 
-    trial_events = experiment_client.sendAction("showEvents")
-    trial_misses = len([e for e in trial_events if e.patient != e.spreadsheet_loaded])
-    return trial_misses, trial_events
+    def process_after_run(self):
+        self.events = self.experiment_client.sendAction("showEvents")
+        if self.events and self.events[0] == 'success':
+            self.events = self.events[1]
+        self.misses = len([e for e in self.events if e.patient != e.spreadsheet_loaded])
 
 # Finally close up the server.
 # I'm having trouble with this. I think I'll try a new approach where I don't kill and re-start the
@@ -44,27 +52,28 @@ def trial(num_nurses=20, num_patients=5, num_computers=10, num_medications=10):
 # t.nurse_hub.listening = False
 
 #data = [trial() for i in range(0,5)]
-misses, events = trial(num_computers=1)
-
-#time.sleep(1)   # let everything else that is printing stuff out settle down
+#misses, events = trial(num_computers=10)
+exp = Experiment(NurseTrial, num_trials=1)
+exp.run()
 
 # Print the events, with highlighting for the errors
-for e in events:
-    print "!!" if e.patient != e.spreadsheet_loaded else "", e
-print misses, "misses out of", len(events)
+trial = exp.trial_outputs[0]
+for event in trial.events:
+    print "!!" if event.patient != event.spreadsheet_loaded else "", event
+print trial.misses, "misses out of", len(trial.events)
 # Find out which computers were used most heavily
 computer_events = {}
 computer_misses = {}
-for e in events:
-    if e.computer in computer_events:
-        computer_events[e.computer].append(e)
+for event in trial.events:
+    if event.computer in computer_events:
+        computer_events[event.computer].append(event)
     else:
-        computer_events[e.computer] = [e]
-    if e.patient != e.spreadsheet_loaded:
-        if e.computer in computer_misses:
-            computer_misses[e.computer].append(e)
+        computer_events[event.computer] = [event]
+    if event.patient != event.spreadsheet_loaded:
+        if event.computer in computer_misses:
+            computer_misses[event.computer].append(event)
         else:
-            computer_misses[e.computer] = [e]
+            computer_misses[event.computer] = [event]
 print 'computer, number of uses, number of misses'
 for c in computer_events:
     print c, len(computer_events[c]), len(computer_misses[c]) if c in computer_misses else 0
