@@ -6,22 +6,26 @@ from trial import Trial
 
 
 class Experiment(object):
-    def __init__(self, trial_class=Trial, num_trials=3):
+    def __init__(self, trial_class=Trial, exp_data={}, num_trials=3):
         self.goal = ""  # The goal is a declarative representation of the aim of the experiment.
                         # It is used where possible to automate experiment setup and some amount of validation.
         self.trial_class = trial_class
+        self.exp_data = exp_data
         self.num_trials = num_trials
         self.trial_outputs = []
 
-    def run(self):
-        #def run_trials(num_trials, objective, num_workers=100, num_recipients=4,
-        #      num_phishers=1, phish_targets=20, max_rounds=20):
+    def run(self, run_data={}):
         self.trial_outputs = []
         for trial_number in range(self.num_trials):
             print "Trial", trial_number
-            trial = self.trial_class()
+            # Build up trial data from experiment data and run data
+            trial_data = self.exp_data.copy()
+            for key in run_data:
+                trial_data[key] = run_data[key]
+            trial = self.trial_class(data=trial_data)
             trial.run()
             self.trial_outputs.append(trial.output())
+        return self.trial_outputs
 
     def process_results(self):  # After calling run(), use to process and return the results
         if self.trial_outputs:

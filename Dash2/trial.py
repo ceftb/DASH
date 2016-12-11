@@ -4,8 +4,12 @@
 
 
 class Trial(object):
-    def __init(self, max_iterations=-1):
+    def __init__(self, data={}, max_iterations=-1):
         self.agents = []
+        self.data = data  # This passes parameter data to be used in the trial. The names are available as attributes
+        print 'initializing trial with data', data
+        for attr in data:
+            setattr(self, attr, data[attr])
         self.max_iterations = max_iterations
         self.iteration = 0
 

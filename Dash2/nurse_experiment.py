@@ -9,14 +9,10 @@ from nurse_hub import Event
 
 class NurseTrial(Trial):
 
-    def __init__(self, num_nurses=20, num_patients=5, num_computers=10, num_medications=10):
-        Trial.__init__(self)
+    def __init__(self, data):
+        Trial.__init__(self, data=data)
         self.iteration = 0  # crashes if not defined even if not used (to fix)
         self.max_iterations = -1
-        self.num_nurses = num_nurses
-        self.num_patients = num_patients
-        self.num_computers = num_computers
-        self.num_medications = num_medications
         self.experiment_client = Client()
         self.agents = []
         self.misses = []
@@ -46,36 +42,31 @@ class NurseTrial(Trial):
         self.events = self.experiment_client.sendAction("showEvents")
         if self.events and self.events[0] == 'success':
             self.events = self.events[1]
+        #for event in self.events:
+        #    print "!!" if event.patient != event.spreadsheet_loaded else "", event
         self.misses = len([e for e in self.events if e.patient != e.spreadsheet_loaded])
+        print self.misses, "misses out of", len([e for e in self.events if e.type in ["write", "read"]]), "reads and writes"
+        # Find out which computers were used most heavily
+        computer_events = {}
+        computer_misses = {}
+        for event in self.events:
+            if event.computer in computer_events:
+                computer_events[event.computer].append(event)
+            else:
+                computer_events[event.computer] = [event]
+            if event.patient != event.spreadsheet_loaded:
+                if event.computer in computer_misses:
+                    computer_misses[event.computer].append(event)
+            else:
+                computer_misses[event.computer] = [event]
+        print 'computer, number of uses, number of misses'
+        for ce in computer_events:
+            print ce, len(computer_events[ce]), len(computer_misses[ce]) if ce in computer_misses else 0
 
-# Finally close up the server.
-# I'm having trouble with this. I think I'll try a new approach where I don't kill and re-start the
-# server between trials, just call a method to clear out all the intermediate data.
-# t.nurse_hub.listening = False
+    def output(self):
+        return (self.num_computers, self.misses)
 
-#data = [trial() for i in range(0,5)]
-#misses, events = trial(num_computers=10)
-exp = Experiment(NurseTrial, num_trials=1)
-exp.run()
 
-# Print the events, with highlighting for the errors
-trial = exp.trial_outputs[0]
-for event in trial.events:
-    print "!!" if event.patient != event.spreadsheet_loaded else "", event
-print trial.misses, "misses out of", len([e for e in trial.events if e.type in ["write", "read"]]), "reads and writes"
-# Find out which computers were used most heavily
-computer_events = {}
-computer_misses = {}
-for event in trial.events:
-    if event.computer in computer_events:
-        computer_events[event.computer].append(event)
-    else:
-        computer_events[event.computer] = [event]
-    if event.patient != event.spreadsheet_loaded:
-        if event.computer in computer_misses:
-            computer_misses[event.computer].append(event)
-        else:
-            computer_misses[event.computer] = [event]
-print 'computer, number of uses, number of misses'
-for c in computer_events:
-    print c, len(computer_events[c]), len(computer_misses[c]) if c in computer_misses else 0
+exp = Experiment(NurseTrial, exp_data={'num_nurses': 20, 'num_patients': 5, 'num_medications': 10}, num_trials=1)
+outputs = [exp.run(run_data={'num_computers': c}) for c in range(10, 21)]
+print 'outputs', outputs
