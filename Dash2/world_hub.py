@@ -239,25 +239,29 @@ class ServeClientThread(threading.Thread):
         return
     
     def handleRegisterRequest(self, message):
-        print 'handling registration request...'
+        if self.trace_handler:
+            print 'handling registration request...'
         aux_data = message[0]
         return self.processRegisterRequestWrapper(aux_data)
 
     def handleSendActionRequest(self, message):
-        print 'handling send action request for', self, '...'
+        if self.trace_handler:
+            print 'handling send action request for', self, '...'
         id = message[0]
         action = message[1]
         aux_data = message[2]
         return self.processSendActionRequest(id, action, aux_data)
 
     def handleGetUpdatesRequest(self, message):
-        print 'handling get updates request...'
+        if self.trace_handler:
+            print 'handling get updates request...'
         id = message[0]
         aux_data = message[1]
         return self.processGetUpdatesRequest(id, aux_data)
 
     def handleDisconnectRequest(self, message):
-        print 'handling disconnect request...'
+        if self.trace_handler:
+            print 'handling disconnect request...'
         id = message[0]
         aux_data = message[1]
         return self.processDisconnectRequest(id, aux_data)

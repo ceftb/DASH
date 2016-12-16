@@ -110,6 +110,8 @@ class DASHAgent(Client, System2Agent, System1Agent):
             for bindings in result:
                 concrete_result = substitute(action, bindings)
                 if not self.isTransient(concrete_result):
+                    if self.traceUpdate:
+                        print "Adding known true and performed", concrete_result
                     self.knownTuple(concrete_result)   # Mark action as performed/known
                     self.knownTuple(('performed', concrete_result))   # Adding both lets both idioms be used in the agent code.
                 self.add_activation(concrete_result, 0.8)

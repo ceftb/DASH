@@ -1,7 +1,7 @@
 
 from dash import DASHAgent
-import random
 import sys
+from system2 import isVar
 
 
 class Nurse(DASHAgent):
@@ -15,8 +15,9 @@ goalWeight doWork 1
 
 goalRequirements doWork
     pickPatient(patient)
-    findMedications(patient, medications)
-    deliverMedications(patient, medications)
+    findMedications(patient, medications, computer)
+    walkAway(computer)
+    deliverMedications(patient, medications, 3)
     forgetNT([alreadyLoggedOn(c, s), findComputer(c, s)])
     logDelivery(patient, medications)
     forget([pickPatient(x), findMedications(x, y), deliverMedications(x, y), logDelivery(x, y), alreadyLoggedOn(c, s), logIn(c, s), logOut(c), findComputer(c, s), readSpreadsheet(p, c, m), loadSpreadsheet(p), writeSpreadsheet(p, c, m), walkAway(c)])
@@ -26,10 +27,17 @@ goalRequirements doWork
     wait()
     forget([canWait(), wait(), findMedications(x,y), findComputer(c,s), logIn(c,s), deliverMedications(x,y), readSpreadsheet(p,c,m)])
 
-goalRequirements findMedications(patient, medications)
+goalRequirements findMedications(patient, medications, computer)
     findComputer(computer, session)
     loadSpreadsheet(patient, computer, session)
     readSpreadsheet(patient, computer, medications)
+
+goalRequirements deliverMedications(patient, medication, stepsLeft)
+    oneLess(stepsLeft, newSteps)
+    deliverMedications(patient, medication, newSteps)
+
+goalRequirements deliverMedications(patient, medication, 0)
+    administerMedications(patient, medication)
 
 goalRequirements logDelivery(patient, medications)
     findComputer(computer, session2)
@@ -48,7 +56,7 @@ transient doWork
 
     """)
 
-        self.primitiveActions([('pickPatient', self.pick_patient), ('deliverMedications', self.deliver_medications),
+        self.primitiveActions([('pickPatient', self.pick_patient), #('deliverMedications', self.deliver_medications),
                                ('loadSpreadsheet', self.load_spreadsheet), ('loadSpreadsheet2', self.load_spreadsheet),
                                ('readSpreadsheet', self.read_spreadsheet), ('writeSpreadsheet', self.write_spreadsheet),
                                ('alreadyLoggedOn', self.already_logged_on), ('logIn', self.log_in),
@@ -56,12 +64,14 @@ transient doWork
                                ('walkAway', self.walk_away), ('forgetNT', self.forget)])
         # self.traceAction = True  # uncomment to see more about the internal actions chosen by the agent
         #self.traceGoals = True
+        #self.traceUpdate = True
         # self.traceForget = True
         self.id = ident
         self.register()
 
         self.patient_list = patients
         self.computer = None    # computer the agent believes it's logged into
+        self.at_computer = False
         self.history = []  # history of the agent's actions
 
         self.blocked = False  # The agent can't always wait and try again, but can when it is blocked on the computer it's trying to use
@@ -79,7 +89,7 @@ transient doWork
         else:
             return []
 
-    def deliver_medications(self, (goal, patient, medication)):
+    def administer_medications(self, (goal, patient, medication)):
         # Must walk away from the computer
         self.sendAction("walkAway", self.computer)
         print self.id, 'delivers', medication, 'to patient', patient
@@ -88,9 +98,11 @@ transient doWork
     def load_spreadsheet(self, (predicate, patient, computer, session)):
         #print "Session on", computer, "is considered", session, "in", (predicate, patient, computer, session)
         self.sendAction("loadSpreadsheet", [patient, computer])
+        self.at_computer = True
         return [{}]
 
     def read_spreadsheet(self, (predicate, patient, computer, medications_variable)):
+        self.at_computer = True
         [status, medication, real_patient] = self.sendAction("readSpreadsheet", [patient, computer])   # returns the medication for the patient
         print self.id, status, 'reading medication', medication, 'for', patient, 'on', computer, '(', real_patient, 'actually loaded)'
         if status == 'success':
@@ -101,6 +113,7 @@ transient doWork
             return []
 
     def write_spreadsheet(self, (predicate, patient, computer, medication)):
+        self.at_computer = True
         (status, written_patient) = self.sendAction("writeSpreadsheet", [patient, computer, medication])
         if status == 'success':
             print self.id, 'opening spreadsheet and writing patient info:', medication, patient, 'on', computer
@@ -123,14 +136,16 @@ transient doWork
             #print 'not already logged on to a computer'
             return []
         else:
-            print self.id, 'already logged onto', self.computer
+            print self.id, 'believes already logged onto', self.computer
             return [{computer_var: self.computer, session_var: "_old"}]  # mark as an old session if already logged in
 
     # Explicitly walk away at the end of each task so others can use the computer (is implicit in delivering medication,
     # and might be removed from the end as part of testing).
     def walk_away(self, (walk_predicate, computer)):
         print self.id, 'walks away from', computer
+        self.at_computer = False
         self.sendAction("walkAway", computer)
+        return [{}]
 
     # Changed this to make finding an open computer and logging into it an atomic action, since when there are
     # many agents they may all see the same open computers and then overrun each other at the beginning, which is
@@ -145,6 +160,7 @@ transient doWork
                 self.blocked = True  # Allow the agent to wait a turn
                 return []
         print self.id, 'login to', 'open' if open_computer else 'unattended', 'computer:', self.computer
+        self.at_computer = True
         return[{computer_variable: self.computer, session_var: "_new"}]  # mark as a new session if we just logged in
 
     # If the main task fails because of contention on the computers, wait a turn to see if it improves
@@ -157,6 +173,22 @@ transient doWork
         self.times_waiting += 1
         return [{}]
 
+    # Bind the new_val_var to one less than the old one, but fail if the answer is negative.
+    def one_less(self, (predicate, old_val, new_val_var)):
+        if isVar(new_val_var):
+            if isVar(old_val):
+                return []  # that won't work
+            elif old_val > 0:
+                print self.id, old_val - 1, 'steps remaining'
+                return [{new_val_var: old_val - 1}]
+            else:
+                return []
+        elif isVar(old_val):
+            return [{old_val: new_val_var + 1}]
+        elif old_val == new_val_var + 1:
+            return [{}]
+        else:
+            return []
 
 
 # maybe add some sort of variable to account for human error, even if logged in successfully 

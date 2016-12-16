@@ -32,14 +32,17 @@ class NurseHub(WorldHub):
     def init_world(self, agent_id, (number_of_computers, number_of_possible_medications)):
         # Initialize the computers to all be available.
         self.number_of_computers = number_of_computers
-        self.logged_on = [None for i in range(0, self.number_of_computers)]
-        self.logged_out = [None for i in range(0, self.number_of_computers)]
-        self.present = [None for i in range(0, self.number_of_computers)]  # agent who is present at the computer.
-        self.spreadsheet_loaded = [None for i in range(0, self.number_of_computers)]
+        cr = range(0, self.number_of_computers)
+        self.logged_on = [None for i in cr]
+        self.logged_out = [None for i in cr]
+        self.present = [None for i in cr]  # agent who is present at the computer.
+        self.unattended_count = [0 for i in cr]
+        self.spreadsheet_loaded = [None for i in cr]
         self.events = []  # list of events
         # self.possible_medications = ['_percocet', '_codeine', '_insulin', '_zithromycin']
         self.possible_medications = ['_m' + str(i) for i in range(1, number_of_possible_medications + 1)]
         self.medication_for_patient = dict()
+        self.time_step = 0
 
     def find_open_computers(self, agent_id, data):
         return 'success', [i for i in range(1, self.number_of_computers+1) if self.logged_on[i-1] is None]
@@ -145,11 +148,22 @@ class NurseHub(WorldHub):
             print event
         print len([e for e in self.events if e.patient != e.spreadsheet_loaded]), \
             "entries on the wrong spreadsheet out of", len(self.events)
+        print 'time step =', self.time_step
 
-    # This is not a method the agent should use, but the experimental harness can call it to examine
-    # the data after a run
+    # These are not methods an agent should use, but the experimental harness can call them to examine
+    # the data after a run and declare a timestep for book-keeping.
     def show_events(self, agent_id, data):
         return 'success', self.events
+
+    def tick(self, agent_id, data):
+        self.time_step += 1
+        # Increment the unattended count for each unattended computer
+        for c in range(0, self.number_of_computers):
+            if self.present[c] is None and not self.logged_on[c] is None:
+                self.unattended_count[c] += 1
+            else:
+                self.unattended_count[c] = 0
+        print 'tick', self.time_step, self.unattended_count
 
 
 if __name__ == "__main__":

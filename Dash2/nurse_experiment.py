@@ -38,6 +38,11 @@ class NurseTrial(Trial):
     def agent_should_stop(self, agent):
         return not agent.active
 
+    # After each step with every agent, cause the hub to go one 'tick', which is used to apply timeouts
+    def process_after_iteration(self):
+        self.experiment_client.sendAction("tick")
+
+
     def process_after_run(self):
         self.events = self.experiment_client.sendAction("showEvents")
         if self.events and self.events[0] == 'success':
@@ -63,10 +68,24 @@ class NurseTrial(Trial):
         for ce in computer_events:
             print ce, len(computer_events[ce]), len(computer_misses[ce]) if ce in computer_misses else 0
 
-    def output(self):
-        return (self.num_computers, self.misses)
+
+# This spits out the results as the number of computers varies, creating a couple of hundred agents in the process.
+def test_num_computers():
+    exp = Experiment(NurseTrial, exp_data={'num_nurses': 20, 'num_patients': 5, 'num_medications': 10}, num_trials=1)
+    runs = [exp.run(run_data={'num_computers': c}) for c in range(10, 21)]
+    outputs = [[(trial.num_computers, trial.misses) for trial in e] for e in runs]
+    print "Number of computers, Number of misses"
+    for output in outputs:
+        print output
 
 
-exp = Experiment(NurseTrial, exp_data={'num_nurses': 20, 'num_patients': 5, 'num_medications': 10}, num_trials=1)
-outputs = [exp.run(run_data={'num_computers': c}) for c in range(10, 21)]
-print 'outputs', outputs
+def test_timeout():
+    exp = Experiment(NurseTrial,
+                     exp_data={'num_nurses': 20, 'num_patients': 5, 'num_medications': 10, 'num_computers': 20},
+                     num_trials=1)
+    runs = [exp.run(run_data={'timeout': t}) for t in range(0,3)]
+    outputs = [[(trial.timeout, trial.misses, trial.iteration) for trial in run] for run in runs]
+    print outputs
+    return runs
+
+runs = test_timeout()

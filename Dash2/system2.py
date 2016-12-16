@@ -268,9 +268,10 @@ class System2Agent:
                 # in the goal requirements clause propagate to those of the higher goal in the goal tree
                 # and to any subsequent actions in its clause
                 if na[0] == 'known':
-                    composed_bindings = dict([(x, na[1][bindings[x]] if bindings[x] in na[1] else bindings[x])
-                                              for x in bindings]
-                                             + [(x, na[1][x]) for x in na[1] if x not in bindings])
+                    composed = [(x, na[1][bindings[x]] if isinstance(bindings[x], basestring) and bindings[x] in na[1] else bindings[x])
+                                for x in bindings]
+                    uncomposed = [(x, na[1][x]) for x in na[1] if x not in bindings]
+                    composed_bindings = dict(composed + uncomposed)
                     if self.traceGoals:
                         print '  '*indent, '  ', 'req set', i, 'succeeded with main bindings', bindings,\
                             'and local bindings', na[1], 'and composed bindings', composed_bindings
@@ -396,12 +397,12 @@ class System2Agent:
     ## Projection
     #################
 
-    def preferPlan(self, planA, planB, initialWorld=None):
+    def preferPlan(self, plan_a, plan_b, initialWorld=None):
         if initialWorld == None:  # by default, start from what's known in the world
             initialWorld=self.knownList()
-        expA = self.expectedUtility(self.project(planA, initialWorld))
-        expB = self.expectedUtility(self.project(planB, initialWorld))
-        return expA > expB
+        exp_a = self.expectedUtility(self.project(plan_a, initialWorld))
+        exp_b = self.expectedUtility(self.project(plan_b, initialWorld))
+        return exp_a > exp_b
 
     def project(self, plan, state=[]):
         worlds = [state]
