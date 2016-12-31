@@ -20,12 +20,12 @@ goalRequirements doWork
     deliverMedications(patient, medications, 3)
     forgetNT([alreadyLoggedOn(c, s), findComputer(c, s)])
     logDelivery(patient, medications)
-    forget([pickPatient(x), findMedications(x, y), deliverMedications(x, y), logDelivery(x, y), alreadyLoggedOn(c, s), logIn(c, s), logOut(c), findComputer(c, s), readSpreadsheet(p, c, m), loadSpreadsheet(p), writeSpreadsheet(p, c, m), walkAway(c)])
+    forget([pickPatient(x), findMedications(x, y), deliverMedications(x, y), logDelivery(x, y), alreadyLoggedOn(c, s), logIn(c, s), logOut(c), findComputer(c, s), readSpreadsheet(p, c, m), loadSpreadsheet(p), writeSpreadsheet(p, c, m), walkAway(c), oneLess(x,y)])
 
 goalRequirements doWork
     canWait()
     wait()
-    forget([canWait(), wait(), findMedications(x,y), findComputer(c,s), logIn(c,s), deliverMedications(x,y), readSpreadsheet(p,c,m)])
+    forget([canWait(), wait(), findMedications(x,y), findComputer(c,s), logIn(c,s), deliverMedications(x,y), readSpreadsheet(p,c,m), oneLess(x,y)])
 
 goalRequirements findMedications(patient, medications, computer)
     findComputer(computer, session)
@@ -180,6 +180,10 @@ transient doWork
                 return []  # that won't work
             elif old_val > 0:
                 print self.id, old_val - 1, 'steps remaining'
+                # When not running within the experiment simulation we need to move the hub on a tick.
+                # This would not require special coding with the event queue but that's untested.
+                # Comment this line out for the experiment!
+                self.sendAction("tick", [])
                 return [{new_val_var: old_val - 1}]
             else:
                 return []

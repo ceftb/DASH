@@ -42,6 +42,7 @@ class NurseHub(WorldHub):
         # self.possible_medications = ['_percocet', '_codeine', '_insulin', '_zithromycin']
         self.possible_medications = ['_m' + str(i) for i in range(1, number_of_possible_medications + 1)]
         self.medication_for_patient = dict()
+        self.time_out = 2  # If > 0, any account left unattended for this long will be logged out
         self.time_step = 0
 
     def find_open_computers(self, agent_id, data):
@@ -161,6 +162,13 @@ class NurseHub(WorldHub):
         for c in range(0, self.number_of_computers):
             if self.present[c] is None and not self.logged_on[c] is None:
                 self.unattended_count[c] += 1
+                if self.time_out > 0 and self.unattended_count >= self.time_out:
+                    agent = self.logged_on[c]
+                    self.logged_out[c] = agent
+                    self.logged_on[c] = None
+                    self.events.append(Event(agent, "autologout", c))
+                    print "AutoLogged", agent, "out of", (c+1), "after", self.time_out
+                    self.unattended_count[c] = 0
             else:
                 self.unattended_count[c] = 0
         print 'tick', self.time_step, self.unattended_count
