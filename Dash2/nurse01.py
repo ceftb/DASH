@@ -25,7 +25,7 @@ goalRequirements doWork
 goalRequirements doWork
     canWait()
     wait()
-    forget([canWait(), wait(), findMedications(x,y), findComputer(c,s), logIn(c,s), deliverMedications(x,y), readSpreadsheet(p,c,m), oneLess(x,y)])
+    forget([canWait(), wait(), findMedications(x,y), findComputer(c,s), logIn(c,s), deliverMedications(x,y), alreadyLoggedOn(c, s), readSpreadsheet(p,c,m), oneLess(x,y)])
 
 goalRequirements findMedications(patient, medications, computer)
     findComputer(computer, session)
@@ -65,7 +65,7 @@ transient doWork
         # self.traceAction = True  # uncomment to see more about the internal actions chosen by the agent
         #self.traceGoals = True
         #self.traceUpdate = True
-        # self.traceForget = True
+        #self.traceForget = True
         self.id = ident
         self.register()
 
@@ -77,6 +77,9 @@ transient doWork
         self.blocked = False  # The agent can't always wait and try again, but can when it is blocked on the computer it's trying to use
         self.times_waiting = 0  # There's also a timeout
         self.max_times_waiting = 5
+
+        # Hack
+        self.tried_once = False
 
     def __str__(self):
         return "<Nurse " + str(self.id) + ">"
@@ -97,9 +100,22 @@ transient doWork
 
     def load_spreadsheet(self, (predicate, patient, computer, session)):
         #print "Session on", computer, "is considered", session, "in", (predicate, patient, computer, session)
-        self.sendAction("loadSpreadsheet", [patient, computer])
-        self.at_computer = True
-        return [{}]
+        result = self.sendAction("loadSpreadsheet", [patient, computer])
+        if result == 'success':
+            self.at_computer = True
+            return [{}]
+        else:  # agent is not logged into the computer so can't load a spreadsheet but could log in maybe
+            self.at_computer = False
+            self.computer = None
+            print 'result from load_spreadsheet is', result, ', forgetting logged on'
+            self.forget(('forget', [('alreadyLoggedOn', computer, 's'), ('logIn', computer, 's'), ('findComputer', computer, 's')]))
+            if not self.tried_once:
+                self.tried_once = True
+                #self.traceGoals = True
+                #self.traceUpdate = True
+                return 'TryAgain'  # Should result in re-trying the login
+            else:
+                return []
 
     def read_spreadsheet(self, (predicate, patient, computer, medications_variable)):
         self.at_computer = True
@@ -153,11 +169,13 @@ transient doWork
     def log_in(self, (login, computer_variable, session_var)):
         open_computer = True
         self.computer = self.sendAction("LoginToOpenComputer")
+        print 'tried to log in, got', self.computer
         if self.computer == 'fail':  # No open computers. Pick one at random which will log someone else off
             open_computer = False
             self.computer = self.sendAction("LoginToUnattendedComputer")
             if self.computer == 'fail':  # can't find any unattended computers on the hub!
                 self.blocked = True  # Allow the agent to wait a turn
+                print 'cannot find an open computer'
                 return []
         print self.id, 'login to', 'open' if open_computer else 'unattended', 'computer:', self.computer
         self.at_computer = True

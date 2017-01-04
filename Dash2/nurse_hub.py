@@ -23,13 +23,13 @@ class Event:
 
 class NurseHub(WorldHub):
 
-    def __init__(self, number_of_computers=10, number_of_possible_medications=10, port=None):
+    def __init__(self, number_of_computers=10, number_of_possible_medications=10, autologout=2, port=None):
         WorldHub.__init__(self, port=port)
-        self.init_world(None, (number_of_computers, number_of_possible_medications))
+        self.init_world(None, (number_of_computers, number_of_possible_medications, autologout))
 
     # agent_id is a bogus argument so an agent can call this as an action on the hub and we can also
     # call it on the hub. Will fix.
-    def init_world(self, agent_id, (number_of_computers, number_of_possible_medications)):
+    def init_world(self, agent_id, (number_of_computers, number_of_possible_medications, autologout)):
         # Initialize the computers to all be available.
         self.number_of_computers = number_of_computers
         cr = range(0, self.number_of_computers)
@@ -42,7 +42,7 @@ class NurseHub(WorldHub):
         # self.possible_medications = ['_percocet', '_codeine', '_insulin', '_zithromycin']
         self.possible_medications = ['_m' + str(i) for i in range(1, number_of_possible_medications + 1)]
         self.medication_for_patient = dict()
-        self.time_out = 2  # If > 0, any account left unattended for this long will be logged out
+        self.time_out = autologout  # If > 0, any account left unattended for this long will be logged out
         self.time_step = 0
 
     def find_open_computers(self, agent_id, data):
@@ -107,18 +107,22 @@ class NurseHub(WorldHub):
             return 'fail'
 
     def load_spreadsheet(self, agent_id, (patient, computer)):
-        # Check no other agent is present at the computer
-        if self.check_present(agent_id, computer):
+        # Check no other agent is present at the computer (don't log the user in automatically if there is no-one logged in)
+        if self.present[computer-1] == agent_id:
             self.spreadsheet_loaded[computer-1] = patient
             return 'success'
+        elif self.present[computer-1] is None:
+            return 'open'
         else:
-            return 'fail'
+            return 'blocked', self.present[computer-1]
 
     def read_spreadsheet(self, agent_id, (patient, computer)):
         # Read the correct medication for the patient whose spreadsheet is loaded on the computer.
         # Check the agent is at the computer (also makes the agent be present if no other agent already is).
-        if not self.check_present(agent_id, computer):
-            return 'computer_blocked', None, None
+        if self.present[computer-1] is None:
+            return 'open', None, None
+        elif self.present[computer-1] != agent_id:
+            return 'computer_blocked by ' + str(self.present[computer-1]), None, None  # someone else is logged on
         # If there isn't yet a medication for this patient, pick one at random. If no patient
         # is loaded on the computer, fail.
         real_patient = self.spreadsheet_loaded[computer-1]
@@ -130,14 +134,18 @@ class NurseHub(WorldHub):
         return 'success', self.medication_for_patient[real_patient], real_patient
 
     def write_spreadsheet(self, agent_id, (patient, computer, medication)):
-        if self.check_present(agent_id, computer):
-            print "Writing event", agent_id, computer, patient, medication, self.spreadsheet_loaded[computer-1]
+        if self.present[computer-1] == agent_id:
+            print "Writing event", agent_id, "using", computer, "for", patient, medication, \
+                "(loaded ", self.spreadsheet_loaded[computer-1], ")"
             self.events.append(Event(agent_id, "write", computer, patient=patient, medication=medication,
                                      spreadsheet_loaded=self.spreadsheet_loaded[computer-1]))
             return 'success', self.spreadsheet_loaded[computer-1]
+        elif self.present[computer-1] is None:
+            return 'open', None
         else:
             return 'computer_blocked', self.spreadsheet_loaded[computer-1]
 
+    # This is no longer used, because the process of logging in if no-one is logged in is a conscious agent action
     def check_present(self, agent_id, computer):
         if self.present[computer-1] is None:
             self.present[computer-1] = agent_id

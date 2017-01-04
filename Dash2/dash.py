@@ -101,7 +101,9 @@ class DASHAgent(Client, System2Agent, System1Agent):
     def update_beliefs(self, result, action):
         if self.traceUpdate:
             print "Updating beliefs based on action", action, "with result", result
-        if not result and not self.isTransient(action):
+        if result == 'TryAgain':
+            return  # in some cases, want the side effects to happen and then re-try the same goal.
+        elif not result and not self.isTransient(action):
             if self.traceUpdate:
                 print "Adding known false", action
             self.knownFalseTuple(action)

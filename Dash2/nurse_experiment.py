@@ -21,7 +21,7 @@ class NurseTrial(Trial):
     def initialize(self):
         # Clear out/initialize the data on the hub
         self.experiment_client.register()
-        self.experiment_client.sendAction("initWorld", (self.num_computers, self.num_medications))
+        self.experiment_client.sendAction("initWorld", (self.num_computers, self.num_medications, self.timeout))
 
         # Set up the agents. Each of n nurses is given a different list of k patients
         self.agents = [nurse01.Nurse(ident=n,
@@ -41,7 +41,6 @@ class NurseTrial(Trial):
     # After each step with every agent, cause the hub to go one 'tick', which is used to apply timeouts
     def process_after_iteration(self):
         self.experiment_client.sendAction("tick")
-
 
     def process_after_run(self):
         self.events = self.experiment_client.sendAction("showEvents")
@@ -71,7 +70,8 @@ class NurseTrial(Trial):
 
 # This spits out the results as the number of computers varies, creating a couple of hundred agents in the process.
 def test_num_computers():
-    exp = Experiment(NurseTrial, exp_data={'num_nurses': 20, 'num_patients': 5, 'num_medications': 10}, num_trials=1)
+    exp = Experiment(NurseTrial, exp_data={'num_nurses': 20, 'num_patients': 5, 'num_medications': 10, 'timeout': -1},
+                     num_trials=1)
     runs = [exp.run(run_data={'num_computers': c}) for c in range(10, 21)]
     outputs = [[(trial.num_computers, trial.misses) for trial in e] for e in runs]
     print "Number of computers, Number of misses"
@@ -83,9 +83,9 @@ def test_timeout():
     exp = Experiment(NurseTrial,
                      exp_data={'num_nurses': 20, 'num_patients': 5, 'num_medications': 10, 'num_computers': 20},
                      num_trials=1)
-    runs = [exp.run(run_data={'timeout': t}) for t in range(0,3)]
+    runs = [exp.run(run_data={'timeout': t}) for t in range(0, 3)]
     outputs = [[(trial.timeout, trial.misses, trial.iteration) for trial in run] for run in runs]
     print outputs
     return runs
 
-runs = test_timeout()
+timeout_runs = test_timeout()
