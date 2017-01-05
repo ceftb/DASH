@@ -70,6 +70,7 @@ transient doWork
         self.register()
 
         self.patient_list = patients
+        self.current_patient = None
         self.computer = None    # computer the agent believes it's logged into
         self.at_computer = False
         self.history = []  # history of the agent's actions
@@ -86,9 +87,9 @@ transient doWork
 
     def pick_patient(self, (goal, patient_variable)):
         if self.patient_list:
-            patient = self.patient_list.pop()
-            print 'starting to work on', patient
-            return [{patient_variable: patient}]
+            self.current_patient = self.patient_list.pop()
+            print 'starting to work on', self.current_patient
+            return [{patient_variable: self.current_patient}]
         else:
             return []
 
@@ -153,6 +154,8 @@ transient doWork
             return []
         else:
             print self.id, 'believes already logged onto', self.computer
+            # If you believe you're logged on, you also believe your patient's spreadsheet is loaded (this is key)
+            self.known('loadSpreadsheet2', [self.current_patient, self.computer, session_var])
             return [{computer_var: self.computer, session_var: "_old"}]  # mark as an old session if already logged in
 
     # Explicitly walk away at the end of each task so others can use the computer (is implicit in delivering medication,
@@ -169,13 +172,13 @@ transient doWork
     def log_in(self, (login, computer_variable, session_var)):
         open_computer = True
         self.computer = self.sendAction("LoginToOpenComputer")
-        print 'tried to log in, got', self.computer
         if self.computer == 'fail':  # No open computers. Pick one at random which will log someone else off
             open_computer = False
             self.computer = self.sendAction("LoginToUnattendedComputer")
             if self.computer == 'fail':  # can't find any unattended computers on the hub!
+                self.computer = None
                 self.blocked = True  # Allow the agent to wait a turn
-                print 'cannot find an open computer'
+                print self.id, 'cannot find an unattended computer'
                 return []
         print self.id, 'login to', 'open' if open_computer else 'unattended', 'computer:', self.computer
         self.at_computer = True

@@ -108,12 +108,13 @@ class NurseHub(WorldHub):
 
     def load_spreadsheet(self, agent_id, (patient, computer)):
         # Check no other agent is present at the computer (don't log the user in automatically if there is no-one logged in)
-        if self.present[computer-1] == agent_id:
-            self.spreadsheet_loaded[computer-1] = patient
-            return 'success'
-        elif self.present[computer-1] is None:
-            return 'open'
-        else:
+        if self.present[computer-1] == agent_id or self.present[computer-1] is None:
+            if self.logged_on[computer-1] is not None:  # Anyone could be logged in
+                self.spreadsheet_loaded[computer-1] = patient
+                return 'success'
+            else:  # no-one is logged in
+                return 'open'
+        else:  # another agent is physically present at the computer
             return 'blocked', self.present[computer-1]
 
     def read_spreadsheet(self, agent_id, (patient, computer)):
@@ -134,14 +135,15 @@ class NurseHub(WorldHub):
         return 'success', self.medication_for_patient[real_patient], real_patient
 
     def write_spreadsheet(self, agent_id, (patient, computer, medication)):
-        if self.present[computer-1] == agent_id:
-            print "Writing event", agent_id, "using", computer, "for", patient, medication, \
-                "(loaded ", self.spreadsheet_loaded[computer-1], ")"
-            self.events.append(Event(agent_id, "write", computer, patient=patient, medication=medication,
-                                     spreadsheet_loaded=self.spreadsheet_loaded[computer-1]))
-            return 'success', self.spreadsheet_loaded[computer-1]
-        elif self.present[computer-1] is None:
-            return 'open', None
+        if self.present[computer-1] == agent_id or self.present[computer-1] is None:  # no other agent at the computer
+            if self.logged_on[computer-1] is not None:  # someone is logged on
+                print "Writing event", agent_id, "using", computer, "for", patient, medication, \
+                      "(loaded ", self.spreadsheet_loaded[computer-1], ")"
+                self.events.append(Event(agent_id, "write", computer, patient=patient, medication=medication,
+                                         spreadsheet_loaded=self.spreadsheet_loaded[computer-1]))
+                return 'success', self.spreadsheet_loaded[computer-1]
+            else:  # no-one logged on
+                return 'open', None
         else:
             return 'computer_blocked', self.spreadsheet_loaded[computer-1]
 
@@ -170,7 +172,7 @@ class NurseHub(WorldHub):
         for c in range(0, self.number_of_computers):
             if self.present[c] is None and not self.logged_on[c] is None:
                 self.unattended_count[c] += 1
-                if self.time_out > 0 and self.unattended_count >= self.time_out:
+                if self.time_out > 0 and self.unattended_count[c] >= self.time_out:
                     agent = self.logged_on[c]
                     self.logged_out[c] = agent
                     self.logged_on[c] = None
