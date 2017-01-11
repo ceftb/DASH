@@ -13,7 +13,7 @@ class PhishTrial(Trial):
         Trial.__init__(self)
         self.iteration = 0
         self.max_iterations = max_iterations
-        self.num_workers=num_workers
+        self.num_workers = num_workers
         self.num_recipients = num_recipients
         self.num_phishers = num_phishers
         self.phish_targets = phish_targets
@@ -45,9 +45,10 @@ class PhishTrial(Trial):
     def initialize(self):
         self.workers = []
         for i in range(0, self.num_workers):
-            self.workers.append(mailReader.MailReader('mailagent'+str(i+1)+'@amail.com'))
-            self.choose_gender_personality(self.workers[i])
-            choose_recipients(self.workers[i], i, self.num_workers, self.num_recipients)
+            w = mailReader.MailReader('mailagent'+str(i+1)+'@amail.com')
+            self.workers.append(w)
+            self.choose_gender_personality(w)
+            choose_recipients(w, i, self.num_workers, self.num_recipients)
             self.workers[i].active = True
 
         self.phisher = mailReader.MailReader('phisher@bmail.com')

@@ -25,6 +25,7 @@ class System2Agent:
         self.traceParse = False
         self.traceKnown = False
         self.traceGoals = False
+        self.traceClauses = False  # prints out information about clauses being tested for a goal
         self.traceForget = False
 
     def readAgent(self, string):
@@ -252,11 +253,11 @@ class System2Agent:
         if gpb is []:
             print "No goal requirements match for ", goals[0]
             return None
-        if self.traceGoals:
+        if self.traceClauses:
             print '  '*indent, "Requirements:", gpb
         i = 1
         for (goal, requirements, bindings) in gpb:
-            if self.traceGoals:
+            if self.traceClauses:
                 print '  '*indent, '  ', 'trying req set', i, goal, requirements, bindings
             # Return the first unfulfilled action in the requirements body, substituting bindings
             # but try the next requirements (if any) if there is a knownFalse subgoal in the requirements
@@ -272,7 +273,7 @@ class System2Agent:
                                 for x in bindings]
                     uncomposed = [(x, na[1][x]) for x in na[1] if x not in bindings]
                     composed_bindings = dict(composed + uncomposed)
-                    if self.traceGoals:
+                    if self.traceClauses:
                         print '  '*indent, '  ', 'req set', i, 'succeeded with main bindings', bindings,\
                             'and local bindings', na[1], 'and composed bindings', composed_bindings
                     na[1] = composed_bindings

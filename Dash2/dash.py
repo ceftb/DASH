@@ -1,15 +1,17 @@
 from system1 import System1Agent
 from system2 import System2Agent, substitute, isConstant, isVar
 from client import Client
+from human_traits import HumanTraits
 import re
 
 
-class DASHAgent(Client, System2Agent, System1Agent):
+class DASHAgent(Client, System2Agent, System1Agent, HumanTraits):
 
     def __init__(self):
         Client.__init__(self)
         System2Agent.__init__(self)
         System1Agent.__init__(self)
+        HumanTraits.__init__(self)
         self.primitiveActionDict = dict()
         # Activation threshold at which actions suggested by system 1 will be considered over deliberation
         # A low threshold will produce more 'impulsive' actions
@@ -28,7 +30,7 @@ class DASHAgent(Client, System2Agent, System1Agent):
         iteration = 0
         while next_action is not None and (max_iterations < 0 or iteration < max_iterations):
             if self.traceAction:
-                print "Next action is ", next_action
+                print self.id, "next action is", next_action
             result = self.performAction(next_action)
             self.update_beliefs(result, next_action)
             self.spreading_activation()

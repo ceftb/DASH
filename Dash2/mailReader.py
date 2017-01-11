@@ -10,24 +10,7 @@ class MailReader(DASHAgent):
 
         self.trace_client = False
 
-        # Ultimately it makes sense to house Big-5 personality information and the way it might interact with
-        # dual processing in a separate class to be inherited, but for this rapid prototyping I will keep it here
-        # along with other potentially-relevant demographic information for now.
-        # These dimensions are assumed to be on a scale from 0 to 1.
-        self.extraversion = 0.5
-        self.agreeableness = 0.5
-        self.conscientiousness = 0.5
-        self.emotional_stability = 0.5
-        self.openness = 0.5
-
-        # Other features of importance
-        self.gender = 'Male'
-
         self.competence_with_internet = 0.5  # general level of competence e.g. Alseadoon et al. 12
-
-
-        # Might be found from the balloon assessment test for example.
-        self.impulsivity = 0.5
 
         self.readAgent("""
 
@@ -109,10 +92,8 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
     # If there is mail in the stack, return the first object
     def have_mail_in_stack(self, (predicate, mail_var)):
         if self.mail_stack:
-            #print 'mail in stack:', self.mail_stack
             return [{mail_var: [self.mail_stack.pop(0)]}]  # return as a list so the generic mail sending function could send more than one message in principle
         else:
-            #print 'no mail in stack'
             return []
 
     def read_mail(self, (predicate, mail_var)):
@@ -159,7 +140,9 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
             phishiness = self.score_phishiness(message)
             if phishiness > self.phishiness_threshold:
                 self.phish_identified.append(message)
-                return [{}]
+                #print self.id, 'too phishy:', phishiness, message, 'ignoring all'
+                #return [{}]
+                continue
 
             # With some fixed probability the agent forwards a work email to another work colleague, including
             # the sender as a reply
@@ -187,7 +170,7 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
         # If the mail is legit, it is never identified as phish
         if 'amail.com' in message['from']:
             return 0
-        # for now, accept 1 in 2 phishing emails
+        # for now, accept 1 in 2 phishing emails whatever the phishiness threshold
         elif random.random() < 0.5:
             # Return a random number above the threshold
             return self.phishiness_threshold + (1 - self.phishiness_threshold) * random.random()
@@ -196,9 +179,13 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
             return self.phishiness_threshold * random.random()
 
     def decide_to_open(self, message, phishiness):
+        # The stuff below was never opening anything
+        return True
         # Some combination of phishiness score, agreeableness, openness
-        if random.random() < (self.agreeableness + self.extraversion + self.openness) / 3 - phishiness:
+        threshold = (self.agreeableness + self.extraversion + self.openness) / 3 - phishiness
+        if random.random() < threshold:
             return True
+        print 'did not open: not below threshold', threshold
         return False
 
     # This one isn't called through system 2 reasoning, but by system 1

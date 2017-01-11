@@ -20,19 +20,22 @@ LEISURE_FWD_LOWER = 0
 LEISURE_FWD_UPPER = 0.8
 
 
-def trial(objective, num_workers=20, num_recipients=4, num_phishers=1,
-          phish_targets=20, max_rounds=20):
+def trial(objective, num_workers=1, num_recipients=4, num_phishers=1,  # num_workers was 20
+          phish_targets=1, max_rounds=20):  # phish_targets was 20
 
     #workers = [mailReader.MailReader('mailagent'+str(i+1)+'@amail.com') for i in range(0, num_workers)]
     workers = []
     for i in range(0, num_workers):
-        workers.append(mailReader.MailReader('mailagent'+str(i+1)+'@amail.com'))
-        choose_gender_personality(workers[i])
-        choose_recipients(workers[i], i, num_workers, num_recipients)
+        w = mailReader.MailReader('mailagent'+str(i+1)+'@amail.com')
+        workers.append(w)
+        choose_gender_personality(w)
+        choose_recipients(w, i, num_workers, num_recipients)
+        w.traceLoop = False
 
     phisher = mailReader.MailReader('phisher@bmail.com')
     choose_victims(phisher, phish_targets, num_workers)
     phisher.active = True
+    phisher.traceLoop = False
 
     # Used as an objective
     phished = False
@@ -41,9 +44,6 @@ def trial(objective, num_workers=20, num_recipients=4, num_phishers=1,
 
     # dovetail the worker and phisher agents until they're all finished
     finished_workers = set()
-    for w in workers:
-        w.traceLoop = False
-    phisher.traceLoop = False
     iteration = 1
     total_mail_stack = 0
     total_mails_read = 0
@@ -65,6 +65,7 @@ def trial(objective, num_workers=20, num_recipients=4, num_phishers=1,
                     phished = True
                     phish_end_time = iteration  # datetime.now() we should use the iteration, not real-time, here
 
+                # Should these really be added each iteration? Each agent stores them across iterations.
                 total_mail_stack += len(w.mail_stack)
                 total_mails_read += w.mails_read
                 total_mails_sent += w.mails_sent
@@ -88,11 +89,14 @@ def trial(objective, num_workers=20, num_recipients=4, num_phishers=1,
         last_mails_read = total_mails_read
         iteration += 1
 
-    # Print some statistics about the run
-    print 'worker, number of emails received, sent, clicked links:'
     for w in workers:
-        print w.address, w.mails_read, w.mails_sent, w.urls_clicked
-    print 'phisher:', phisher.address, phisher.mails_sent, phisher.urls_clicked
+        w.disconnect()
+
+    # Print some statistics about the run
+    print 'worker, number of emails received, sent, attachments opened:'
+    for w in workers:
+        print w.address, w.mails_read, w.mails_sent, w.attachments_opened
+    print 'phisher:', phisher.address, phisher.mails_sent, phisher.attachments_opened
 
     if objective == 'number':
         phish_attachments_opened = []
@@ -103,14 +107,9 @@ def trial(objective, num_workers=20, num_recipients=4, num_phishers=1,
                     worker_attachments_opened += 1
             phish_attachments_opened.append(worker_attachments_opened)
         
-        for w in workers:
-            w.disconnect()
-        
         return numpy.mean(phish_attachments_opened)
 
     elif objective == 'time':
-        for w in workers:
-            w.disconnect()
         if phished:
             return (phish_end_time-phish_start_time).total_seconds()
         else:
@@ -129,7 +128,7 @@ def choose_recipients(agent, worker_i, num_workers, num_recipients):
         mode = random.choice(mode_options)
         mail = {'to': 'mailagent' + str(recipients[i] + 1) + '@amail.com', 'subject': 'test',
                 'mode': mode,
-                'body': 'this is a test message',
+                'body': 'this is a test message ' + str(i+1),
                 'attachment': 'budget.xlsx' if mode == 'work' else 'kittens.jpeg'}
 
         if mode == 'leisure':
@@ -179,8 +178,8 @@ def choose_gender_personality(worker):
     worker.work_reply_probability = random.uniform(WORK_REPLY_LOWER, WORK_REPLY_UPPER)
 
 
-def run_trials(num_trials, objective, num_workers=100, num_recipients=4,
-               num_phishers=1, phish_targets=20, max_rounds=20):
+def run_trials(num_trials, objective, num_workers=50, num_recipients=4,  # num_workers was 100, num_recipients was 4
+               num_phishers=1, phish_targets=15, max_rounds=20):  # phish_targets was 20
     output = []
     for _ in range(num_trials):
         trial_output = trial(objective, num_workers, num_recipients,
@@ -196,7 +195,7 @@ def run_trials(num_trials, objective, num_workers=100, num_recipients=4,
 
 # Run it once
 # trial()
-num_trials = 3
-max_num_rounds = 5
+num_trials = 1  # was 3
+max_num_rounds = 10
 print run_trials(num_trials, 'number', max_rounds=max_num_rounds)
 print str(num_trials) + " trials run, max_rounds = " + str(max_num_rounds)
