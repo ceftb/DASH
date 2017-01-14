@@ -52,17 +52,22 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
                             'subject': 'test', 'body': 'this is a test message', 'attachment': 'budget.xlsx'},
                            {'to': self.address, 'forwarders': [],
                             'subject': 'test', 'body': 'this is a second test message', 'attachment': 'budget.xlsx'}]
+        self.send_mail_all_at_once = True  # if False, just pops the queue each time the goal sendMailInStack is satisfied
 
         self.work_colleagues = []  # set of people that work-related email might be sent of forwarded to or expected to come from
         self.leisure_colleagues = []  # set of people that leisure-related email might be sent of forwarded to or expected to come from
 
+        # This number isn't really used right now, since we return a score above or below based on whether the agent identifies
+        # the message as phish, not the other way around.
         self.phishiness_threshold = 0.5  # messages are score from 0 to 1 and rejected as phish if they score over this threshold
+
+        # This is a simple parameter that can be manipulated
+        self.probability_recognize_phish = 0.5  # If the message is phish, it is recognized with this constant probability
 
         # probability that email deemed to be legitimate leisure mail will be forwarded to a friend. Shortly this
         # should be calculated based on agreeableness, extraversion and conscientiousness.
         self.leisure_forward_probability = 0.5
         self.work_forward_probability = 0.5
-
 
         # Keep track of the number of emails read and sent
         self.mails_read = 0
@@ -87,12 +92,20 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
         # Record phish that are identified as such (i.e. emails from bmail.com, not amail.com addresses).
         self.phish_identified = []
 
+        # For debugging groups of agents
+        self.print_sent_mail = False
+
     # primitive actions
 
     # If there is mail in the stack, return the first object
     def have_mail_in_stack(self, (predicate, mail_var)):
         if self.mail_stack:
-            return [{mail_var: [self.mail_stack.pop(0)]}]  # return as a list so the generic mail sending function could send more than one message in principle
+            if self.send_mail_all_at_once:
+                mail = self.mail_stack
+                self.mail_stack = []
+                return [{mail_var: mail}]
+            else:
+                return [{mail_var: [self.mail_stack.pop(0)]}]  # return as a list so the generic mail sending function could send more than one message in principle
         else:
             return []
 
@@ -114,6 +127,9 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
                                       'body': body[1:] + str(self.mails_sent), 'url': url[1:]}])
         else:  # Just one argument, assumed to be an email message in dictionary form as expected by the hub
             result = self.sendAction("sendMail", goal[1])
+
+        if self.print_sent_mail:
+            print "Sent mail:", goal[1:]
 
         self.mails_sent += 1
         if result is not None and result[0] == "success":
@@ -140,8 +156,6 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
             phishiness = self.score_phishiness(message)
             if phishiness > self.phishiness_threshold:
                 self.phish_identified.append(message)
-                #print self.id, 'too phishy:', phishiness, message, 'ignoring all'
-                #return [{}]
                 continue
 
             # With some fixed probability the agent forwards a work email to another work colleague, including
@@ -171,7 +185,7 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
         if 'amail.com' in message['from']:
             return 0
         # for now, accept 1 in 2 phishing emails whatever the phishiness threshold
-        elif random.random() < 0.5:
+        elif random.random() < self.probability_recognize_phish:
             # Return a random number above the threshold
             return self.phishiness_threshold + (1 - self.phishiness_threshold) * random.random()
         else:
