@@ -62,7 +62,8 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
         self.phishiness_threshold = 0.5  # messages are score from 0 to 1 and rejected as phish if they score over this threshold
 
         # This is a simple parameter that can be manipulated
-        self.probability_recognize_phish = 0.5  # If the message is phish, it is recognized with this constant probability
+        self.probability_recognize_phish = 0.8  # If the message is phish, it is recognized with this constant probability
+        self.probability_click_unrecognized_phish = 0.3
 
         # probability that email deemed to be legitimate leisure mail will be forwarded to a friend. Shortly this
         # should be calculated based on agreeableness, extraversion and conscientiousness.
@@ -194,12 +195,13 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
 
     def decide_to_open(self, message, phishiness):
         # The stuff below was never opening anything
-        return True
+        if random.random() < self.probability_click_unrecognized_phish:
+            return True
         # Some combination of phishiness score, agreeableness, openness
         threshold = (self.agreeableness + self.extraversion + self.openness) / 3 - phishiness
         if random.random() < threshold:
             return True
-        print 'did not open: not below threshold', threshold
+        #print 'did not open: not below threshold', threshold
         return False
 
     # This one isn't called through system 2 reasoning, but by system 1
