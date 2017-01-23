@@ -48,14 +48,14 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
 
         # Stack of emails to send. This way it is easy enough to task the agent with a set of emails, even dynamically.
         # Setting up with an initial mail to test. Should be the same behavior as with fixed email in the goal.
-        self.mail_stack = [{'to': self.address, 'forwarders': [],
-                            'subject': 'test', 'body': 'this is a test message', 'attachment': 'budget.xlsx'},
-                           {'to': self.address, 'forwarders': [],
-                            'subject': 'test', 'body': 'this is a second test message', 'attachment': 'budget.xlsx'}]
+        self.mail_stack = [{'to': self.address, 'subject': 'test', 'body': 'this is a test message',
+                            'attachment': 'budget.xlsx'},
+                           {'to': self.address, 'subject': 'test', 'body': 'this is a second test message',
+                            'attachment': 'budget.xlsx'}]
         self.send_mail_all_at_once = True  # if False, just pops the queue each time the goal sendMailInStack is satisfied
 
-        self.work_colleagues = []  # set of people that work-related email might be sent of forwarded to or expected to come from
-        self.leisure_colleagues = []  # set of people that leisure-related email might be sent of forwarded to or expected to come from
+        # sets of people that email might be sent of forwarded to or expected to come from for different categories
+        self.colleagues = {'work': [], 'leisure': []}
 
         # This number isn't really used right now, since we return a score above or below based on whether the agent identifies
         # the message as phish, not the other way around.
@@ -67,8 +67,7 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
 
         # probability that email deemed to be legitimate leisure mail will be forwarded to a friend. Shortly this
         # should be calculated based on agreeableness, extraversion and conscientiousness.
-        self.leisure_forward_probability = 0.5
-        self.work_forward_probability = 0.5
+        self.forward_probability = {'leisure': 0.5, 'work': 0.5}
 
         # Keep track of the number of emails read and sent
         self.mails_read = 0
@@ -160,17 +159,11 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
                 continue
 
             # With some fixed probability the agent forwards a work email to another work colleague, including
-            # the sender as a reply
-            if message['mode'] == 'work' and self.work_colleagues and random.random() < self.work_forward_probability:
+            # the sender as a reply, and we generalize the categories of email here
+            mode = message['mode']  # means email category
+            if self.colleagues[mode] and random.random() < self.forward_probability[mode]:
                 new_message = copy.copy(message)
-                new_message['to'] = random.choice(self.work_colleagues)
-                self.mail_stack.append(new_message)
-            # Leisure-related mail is forwarded with probability determined from personality and gender to a subset of the
-            # agent's friend group. It keeps a 'forward' trail in the mail to avoid sending the same email to someone twice.
-            # (forward trail nyi).
-            elif message['mode'] == 'leisure' and self.leisure_colleagues and random.random() < self.leisure_forward_probability:
-                new_message = copy.copy(message)
-                new_message['to'] = random.choice(self.leisure_colleagues)
+                new_message['to'] = random.choice(self.colleagues[mode])
                 self.mail_stack.append(new_message)
 
             # The probability of opening an attachment in either is related to openness, but is much higher in work-related email.

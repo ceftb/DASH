@@ -33,13 +33,18 @@ class PasswordAgent(DASHAgent):
         DASHAgent.__init__(self)
 
         response = self.register()
-        if response[0] != "success":
-            print "Error: world hub not reachable - exiting "
+        if response is None or response[0] != "success":
+            print "Error: world hub not reachable - exiting. This agent will only run with a world hub (e.g pass_sim_hub)."
             sys.exit()
         self.id = response[1]
 
         # Added by Jim based on bruno_user.pl
-        self.password_list = ['p', 'P', 'pw', 'Pw', 'pw1', 'Pw1', 'pass', 'Pass', 'pas1', 'Pas1', 'pass1', 'Pass1', 'PaSs1', 'password', 'P4ssW1', 'PassWord', 'PaSs12', 'PaSsWord', 'PaSsW0rd', 'P@SsW0rd', 'PassWord1', 'PaSsWord1', 'P4ssW0rd!', 'P4SsW0rd!', 'PaSsWord12', 'P@SsWord12', 'P@SsWoRd12', 'PaSsWord!2', 'P@SsWord!234', 'P@SsWord!234', 'MyP4SsW0rd!', 'MyP4SsW0rd!234', 'MyP@SsW0rd!234', 'MyPaSsWoRd!234?', 'MyPaSsW0Rd!234?', 'MyS3cUReP@SsW0rd!2345', 'MyV3ryL0ngS3cUReP@SsW0rd!2345?']
+        self.password_list = ['p', 'P', 'pw', 'Pw', 'pw1', 'Pw1', 'pass', 'Pass', 'pas1', 'Pas1', 'pass1', 'Pass1',
+                              'PaSs1', 'password', 'P4ssW1', 'PassWord', 'PaSs12', 'PaSsWord', 'PaSsW0rd', 'P@SsW0rd',
+                              'PassWord1', 'PaSsWord1', 'P4ssW0rd!', 'P4SsW0rd!', 'PaSsWord12', 'P@SsWord12',
+                              'P@SsWoRd12', 'PaSsWord!2', 'P@SsWord!234', 'P@SsWord!234', 'MyP4SsW0rd!',
+                              'MyP4SsW0rd!234', 'MyP@SsW0rd!234', 'MyPaSsWoRd!234?', 'MyPaSsW0Rd!234?',
+                              'MyS3cUReP@SsW0rd!2345', 'MyV3ryL0ngS3cUReP@SsW0rd!2345?']
 
         # distribution of probabilities for every service type. Used to be dictionaries, but then order is not guaranteed
         self.serviceProbs = [('mail', 0.35), ('social_net', 0.85), ('bank', 1.0)]
@@ -53,7 +58,7 @@ class PasswordAgent(DASHAgent):
         self.strengtheningRate = 0.2
 
 
-        # initial cong. burden
+        # initial cog. burden
         self.cognitiveBurden = 0
         # These were copied from bruno_user.pl in lib/logic - check for comments there.
         self.cognitiveThreshold = 68
@@ -113,7 +118,7 @@ transient doWork
     # and will be bound to the result of setting up the service
     def setupAccount(self, (goal, service_type_var, service_var)):
         ''' Should be equivalent to createAccount subgoal in prolog version
-        It takes service type as an input, and based on that decides which
+        It takes service type as an input, and decides which
         username to use[1]. Then, it picks the password and submits the info.
 
         Based on the service response it adjusts username and password.
@@ -144,7 +149,7 @@ transient doWork
 
         # Decide the service to log into
         [status, service, requirements] = self.sendAction('getAccount', [service_type])
-        print 'getaccount result:', status, service
+        print 'getaccount result:', status, service, requirements
 
         ### choose Username
         # if the list of existing usernames is not empty, pick one at random,
@@ -184,7 +189,7 @@ transient doWork
             #self.setupAccount(service_type, service, result[1])
             return []
         else:
-            print 'unknown result for creating account'
+            print 'unknown result for creating account:', status, data
             return []
 
 
@@ -280,6 +285,7 @@ transient doWork
             return []
 
     # Will be about password forget rate stopping criterion, but for now just false
+    # This means the simulation will go on forever if the agentLoop call doesn't use a finite number of steps
     def check_termination(self, call):
         return []
 
