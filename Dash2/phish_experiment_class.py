@@ -27,14 +27,9 @@ class PhishTrial(Trial):
 
         self.iteration = 0
 
-        self.big_5_lower = 0.2
-        self.big_5_upper = 0.9
-        self.reply_lower = 0
-        self.reply_upper = 0.8
-        self.work_reply_lower = 0
-        self.work_reply_upper = 0.8
-        self.leisure_fwd_lower = 0
-        self.leisure_fwd_upper = 0.8
+        self.big_5_range = [0.2, 0.9]
+        # self.reply_range = {'work': [0, 0.8], 'leisure': [0, 0.8]}  # Note these is currently no separate reply in mailReader
+        self.forward_range = {'leisure': [0, 0.8], 'work': [0, 0.8]}
         self.p_recognize_phish = 0.5  # this default is overridden in the trial
 
         self.total_mail_stack = 0
@@ -52,32 +47,20 @@ class PhishTrial(Trial):
         self.workers = []
         for i in range(0, self.num_workers):
             w = mailReader.MailReader('mailagent'+str(i+1)+'@amail.com')
+            w.choose_random_gender_personality(self.big_5_range)
             self.workers.append(w)
-            self.choose_random_gender_personality(w)
-            choose_recipients(w, i, self.num_workers, self.num_recipients)
+            for mode in ['leisure', 'work']:
+                w.forward_probability[mode] = random.uniform(self.forward_range[mode][0], self.forward_range[mode][1])
+            choose_recipients(w, i, self.num_workers, self.num_recipients, attachment='budget.xlsx')
             w.probability_recognize_phish = self.p_recognize_phish
-            self.workers[i].active = True
+            w.active = True
 
         self.phisher = mailReader.MailReader('phisher@bmail.com')
-        choose_victims(self.phisher, self.phish_targets, self.num_workers)
+        choose_recipients(self.phisher, -1, self.num_workers, self.phish_targets, attachment='phish.xlsx')
         self.phisher.active = True
         self.phisher.print_sent_mail = True
 
         self.agents = self.workers + [self.phisher]
-
-    def choose_random_gender_personality(self, worker):
-        genders = ['Male', 'Female']
-        worker.gender = random.choice(genders)
-        worker.extraversion = self.big_5_random()
-        worker.agreeableness = self.big_5_random()
-        worker.conscientiousness = self.big_5_random()
-        worker.emotional_stability = self.big_5_random()
-        worker.openness = self.big_5_random()
-        worker.leisure_forward_probability = random.uniform(self.leisure_fwd_lower, self.leisure_fwd_upper)
-        worker.work_reply_probability = random.uniform(self.work_reply_lower, self.work_reply_upper)
-
-    def big_5_random(self):
-        return random.uniform(self.big_5_lower, self.big_5_upper)
 
     def should_stop(self):
         if Trial.should_stop(self):  # Use the default definition + quiescence
@@ -117,69 +100,45 @@ class PhishTrial(Trial):
                 return -1
 
 
-def choose_recipients(agent, worker_i, num_workers, num_recipients):
+def choose_recipients(agent, worker_i, num_workers, num_recipients, attachment=None, modes=['work', 'leisure'],
+                      domain='amail.com'):
     # reset recipients
-    del agent.work_colleagues[:]
-    del agent.leisure_colleagues[:]
-    recipients = random.sample([i for i in range(0, num_workers) if i != worker_i], num_recipients)
-    mode_options = ['leisure', 'work']
+    for mode in modes:
+        del agent.colleagues[mode][:]
 
-    stack = []
-    for i in range(0, num_recipients):
-        mode = random.choice(mode_options)
-        mail = {'to': 'mailagent' + str(recipients[i] + 1) + '@amail.com', 'subject': 'test',
-                'mode': mode,
-                'body': 'this is a test message',
-                'attachment': 'budget.xlsx' if mode == 'work' else 'kittens.jpeg'}
-
-        if mode == 'leisure':
-            agent.leisure_colleagues.append('mailagent'+str(recipients[i]+1)+'@amail.com')
-        else:
-            agent.work_colleagues.append('mailagent'+str(recipients[i]+1)+'@amail.com')
-
-        stack.append(mail)
-
-    agent.mail_stack = stack
-
-
-def choose_victims(phisher, num_victims, num_workers):
-    # reset victims
-    del phisher.work_colleagues[:]
-    del phisher.leisure_colleagues[:]
-    victims = random.sample(range(1, num_workers + 1), num_victims)
-    mode_options = ['leisure', 'work']
-
-    phisher.mail_stack = []
-    for v in victims:
-        mode = random.choice(mode_options)
-        mail = {'to': 'mailagent' + str(v) + '@amail.com', 'subject': 'test',
-                'mode': mode,
-                'body': 'this is a test message',
-                'attachment': 'phish.xlsx'}
-
-        if mode == 'leisure':
-            phisher.leisure_colleagues.append('mailagent'+str(v)+'@amail.com')
-        else:
-            phisher.work_colleagues.append('mailagent'+str(v)+'@amail.com')
-
-        phisher.mail_stack.append(mail)
+    recipients = random.sample([str(i + 1) for i in range(0, num_workers) if i != worker_i], num_recipients)
+    agent.mail_stack = []
+    for recipient in recipients:
+        mode = random.choice(modes)
+        mail = {'to': 'mailagent' + recipient + '@' + domain,
+                'subject': 'test', 'mode': mode, 'body': 'this is a test message',
+                'attachment': attachment}
+        agent.colleagues[mode].append('mailagent' + recipient + '@' + domain)
+        agent.mail_stack.append(mail)
 
 
 # Getting slow-down I don't understand when I write this within the same process, so trying to call as
-# a subprocess and see if that helps.
+# a subprocess and see if that helps. Because of that, the guts of this aren't encapsulated in the
+# experiment object as I'd like.
 
-def run_subprocess():
+# In the scenario from the slides, seek to optimize the number of phish_targets given 50 workers and
+# a probability of one hit of 0.8 (defined as phisher stealth level). So iterate through phish_targets
+# to find the closest to 0.8 as the performance metric.
+
+# As a counterpoint, random sampling of the probability space of parameters (e.g. probabilities of recognizing
+# phish, opening attachment and phisher stealth) to show the variety of values for number of phish. Unfortunately
+# this is itself an average over many trials which is expensive. I should find a single-trial measure for this part.
+
+def run_subprocess(trials=100, num_phish_candidates=[5, 10, 15, 20, 25]):
     all_data = {}  # for testing
     total = {}
     ave = {}
-    pts = [25]  #[5, 10, 15, 20]
-    for pt in pts:
+    for pt in num_phish_candidates:
         all_data[pt] = []
         total[pt] = 0
         ave[pt] = 0
-        call = ["python", "/Users/jim/Projects/Deter/webdash/Dash2/phish_experiment_class.py", "run", str(pt)]
-        num_trials = 100
-        for trial in range(0, num_trials):  # Try creating a new experiment each time to avoid bloat - doesn't work
+        call = ["python", "phish_experiment_class.py", "run", str(pt)]
+        for trial in xrange(0, trials):  # Try creating a new experiment each time to avoid bloat - doesn't work
             print 'iteration', (trial + 1)
             try:
                 process = subprocess.Popen(call, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
@@ -189,7 +148,7 @@ def run_subprocess():
             #proc.stdin.write('run_one()\n\n\n')
             line = process.stdout.readline()
             while line != "":
-                print "sub:", line
+                print "sub", pt, trial, ":", line
                 if line.startswith("Final"):
                     data = line.split(" ")
                     all_data[pt].append(data)
@@ -199,18 +158,19 @@ def run_subprocess():
                         ave[pt] += float(data[1])
                 line = process.stdout.readline()
             print process.communicate()
-            print 'all data for', pt, 'is', all_data[pt]
-    for pt in pts:
-        print pt, '-', total[pt], 'of', num_trials, 'ave', (ave[pt]/num_trials)
+            #print 'all data for', pt, 'is', all_data[pt]
+            ave[pt] /= trials
+    for pt in num_phish_candidates:
+        print pt, '-', total[pt], 'of', trials, 'ave', ave[pt]
 
 
-def run_one(pt):
+def run_one(phish_targets):
     e = Experiment(PhishTrial, num_trials=1)
     e.run(run_data={'max_iterations': 10,  # The phishing attachment is opened in iteration 9 in the current setup
                     'objective': 'number',
                     'num_workers': 50, 'num_recipients': 4,
                     # variables on the trial object that are passed to the agents
-                    'phish_targets': pt, 'p_recognize_phish': 0.8, 'p_open_attachment': 0.3})
+                    'phish_targets': phish_targets, 'p_recognize_phish': 0.8, 'p_open_attachment': 0.3})
     r = e.process_results()
     print "Final", r[0]
 
