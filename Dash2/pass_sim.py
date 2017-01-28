@@ -26,6 +26,8 @@ import random
 from utils import distPicker
 import operator
 import sys
+import minimum_spanning_tree
+
 
 class PasswordAgent(DASHAgent):
     # add socket
@@ -38,7 +40,8 @@ class PasswordAgent(DASHAgent):
             sys.exit()
         self.id = response[1]
 
-        # Added by Jim based on bruno_user.pl
+        # Added by Jim based on bruno_user.pl. This is the list of all possible password choices for
+        # the agent, not the ones the agent currently users.
         self.password_list = ['p', 'P', 'pw', 'Pw', 'pw1', 'Pw1', 'pass', 'Pass', 'pas1', 'Pas1', 'pass1', 'Pass1',
                               'PaSs1', 'password', 'P4ssW1', 'PassWord', 'PaSs12', 'PaSsWord', 'PaSsW0rd', 'P@SsW0rd',
                               'PassWord1', 'PaSsWord1', 'P4ssW0rd!', 'P4SsW0rd!', 'PaSsWord12', 'P@SsWord12',
@@ -59,9 +62,10 @@ class PasswordAgent(DASHAgent):
 
 
         # initial cog. burden
-        self.cognitiveBurden = 0
+        self.cognitiveBurden = 0  # Perhaps this is computed at each point, haven't figured out the details yet.
         # These were copied from bruno_user.pl in lib/logic - check for comments there.
-        self.cognitiveThreshold = 68
+        self.cognitiveThreshold = 30  # was 68 in the prolog but trying one that limits to something like 12 passwords
+        # (the prolog version included the cost for usernames, not currently included)
         self.recallThreshold = 0.5
         self.passwordReusePriority = 'long'
         self.passwordReuseThreshold = 54
@@ -149,7 +153,7 @@ transient doWork
 
         # Decide the service to log into
         [status, service, requirements] = self.sendAction('getAccount', [service_type])
-        print 'getaccount result:', status, service, requirements
+        #print 'chosen account to set up:', status, service, requirements
 
         ### choose Username
         # if the list of existing usernames is not empty, pick one at random,
@@ -167,9 +171,9 @@ transient doWork
         # I am not sure if it would make more sense to keep beliefs local in this
         # case
         [status, data] = self.sendAction('createAccount', [service, username, password])
-        print 'create account result:', [status, data]
+        #print 'create account result:', [status, data]
         if status == 'success':
-            print 'Success: Account Created'
+            print 'Account created on', service, 'with user', username, 'and password', password, requirements
             if password not in self.writtenPasswords:
                 self.beliefs[service] = [username, password, self.initial_belief]
             else:
@@ -179,7 +183,7 @@ transient doWork
             else:
                 return [{service_var: service}]
         elif status == 'failed:user':
-            print 'Failed to create account: username already exists'
+            #print 'Failed to create account on', service, ': username already exists'  # too frequent to print
             # Should succeed in 'setting up' the account though
             if isVar(service_type_var):
                 return [{service_type_var: service_type, service_var: service}]
@@ -187,9 +191,10 @@ transient doWork
                 return [{service_var: service}]
         elif status == 'failed:reqs':
             #self.setupAccount(service_type, service, result[1])
+            print 'Failed to create account on ', service, ': password failed the requirements'
             return []
         else:
-            print 'unknown result for creating account:', status, data
+            print 'unknown result for creating account:', service, status, data
             return []
 
 
@@ -214,8 +219,8 @@ transient doWork
         [username, password, belief] = self.beliefs[service]
         # Select password: essentially the weaker the belief is the greater the chance
         # that user will just pick one of their known username/passwords
-        distribution = [(password, belief), ('known', 1.0)]
-        if distPicker(distribution, random.random()) == 'known' and self.knownUsernames and self.known_passwords:
+        distribution = [(password, belief), ('other_known', 1.0)]
+        if distPicker(distribution, random.random()) == 'other_known' and self.knownUsernames and self.known_passwords:
             changed_password = True
             username = random.choice(self.knownUsernames)
             password = random.choice(self.known_passwords)
@@ -231,8 +236,10 @@ transient doWork
                 self.beliefs[service][2] += (self.beliefs[service][2]*self.strengtheningRate)
                 new_strength = min(self.beliefs[service][2], 0.9999)   # used to be 'max' but I think 'min' was intended
                 self.beliefs[service] = [username, password, new_strength]
+                print 'signed into', service, 'with changed username and password', username, ',', password
             else:
                 self.beliefs[service] = [username, password, self.initial_belief]
+                print 'signed into', service, 'with same username and password', username, ',', password
             return [{}]
         elif login_response[0] == 'failed:logged_in':
             self.signOut(service)
@@ -256,15 +263,15 @@ transient doWork
         username = self.beliefs[service][0]
         response = self.sendAction('retrieveStatus', [service, username])
         if response[0] == 'failure':
-            print 'Error: User was not logged in'
+            print 'Error signing out: User was not logged in to', service, 'as', username
             return []
         else:
             self.sendAction('signOut', [service, username])
-            print 'Success: User successfully logged out'
+            print 'User successfully logged out from', service, 'as', username
             return [{}]
 
     def resetPassword(self, (goal, service)):
-        print 'agent beliefs for service', service, 'are', self.beliefs[service]
+        #print 'Resetting: agent beliefs for service', service, 'are', self.beliefs[service]
         [username, old_password, belief] = self.beliefs[service]
 
         new_password = self.choose_password(username)
@@ -272,12 +279,11 @@ transient doWork
         status_response = self.sendAction('resetPassword', [service, username, old_password, new_password])
 
         if status_response[0] == 'success':
-            print 'Success: password reset successfully'
             if new_password in self.writtenPasswords:
                 self.beliefs[service] = [username, new_password, self.initial_belief, 0.999]
             else:
                 self.beliefs[service] = [username, new_password, self.initial_belief]
-            print 'new beliefs:', self.beliefs[service]
+            print 'new beliefs for', service, 'after resetting:', self.beliefs[service]
             return [{}]
         else:
             #not yet implemented handling of requirements
@@ -289,7 +295,8 @@ transient doWork
     def check_termination(self, call):
         return []
 
-    # Extracted by Jim from setUpAccount and resetPassword
+    # Extracted by Jim from setUpAccount and resetPassword, and modified to match the description in papers
+    # such as the HotSoS 15 paper.
     def choose_password(self, username, requirements=None):
                 ### choose Password
         # Note - this fails when the password_list is exhausted, which happens because passwords are moved
@@ -297,43 +304,53 @@ transient doWork
         # is it to choose something from that list when this one is empty? - Jim
         # I've added code below that uses the 'password_list' if there are still values on it, and otherwise picks
         # a known password.
-        list_of_new = self.password_list
+        # This used to make a random choice, now it runs through the password_list in order, which is assumed
+        # to be roughly in complexity order (added indices into password_list and known_passwords)
+        list_of_new = self.password_list  # These are used with random choice, to pick without replacement
         list_of_old = self.known_passwords
+        new_pw_index = 0
+        old_pw_index = 0
         if list_of_new:
-            desired_pass = random.choice(self.password_list)
-            list_of_new = [x for x in list_of_new if x is not desired_pass]  # constructive not surgical
+            desired_pass = self.password_list[new_pw_index]  # random.choice(self.password_list)
+            #list_of_new = [x for x in list_of_new if x is not desired_pass]  # constructive, not surgical
+            new_pw_index += 1
         elif self.known_passwords:
-            desired_pass = random.choice(self.known_passwords)
-            list_of_old = [x for x in list_of_old if x is not desired_pass]  # constructive not surgical
+            desired_pass = self.known_passwords[old_pw_index]  # random.choice(self.known_passwords)
+            #list_of_old = [x for x in list_of_old if x is not desired_pass]  # constructive not surgical
+            old_pw_index += 1
         # if there are requirements verify that the password complies with them
         if requirements is not None:
             # will run through every unused password, then every used one, so maxTries is more of a timeout
             # for long lists
-            maxTries = 100
-            while not requirements.verify(username, desired_pass) and maxTries > 0:
-                print 'password', desired_pass, 'chosen from', len(list_of_new), len(list_of_old), \
-                    'not verified against', requirements
-                if list_of_new:
-                    desired_pass = random.choice(list_of_new)
-                    list_of_new = [x for x in list_of_new if x is not desired_pass]
-                elif list_of_old:
-                    desired_pass = random.choice(list_of_old)
-                    list_of_old = [x for x in list_of_old if x is not desired_pass]
+            max_tries = 100
+            while (not requirements.verify(username, desired_pass) or self.overCogLoad(desired_pass)) and max_tries > 0:
+                #print 'password', desired_pass, 'chosen from', len(list_of_new), len(list_of_old), \
+                #    'not verified against', requirements
+                if new_pw_index < len(self.password_list):  # list_of_new:
+                    desired_pass = self.password_list[new_pw_index]  # random.choice(list_of_new)
+                    #list_of_new = [x for x in list_of_new if x is not desired_pass]
+                    new_pw_index += 1
+                elif new_pw_index < len(self.known_passwords):  # list_of_old:
+                    desired_pass = self.known_passwords[old_pw_index]  # random.choice(list_of_old)
+                    #list_of_old = [x for x in list_of_old if x is not desired_pass]
+                    old_pw_index += 1
                 else:
                     break  # no more passwords to try
-                maxTries -= 1
+                max_tries -= 1
 
         # if pass is too hard, reuse the hardest one or write it down,
         # the decision is based on memoBias parameter
         # maybe add some distance heuristics later
-        new_password_verified = True if requirements is None else requirements.verify(username, desired_pass)
+        new_password_verified = (requirements is None or requirements.verify(username, desired_pass)) \
+            and not self.overCogLoad(desired_pass)
 
-        if new_password_verified and \
-            (self.password_complexity(desired_pass) + self.cognitiveBurden) < self.cognitiveThreshold:
+        if new_password_verified:
             password = desired_pass
             # add to the list of known pass, and remove from potential passes
             if desired_pass not in self.known_passwords:
                 self.known_passwords.append(desired_pass)
+                # For now, compute and print the levenshtein set cost of the known passwords
+                print len(self.known_passwords), 'Levenshtein cost:', levenshtein_set_cost(self.known_passwords), self.known_passwords
             if desired_pass in self.password_list:
                 self.password_list.remove(desired_pass)
         elif self.known_passwords and \
@@ -349,11 +366,69 @@ transient doWork
             self.password_list.remove(desired_pass)
         return password
 
+    # Boolean - whether adding the password as a new password will tip the agent over its cognitive load threshold
+    def overCogLoad(self, password):
+        if password in self.known_passwords:
+            return False  # only increases the load if it's not already used
+        else:
+            new_cost = levenshtein_set_cost(self.known_passwords + [password])
+            # Should also check username cost, but currently don't
+            return new_cost > self.cognitiveThreshold
+
     # Should return a measure of the complexity of the password by our usual standards.
-    # Here I'm just using the length to get this up and running (Jim)
+    # Here I'm just using the length to get this up and running - and not sure this is what will be used finally
     def password_complexity(self, password):
         return len(password)
 
+# The cost of a set of strings is the cost of the minimum spanning tree over the set, with
+# levenshtein distance as edge weight.
+def levenshtein_set_cost(strings):
+    # First create the graph (a complete graph)
+    graph = {}
+    for i in xrange(0, len(strings)):
+        graph[i] = {}
+        for j in xrange(0, len(strings)):
+            if i < j:  # this will always come first
+                graph[i][j] = levenshtein_distance(strings[i], strings[j])
+            elif i > j:  # (so don't compute twice)
+                graph[i][j] = graph[j][i]
+    # Next compute the minimum spanning tree
+    mst = minimum_spanning_tree.minimum_spanning_tree(graph)
+    return sum([graph[x][y] for (x,y) in mst])
+
+
+# Copied from http://rosettacode.org/wiki/Levenshtein_distance
+def levenshtein_distance(str1, str2):
+    m = len(str1)
+    n = len(str2)
+    len_sum = float(m + n)
+    d = []
+    for i in range(m+1):
+        d.append([i])
+    del d[0][0]
+    for j in range(n+1):
+        d[0].append(j)
+    for j in range(1,n+1):
+        for i in range(1,m+1):
+            if str1[i-1] == str2[j-1]:
+                d[i].insert(j,d[i-1][j-1])
+            else:
+                minimum = min(d[i-1][j]+1, d[i][j-1]+1, d[i-1][j-1]+2)
+                d[i].insert(j, minimum)
+    l_dist = d[-1][-1]
+    #ratio = (len_sum - l_dist)/len_sum
+    #return {'distance':l_dist, 'ratio':ratio}
+    return l_dist
+
+print(levenshtein_distance("kitten","sitting"))
+print(levenshtein_distance("rosettacode","raisethysword"))
+
+
+
 
 if __name__ == "__main__":
-    PasswordAgent().agentLoop(1000)
+    pa = PasswordAgent()
+    pa.agentLoop(1000)
+    # Use the results on the hub, because the agent may create ids and passwords and then forget them,
+    # but they still exist.
+    # print 'final beliefs are', pa.beliefs

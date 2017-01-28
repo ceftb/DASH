@@ -7,6 +7,10 @@ class ServiceHub(WorldHub):
 
     def __init__(self):
         WorldHub.__init__(self)
+        self.initialize()
+
+    # Defined separately from the __init__ method so a client can use it to reset the trial
+    def initialize(self):
         self.service_counter = 0
         self.service_dictionary = {}   # dictionary service_name:service built at startup
         self.serviceDist = self.create_services(['mail', 'bank', 'social_net'])
@@ -30,10 +34,26 @@ class ServiceHub(WorldHub):
                     user_pwd_hosts[user][upw[user]].append(name)
             reuse_possibilities += len(upw) * (len(user_pwd_hosts) - 1)
         reuse_opportunities = 0
+        total = 0
+        histogram = [0]*reuse_possibilities
         for user in user_pwd_hosts:
             for pwd in user_pwd_hosts[user]:
                 reuse_opportunities += len(user_pwd_hosts[user][pwd]) - 1
+                histogram[len(user_pwd_hosts[user][pwd])] += 1
+                total += 1
         print reuse_opportunities, 'reuse opportunities out of', reuse_possibilities, 'options'
+        # Print everything, then the number of username-password combos used once, twice etc.
+        print user_pwd_hosts
+        print 'x, number of username password pairs used x times'
+        i = 1
+        for val in histogram:
+            print i, histogram[i]
+            total -= histogram[i]
+            if total <= 0:
+                break
+            i += 1
+        # For now, clear everything so we can run again without re-starting the hub
+        self.initialize()
 
     def reset_password(self, agent_id, (service_name, username, old_password, new_password)):
         service = self.service_dictionary[service_name]
