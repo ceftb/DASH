@@ -160,11 +160,12 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
 
             # With some fixed probability the agent forwards a work email to another work colleague, including
             # the sender as a reply, and we generalize the categories of email here
-            mode = message['mode']  # means email category
-            if self.colleagues[mode] and random.random() < self.forward_probability[mode]:
-                new_message = copy.copy(message)
-                new_message['to'] = random.choice(self.colleagues[mode])
-                self.mail_stack.append(new_message)
+            if 'mode' in message:
+                mode = message['mode']  # means email category
+                if mode in self.colleagues and self.colleagues[mode] and random.random() < self.forward_probability[mode]:
+                    new_message = copy.copy(message)
+                    new_message['to'] = random.choice(self.colleagues[mode])
+                    self.mail_stack.append(new_message)
 
             # The probability of opening an attachment in either is related to openness, but is much higher in work-related email.
             if self.decide_to_open(message, phishiness):

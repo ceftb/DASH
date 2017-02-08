@@ -27,6 +27,7 @@ class System2Agent:
         self.traceGoals = False
         self.traceClauses = False  # prints out information about clauses being tested for a goal
         self.traceForget = False
+        self.traceProject = False
 
     def readAgent(self, string):
         # state is used for multi-line statements like goalRequirements
@@ -340,10 +341,11 @@ class System2Agent:
 
     # Need 'not' in there properly as well as deep variable replacement
     def notKnown(self, predicate):
-        print "calling notknown with", predicate
         if self.isKnown(predicate):
+            print "calling notknown with", predicate, ": false"
             return []
         else:
+            print "calling notknown with", predicate, ": true"
             return [{}]
 
     # Create a list of all the known facts, used for projection
@@ -403,7 +405,19 @@ class System2Agent:
             initialWorld=self.knownList()
         exp_a = self.expectedUtility(self.project(plan_a, initialWorld))
         exp_b = self.expectedUtility(self.project(plan_b, initialWorld))
+        # temporary
+        print 'a:', exp_a, 'b:', exp_b
         return exp_a > exp_b
+
+    # If the first step in the plan is indicated, bind the step variable to it
+    def preferFirstStep(self, action):
+        (plan, stepVar) = action[1:]
+        if self.preferPlan(plan, plan[1:]):
+            print 'True prefer first step projection with', action
+            return [{stepVar: plan[0]}]
+        else:
+            print 'False prefer first step projection with', action
+            return False #[{stepVar: 'doNothing'}]
 
     def project(self, plan, state=[]):
         worlds = [state]
@@ -412,7 +426,8 @@ class System2Agent:
             for world in worlds:
                 newWorlds = newWorlds + self.projectStep(step, world)
             worlds = newWorlds
-        print "Projecting", plan, "\n  yields", worlds
+        if self.traceProject:
+            print "Projecting", plan, "\n  yields", worlds
         return worlds
 
     # Project a single step by finding the appropriate projection rule

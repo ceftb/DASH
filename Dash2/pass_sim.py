@@ -60,6 +60,9 @@ class PasswordAgent(DASHAgent):
         # strengthening rate
         self.strengtheningRate = 0.2
 
+        self.choose_password_method = 'random'  # 'list-order' or 'random' -
+        # how passwords are chosen either from the list of new or existing passwords
+
 
         # initial cog. burden
         self.cognitiveBurden = 0  # Perhaps this is computed at each point, haven't figured out the details yet.
@@ -311,13 +314,19 @@ transient doWork
         new_pw_index = 0
         old_pw_index = 0
         if list_of_new:
-            desired_pass = self.password_list[new_pw_index]  # random.choice(self.password_list)
-            #list_of_new = [x for x in list_of_new if x is not desired_pass]  # constructive, not surgical
-            new_pw_index += 1
+            if self.choose_password_method == 'random':
+                desired_pass = random.choice(self.password_list)
+                list_of_new = [x for x in list_of_new if x is not desired_pass]  # constructive, not surgical
+            else:
+                desired_pass = self.password_list[new_pw_index]  # random.choice(self.password_list)
+                new_pw_index += 1
         elif self.known_passwords:
-            desired_pass = self.known_passwords[old_pw_index]  # random.choice(self.known_passwords)
-            #list_of_old = [x for x in list_of_old if x is not desired_pass]  # constructive not surgical
-            old_pw_index += 1
+            if self.choose_password_method == 'random':
+                desired_pass = random.choice(self.known_passwords)
+                list_of_old = [x for x in list_of_old if x is not desired_pass]  # constructive not surgical
+            else:
+                desired_pass = self.known_passwords[old_pw_index]  # random.choice(self.known_passwords)
+                old_pw_index += 1
         # if there are requirements verify that the password complies with them
         if requirements is not None:
             # will run through every unused password, then every used one, so maxTries is more of a timeout
@@ -326,14 +335,22 @@ transient doWork
             while (not requirements.verify(username, desired_pass) or self.overCogLoad(desired_pass)) and max_tries > 0:
                 #print 'password', desired_pass, 'chosen from', len(list_of_new), len(list_of_old), \
                 #    'not verified against', requirements
-                if new_pw_index < len(self.password_list):  # list_of_new:
-                    desired_pass = self.password_list[new_pw_index]  # random.choice(list_of_new)
-                    #list_of_new = [x for x in list_of_new if x is not desired_pass]
-                    new_pw_index += 1
-                elif new_pw_index < len(self.known_passwords):  # list_of_old:
-                    desired_pass = self.known_passwords[old_pw_index]  # random.choice(list_of_old)
-                    #list_of_old = [x for x in list_of_old if x is not desired_pass]
-                    old_pw_index += 1
+                if (self.choose_password_method == 'list-order' and new_pw_index < len(self.password_list)) or \
+                        (self.choose_password_method == 'random' and list_of_new):
+                    if self.choose_password_method == 'list-order':
+                        desired_pass = self.password_list[new_pw_index]
+                        new_pw_index += 1
+                    else:
+                        desired_pass = random.choice(list_of_new)
+                        list_of_new = [x for x in list_of_new if x is not desired_pass]
+                elif (self.choose_password_method == 'list-order' and old_pw_index < len(self.known_passwords)) or \
+                        (self.choose_password_method == 'random' and list_of_old):
+                    if self.choose_password_method == 'list-order':
+                        desired_pass = self.known_passwords[old_pw_index]
+                        old_pw_index += 1
+                    else:
+                        desired_pass = random.choice(list_of_old)
+                        list_of_old = [x for x in list_of_old if x is not desired_pass]
                 else:
                     break  # no more passwords to try
                 max_tries -= 1
