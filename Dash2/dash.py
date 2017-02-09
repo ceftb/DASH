@@ -2,10 +2,13 @@ from system1 import System1Agent
 from system2 import System2Agent, substitute, isConstant, isVar
 from client import Client
 from human_traits import HumanTraits
+from parameter import Parameter, Uniform
 import re
 
 
 class DASHAgent(Client, System2Agent, System1Agent, HumanTraits):
+
+    parameters = []
 
     def __init__(self):
         Client.__init__(self)
@@ -22,6 +25,12 @@ class DASHAgent(Client, System2Agent, System1Agent, HumanTraits):
         # Although 'forget' is defined in system2, it is assigned primitive here because
         # that module is compiled first
         self.primitiveActions([('forget', self.forget), ['sleep', self.sleep]])
+        # Instantiate some agent values from the declared parameters. By default sample the distributions if given.
+        # Need some code for when there is no distribution etc.
+        for parameter in self.__class__.parameters:
+            v = parameter.distribution.sample()
+            print 'setting', parameter, 'to', v
+            setattr(self, parameter.name, v)
 
     # This is in the java part in the old agent
     def agentLoop(self, max_iterations=-1, disconnect_at_end=True):
@@ -124,7 +133,7 @@ class DASHAgent(Client, System2Agent, System1Agent, HumanTraits):
 
     # A null action that always succeeds, useful for dummy steps
     def succeed(self, action):
-        #print "Primitive action", action, "trivially succeeds"
+        print "Primitive action", action, "trivially succeeds"
         return [{'performed': action}]
 
 

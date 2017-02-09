@@ -1,9 +1,14 @@
 import random
 import copy
-from dash import DASHAgent
+from dash import DASHAgent, Parameter, Uniform
 
 
 class MailReader(DASHAgent):
+
+    # Class-level information about parameter probability distributions
+                  # If the message is phish, it is recognized with this constant probability
+    parameters = [Parameter('probability_recognize_phish', distribution=Uniform(0.7, 0.9)),
+                  Parameter('probability_click_unrecognized_phish', distribution=Uniform(0.1, 0.4))]
 
     def __init__(self, address):
         DASHAgent.__init__(self)
@@ -40,7 +45,6 @@ goalRequirements sendMailFromStack(mail)
 transient doWork     # Agent will forget goal's achievement or failure as soon as it happens
 
                        """)
-        self.primitiveActions([('click', self.click_link_in_mail)])
 
         self.address = address
         print 'registering', address
@@ -60,10 +64,6 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
         # This number isn't really used right now, since we return a score above or below based on whether the agent identifies
         # the message as phish, not the other way around.
         self.phishiness_threshold = 0.5  # messages are score from 0 to 1 and rejected as phish if they score over this threshold
-
-        # This is a simple parameter that can be manipulated
-        self.probability_recognize_phish = 0.8  # If the message is phish, it is recognized with this constant probability
-        self.probability_click_unrecognized_phish = 0.3
 
         # probability that email deemed to be legitimate leisure mail will be forwarded to a friend. Shortly this
         # should be calculated based on agreeableness, extraversion and conscientiousness.
@@ -208,10 +208,6 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
     def open_attachment_in_mail(self, (predicate, mail)):
         if 'attachment' in mail:
             self.attachments_opened.append(mail['attachment'])
-        return [{}]
-
-    def succeed_m(self, goal):
-        #print 'calling succeed'
         return [{}]
 
     # System 1 support
