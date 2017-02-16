@@ -437,10 +437,8 @@ def levenshtein_distance(str1, str2):
     #return {'distance':l_dist, 'ratio':ratio}
     return l_dist
 
-print(levenshtein_distance("kitten","sitting"))
-print(levenshtein_distance("rosettacode","raisethysword"))
-
-
+#print(levenshtein_distance("kitten","sitting"))
+#print(levenshtein_distance("rosettacode","raisethysword"))
 
 
 if __name__ == "__main__":
