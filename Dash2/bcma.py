@@ -1,4 +1,4 @@
-from dash import DASHAgent
+from dash import DASHAgent, isVar
 
 
 class BCMAAgent(DASHAgent):
@@ -27,7 +27,10 @@ goalRequirements doFirstStepIfPreferred(plan)
 # The second clause for the same goal is tried after the first one
 # fails.
 goalRequirements doFirstStepIfPreferred(plan)
-  succeeds(plan)
+  succeeds(_doNothing)
+
+# Breaks the recursion
+goalRequirements decidePerformRest([])
 
 goalRequirements decidePerformRest(plan)
   remainder(plan, rest)
@@ -68,49 +71,41 @@ utility
   performed(document(meds, patient)) -> 1
 
 """)
-        self.primitiveActions([['notKnown', self.notKnown],
-                  ['buildPlan', self.buildPlan],
-                  ['preferFirstStep', self.preferFirstStep],
-                  ['remainder', self.remainder],
-                  ['eMAR_Review', self.succeed],
-                  ['retrieveMeds', self.succeed],
-                  ['scan', self.succeed],
-                  ['deliver', self.succeed],
-                  ['ensureLoggedIn', self.succeed],
-                  ['document', self.succeed],
-                  ['succeeds', self.succeed],
-                  ['doNothing', self.succeed]])
+        self.primitiveActions([[x, self.succeed] for x in ['eMAR_Review', 'retrieveMeds', 'scan', 'deliver',
+                                                           #'ensureLoggedIn',
+                                                           'document', 'succeeds', 'doNothing']])
+        self.traceProject = True
+
 
     # assume patient is bound and plan is not. Return bindings
     # for the plan
-    def buildPlan(self, action):
-        print "calling build plan with", action
-        (patient, meds, plan) = action[1:]
+    def build_plan(self, (predicate, patient, meds, plan)):
+        print "calling build plan with", patient, meds
         # instantiates the plan for the patient and meds
-        return [{plan: [('eMAR_Review', patient),
-        ('retrieveMeds', meds, patient),
-        ('scan', patient),
-        ('scan', meds),
-        ('deliver', meds, patient),
-        'ensureLoggedIn',
-        ('document', meds, patient)]}]
-
-    # If the first step in the plan is indicated, bind the step variable to it
-    def preferFirstStep(self, action):
-        (plan, stepVar) = action[1:]
-        if self.preferPlan(plan, plan[1:]):
-            return [{stepVar: plan[0]}]
+        if isVar(plan):
+            return [{plan: [('eMAR_Review', patient),
+                            ('retrieveMeds', meds, patient),
+                            ('scan', patient),
+                            ('scan', meds),
+                            ('deliver', meds, patient),
+                            ('ensureLoggedIn',),  # The comma is needed to force this action to be a tuple
+                            ('document', meds, patient)]}]
         else:
-            return False #[{stepVar: 'doNothing'}]
+            return []
 
     # Binds the 'remainder' var to the remainder of the plan in the first var
-    def remainder(self, action):
-        (plan, remvar) = action[1:]
+    def remainder(self, (predicate, plan, remainder_var)):
         if len(plan) < 1:
             return []
         else:
-            return [{remvar: plan[1:]}]
+            return [{remainder_var: plan[1:]}]
+
+    def ensure_logged_in(self, goal):
+        # Just assert that the agent is logged in right now
+        self.known('_loggedIn', [])
+        return [{}]
 
 
 if __name__ == "__main__":
-    BCMAAgent().agentLoop(max_iterations=200)
+    a = BCMAAgent()
+    a.agentLoop(max_iterations=200)

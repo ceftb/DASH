@@ -29,6 +29,22 @@ class System2Agent:
         self.traceForget = False
         self.traceProject = False
 
+    # A primitive action is declared in primitiveActionDict, or it might be a method
+    # on the agent with the same name, or the same name with camelCase converted to underscores
+    def isPrimitive(self, goal):
+        predicate = goal[0]
+        # Protect some predicates from being treated as primitive by this permissive method
+        if predicate in ['known']:
+            return False
+        if predicate in self.primitiveActionDict:
+            return True
+        if hasattr(self, predicate) and callable(getattr(self, predicate)):
+            return True
+        underscore_action = dash.convert_camel(predicate)
+        if hasattr(self, underscore_action) and callable(getattr(self, underscore_action)):
+            return True
+        return False
+
     def readAgent(self, string):
         # state is used for multi-line statements like goalRequirements
         # and projection rules
@@ -172,10 +188,12 @@ class System2Agent:
     # utility by that amount.
     def readUtility(self, lines):
         for line in lines[1:]:
-            print "reading utility from", line
+            if self.traceProject:
+                print "reading utility from", line
             [precond, incr] = line.split("->")
             self.utilityRules.append([self.readGoalTuple(precond.strip()), float(incr)])
-        print "Utility rules are", self.utilityRules
+        if self.traceProject:
+            print "Utility rules are", self.utilityRules
 
     def readTransient(self, line):
         goal = self.readGoalTuple(line[line.find(" "):].strip())
@@ -351,7 +369,7 @@ class System2Agent:
     # Create a list of all the known facts, used for projection
     # (Simple def used for functional abstraction)
     def knownList(self):
-        return [fact for goal in self.knownDict for fact in self.knownDict[goal]]
+        return [fact if type(fact) is not tuple or len(fact) != 1 else fact[0] for goal in self.knownDict for fact in self.knownDict[goal]]
 
     def isIn(self, goal, adict):
         if goal[0] in adict:
@@ -403,48 +421,77 @@ class System2Agent:
     def preferPlan(self, plan_a, plan_b, initialWorld=None):
         if initialWorld == None:  # by default, start from what's known in the world
             initialWorld=self.knownList()
+        if self.traceProject:
+            print 'initial world for a:'
+            for fact in initialWorld:
+                if self.my_size(fact) < 10:
+                    print "  ", fact
         exp_a = self.expectedUtility(self.project(plan_a, initialWorld))
+        if self.traceProject:
+            print 'initial world for b:'
+            for fact in initialWorld:
+                if self.my_size(fact) < 10:
+                    print "  ", fact
         exp_b = self.expectedUtility(self.project(plan_b, initialWorld))
         # temporary
-        print 'a:', exp_a, 'b:', exp_b
+        if self.traceProject:
+            print 'a:', plan_a, exp_a, 'b:', plan_b, exp_b
         return exp_a > exp_b
+
+    # recursively count the elements in an s-expression
+    def my_size(self, x):
+        if type(x) in [list, tuple]:
+            return sum([self.my_size(element) for element in x])
+        else:
+            return 1
 
     # If the first step in the plan is indicated, bind the step variable to it
     def preferFirstStep(self, action):
         (plan, stepVar) = action[1:]
         if self.preferPlan(plan, plan[1:]):
-            print 'True prefer first step projection with', action
+            if self.traceProject:
+                print 'True prefer first step projection with', action
             return [{stepVar: plan[0]}]
         else:
-            print 'False prefer first step projection with', action
+            if self.traceProject:
+                print 'False prefer first step projection with', action
             return False #[{stepVar: 'doNothing'}]
 
     def project(self, plan, state=[]):
         worlds = [state]
         for step in plan:
-            newWorlds = []
+            new_worlds = []
             for world in worlds:
-                newWorlds = newWorlds + self.projectStep(step, world)
-            worlds = newWorlds
+                new_worlds = new_worlds + self.projectStep(step, world)
+            worlds = new_worlds
         if self.traceProject:
-            print "Projecting", plan, "\n  yields", worlds
+            # Temporary
+            #print "Projecting", plan, "\n  yields", worlds
+            print "Projecting", plan, "\n  yields",\
+                  [[x for x in world if x == '_loggedIn' or (type(x) is tuple and x[0] == 'performed' and x[1][0] in ['document', 'scan'])] for world in worlds]
         return worlds
 
     # Project a single step by finding the appropriate projection rule
     def projectStep(self, step, world):
         #print 'projecting', step, 'on', world
         head = step   # predicate for the rule, which is the step if it's a string..
+        copied = False  # whether we have made a copy of the world to protect others from the same changes
         if isinstance(step, (list, tuple)):
             head = step[0]  #.. and otherwise the first element
         if head in self.projectionRuleDict:
             rules = self.projectionRuleDict[head]
             for rule in rules:
                 bindings = unify(rule[0], step) if isinstance(step, (list, tuple)) else True
-                if bindings != False:
-                    #print "Rule", rule, "matches with bindings", bindings
+                if bindings is not False:
+                    if self.traceProject:
+                        print "Rule", rule, "matches with bindings", bindings
                     for effect in rule[1]:
-                        if effect.precondition == True or matchPrecond(substitute(effect.precondition, bindings), world):
-                            world = effect.do(world, bindings)
+                        if effect.precondition is True or matchPrecond(substitute(effect.precondition, bindings), world):
+                            # As soon as we know there will be a change make sure this is a copy
+                            if not copied:
+                                world = list(world)
+                                copied = True  # but only need to copy once
+                            world = effect.update_world(world, bindings)
                     return [world]
         # Default effect if no rule matched
         return [world + [('performed', step)]]
@@ -501,7 +548,6 @@ def allMatches(pattern, world, allBindings=[{}]):
     return []
 
 
-
 # A probabilistic effect should really be a list of alternatives whose
 # probability sum to 1 but for now I'm just providing a probability p,
 # and we assume that the alternative is nothing happening with prob 1-p.
@@ -522,7 +568,7 @@ class Effect(object):
         return "<effect: %s -> %s %s>" % (self.precondition, '+' if self.addOrDelete == self.add else '-', self.term)
 
     # return a world after this effect happens in the input world (list of facts)
-    def do(self, world, bindings):
+    def update_world(self, world, bindings):
         if isinstance(self.term, (list, tuple)):
             fact = substitute(self.term, bindings)
         else:

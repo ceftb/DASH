@@ -179,11 +179,13 @@ class Client(object):
         """
 
         if self.sock is not None:
-            self.sendMessage(message_types['disconnect'], [self.id, aux_data])
+            if self.connected:
+                self.sendMessage(message_types['disconnect'], [self.id, aux_data])
+                self.sock.shutdown(socket.SHUT_RDWR)
 
             if self.trace_client:
-                print "disconnecting from world hub."
-            self.sock.shutdown(socket.SHUT_RDWR)
+                print "disconnecting from world hub" + "." if self.connected else ", no message sent since already not connected."
+
             self.sock.close()
         #sys.exit(0)  # Should not automatically kill the process
 

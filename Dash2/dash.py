@@ -2,7 +2,7 @@ from system1 import System1Agent
 from system2 import System2Agent, substitute, isConstant, isVar
 from client import Client
 from human_traits import HumanTraits
-from parameter import Parameter, Uniform
+from parameter import Parameter, Uniform, Boolean
 import re
 
 
@@ -25,12 +25,13 @@ class DASHAgent(Client, System2Agent, System1Agent, HumanTraits):
         # Although 'forget' is defined in system2, it is assigned primitive here because
         # that module is compiled first
         self.primitiveActions([('forget', self.forget), ['sleep', self.sleep]])
-        # Instantiate some agent values from the declared parameters. By default sample the distributions if given.
+        # Instantiate some agent values from the declared parameters. By default, use the default value,
+        # otherwise sample the distribution
         # Need some code for when there is no distribution etc.
-        for parameter in self.__class__.parameters:
-            v = parameter.distribution.sample()
-            print 'setting', parameter, 'to', v
-            setattr(self, parameter.name, v)
+        for p in self.__class__.parameters:
+            v = p.distribution.sample() if p.default is None else p.default
+            print 'setting', p, 'to', v
+            setattr(self, p.name, v)
 
     # This is in the java part in the old agent
     def agentLoop(self, max_iterations=-1, disconnect_at_end=True):
@@ -76,22 +77,6 @@ class DASHAgent(Client, System2Agent, System1Agent, HumanTraits):
                 self.primitiveActionDict[item] = item # store the name and look for the function at planning time
             else:
                 self.primitiveActionDict[item[0]] = item[1]
-
-    # A primitive action is declared in primitiveActionDict, or it might be a method
-    # on the agent with the same name, or the same name with camelCase converted to underscores
-    def isPrimitive(self, goal):
-        predicate = goal[0]
-        # Protect some predicates from being treated as primitive by this permissive method
-        if predicate in ['known']:
-            return False
-        if predicate in self.primitiveActionDict:
-            return True
-        if hasattr(self, predicate) and callable(getattr(self, predicate)):
-            return True
-        underscore_action = convert_camel(predicate)
-        if hasattr(self, underscore_action) and callable(getattr(self, underscore_action)):
-            return True
-        return False
 
     # This format is now inefficient since we have different ways that a predicate can be a primitive action
     def performAction(self, action):
