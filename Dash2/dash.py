@@ -15,7 +15,6 @@ class DASHAgent(Client, System2Agent, System1Agent, HumanTraits):
         System2Agent.__init__(self)
         System1Agent.__init__(self)
         HumanTraits.__init__(self)
-        self.primitiveActionDict = dict()
         # Activation threshold at which actions suggested by system 1 will be considered over deliberation
         # A low threshold will produce more 'impulsive' actions
         self.system1_threshold = 0.1

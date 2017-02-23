@@ -10,6 +10,7 @@ class System2Agent:
     def __init__(self):
         self.goalWeightDict = dict()
         self.goalRequirementsDict = dict()
+        self.primitiveActionDict = dict()
         self.knownDict = dict()
         self.knownFalseDict = dict()
         self.transientDict = dict()
@@ -132,6 +133,8 @@ class System2Agent:
                 return "_" + parse.value
             else:
                 return parse.value
+        elif isinstance(parse, compiler.ast.Not):
+            return 'not', self.parseToTuple(parse.expr)
         else:
             print "Unhandled node type:", parse
             raise BaseException
@@ -235,7 +238,7 @@ class System2Agent:
                 print "recording as known", t
             adict[t[0]].append(t)
 
-    def known(self, predicate, arguments):
+    def known(self, predicate, arguments=[]):
         self.knownTuple(tuple([predicate]) + tuple(arguments))  # this allows arguments to be any iterable
 
     def knownFalse(self, predicate, arguments):
@@ -250,6 +253,7 @@ class System2Agent:
         if goal is not None:
             return self.chooseActionForGoals([goal])
         else:
+            print 'no unsatisfied goals'
             return None
 
     def chooseGoal(self):
@@ -375,7 +379,7 @@ class System2Agent:
         if goal[0] in adict:
             for term in adict[goal[0]]:
                 bindings = unify(goal, term)
-                if bindings != False:  # Since {} means success with no new bindings
+                if bindings is not False:  # Since {} means success with no new bindings
                     return bindings
         return False
 
@@ -418,7 +422,7 @@ class System2Agent:
     ## Projection
     #################
 
-    def preferPlan(self, plan_a, plan_b, initialWorld=None):
+    def prefer_plan(self, plan_a, plan_b, initialWorld=None):
         if initialWorld == None:  # by default, start from what's known in the world
             initialWorld=self.knownList()
         if self.traceProject:
@@ -446,34 +450,33 @@ class System2Agent:
             return 1
 
     # If the first step in the plan is indicated, bind the step variable to it
-    def preferFirstStep(self, action):
-        (plan, stepVar) = action[1:]
-        if self.preferPlan(plan, plan[1:]):
+    def prefer_first_step(self, (goal, plan, step_var)):
+        if self.prefer_plan(plan, plan[1:]):
             if self.traceProject:
-                print 'True prefer first step projection with', action
-            return [{stepVar: plan[0]}]
+                print 'True prefer first step projection with', goal, plan, step_var
+            return [{step_var: plan[0]}]
         else:
             if self.traceProject:
-                print 'False prefer first step projection with', action
-            return False #[{stepVar: 'doNothing'}]
+                print 'False prefer first step projection with', goal, plan, step_var
+            return False
 
     def project(self, plan, state=[]):
         worlds = [state]
         for step in plan:
             new_worlds = []
             for world in worlds:
-                new_worlds = new_worlds + self.projectStep(step, world)
+                new_worlds = new_worlds + self.project_step(step, world)
             worlds = new_worlds
         if self.traceProject:
             # Temporary
             #print "Projecting", plan, "\n  yields", worlds
-            print "Projecting", plan, "\n  yields",\
-                  [[x for x in world if x == '_loggedIn' or (type(x) is tuple and x[0] == 'performed' and x[1][0] in ['document', 'scan'])] for world in worlds]
+            print "Projecting", plan, "\n  yields", worlds
         return worlds
 
     # Project a single step by finding the appropriate projection rule
-    def projectStep(self, step, world):
-        #print 'projecting', step, 'on', world
+    def project_step(self, step, world):
+        if self.traceProject:
+            print 'projecting', step, 'on', world
         head = step   # predicate for the rule, which is the step if it's a string..
         copied = False  # whether we have made a copy of the world to protect others from the same changes
         if isinstance(step, (list, tuple)):
@@ -481,12 +484,12 @@ class System2Agent:
         if head in self.projectionRuleDict:
             rules = self.projectionRuleDict[head]
             for rule in rules:
-                bindings = unify(rule[0], step) if isinstance(step, (list, tuple)) else True
+                bindings = unify(rule[0], step) if isinstance(step, (list, tuple)) else {}
                 if bindings is not False:
                     if self.traceProject:
                         print "Rule", rule, "matches with bindings", bindings
                     for effect in rule[1]:
-                        if effect.precondition is True or matchPrecond(substitute(effect.precondition, bindings), world):
+                        if effect.precondition is True or match_precond(substitute(effect.precondition, bindings), world):
                             # As soon as we know there will be a change make sure this is a copy
                             if not copied:
                                 world = list(world)
@@ -494,12 +497,15 @@ class System2Agent:
                             world = effect.update_world(world, bindings)
                     return [world]
         # Default effect if no rule matched
+        if self.traceProject:
+            print 'returning', [world + [('performed', step)]]
         return [world + [('performed', step)]]
 
     def utility(self, world):
         total = 0
         for rule in self.utilityRules:
             total += len(allMatches(rule[0], world)) * rule[1]
+        #print 'utility of', world, 'is', total
         return total
 
     def expectedUtility(self, worlds):
@@ -512,20 +518,17 @@ class System2Agent:
         return [{}]
 
 
-
-
-def matchPrecond(precond, world):
-    #print "Matching", precond
-    if precond == True:
+def match_precond(precond, world):
+    if precond is True:
         return True
     if isinstance(precond, (tuple, list)) and precond[0] == 'and':
-        for subPrecond in precond[1:]:
-            if not matchPrecond(subPrecond, world):
+        for sub_precond in precond[1:]:
+            if not match_precond(sub_precond, world):
                 return False
         return True
     elif isinstance(precond, (tuple, list)) and precond[0] == 'or':
-        for subPrecond in precond[1:]:
-            if matchPrecond(subPrecond, world):
+        for sub_precond in precond[1:]:
+            if match_precond(sub_precond, world):
                 return True
         return False
     elif isinstance(precond, (tuple, basestring)):    # match a single goal
@@ -544,15 +547,19 @@ def allMatches(pattern, world, allBindings=[{}]):
     if isinstance(pattern, (tuple, list)):
         matches = [b for b in [unify(fact, pattern, bindings) for fact in world for bindings in allBindings]
                    if b is not False]
+        #print 'all matches for', pattern, 'in', world, 'are', matches
         return matches
-    return []
+    elif pattern in world:
+        #print 'one match for', pattern, 'in', world
+        return [{}]
+    else:
+        #print 'no matches for', pattern, 'in', world
+        return []
 
 
 # A probabilistic effect should really be a list of alternatives whose
 # probability sum to 1 but for now I'm just providing a probability p,
 # and we assume that the alternative is nothing happening with prob 1-p.
-
-
 class Effect(object):
 
     add = 1
@@ -612,11 +619,9 @@ def substitute_argument(arg, bindings):
     else:
         return bindings[arg]
 
-
-# Return bindings that would unify the pattern with the candidate, or False
 traceUnify = False
 
-
+# Return bindings that would unify the pattern with the candidate, or False
 def unify(pattern, candidate, bindings=None):
     if bindings is None:
         bindings = {}   # Cannot create dict in the argslist, or it's shared between every call
