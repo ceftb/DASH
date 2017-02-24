@@ -19,6 +19,7 @@ class System2Agent:
         # clause in the middle of some goal requirements, which will never happen if forget is transient.
         # I think the best answer right now might be to add some judicious forget([forget(x)]) statements
         self.projectionRuleDict = dict()
+        self.triggerRules = []
         self.utilityRules = []
 
         # Read the agent definition in a simpler syntax and create the appropriate definitions
@@ -53,17 +54,20 @@ class System2Agent:
         goalRequirements = 1
         project = 2
         utility = 3
+        trigger = 4
         lines = []
         for line in string.split('\n'):
             if "#" in line:
                 line = line[0:line.find("#")]
             line = line.strip()
-            if state in [goalRequirements, project, utility]:
+            if state in [goalRequirements, project, utility, trigger]:
                 if line == "":
                     if state == goalRequirements:
                         self.readGoalRequirements(lines)
                     elif state == project:
                         self.readProject(lines)
+                    elif state == trigger:
+                        self.readTrigger(lines)
                     elif state == utility:
                         self.readUtility(lines)
                     state = 0
@@ -80,6 +84,9 @@ class System2Agent:
                 self.readPrimitive(line)
             elif line.startswith("project"):
                 state = project
+                lines = [line]
+            elif line.startswith("trigger"):
+                state = trigger
                 lines = [line]
             elif line.startswith("utility"):
                 state = utility
@@ -147,11 +154,28 @@ class System2Agent:
         if self.traceParse:
             print "Reading projection rule from", lines
         goal = self.readGoalTuple(lines[0][lines[0].find(" "):].strip())
+        # Store a list of projection rules indexed by the goal
+        head = goal
+        if isinstance(goal, (list, tuple)):
+            head = goal[0]
+        if head not in self.projectionRuleDict:
+            self.projectionRuleDict[head] = []
+        effects = self.read_effect_lines(lines[1:])
+        self.projectionRuleDict[head].append((goal, effects))
+
+    def readTrigger(self, lines):
+        if self.traceParse:
+            print "Reading trigger rule from", lines
+        trigger = self.readGoalTuple(lines[0][lines[0].find(" "):].strip())
+        effects = self.read_effect_lines(lines[1:])  # trigger effects are just like project rule effects
+        self.triggerRules.append((trigger, effects))
+
+    def read_effect_lines(self, lines):
         effects = []
         # To handle multi-line preconditions, group lines into a longLine that
         # contains a " + " or " - "
         longLine = ""
-        for line in lines[1:]:
+        for line in lines:
             longLine += line
             effectLine = longLine
             condition = True
@@ -161,13 +185,7 @@ class System2Agent:
                     condition = self.readGoalTuple(precondLine)
                 effects.append(self.readEffectLine(effectLine, condition))
                 longLine = ""
-        # Store a list of projection rules indexed by the goal
-        head = goal
-        if isinstance(goal, (list, tuple)):
-            head = goal[0]
-        if head not in self.projectionRuleDict:
-            self.projectionRuleDict[head] = []
-        self.projectionRuleDict[head].append((goal, effects))
+        return effects
 
     def readEffectLine(self, line, condition=True):
         p = compiler.parse(line.strip()).node.nodes[0].expr
@@ -478,28 +496,48 @@ class System2Agent:
         if self.traceProject:
             print 'projecting', step, 'on', world
         head = step   # predicate for the rule, which is the step if it's a string..
+        matched = False  # matched means a projection rule matched. Copied means we changed the world and copied it
         copied = False  # whether we have made a copy of the world to protect others from the same changes
         if isinstance(step, (list, tuple)):
             head = step[0]  #.. and otherwise the first element
+        bindings = {}
+        # Run the first matching projection rule
         if head in self.projectionRuleDict:
             rules = self.projectionRuleDict[head]
             for rule in rules:
-                bindings = unify(rule[0], step) if isinstance(step, (list, tuple)) else {}
+                bindings = unify(rule[0], step) if isinstance(step, (list, tuple)) else {}  # why not all matches??
                 if bindings is not False:
+                    matched = True
                     if self.traceProject:
                         print "Rule", rule, "matches with bindings", bindings
-                    for effect in rule[1]:
-                        if effect.precondition is True or match_precond(substitute(effect.precondition, bindings), world):
-                            # As soon as we know there will be a change make sure this is a copy
-                            if not copied:
-                                world = list(world)
-                                copied = True  # but only need to copy once
-                            world = effect.update_world(world, bindings)
-                    return [world]
+                    world, copied = self.apply_effects_list(rule[1], world, bindings, copied)
+                    #return [world]  Now want to add triggers in the same function
+                    break
         # Default effect if no rule matched
-        if self.traceProject:
-            print 'returning', [world + [('performed', step)]]
-        return [world + [('performed', step)]]
+        if not matched:
+            if self.traceProject:
+                print 'returning', [world + [('performed', step)]]
+            if not copied:
+                world = list(world)
+                copied = True
+            world = world + [('performed', step)]
+        # Next run any triggers that match (will match them every step henceforth, but could add an effect to stop that)
+        for trigger in self.triggerRules:
+            all_bindings = allMatches(trigger[0], world, [bindings])
+            for trigger_bindings in all_bindings:
+                world, copied = self.apply_effects_list(trigger[1], world, trigger_bindings, copied)
+        return [world]
+
+    def apply_effects_list(self, effects, world, bindings, copied):
+        for effect in effects:
+            if effect.precondition is True or match_precond(substitute(effect.precondition, bindings), world):
+                # As soon as we know there will be a change make sure this is a copy
+                if not copied:
+                    world = list(world)
+                    copied = True  # but only need to copy once
+                world = effect.update_world(world, bindings)
+        return world, copied
+
 
     def utility(self, world):
         total = 0
@@ -531,6 +569,11 @@ def match_precond(precond, world):
             if match_precond(sub_precond, world):
                 return True
         return False
+    elif isinstance(precond, (tuple, list)) and precond[0] == 'not':
+        if match_precond(precond[1], world):
+            return False
+        else:
+            return True
     elif isinstance(precond, (tuple, basestring)):    # match a single goal
         return precond in world                       # trying to avoid python2-specific match
     else:

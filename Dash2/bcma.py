@@ -74,7 +74,7 @@ utility
         self.primitiveActions([[x, self.succeed] for x in ['eMAR_Review', 'retrieveMeds', 'scan', 'deliver',
                                                            #'ensureLoggedIn',
                                                            'document', 'succeeds', 'doNothing']])
-        self.traceProject = True
+        #self.traceProject = True
 
 
     # assume patient is bound and plan is not. Return bindings
@@ -102,7 +102,7 @@ utility
 
     def ensure_logged_in(self, goal):
         # Just assert that the agent is logged in right now
-        self.known('_loggedIn', [])
+        self.known('_loggedIn')
         return [{}]
 
 
