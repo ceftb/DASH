@@ -26,8 +26,6 @@ goalRequirements decideFirstStep(plan)
 goalRequirements decideFirstStep(plan)
   succeed(_doNothing)
 
-# Really for these two clauses we have model and not performed(action) -> unsafe in different ways
-# But not sure I can match negatives yet
 project followLink()
   + _got_data
   + _attacked
@@ -44,6 +42,8 @@ utility
 """)
         self.known('_vandal_model')  # Assert the model(s) that the agent is using
         #self.known('_burglar_model')
+        # Uncomment to see what's going on with the projection
+        #self.traceProject = True
 
     # Binds the 'remainder' var to the remainder of the plan in the first var
     def remainder(self, (predicate, plan, remainder_var)):
@@ -67,4 +67,4 @@ utility
 
 if __name__ == "__main__":
     s = SecurityUser()
-    s.agentLoop(max_iterations=200)
+    s.agentLoop(max_iterations=10)
