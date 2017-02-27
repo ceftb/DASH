@@ -49,30 +49,30 @@ class PasswordAgent(DASHAgent):
                               'MyP4SsW0rd!234', 'MyP@SsW0rd!234', 'MyPaSsWoRd!234?', 'MyPaSsW0Rd!234?',
                               'MyS3cUReP@SsW0rd!2345', 'MyV3ryL0ngS3cUReP@SsW0rd!2345?']
 
-        # distribution of probabilities for every service type. Used to be dictionaries, but then order is not guaranteed
+        # distribution of probabilities for every service type. These are cumulative probabilities, so order matters.
         self.serviceProbs = [('mail', 0.35), ('social_net', 0.85), ('bank', 1.0)]
         # bias between memorizing or writing down
         self.memoBias = [('reuse', 0.5), ('write_down', 1.0)]
         # initial strength of beliefs
         self.initial_belief = 0.65
         # forgetting rate - percent of belief lost
-        self.forgettingRate = 0.15
+        self.initial_password_forget_rate = 0.0025  # from bruno_user.pl
+        self.password_forget_rate = {}
         # strengthening rate
         self.strengtheningRate = 0.2
+        self.strengthen_factor = 4  # strengthenScalar from bruno_user.pl
 
         self.choose_password_method = 'random'  # 'list-order' or 'random' -
         # how passwords are chosen either from the list of new or existing passwords
 
-
-        # initial cog. burden
         self.cognitiveBurden = 0  # Perhaps this is computed at each point, haven't figured out the details yet.
         # These were copied from bruno_user.pl in lib/logic - check for comments there.
         self.cognitiveThreshold = 30  # was 68 in the prolog but trying one that limits to something like 12 passwords
         # (the prolog version included the cost for usernames, not currently included)
-        self.recallThreshold = 0.5
+        self.recallThreshold = 0.5  # from bruno_user.pl
         self.passwordReusePriority = 'long'
         self.passwordReuseThreshold = 54
-        self.passwordForgetRateStoppingCriterion = 0.0005
+        self.passwordForgetRateStoppingCriterion = 0.0005  # from bruno_user.pl
         # pairs used - dict {service:[username, password]}
         self.known = {}
         # usernames used - dict {username:complexity} (I changed to just a list - Jim)
@@ -84,19 +84,7 @@ class PasswordAgent(DASHAgent):
         # USER beliefs
         self.beliefs = {}
 
-        # This is used below so I added it here to make the code run.
-        # Not sure how it should interact with the variables above
-        self.username_list = ['user1', 'user12', 'admin']
-
-        # i'm not really clear about usage of primitive actions vs just defining
-        # new goals
-        self.primitiveActions([
-                               ('checkTermination', self.check_termination),
-                               ('setupAccount', self.setupAccount),
-                               ('signIn', self.signIn),
-                               ('signOut', self.signOut),
-                               ('resetPassword', self.resetPassword)
-                               ])
+        self.username_list = ['user1', 'user12', 'admin']  # user names currently randomly chosen from these
 
         # The agent goal description is short, because the rational task is not that important here.
         self.readAgent("""
@@ -123,7 +111,7 @@ transient doWork
 
     # service_type_var may be unbound or bound to a requested service_type. service_var is unbound
     # and will be bound to the result of setting up the service
-    def setupAccount(self, (goal, service_type_var, service_var)):
+    def setup_account(self, (goal, service_type_var, service_var)):
         ''' Should be equivalent to createAccount subgoal in prolog version
         It takes service type as an input, and decides which
         username to use[1]. Then, it picks the password and submits the info.
@@ -181,6 +169,7 @@ transient doWork
                 self.beliefs[service] = [username, password, self.initial_belief]
             else:
                 self.beliefs[service] = [username, password, self.initial_belief, 0.9999]
+            self.password_forget_rate[service] = self.initial_password_forget_rate  # following bruno_user.pl but not a direct copy
             if isVar(service_type_var):
                 return [{service_type_var: service_type, service_var: service}]
             else:
@@ -200,9 +189,8 @@ transient doWork
             print 'unknown result for creating account:', service, status, data
             return []
 
-
-    def signIn(self, (goal, service)):
-        ''' This should be equivalent to singIn subgoal in prolog version
+    def sign_in(self, (goal, service)):
+        ''' This should be equivalent to signIn subgoal in prolog version
         User looks for service beliefs on the worldHub, and based on the strength
         of his belief tries either one of the known passwords or the password for
         which agent has beliefs. If he has no account on that service it proceeds
@@ -235,8 +223,12 @@ transient doWork
         # Finally, if failed, repeat the sign in process with the updated beliefs
         login_response = self.sendAction('signIn', [service, username, password])
         if login_response[0] == 'success':
+            if service not in self.password_forget_rate:
+                self.password_forget_rate[service] = self.initial_password_forget_rate
+            else:
+                self.password_forget_rate[service] /= 2.364  # from bruno_user.pl
             if changed_password:
-                self.beliefs[service][2] += (self.beliefs[service][2]*self.strengtheningRate)
+                self.beliefs[service][2] += self.beliefs[service][2] * self.strengtheningRate
                 new_strength = min(self.beliefs[service][2], 0.9999)   # used to be 'max' but I think 'min' was intended
                 self.beliefs[service] = [username, password, new_strength]
                 print 'signed into', service, 'with changed username and password', username, ',', password
@@ -254,7 +246,7 @@ transient doWork
                 self.beliefs[service] = [username, password, new_strength]
             return self.signIn((goal, service))
 
-    def signOut(self, (goal, service)):
+    def sign_out(self, (goal, service)):
         """ This should be equivalent to the signOut subgoal in prolog
         It checks if the user is logged in, and if so, it sends a message to log
         him out.
@@ -273,7 +265,7 @@ transient doWork
             print 'User successfully logged out from', service, 'as', username
             return [{}]
 
-    def resetPassword(self, (goal, service)):
+    def reset_password(self, (goal, service)):
         #print 'Resetting: agent beliefs for service', service, 'are', self.beliefs[service]
         [username, old_password, belief] = self.beliefs[service]
 
@@ -296,6 +288,8 @@ transient doWork
     # Will be about password forget rate stopping criterion, but for now just false
     # This means the simulation will go on forever if the agentLoop call doesn't use a finite number of steps
     def check_termination(self, call):
+        # Would add here that the agent has a password forget rate below threshold for each known service
+        # (from bruno_user.pl)
         return []
 
     # Extracted by Jim from setUpAccount and resetPassword, and modified to match the description in papers
@@ -332,7 +326,7 @@ transient doWork
             # will run through every unused password, then every used one, so maxTries is more of a timeout
             # for long lists
             max_tries = 100
-            while (not requirements.verify(username, desired_pass) or self.overCogLoad(desired_pass)) and max_tries > 0:
+            while (not requirements.verify(username, desired_pass) or self.over_cog_load(desired_pass)) and max_tries > 0:
                 #print 'password', desired_pass, 'chosen from', len(list_of_new), len(list_of_old), \
                 #    'not verified against', requirements
                 if (self.choose_password_method == 'list-order' and new_pw_index < len(self.password_list)) or \
@@ -359,7 +353,7 @@ transient doWork
         # the decision is based on memoBias parameter
         # maybe add some distance heuristics later
         new_password_verified = (requirements is None or requirements.verify(username, desired_pass)) \
-            and not self.overCogLoad(desired_pass)
+            and not self.over_cog_load(desired_pass)
 
         if new_password_verified:
             password = desired_pass
@@ -384,7 +378,7 @@ transient doWork
         return password
 
     # Boolean - whether adding the password as a new password will tip the agent over its cognitive load threshold
-    def overCogLoad(self, password):
+    def over_cog_load(self, password):
         if password in self.known_passwords:
             return False  # only increases the load if it's not already used
         else:
@@ -394,6 +388,7 @@ transient doWork
 
     # Should return a measure of the complexity of the password by our usual standards.
     # Here I'm just using the length to get this up and running - and not sure this is what will be used finally
+    # Could be static at present, but leaving it as a method so it can include agent parameters later.
     def password_complexity(self, password):
         return len(password)
 
@@ -443,7 +438,7 @@ def levenshtein_distance(str1, str2):
 
 if __name__ == "__main__":
     pa = PasswordAgent()
-    pa.agentLoop(1000)
+    pa.agentLoop(500)
     # Use the results on the hub, because the agent may create ids and passwords and then forget them,
     # but they still exist.
     # print 'final beliefs are', pa.beliefs
