@@ -22,6 +22,7 @@
 
 
 from dash import DASHAgent, isConstant, isVar
+import math
 import random
 from utils import distPicker
 import operator
@@ -81,10 +82,14 @@ class PasswordAgent(DASHAgent):
         self.known_passwords = []
         # list of writen pairs
         self.writtenPasswords = []
-        # USER beliefs
+        # USER beliefs. self.beliefs[belief] is a triple [username, password, belief] where 0 <= belief <= 1
         self.beliefs = {}
 
-        self.username_list = ['user1', 'user12', 'admin']  # user names currently randomly chosen from these
+        self.username_list = ['user1', 'user12', 'admin']  # user names are currently randomly chosen from these
+
+        # I need some clarification on this. In the prolog version, this is only incremented when the password fails
+        # I'm doing the same for now and leaving the name as 'num_logins'.
+        self.num_logins = 3  # from bruno_user.pl
 
         # The agent goal description is short, because the rational task is not that important here.
         self.readAgent("""
@@ -227,24 +232,41 @@ transient doWork
                 self.password_forget_rate[service] = self.initial_password_forget_rate
             else:
                 self.password_forget_rate[service] /= 2.364  # from bruno_user.pl
-            if changed_password:
-                self.beliefs[service][2] += self.beliefs[service][2] * self.strengtheningRate
-                new_strength = min(self.beliefs[service][2], 0.9999)   # used to be 'max' but I think 'min' was intended
-                self.beliefs[service] = [username, password, new_strength]
-                print 'signed into', service, 'with changed username and password', username, ',', password
-            else:
-                self.beliefs[service] = [username, password, self.initial_belief]
-                print 'signed into', service, 'with same username and password', username, ',', password
+            #if changed_password:
+                #self.beliefs[service][2] += self.beliefs[service][2] * self.strengtheningRate
+                #new_strength = min(self.beliefs[service][2], 0.9999)   # used to be 'max' but I think 'min' was intended
+            self.beliefs[service] = [username, password, 1]
+            print 'signed into', service, 'with changed username and password', username, ',', password
+            #else:
+            #    self.beliefs[service] = [username, password, 1]
+            #    print 'signed into', service, 'with same username and password', username, ',', password
+            # Strengthen this password in all other services, and weaken all other passwords
+            for s in self.beliefs:
+                b = self.beliefs[service]  # [username, password, belief]
+                if s != service and b[1] == password:
+                    b[2] = min(1, b[2] + self.strengthen_factor * self.password_forget_rate[service])
+            self.degrade_all_password_beliefs()
             return [{}]
         elif login_response[0] == 'failed:logged_in':
+            self.degrade_all_password_beliefs()
             self.signOut(service)
             return []
         else:
-            if changed_password:
-                self.beliefs[service][2] -= (self.beliefs[service][2]*self.strengtheningRate)
-                new_strength = max(self.beliefs[service][2], 0.0001)  # used to be 'min' but I think 'max' was intended
-                self.beliefs[service] = [username, password, new_strength]
+            # behavior from bruno_user.pl
+            self.num_logins += 1
+            self.password_forget_rate[service] = self.password_forget_rate[service] * 2 * math.log(self.num_logins)
+            self.beliefs[service] = [username, password, 0]  # it is removed from the list in bruno_user.pl
+            self.degrade_all_password_beliefs()
+            #if changed_password:
+            #    self.beliefs[service][2] -= (self.beliefs[service][2]*self.strengtheningRate)
+            #    new_strength = max(self.beliefs[service][2], 0.0001)  # used to be 'min' but I think 'max' was intended
+            #    self.beliefs[service] = [username, password, new_strength]
             return self.signIn((goal, service))
+
+    def degrade_all_password_beliefs(self):  # same as passwordFatigue in bruno_user.pl
+        for service in self.beliefs:
+            b = self.beliefs[service]  # [username, password, belief]
+            b[2] = max(0, b[2] - self.password_forget_rate[service])
 
     def sign_out(self, (goal, service)):
         """ This should be equivalent to the signOut subgoal in prolog
