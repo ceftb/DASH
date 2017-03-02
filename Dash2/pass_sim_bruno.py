@@ -1,6 +1,9 @@
 # todo & notes
-# Changing to use spreading activation in system 1 to model password forgetting and mistaking passwords between sites.
+# -define socket in the right way - I am an idiot
+# add return values as appropriate
+# add time belief depreciation element - in services though
 # add counters for memorizations, resets, etc...
+# services will have to handle the password same as old one
 # check termination
 
 ### Create acc
@@ -110,10 +113,6 @@ transient doWork
 """)
         self.trace_action = True
 
-        # Same passwords reinforce across services. Different passwords inhibit each other on one service.
-        self.create_neighbor_rule('password', self.link_password_nodes)
-
-
 
     # service_type_var may be unbound or bound to a requested service_type. service_var is unbound
     # and will be bound to the result of setting up the service
@@ -150,7 +149,7 @@ transient doWork
 
         # Decide the service to log into
         [status, service, requirements] = self.sendAction('getAccount', [service_type])
-        print 'chosen account to set up:', service_type, status, service, requirements
+        #print 'chosen account to set up:', status, service, requirements
 
         ### choose Username
         # if the list of existing usernames is not empty, pick one at random,
@@ -163,12 +162,6 @@ transient doWork
             username = random.choice(self.username_list)
 
         password = self.choose_password(username, requirements)
-
-        # Make sure a node exists for this password for every known service
-        # The same password is linked positively across services,
-        # and different passwords are linked negatively at each service (this is enforced by neighbor rules)
-        for s2 in self.beliefs:
-            self.fact_to_node(('password', s2, password))
 
         # If account is be created, update beliefs else repeat
         # I am not sure if it would make more sense to keep beliefs local in this
@@ -421,21 +414,6 @@ transient doWork
     def password_complexity(self, password):
         return len(password)
 
-    # System 1 neighbor rule:
-    # Same passwords reinforce across services. Different passwords inhibit each other on one service.
-    def link_password_nodes(self, node):
-        (p, service, password) = node.fact
-        for other in self.nodes:
-            if other == node or not isinstance(other.fact, (tuple, list)) or not len(other.fact) > 2:
-                continue
-            elif other.fact[1] == service:
-                node.add_neighbor(other, -1)
-                other.add_neighbor(node, -1)
-            elif other.fact[2] == password:
-                node.add_neighbor(other, 1)
-                other.add_neighbor(node, 1)
-        print 'linked', node
-
 # The cost of a set of strings is the cost of the minimum spanning tree over the set, with
 # levenshtein distance as edge weight.
 def levenshtein_set_cost(strings):
@@ -482,11 +460,7 @@ def levenshtein_distance(str1, str2):
 
 if __name__ == "__main__":
     pa = PasswordAgent()
-    pa.agentLoop(100)
+    pa.agentLoop(500)
     # Use the results on the hub, because the agent may create ids and passwords and then forget them,
     # but they still exist.
-    print 'final beliefs are', pa.beliefs
-    print len(pa.nodes), 'system 1 nodes:'
-    for node in sorted(pa.nodes,
-                       key=lambda n: n.fact[1] if isinstance(n.fact, tuple) and n.fact[0] == 'password' else 100):
-        print node
+    # print 'final beliefs are', pa.beliefs
