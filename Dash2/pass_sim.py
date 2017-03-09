@@ -399,11 +399,17 @@ transient doWork
             #password = max(stats.iteritems(), key=operator.itemgetter(1))[0]
             # .. but actually we tried to reuse above, so we need to add something that synthesizes a password
             # here, e.g. adding numbers or characters if that is the problem, etc.
-            password = max(self.known_passwords, key=self.password_complexity)
+
+            # NOTE - this case happens all the time once we are at the cognitive limit, and picking the same
+            # each time leads to more repeats than seem reasonable. Switching to random for now. Perhaps pick
+            # randomly from those that satisfy the requirements, if any.
+            #password = max(self.known_passwords, key=self.password_complexity)
+            password = random.choice(self.known_passwords)
         else:
             password = desired_pass
             self.writtenPasswords.append(desired_pass)
             self.password_list.remove(desired_pass)
+        print 'choose password [', requirements, '] chooses', password
         return password
 
     # Boolean - whether adding the password as a new password will tip the agent over its cognitive load threshold
@@ -487,6 +493,5 @@ if __name__ == "__main__":
     # but they still exist.
     print 'final beliefs are', pa.beliefs
     print len(pa.nodes), 'system 1 nodes:'
-    for node in sorted(pa.nodes,
-                       key=lambda n: n.fact[1] if isinstance(n.fact, tuple) and n.fact[0] == 'password' else 100):
+    for node in sorted(pa.nodes, key=lambda n: pa.fact_to_key(n.fact)):
         print node

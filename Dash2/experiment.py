@@ -16,12 +16,12 @@ class Experiment(object):
 
     def run(self, run_data={}):
         self.trial_outputs = []
+        # Build up trial data from experiment data and run data
+        trial_data = self.exp_data.copy()
+        for key in run_data:
+            trial_data[key] = run_data[key]
         for trial_number in range(self.num_trials):
             print "Trial", trial_number
-            # Build up trial data from experiment data and run data
-            trial_data = self.exp_data.copy()
-            for key in run_data:
-                trial_data[key] = run_data[key]
             trial = self.trial_class(data=trial_data)
             trial.run()
             self.trial_outputs.append(trial.output())

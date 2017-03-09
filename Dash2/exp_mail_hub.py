@@ -1,4 +1,4 @@
-from exp_world_hub import WorldHub, serveClientThread
+from world_hub import WorldHub, serveClientThread
 
 
 # This is a subclass of WorldHub that responds to 'checkMail' actions from clients with random mail.
@@ -22,9 +22,9 @@ class MailHub(WorldHub):
 
     def get_mail(self, id):
         if id in self.emailAddresses:
-            address =  self.emailAddresses[id]
+            address = self.emailAddresses[id]
             mail = self.mail[address]
-            self.mail[address] = []
+            self.mail[address] = {}
             return ['success', mail]
         else:
             return ['fail',[]]
@@ -43,7 +43,7 @@ class MailHub(WorldHub):
                 elif isinstance(message['to'], list):
                     for recipient in message['to']:
                         self.initialize_email(id, recipient)
-                        self.mail[selfemailAddresses[id]][recipient].append(message)
+                        self.mail[self.emailAddresses[id]][recipient].append(message)
             return ['success', []]
         except:
             print "problem sending mail"

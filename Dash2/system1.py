@@ -22,7 +22,7 @@ class Node:
 
     def __str__(self):
         return "N" + str(self.node_id) + ": " + str(self.fact) + ", " + str(self.activation)\
-               + ", nx: " + str([link[0].node_id for link in self.neighbors])
+               + ", " + str([link[0].node_id for link in self.neighbors])
 
     def __repr__(self):
         return self.__str__()
@@ -55,15 +55,14 @@ class Node:
 
 
 class System1Agent:
-    nodes = set()
-    action_nodes = set()  # subset of nodes that suggest an action, for efficiency
-    fact_node_dict = dict()  # maps node facts to nodes
-    neighbor_rules = dict()  # maps node fact predicates to lambdas
-
-    trace_add_activation = False
 
     def __init__(self):
         self.system1Fact = set()
+        self.nodes = set()
+        self.action_nodes = set()  # subset of nodes that suggest an action, for efficiency
+        self.fact_node_dict = dict()  # maps node facts to nodes
+        self.neighbor_rules = dict()  # maps node fact predicates to lambdas
+        self.trace_add_activation = False
 
     # Main DASH agent communicates activation for a fact. This looks up the node with fact_node_dict, adding
     # if necessary, and increments the activation

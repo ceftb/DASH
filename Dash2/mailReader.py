@@ -1,6 +1,6 @@
 import random
 import copy
-from dash import DASHAgent, Parameter, Uniform
+from dash import DASHAgent, Parameter, Uniform, Boolean
 
 
 class MailReader(DASHAgent):
@@ -8,14 +8,20 @@ class MailReader(DASHAgent):
     # Class-level information about parameter probability distributions
                   # If the message is phish, it is recognized with this constant probability
     parameters = [Parameter('probability_recognize_phish', distribution=Uniform(0.7, 0.9)),
-                  Parameter('probability_click_unrecognized_phish', distribution=Uniform(0.1, 0.4))]
+                  Parameter('probability_click_unrecognized_phish', distribution=Uniform(0.1, 0.4)),
+                  # messages are scored from 0 to 1 and classified as phish if they score over this threshold
+                  # (This number isn't really used right now, since we return a score above or below based on whether
+                  # the agent identifies the message as phish, not the other way around.)
+                  Parameter('phishiness_threshold', distribution=Uniform(0.3, 0.7), default=0.5),
+                  Boolean('send_mail_all_at_once', default=True)]
 
-    def __init__(self, address):
+    def __init__(self, address, register=True):
         DASHAgent.__init__(self)
 
         self.trace_client = False
 
-        self.competence_with_internet = 0.5  # general level of competence e.g. Alseadoon et al. 12
+        # Not currently used
+        #self.competence_with_internet = 0.5  # general level of competence e.g. Alseadoon et al. 12
 
         self.readAgent("""
 
@@ -47,8 +53,9 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
                        """)
 
         self.address = address
-        print 'registering', address
-        self.register([address])    # Register with the running mail_hub
+        if register:
+            print 'registering', address
+            self.register([address])    # Register with the running mail_hub
 
         # Stack of emails to send. This way it is easy enough to task the agent with a set of emails, even dynamically.
         # Setting up with an initial mail to test. Should be the same behavior as with fixed email in the goal.
@@ -56,14 +63,10 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
                             'attachment': 'budget.xlsx'},
                            {'to': self.address, 'subject': 'test', 'body': 'this is a second test message',
                             'attachment': 'budget.xlsx'}]
-        self.send_mail_all_at_once = True  # if False, just pops the queue each time the goal sendMailInStack is satisfied
 
         # sets of people that email might be sent of forwarded to or expected to come from for different categories
         self.colleagues = {'work': [], 'leisure': []}
 
-        # This number isn't really used right now, since we return a score above or below based on whether the agent identifies
-        # the message as phish, not the other way around.
-        self.phishiness_threshold = 0.5  # messages are score from 0 to 1 and rejected as phish if they score over this threshold
 
         # probability that email deemed to be legitimate leisure mail will be forwarded to a friend. Shortly this
         # should be calculated based on agreeableness, extraversion and conscientiousness.
@@ -176,7 +179,7 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
 
     # For now, 1's and 0's without regard to personality or other factors.
     def score_phishiness(self, message):
-        # If the mail is legit, it is never identified as phish
+        # If the mail appears to be from the correct domain, it is never identified as phish
         if 'amail.com' in message['from']:
             return 0
         # for now, accept 1 in 2 phishing emails whatever the phishiness threshold
@@ -210,13 +213,16 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
             self.attachments_opened.append(mail['attachment'])
         return [{}]
 
+    def succeed_m(self, goal):
+        return [{}]
+
     # System 1 support
 
     # Create neighbor nodes for a node that represents a read_mail action, and binds a list of emails
     # For each email that has a link (right now just for each email), suggest an action to click on it
-    def create_mail_nodes(self, node):
-        for mail in node.fact[1]:
-            node.add_neighbor(self.fact_to_node(['mail', mail]))
+    def create_mail_nodes(self, s1node):
+        for mail in s1node.fact[1]:
+            s1node.add_neighbor(self.fact_to_node(['mail', mail]))
             # Turning off the urge to click a link right now for testing
             #node.add_neighbor(self.fact_to_node(['action', 'click', mail]))
 
