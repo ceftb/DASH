@@ -19,7 +19,7 @@ class Client(object):
             c = Client()
         """
         self.trace_client = True
-        print "initializing client..."
+        #print "initializing client..."
         if host is None:
             self.server_host = 'localhost'
         else:
