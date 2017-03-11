@@ -28,7 +28,7 @@ class PhishTrial(Trial):
         self.iteration = 0
 
         self.big_5_range = [0.2, 0.9]
-        # self.reply_range = {'work': [0, 0.8], 'leisure': [0, 0.8]}  # Note these is currently no separate reply in mailReader
+        # self.reply_range = {'work': [0, 0.8], 'leisure': [0, 0.8]}  # Note there is currently no separate reply in mailReader
         self.forward_range = {'leisure': [0, 0.8], 'work': [0, 0.8]}
         self.p_recognize_phish = 0.5  # this default is overridden in the trial
 
@@ -40,13 +40,15 @@ class PhishTrial(Trial):
         self.last_mail_stack = 0
         self.generations_since_change = 0
 
+        self.agents_iterated = 0
+
         Trial.__init__(self, data=data)  # Call the trial initialization here so data will override the other defaults
 
     def initialize(self):
         print 'initializing with', self.num_workers, 'workers'
         self.workers = []
         for i in range(0, self.num_workers):
-            w = mailReader.MailReader('mailagent'+str(i+1)+'@amail.com')
+            w = mailReader.MailReader('mailagent'+str(i+1)+'@amail.com', self.register)
             w.choose_random_gender_personality(self.big_5_range)
             self.workers.append(w)
             for mode in ['leisure', 'work']:
@@ -54,6 +56,8 @@ class PhishTrial(Trial):
             choose_recipients(w, i, self.num_workers, self.num_recipients, attachment='budget.xlsx')
             w.probability_recognize_phish = self.p_recognize_phish
             w.active = True
+            if i % 100 == 0:
+                print (i + 1), 'agents created'
 
         self.phisher = mailReader.MailReader('phisher@bmail.com')
         choose_recipients(self.phisher, -1, self.num_workers, self.phish_targets, attachment='phish.xlsx')
@@ -84,10 +88,14 @@ class PhishTrial(Trial):
         self.total_mail_stack += len(agent.mail_stack)
         self.total_mails_read += agent.mails_read
         self.total_mails_sent += agent.mails_sent
+        self.agents_iterated += 1
+        if self.agents_iterated % 100 == 0:
+            print (self.agents_iterated + 1), 'agents iterated'
 
     def process_after_iteration(self):
         print 'Iteration', self.iteration, 'total stack', self.total_mail_stack, 'total read', self.total_mails_read,\
               'total sent', self.total_mails_sent, 'generations since change', self.generations_since_change
+        self.agents_iterated = 0
 
     def output(self):
         if self.objective == 'number':
@@ -164,19 +172,21 @@ def run_subprocess(trials=100, num_phish_candidates=[5, 10, 15, 20, 25]):
         print pt, '-', total[pt], 'of', trials, 'ave', ave[pt]
 
 
-def run_one(phish_targets):
+# To test scalability, running with max_iterations 1 and num_workers increasing.
+def run_one(phish_targets, num_workers=50):
     e = Experiment(PhishTrial, num_trials=1)
-    e.run(run_data={'max_iterations': 10,  # The phishing attachment is opened in iteration 9 in the current setup
+    e.run(run_data={'max_iterations': 1,  # (was 10) The phishing attachment is opened in step 9 in the current setup
                     'objective': 'number',
-                    'num_workers': 50, 'num_recipients': 4,
+                    'num_workers': num_workers, 'num_recipients': 4,
                     # variables on the trial object that are passed to the agents
-                    'phish_targets': phish_targets, 'p_recognize_phish': 0.8, 'p_open_attachment': 0.3})
+                    'phish_targets': phish_targets, 'p_recognize_phish': 0.8, 'p_open_attachment': 0.3,
+                    'register': False})  # don't register with a hub to test raw numbers of agents
     r = e.process_results()
     print "Final", r[0]
 
 
 if __name__ == "__main__":
     print 'argv is', sys.argv
-    if len(sys.argv) > 1 and sys.argv[1] == "run":
-        run_one(int(sys.argv[2]))
+    if len(sys.argv) > 1 and sys.argv[1] == "run":  # usage: python xx run 5 100 ; nTargets then nWorkers
+        run_one(int(sys.argv[2]), int(sys.argv[3]))
 

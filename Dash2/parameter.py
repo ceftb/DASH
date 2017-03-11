@@ -46,9 +46,9 @@ class Distribution:
 
 class Uniform(Distribution):
 
-    def __init__(self, min, max):
-        self.min_value = min
-        self.max_value = max
+    def __init__(self, min_value, max_value):
+        self.min_value = min_value
+        self.max_value = max_value
 
     def __repr__(self):
         return "Uniform(" + str(self.min_value) + ", " + str(self.max_value) + ")"

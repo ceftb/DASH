@@ -16,7 +16,7 @@ def minimum_spanning_tree(G):
     length of edge u,v, and G[u][v] should always equal G[v][u].
     The tree is returned as a list of edges.
     """
-    #if not isUndirected(G):
+    # if not isUndirected(G):
     #    raise ValueError("MinimumSpanningTree: input is not undirected")
     for u in G:
         for v in G[u]:
@@ -29,10 +29,10 @@ def minimum_spanning_tree(G):
     # part (the sort) is sped up by being built in to Python.
     subtrees = UnionFind()
     tree = []
-    for W,u,v in sorted((G[u][v],u,v) for u in G for v in G[u]):
+    for W, u, v in sorted((G[u][v], u, v) for u in G for v in G[u]):
         if subtrees[u] != subtrees[v]:
-            tree.append((u,v))
-            subtrees.union(u,v)
+            tree.append((u, v))
+            subtrees.union(u, v)
     return tree
 
 

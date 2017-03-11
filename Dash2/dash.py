@@ -29,7 +29,6 @@ class DASHAgent(Client, System2Agent, System1Agent, HumanTraits):
         # Need some code for when there is no distribution etc.
         for p in self.__class__.parameters:
             v = p.distribution.sample() if p.default is None else p.default
-            #print 'setting', p, 'to', v
             setattr(self, p.name, v)
 
     # This is in the java part in the old agent
