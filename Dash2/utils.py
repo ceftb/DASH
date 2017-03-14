@@ -75,15 +75,16 @@ class Requirements:
 
 # Store information about what constitutes weak, average or strong requirements in this file.
 # These numbers come from bruno_services - maybe a different set should be used, let me know (Jim)
-def create_requirements(strength):
-    if strength == 'weak':
-        return Requirements(min_len=1 + rand(4), max_len=64)
-    elif strength == 'average':
-        return Requirements()
-    elif strength == 'strong':
-        # High max len because was having trouble when min and max got close, and that's not
-        # realistic to most constraints out there.
-        return Requirements(min_len=6 + rand(8), max_len=80, numbers=1)
+def create_requirements(strength_name, min_len, min_numbers):
+    #if strength == 'weak':
+    #    return Requirements(min_len=4, max_len=80)  # min_len was 4 + rand(4) but removing randomness for testing
+    #elif strength == 'average':
+    #    return Requirements(min_len=7, max_len=80, numbers=1)
+    #elif strength == 'strong':
+    #    # High max len because was having trouble when min and max got close, and that's not
+    #    # realistic to most constraints out there.
+    #    return Requirements(min_len=14, max_len=80, numbers=2) # min_len was 10 + rand(8) - see for weak requirements
+    return Requirements(min_len=min_len, max_len=80, numbers=min_numbers)
 
 
 # This is shorthand to make create_requirements above more readable
@@ -92,16 +93,17 @@ def rand(max_value):
 
 
 class Service:
-    def __init__(self, service_type, name, requirements):
+    def __init__(self, service_type, name, requirements_name, min_len, min_numbers):
         self.type = service_type
         self.name = name
-        self.requirements = requirements
+        self.requirements = requirements_name
         # Use 'weak', 'average' and 'strong' as shorthand for a distribution of requirements
-        if requirements in ['weak', 'average', 'strong']:
-            self.requirements = create_requirements(requirements)
-        else:
-            print 'warning, unrecognized requirements strength', requirements, 'using average'
-            self.requirements = create_requirements('average')
+        # (Now sending the requirements so they can be manipulated from the hub)
+        #if requirements in ['weak', 'average', 'strong']:
+        self.requirements = create_requirements(requirements_name, min_len, min_numbers)
+        #else:
+        #    print 'warning, unrecognized requirements strength', requirements, 'using average'
+        #    self.requirements = create_requirements('average')
         self.user_name_passwords = {}    # dict of user names and passwords used on this service
         self.user_status = {}    # dict of status of user on service, e.g. 'logged_in'
         self.compromised_by = []  # agents who have compromised this service, and can read the passwords

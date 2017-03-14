@@ -22,7 +22,7 @@ class ServiceHub(WorldHub):
         reuse_possibilities = 0     # Total number of reuses that might be tried - every u/p combo on every other host
         print 'user', agent_id, 'disconnected, here are the current users'
         for name in self.service_dictionary:
-            print name
+            print name, self.service_dictionary[name]
             upw = self.service_dictionary[name].user_name_passwords
             for user in upw:
                 print '  ', user, upw[user]
@@ -32,7 +32,7 @@ class ServiceHub(WorldHub):
                     user_pwd_hosts[user][upw[user]] = [name]
                 else:
                     user_pwd_hosts[user][upw[user]].append(name)
-            reuse_possibilities += len(upw) * (len(user_pwd_hosts) - 1)
+                reuse_possibilities += len(upw) * (len(user_pwd_hosts[user]) - 1)
         reuse_opportunities = 0
         total = 0
         histogram = [0]*reuse_possibilities
@@ -117,8 +117,9 @@ class ServiceHub(WorldHub):
             print "Create account failed on", service, ": password doesn't meet the requirements ", requirements
             return 'failed:reqs', [requirements]
 
-    def get_account(self, agent_id, aux_data):
-        result = distPicker(self.serviceDist[aux_data[0]], random.random())
+    def get_account(self, agent_id, data):
+        service_type = data[0]
+        result = distPicker(self.serviceDist[service_type], random.random())
         print 'get account result', result
         return 'success', result.get_name(), result.get_requirements()
 
@@ -161,10 +162,11 @@ class ServiceHub(WorldHub):
         return result
 
     def create_service_dist(self, service_type):
-        # Just create one of each type with equal probability for now to test this out
-        services = [(Service(service_type, self.service_counter + 1, 'weak'), 0.33),
-                    (Service(service_type, self.service_counter + 2, 'average'), 0.67),
-                    (Service(service_type, self.service_counter + 3, 'strong'), 1.0)]
+        # Just create one service of each constraint strength with equal probability for now to test this out
+        # Now manipulating this distribution to see what difference it makes
+        services = [(Service(service_type, self.service_counter + 1, 'weak', 14, 2), 0.33),     # default was 4, 0, 0.33
+                    (Service(service_type, self.service_counter + 2, 'average', 18, 3), 0.67),  # default was 7, 1, 0.67
+                    (Service(service_type, self.service_counter + 3, 'strong', 22, 4), 1.0)]   # default was 14, 2, 1.0
         for (service, prob) in services:
             self.service_dictionary[service.get_name()] = service
         self.service_counter += 3

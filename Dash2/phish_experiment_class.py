@@ -1,5 +1,12 @@
 # Runs the phishing experiment using the Experiment and Trial classes.
 
+"""
+3/13/17 - with the modification to code choosing recipients for a mail agent, 100k agents have been
+created and iterated in one python image. This took approximately 1.22 gb meaning I could not easily
+scale to 1m in one image on my 16g laptop while running the OS and a browser. I will try some tricks to
+share memory between agents in the same image for e.g. the goal table and see if that improves the outlook.
+"""
+
 from experiment import Experiment
 from trial import Trial
 import mailReader
@@ -114,7 +121,17 @@ def choose_recipients(agent, worker_i, num_workers, num_recipients, attachment=N
     for mode in modes:
         del agent.colleagues[mode][:]
 
-    recipients = random.sample([str(i + 1) for i in range(0, num_workers) if i != worker_i], num_recipients)
+    # Old way here led to quadratic behavior that was probably a major source of slowdown as n -> 100k or so
+    #recipients = random.sample([str(i + 1) for i in range(0, num_workers) if i != worker_i], num_recipients)
+    # Of course right now I'm missing the web to check on the python random module
+    # This might be a lot slower when the number of recipients approaches the number of workers, I should test for that
+    # and put in a switch
+    recipients = []
+    for i in xrange(0, num_recipients):
+        new_rec = random.randrange(1, num_workers+1)
+        while str(new_rec) in recipients:
+            new_rec = random.randrange(1, num_workers+1)
+        recipients.append(str(new_rec))
     agent.mail_stack = []
     for recipient in recipients:
         mode = random.choice(modes)
@@ -175,7 +192,7 @@ def run_subprocess(trials=100, num_phish_candidates=[5, 10, 15, 20, 25]):
 # To test scalability, running with max_iterations 1 and num_workers increasing.
 def run_one(phish_targets, num_workers=50):
     e = Experiment(PhishTrial, num_trials=1)
-    e.run(run_data={'max_iterations': 1,  # (was 10) The phishing attachment is opened in step 9 in the current setup
+    e.run(run_data={'max_iterations': 1,  # (was 1) The phishing attachment is opened in step 9 in the current setup
                     'objective': 'number',
                     'num_workers': num_workers, 'num_recipients': 4,
                     # variables on the trial object that are passed to the agents

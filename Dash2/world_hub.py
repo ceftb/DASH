@@ -159,8 +159,8 @@ class ServeClientThread(threading.Thread):
                 # types of messages to consider: register id, process action, update state 
                 self.handleClientRequest(message_type, message)
 
-        except:
-            print "closing socket..."
+        except BaseException as e:
+            print "closing socket...", e
             self.client.close()
             print "exiting client thread"
 

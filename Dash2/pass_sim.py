@@ -17,8 +17,17 @@
 ##### find a way of rasing an error (42)
 ##### finish elaborate pass choosing
 
+"""
+Notes: 3/13/17 - got to the point where I'm recording the number of passwords created and manipulating the constraint
+difficulty on the hub, and computing reuse opportunities. It looks like this will work, need to compute expected
+number of compromised sites based on (1) base prob of direct attack,
+(2) prob of password attack that is higher for shorted passwords and
+(3) possible reuse attacks (will assume a high probability they are executed).
+Probably the uncanniness will depend on those numbers, which points to the value of FARM
+"""
 
-from dash import DASHAgent, isConstant, isVar
+
+from dash import DASHAgent, isConstant, isVar, Parameter, Uniform, Boolean
 import math
 import random
 from utils import distPicker
@@ -28,7 +37,10 @@ import minimum_spanning_tree
 
 
 class PasswordAgent(DASHAgent):
-    # add socket
+
+    parameters = [Parameter('initial_belief', default=0.65),  # initial strength of beliefs
+                  ]
+
     def __init__(self):
         DASHAgent.__init__(self)
 
@@ -48,11 +60,11 @@ class PasswordAgent(DASHAgent):
                               'MyS3cUReP@SsW0rd!2345', 'MyV3ryL0ngS3cUReP@SsW0rd!2345?']
 
         # distribution of probabilities for every service type. These are cumulative probabilities, so order matters.
-        self.serviceProbs = [('mail', 0.35), ('social_net', 0.85), ('bank', 1.0)]
+        self.service_type_probs = [('mail', 0.35), ('social_net', 0.85), ('bank', 1.0)]
         # bias between memorizing or writing down
         self.memoBias = [('reuse', 0.5), ('write_down', 1.0)]
         # initial strength of beliefs
-        self.initial_belief = 0.65
+        #self.initial_belief = 0.65  # now a parameter
         # forgetting rate - percent of belief lost
         self.initial_password_forget_rate = 0.0025  # from bruno_user.pl
         self.password_forget_rate = {}
@@ -82,7 +94,7 @@ class PasswordAgent(DASHAgent):
         # USER beliefs. self.beliefs[belief] is a triple [username, password, belief] where 0 <= belief <= 1
         self.beliefs = {}
 
-        self.username_list = ['user1', 'user12', 'admin']  # user names are currently randomly chosen from these
+        self.username_list = ["joe@gmail.com"]  # ['user1', 'user12', 'admin']  # user names are currently randomly chosen from these
 
         # I need some clarification on this. In the prolog version, this is only incremented when the password fails
         # I'm doing the same for now and leaving the name as 'num_logins'.
@@ -146,7 +158,7 @@ transient doWork
         '''
         if isVar(service_type_var):
             # choose the service type, and find the actual service
-            service_type = distPicker(self.serviceProbs, random.random())
+            service_type = distPicker(self.service_type_probs, random.random())
 
         # Decide the service to log into
         [status, service, requirements] = self.sendAction('getAccount', [service_type])
@@ -440,7 +452,7 @@ transient doWork
             elif other.fact[2] == password:
                 node.add_neighbor(other, 1)
                 other.add_neighbor(node, 1)
-        print 'linked', node
+        #print 'linked', node
 
 # The cost of a set of strings is the cost of the minimum spanning tree over the set, with
 # levenshtein distance as edge weight.
@@ -491,7 +503,9 @@ if __name__ == "__main__":
     pa.agentLoop(100)
     # Use the results on the hub, because the agent may create ids and passwords and then forget them,
     # but they still exist.
-    print 'final beliefs are', pa.beliefs
-    print len(pa.nodes), 'system 1 nodes:'
-    for node in sorted(pa.nodes, key=lambda n: pa.fact_to_key(n.fact)):
-        print node
+    #print 'final beliefs are', pa.beliefs
+    #print len(pa.nodes), 'system 1 nodes:'
+    #for node in sorted(pa.nodes, key=lambda n: pa.fact_to_key(n.fact)):
+    #    print node
+    print 'cog burden is', levenshtein_set_cost(pa.known_passwords), 'for', len(pa.known_passwords), \
+        'passwords. Threshold is', pa.cognitiveThreshold
