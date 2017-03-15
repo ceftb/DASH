@@ -9,6 +9,7 @@ import threading
 import struct
 import pickle
 import re
+import traceback
 from communication_aux import message_types
 
 
@@ -140,13 +141,15 @@ class ServeClientThread(threading.Thread):
         self.size = 1024
         self.hub = hub
         self.trace_handler = True
+        self.running = False
 
         return
 
     def run(self):
 
         try:
-            while True:
+            self.running = True
+            while self.running:
                 # determine what the client wants
                 [message_type, message] = self.getClientRequest()
 
@@ -159,8 +162,11 @@ class ServeClientThread(threading.Thread):
                 # types of messages to consider: register id, process action, update state 
                 self.handleClientRequest(message_type, message)
 
+            print 'Client disconnected'
+
         except BaseException as e:
             print "closing socket...", e
+            traceback.print_exc()
             self.client.close()
             print "exiting client thread"
 
@@ -211,7 +217,6 @@ class ServeClientThread(threading.Thread):
         #    0: register id, update state
         #    1: handle action, update state, relay relevant observations to client
         #    2: relay recent observations to client
-
         if message_types['register'] == message_type:
             response = self.handleRegisterRequest(message_payload)
         elif message_types['send_action'] == message_type:
@@ -220,13 +225,18 @@ class ServeClientThread(threading.Thread):
             response = self.handleGetUpdatesRequest(message_payload)
         elif message_types['disconnect'] == message_type:
             self.handleDisconnectRequest(message_payload)
-            self.client.shutdown(socket.SHUT_RDWR)
+            try:
+                self.client.shutdown(socket.SHUT_RDWR)
+            except socket.error as e:
+                pass
             self.client.close()
-            sys.exit(0)
+            #sys.exit(0)  # don't necessarily want to exit the hub when one agent disconnects
+            self.running = False  # This will end the listen loop in the 'run' method
         else:
             print "uhoh!"
 
-        self.sendMessage(response)
+        if self.running:
+            self.sendMessage(response)
 
         return
 
