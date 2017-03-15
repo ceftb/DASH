@@ -7,6 +7,11 @@ class ServiceHub(WorldHub):
 
     def __init__(self):
         WorldHub.__init__(self)
+        # Not in initialize() because we don't want it to reset every time
+        # hard default
+        #self.hardnesses = [['weak', 14, 2, 0.33], ['average', 18, 3, 0.67], ['strong', 22, 4, 1.0]]
+        # easy default
+        self.hardnesses = [['weak', 1, 0, 0.33], ['average', 4, 0, 0.67], ['strong', 8, 1, 1.0]]
         self.initialize()
 
     # Defined separately from the __init__ method so a client can use it to reset the trial
@@ -18,9 +23,17 @@ class ServiceHub(WorldHub):
     # Use disconnect of a client as an excuse to print out all the usernames and passwords to debug reuse attacks
     # Also prints out the number of reuse opportunities and the probability of a random reuse attack succeeding
     def processDisconnectRequest(self, agent_id, aux_data):
+        # For now, clear everything so we can run again without re-starting the hub
+        print 'user', agent_id, 'disconnected'
+        self.initialize()
+
+    def send_reuses(self, agent_id, aux_data):
+        return self.compute_reuses()
+
+    def compute_reuses(self):
         user_pwd_hosts = dict()
         reuse_possibilities = 0     # Total number of reuses that might be tried - every u/p combo on every other host
-        print 'user', agent_id, 'disconnected, here are the current users'
+        print 'here are the current users'
         for name in self.service_dictionary:
             print name, self.service_dictionary[name]
             upw = self.service_dictionary[name].user_name_passwords
@@ -39,21 +52,26 @@ class ServiceHub(WorldHub):
         for user in user_pwd_hosts:
             for pwd in user_pwd_hosts[user]:
                 reuse_opportunities += len(user_pwd_hosts[user][pwd]) - 1
-                histogram[len(user_pwd_hosts[user][pwd])] += 1
+                try:
+                    histogram[len(user_pwd_hosts[user][pwd])] += 1
+                except BaseException as e:
+                    print 'process disconnect error', e
+                    print 'index was', len(user_pwd_hosts[user][pwd]), 'for', user, pwd, 'in', user_pwd_hosts
                 total += 1
         print reuse_opportunities, 'reuse opportunities out of', reuse_possibilities, 'options'
         # Print everything, then the number of username-password combos used once, twice etc.
         print user_pwd_hosts
         print 'x, number of username password pairs used x times'
-        i = 1
-        for val in histogram:
-            print i, histogram[i]
-            total -= histogram[i]
-            if total <= 0:
-                break
-            i += 1
-        # For now, clear everything so we can run again without re-starting the hub
-        self.initialize()
+        reuses = []
+        for i, val in enumerate(histogram):
+            if i > 0:
+                print i, val
+                total -= val
+                reuses.append((i, val))
+                if total <= 0:
+                    break
+        return reuses
+
 
     def reset_password(self, agent_id, (service_name, username, old_password, new_password)):
         service = self.service_dictionary[service_name]
@@ -144,6 +162,12 @@ class ServiceHub(WorldHub):
         else:
             return 'fail'
 
+    # The agent calls this to set the hardnesses of constraints. This allows them to be manipulated by a program
+    # controlling the agents.
+    def set_service_hardness(self, agent_id, hardnesses):
+        print 'setting hardnesses to', hardnesses
+        self.hardnesses = hardnesses  # see self.hardnesses default value for an example
+
     def get_user_pw_list(self, agent_id, (service_name)):
         service = self.service_dictionary[service_name]
         # Check that this agent successfully compromised this site
@@ -164,9 +188,11 @@ class ServiceHub(WorldHub):
     def create_service_dist(self, service_type):
         # Just create one service of each constraint strength with equal probability for now to test this out
         # Now manipulating this distribution to see what difference it makes
-        services = [(Service(service_type, self.service_counter + 1, 'weak', 14, 2), 0.33),     # default was 4, 0, 0.33
-                    (Service(service_type, self.service_counter + 2, 'average', 18, 3), 0.67),  # default was 7, 1, 0.67
-                    (Service(service_type, self.service_counter + 3, 'strong', 22, 4), 1.0)]   # default was 14, 2, 1.0
+        #services = [(Service(service_type, self.service_counter + 1, 'weak', 14, 2), 0.33),     # default was 4, 0, 0.33
+        #            (Service(service_type, self.service_counter + 2, 'average', 18, 3), 0.67),  # default was 7, 1, 0.67
+        #            (Service(service_type, self.service_counter + 3, 'strong', 22, 4), 1.0)]   # default was 14, 2, 1.0
+        services = [(Service(service_type, self.service_counter + i + 1, name, min_length, min_numbers), prob)
+                    for i, [name, min_length, min_numbers, prob] in enumerate(self.hardnesses)]
         for (service, prob) in services:
             self.service_dictionary[service.get_name()] = service
         self.service_counter += 3
