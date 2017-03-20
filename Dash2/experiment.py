@@ -1,3 +1,4 @@
+import numbers
 import numpy
 from trial import Trial
 
@@ -28,8 +29,18 @@ class Experiment(object):
         return self.trial_outputs
 
     def process_results(self):  # After calling run(), use to process and return the results
-        if self.trial_outputs:
-            return [numpy.mean(self.trial_outputs), numpy.median(self.trial_outputs),
-                    numpy.var(self.trial_outputs)]
+        # If each result is a list, zip them and attempt simple statistics on them
+        if self.trial_outputs and all([isinstance(x, (list, tuple)) for x in self.trial_outputs]):
+            print 'iterating simple statistics on', self.trial_outputs
+            return [simple_statistics([trial[i] for trial in self.trial_outputs]) for i, p in enumerate(self.trial_outputs[0])]
+        elif self.trial_outputs and all([isinstance(x, numbers.Number) for x in self.trial_outputs]):
+            return simple_statistics(self.trial_outputs)
         else:
-            return None
+            return self.trial_outputs
+
+
+def simple_statistics(numlist):
+    print 'running simple statistics on', numlist
+    if all([isinstance(x, numbers.Number) for x in numlist]):
+        return [numpy.mean(numlist), numpy.median(numlist), numpy.var(numlist)]
+

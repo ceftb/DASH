@@ -113,8 +113,9 @@ goalRequirements doWork
     setupAccount(service_type, service)
     signIn(service)
     signOut(service)
-    resetPassword(service)
     forget([setupAccount(st,s), signIn(s), signOut(s), resetPassword(s)])
+
+#resetPassword(service)  # skip this step
 
 # This means that every iteration it will need to be re-achieved
 transient doWork
@@ -498,14 +499,44 @@ def levenshtein_distance(str1, str2):
 #print(levenshtein_distance("rosettacode","raisethysword"))
 
 
-if __name__ == "__main__":
+def run_one(hardnesses):
     pa = PasswordAgent()
-    pa.agentLoop(100)
+    pa.sendAction('set_service_hardness', hardnesses)
+    pa.agentLoop(100, disconnect_at_end=False)
     # Use the results on the hub, because the agent may create ids and passwords and then forget them,
     # but they still exist.
     #print 'final beliefs are', pa.beliefs
     #print len(pa.nodes), 'system 1 nodes:'
     #for node in sorted(pa.nodes, key=lambda n: pa.fact_to_key(n.fact)):
     #    print node
+    # Read the number of reuses from the hub before disconnecting (could be computed here but aren't)
+    reuses = pa.sendAction('send_reuses')
+    pa.disconnect()
+    print 'reuses:', reuses
     print 'cog burden is', levenshtein_set_cost(pa.known_passwords), 'for', len(pa.known_passwords), \
-        'passwords. Threshold is', pa.cognitiveThreshold
+       'passwords. Threshold is', pa.cognitiveThreshold
+    return len(pa.known_passwords), expected_number_of_sites(reuses), reuses
+
+
+# expected number of sites turned over (* p) based on prob attack of p and reuse prob of 1
+def expected_number_of_sites(reuses):
+    total = sum(i * v for i,v in reuses)
+    return sum([i*i*v for i,v in reuses])/float(total) if total > 0 else 0
+
+
+if __name__ == "__main__":
+    results = []
+    for i in range(0, 14):
+        hardnesses = [['weak', 1 + i, i/6, 0.33], ['average', 5+i, i/4, 0.67], ['strong', 8+i, i/3, 1.0]]
+        print hardnesses
+        local_result = [run_one(hardnesses) for trial in xrange(1, 30)]
+        results.append((i, local_result, hardnesses))
+        print i, 'ave n', sum(r[0] for r in local_result)/float(len(local_result))
+        print i, 'ave r', sum(r[1] for r in local_result)/float(len(local_result))
+    for [i, local_result, h] in results:
+        print i, 'ave n', sum(r[0] for r in local_result)/float(len(local_result))
+        print i, 'ave r', sum(r[1] for r in local_result)/float(len(local_result))
+
+# what I used
+#for [i, local_result, h] in results:
+#     print min((i * 0.2 + sum(9 - r[1] for r in local_result)/float(len(local_result))) / 9, 1.0)

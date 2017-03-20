@@ -134,7 +134,7 @@ class Client(object):
         # However if the return object is a list it must have the first form.
         if isinstance(response, (list, tuple)):
             if len(response) == 0:
-                print 'malformed response from server'
+                print 'empty response from server for action', action, data, time
                 return response
             result = response[0]
             if len(response) > 1:

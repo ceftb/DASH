@@ -55,7 +55,7 @@ class Trial(object):
     def process_after_iteration(self):  # do any book-keeping needed after each iteration completes
         pass
 
-    def process_after_run(self):  # do any book-keeping needed after the trial ends
+    def process_after_run(self):  # do any book-keeping needed after the trial ends and before agents are disconnected
         pass
 
     def output(self):  # overridden with a function to compute and return the output from the trial
