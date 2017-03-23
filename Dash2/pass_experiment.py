@@ -18,6 +18,9 @@ class PasswordTrial(trial.Trial):
     # Just run one at a time, or there may appear to be more password sharing than is warranted.
     def initialize(self):
         self.agents = [pass_sim.PasswordAgent()]
+        # Set up hardnesses for the current run
+        print 'hardnesses are', self.hardnesses
+        self.agents[0].sendAction('set_service_hardness', self.hardnesses)
 
     def agent_should_stop(self, agent):
         return False  # Stop when max_iterations reached, which is tested separately in should_stop
@@ -39,9 +42,11 @@ def run_one(arguments):
     for i in range(0, 14):
         hardnesses = [['weak', 1 + i, i/6, 0.33], ['average', 5+i, i/4, 0.67], ['strong', 8+i, i/3, 1.0]]
         print hardnesses
-        e = experiment.Experiment(PasswordTrial, num_trials=30)
-        e.run(run_data={'max_iterations': 100})
-        print e.process_results()  # Prints mean, median and variance of each item in a result list
+        e = experiment.Experiment(PasswordTrial, num_trials=100)
+        e.run(run_data={'max_iterations': 100, 'hardnesses': hardnesses})
+        results.append([i] + e.process_results())  # mean, median and variance of each item in a result list
+    print results
+    return results
 
 
 # can be called from the command line with the number of agents per trial.
