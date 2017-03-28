@@ -27,7 +27,7 @@ Probably the uncanniness will depend on those numbers, which points to the value
 """
 
 
-from dash import DASHAgent, isConstant, isVar, Parameter, Uniform, Boolean
+from dash import DASHAgent, isConstant, isVar, Parameter, Uniform, Boolean, Range
 import math
 import random
 from utils import distPicker
@@ -38,7 +38,7 @@ import minimum_spanning_tree
 
 class PasswordAgent(DASHAgent):
 
-    parameters = [Parameter('initial_belief', default=0.65),  # initial strength of beliefs
+    parameters = [Parameter('initial_belief', default=0.65, range=(0, 1)),  # initial strength of beliefs
                   ]
 
     def __init__(self):
@@ -455,6 +455,7 @@ transient doWork
                 other.add_neighbor(node, 1)
         #print 'linked', node
 
+
 # The cost of a set of strings is the cost of the minimum spanning tree over the set, with
 # levenshtein distance as edge weight.
 def levenshtein_set_cost(strings):
@@ -486,7 +487,7 @@ def levenshtein_distance(str1, str2):
     for j in range(1,n+1):
         for i in range(1,m+1):
             if str1[i-1] == str2[j-1]:
-                d[i].insert(j,d[i-1][j-1])
+                d[i].insert(j, d[i-1][j-1])
             else:
                 minimum = min(d[i-1][j]+1, d[i][j-1]+1, d[i-1][j-1]+2)
                 d[i].insert(j, minimum)

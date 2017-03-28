@@ -2,7 +2,7 @@ from system1 import System1Agent
 from system2 import System2Agent, substitute, isConstant, isVar
 from client import Client
 from human_traits import HumanTraits
-from parameter import Parameter, Uniform, Boolean
+from parameter import Parameter, Uniform, Boolean, Range
 import re
 
 

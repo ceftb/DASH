@@ -15,6 +15,7 @@ class Experiment(object):
         self.num_trials = num_trials
         self.trial_outputs = []
 
+    # Runs a set of trials, keeping all values constant, and returning the set of trial outputs
     def run(self, run_data={}):
         self.trial_outputs = []
         # Build up trial data from experiment data and run data
@@ -32,7 +33,8 @@ class Experiment(object):
         # If each result is a list, zip them and attempt simple statistics on them
         if self.trial_outputs and all([isinstance(x, (list, tuple)) for x in self.trial_outputs]):
             print 'iterating simple statistics on', self.trial_outputs
-            return [simple_statistics([trial[i] for trial in self.trial_outputs]) for i, p in enumerate(self.trial_outputs[0])]
+            return [simple_statistics([trial[i] for trial in self.trial_outputs])
+                    for i, in xrange(len(self.trial_outputs[0]))]
         elif self.trial_outputs and all([isinstance(x, numbers.Number) for x in self.trial_outputs]):
             return simple_statistics(self.trial_outputs)
         else:
