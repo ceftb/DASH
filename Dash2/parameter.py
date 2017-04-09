@@ -4,13 +4,17 @@ import numbers
 
 class Parameter:
 
-    def __init__(self, name, distribution=None, default=None):
+    def __init__(self, name, distribution=None, default=None, value_set=None, range=None):
         self.name = name
         self.distribution = distribution
         self.default = default
+        self.value_set = value_set  # value_set may be a list or a range such as Range(0,1) (assumed to be closed)
+        if value_set is None and range is not None:
+            self.value_set = Range(range[0], range[1])
 
     def __repr__(self):
-        string = "P[" + self.name + ", " + str(self.distribution)
+        string = "P[" + self.name + ", " + \
+                 (str(self.distribution) if self.distribution is not None else str(self.value_set))
         if self.default is not None:
             string += ", " + str(self.default)
         return string + "]"
@@ -19,11 +23,22 @@ class Parameter:
 class Boolean(Parameter):
 
     def __init__(self, name, distribution=None, default=None):
-        Parameter.__init__(self, name, distribution, default)
+        Parameter.__init__(self, name, distribution, default, value_set=[True, False])
 
         # If the distribution is not filled if, default to equal chance True and False
         if distribution is None:
-            self.distribution = Equiprobable([True, False])
+            self.distribution = Equiprobable(self.value_set)
+
+
+# A continuous closed range of numbers
+class Range:
+
+    def __init__(self, min_val, max_val):
+        self.min = min_val
+        self.max = max_val
+
+    def __repr__(self):
+        return "Range(" + str(self.min) + ", " + str(self.max) + ")"
 
 
 # General class of distributions for parameters
@@ -60,7 +75,7 @@ class Uniform(Distribution):
         return (self.max_value - self.min_value)/2.0
 
 
-# This class currently assumes an immutable set of possible values, so the mean is precomputed if applicable.
+# This class currently assumes an immutable finite set of possible values, so the mean is precomputed if applicable.
 class Equiprobable(Distribution):
 
     def __init__(self, values):
