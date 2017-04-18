@@ -1,5 +1,13 @@
 from dash import DASHAgent, isVar
 
+# This agent demonstrates the use of mental models in reasoning about whether to take a security action. Mental models
+# here use projection following Laird-Johnson. The 'project' rule below shows how the agent believes a
+# self-taken action might change the world while 'trigger' rules show how exogenous actions triggered by world states
+# may in turn change the world. The mental model(s) affect the rules through conditional clauses as shown
+# in the trigger rule. Each model that the agent follows is declared as 'known' in the initial setup: uncomment one
+# or both of the 'self.known' lines below to change the agent's mental models, which change its beliefs about the
+# consequences of actions.
+
 
 class SecurityUser(DASHAgent):
 
@@ -40,7 +48,7 @@ utility
   _lost_files -> -1
 
 """)
-        self.known('_vandal_model')  # Assert the model(s) that the agent is using
+        #self.known('_vandal_model')  # Assert the model(s) that the agent is using
         #self.known('_burglar_model')
         # Uncomment to see what's going on with the projection
         #self.traceProject = True

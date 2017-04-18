@@ -42,7 +42,7 @@ class PasswordTrial(trial.Trial):
 
 
 def run_one(arguments):
-    e = Experiment(PasswordTrial, independent=['hardness', Range(0,2)]) # typically 0,14 but shortened for testing
+    e = Experiment(PasswordTrial, independent=['hardness', Range(0, 2)])  # typically 0,14 but shortened for testing
     results = e.run(run_data={'max_iterations': 10})  # typically max_iterations is 100, but lowered for testing
     #for i in range(0, 14):
     #    hardnesses = [['weak', 1 + i, i/6, 0.33], ['average', 5+i, i/4, 0.67], ['strong', 8+i, i/3, 1.0]]
