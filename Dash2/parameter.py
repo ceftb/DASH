@@ -2,6 +2,10 @@ import random
 import numbers
 
 
+# A parameter represents a variable for an agent that the FARM system can investigate.
+# The list of parameters is declared with the agent definition, e.g. mailReader.py. When an agent is instantiated,
+# the parameter name is set as an attribute of the agent, with the parameter default value or with a value
+# drawn from the distribution declared for the parameter.
 class Parameter:
 
     def __init__(self, name, distribution=None, default=None, value_set=None, range=None):

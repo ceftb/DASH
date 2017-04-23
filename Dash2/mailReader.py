@@ -13,7 +13,11 @@ class MailReader(DASHAgent):
                   # (This number isn't really used right now, since we return a score above or below based on whether
                   # the agent identifies the message as phish, not the other way around.)
                   Parameter('phishiness_threshold', distribution=Uniform(0.3, 0.7), default=0.5),
-                  Boolean('send_mail_all_at_once', default=True)]
+                  Boolean('send_mail_all_at_once', default=True),
+                  # probability that email deemed to be legitimate leisure mail will be forwarded to a friend.
+                  # Shortly this should be calculated based on agreeableness, extraversion and conscientiousness.
+                  Parameter('forward_probability', default={'leisure': 0.5, 'work': 0.5}),
+                  ]
 
     def __init__(self, address, register=True):
         DASHAgent.__init__(self)
@@ -66,11 +70,6 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
 
         # sets of people that email might be sent of forwarded to or expected to come from for different categories
         self.colleagues = {'work': [], 'leisure': []}
-
-
-        # probability that email deemed to be legitimate leisure mail will be forwarded to a friend. Shortly this
-        # should be calculated based on agreeableness, extraversion and conscientiousness.
-        self.forward_probability = {'leisure': 0.5, 'work': 0.5}
 
         # Keep track of the number of emails read and sent
         self.mails_read = 0
@@ -143,7 +142,7 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
     # At the moment all of the agent's work process for work-related email as well as response to phishing email
     # (which might present as work-related or as social/leisure) is handled in this primitive method.
     def process_mail(self, (predicate, mail)):
-        #print 'processing', mail
+        print 'processing', mail
 
         # Succeed if there's no mail
         if not mail:
@@ -169,6 +168,8 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
                     new_message = copy.copy(message)
                     new_message['to'] = random.choice(self.colleagues[mode])
                     self.mail_stack.append(new_message)
+                else:
+                    print 'did not forward, mode =', mode, 'colleagues=', self.colleagues[mode]
 
             # The probability of opening an attachment in either is related to openness, but is much higher in work-related email.
             if self.decide_to_open(message, phishiness):
