@@ -7,7 +7,8 @@ from experiment import Experiment
 from parameter import Range
 import trial
 import sys
-import pass_sim
+import pass_sim_extend
+import math
 
 
 class PasswordTrial(trial.Trial):
@@ -18,7 +19,7 @@ class PasswordTrial(trial.Trial):
     # need to set up the self.agents list for iteration.
     # Just run one at a time, or there may appear to be more password sharing than is warranted.
     def initialize(self):
-        self.agents = [pass_sim.PasswordAgent()]
+        self.agents = [pass_sim_extend.PasswordAgent()]
         # Set up hardnesses for the current run
         h = self.hardness
         if h >= 0:  # a negative value turns this off so we can test other things
@@ -33,16 +34,20 @@ class PasswordTrial(trial.Trial):
         pa = self.agents[0]
         reuses = pa.sendAction('send_reuses')
         print 'reuses:', reuses
-        print 'cog burden is', pass_sim.levenshtein_set_cost(pa.known_passwords), 'for', len(pa.known_passwords), \
-              'passwords. Threshold is', pa.cognitiveThreshold
-        self.results = len(pa.known_passwords), pass_sim.expected_number_of_sites(reuses)  #, reuses
+        minLength = len(min(pa.known_passwords, key=len))
+        cb = pass_sim_extend.levenshtein_set_cost(pa.known_passwords) + \
+            minLength + math.fsum([pa.word_count_dict[password] for password in
+                                  pa.known_passwords])
+        print 'Cognitive load is', cb, 'for', len(pa.known_passwords), \
+            'passwords. Threshold is', pa.cognitiveThreshold
+        self.results = len(pa.known_passwords), pass_sim_extend.expected_number_of_sites(reuses)  #, reuses
 
     def output(self):
         return self.results
 
 
 def run_one(arguments):
-    e = Experiment(PasswordTrial, independent=['hardness', Range(0,14)]) # typically 0,14 but shortened for testing
+    e = Experiment(PasswordTrial, independent=['hardness', Range(0,4)]) # typically 0,14 but shortened for testing
     results = e.run(run_data={'max_iterations': 100})  # typically max_iterations is 100, but lowered for testing
     #for i in range(0, 14):
     #    hardnesses = [['weak', 1 + i, i/6, 0.33], ['average', 5+i, i/4, 0.67], ['strong', 8+i, i/3, 1.0]]

@@ -26,14 +26,16 @@ number of compromised sites based on (1) base prob of direct attack,
 Probably the uncanniness will depend on those numbers, which points to the value of FARM
 """
 
-
-from dash import DASHAgent, isConstant, isVar, Parameter, Uniform, Boolean, Range
 import math
 import random
-from utils import distPicker
 import operator
 import sys
 import minimum_spanning_tree
+import itertools
+
+from dash import DASHAgent, isConstant, isVar, Parameter, Uniform, Boolean, Range
+from utils import distPicker
+from count import count
 
 
 class PasswordAgent(DASHAgent):
@@ -59,6 +61,9 @@ class PasswordAgent(DASHAgent):
                               'MyP4SsW0rd!234', 'MyP@SsW0rd!234', 'MyPaSsWoRd!234?', 'MyPaSsW0Rd!234?',
                               'MyS3cUReP@SsW0rd!2345', 'MyV3ryL0ngS3cUReP@SsW0rd!2345?']
 
+        # model the complexity of each password by determining how many valid word nonoverlapping substrings it contains
+        self.word_count_dict = {p: count(p)[0] for p in self.password_list}
+
         # distribution of probabilities for every service type. These are cumulative probabilities, so order matters.
         self.service_type_probs = [('mail', 0.35), ('social_net', 0.85), ('bank', 1.0)]
         # bias between memorizing or writing down
@@ -77,7 +82,7 @@ class PasswordAgent(DASHAgent):
 
         self.cognitiveBurden = 0  # Perhaps this is computed at each point, haven't figured out the details yet.
         # These were copied from bruno_user.pl in lib/logic - check for comments there.
-        self.cognitiveThreshold = 30  # was 68 in the prolog but trying one that limits to something like 12 passwords
+        self.cognitiveThreshold = 500  # was 68 in the prolog but trying one that limits to something like 12 passwords
         # (the prolog version included the cost for usernames, not currently included)
         self.recallThreshold = 0.5  # from bruno_user.pl
         self.passwordReusePriority = 'long'
@@ -200,7 +205,7 @@ transient doWork
             else:
                 return [{service_var: service}]
         elif status == 'failed:user':
-            #print 'Failed to create account on', service, ': username already exists'  # too frequent to print
+            # print 'Failed to create account on', service, ': username already exists'  # too frequent to print
             # Should succeed in 'setting up' the account though
             if isVar(service_type_var):
                 return [{service_type_var: service_type, service_var: service}]
@@ -231,7 +236,6 @@ transient doWork
         # check if user has account
         if service not in self.beliefs or not self.beliefs[service]:
             print "User has no beliefs for this account"
-
         [username, password, belief] = self.beliefs[service]
         # Select password: essentially the weaker the belief is the greater the chance
         # that user will just pick one of their known username/passwords
@@ -403,7 +407,13 @@ transient doWork
             if desired_pass not in self.known_passwords:
                 self.known_passwords.append(desired_pass)
                 # For now, compute and print the levenshtein set cost of the known passwords
-                print len(self.known_passwords), 'Levenshtein cost:', levenshtein_set_cost(self.known_passwords), self.known_passwords
+
+                minLength = len(min(self.known_passwords, key=len))
+                cl = levenshtein_set_cost(self.known_passwords) + minLength + \
+                    math.fsum([self.word_count_dict[p]
+                              for p in self.known_passwords])
+                print len(self.known_passwords), 'Cognitive load:', cl, \
+                    self.known_passwords
             if desired_pass in self.password_list:
                 self.password_list.remove(desired_pass)
         elif self.known_passwords and \
@@ -430,7 +440,15 @@ transient doWork
         if password in self.known_passwords:
             return False  # only increases the load if it's not already used
         else:
-            new_cost = levenshtein_set_cost(self.known_passwords + [password])
+            # model cost of passwords by using levenshtein set cost, num words
+            # in password, and the length of the password (length is necessary
+            # because two long passwords might have the same levenshtein dist.
+            # as two extremely short passwords)
+            minLength = len(min(self.known_passwords + [password], key=len))
+            new_cost = levenshtein_set_cost(self.known_passwords + [password]) \
+                + minLength + \
+                math.fsum([self.word_count_dict[p]
+                          for p in self.known_passwords + [password]])
             # Should also check username cost, but currently don't
             return new_cost > self.cognitiveThreshold
 
@@ -454,7 +472,6 @@ transient doWork
                 node.add_neighbor(other, 1)
                 other.add_neighbor(node, 1)
         #print 'linked', node
-
 
 # The cost of a set of strings is the cost of the minimum spanning tree over the set, with
 # levenshtein distance as edge weight.
@@ -514,8 +531,12 @@ def run_one(hardnesses):
     reuses = pa.sendAction('send_reuses')
     pa.disconnect()
     print 'reuses:', reuses
-    print 'cog burden is', levenshtein_set_cost(pa.known_passwords), 'for', len(pa.known_passwords), \
-       'passwords. Threshold is', pa.cognitiveThreshold
+    minLength = len(min(pa.known_passwords, key=len))
+    cb = levenshtein_set_cost(pa.known_passwords) + minLength + \
+        math.fsum([pa.word_count_dict[password] for password in
+                  pa.known_passwords])
+    print 'Cognitive load is', cb, 'for', len(pa.known_passwords), \
+        'passwords. Threshold is', pa.cognitiveThreshold
     return len(pa.known_passwords), expected_number_of_sites(reuses), reuses
 
 
@@ -539,6 +560,10 @@ if __name__ == "__main__":
         print i, 'ave n', sum(r[0] for r in local_result)/float(len(local_result))
         print i, 'ave r', sum(r[1] for r in local_result)/float(len(local_result))
 
-# what I used
-#for [i, local_result, h] in results:
-#     print min((i * 0.2 + sum(9 - r[1] for r in local_result)/float(len(local_result))) / 9, 1.0)
+
+    minLength = len(min(pa.known_passwords, key=len))
+    cb = levenshtein_set_cost(pa.known_passwords) + minLength + \
+        math.fsum([pa.word_count_dict[password] for password in
+                  pa.known_passwords])
+    print 'Cognitive load is', cb, 'for', len(pa.known_passwords), \
+        'passwords. Threshold is', pa.cognitiveThreshold
