@@ -32,28 +32,42 @@ class Experiment(object):
         # The representation for independent variables isn't fixed yet. For now, a two-element list with
         # the name of the variable and a range object.
         if self.independent is not None and isinstance(self.independent[1], Range):
-            independent_vals = range(self.independent[1].min, self.independent[1].max)
+            independent_vals = range(self.independent[1].min, self.independent[1].max, self.independent[1].step)
+            print 'expanded range to', independent_vals
         for independent_val in independent_vals:
             trial_data = trial_data_for_all_values.copy()
-            trial_data[self.independent[0]] = independent_val
+            if self.independent is not None:
+                trial_data[self.independent[0]] = independent_val
             self.trial_outputs[independent_val] = []
             for trial_number in range(self.num_trials):
-                print "Trial", trial_number, "with", self.independent[0], "=", independent_val
+                print "Trial", trial_number, "with", None if self.independent is None else self.independent[0], "=", \
+                    independent_val
                 trial = self.trial_class(data=trial_data)
                 trial.run()
                 self.trial_outputs[independent_val].append(trial.output())
         return self.trial_outputs
 
     def process_results(self):  # After calling run(), use to process and return the results
-        # If each result is a list, zip them and attempt simple statistics on them
-        if self.trial_outputs and all([isinstance(x, (list, tuple)) for x in self.trial_outputs]):
-            print 'iterating simple statistics on', self.trial_outputs
-            return [simple_statistics([trial[i] for trial in self.trial_outputs])
-                    for i, in xrange(len(self.trial_outputs[0]))]
-        elif self.trial_outputs and all([isinstance(x, numbers.Number) for x in self.trial_outputs]):
-            return simple_statistics(self.trial_outputs)
-        else:
-            return self.trial_outputs
+        # If the results are a dictionary, assume the key is the independent variable and process the outcomes
+        # for each one
+        if self.trial_outputs and isinstance(self.trial_outputs, dict):
+            result = dict()
+            for key in self.trial_outputs:
+                result[key] = process_list_results(self.trial_outputs[key])
+            return result
+        return process_list_results(self.trial_outputs)
+
+
+def process_list_results(list_results):
+    # If each result is a list, zip them and attempt simple statistics on them
+    if list_results and all([isinstance(x, (list, tuple)) for x in list_results]):
+        print 'iterating simple statistics on', list_results
+        return [simple_statistics([trial[i] for trial in list_results])
+                for i in xrange(len(list_results[0]))]
+    elif list_results and all([isinstance(x, numbers.Number) for x in list_results]):
+        return simple_statistics(list_results)
+    else:
+        return list_results
 
 
 def simple_statistics(numlist):

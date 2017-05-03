@@ -37,12 +37,13 @@ class Boolean(Parameter):
 # A continuous closed range of numbers
 class Range:
 
-    def __init__(self, min_val, max_val):
+    def __init__(self, min_val, max_val, step=1):
         self.min = min_val
         self.max = max_val
+        self.step = step
 
     def __repr__(self):
-        return "Range(" + str(self.min) + ", " + str(self.max) + ")"
+        return "Range(" + str(self.min) + ", " + str(self.max) + " by " + str(self.step) + ")"
 
 
 # General class of distributions for parameters

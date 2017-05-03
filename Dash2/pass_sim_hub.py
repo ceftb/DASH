@@ -72,7 +72,6 @@ class ServiceHub(WorldHub):
                     break
         return reuses
 
-
     def reset_password(self, agent_id, (service_name, username, old_password, new_password)):
         service = self.service_dictionary[service_name]
         if service is None:
