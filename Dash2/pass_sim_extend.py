@@ -82,7 +82,7 @@ class PasswordAgent(DASHAgent):
 
         self.cognitiveBurden = 0  # Perhaps this is computed at each point, haven't figured out the details yet.
         # These were copied from bruno_user.pl in lib/logic - check for comments there.
-        self.cognitiveThreshold = 500  # was 68 in the prolog but trying one that limits to something like 12 passwords
+        self.cognitiveThreshold = 30  # was 68 in the prolog but trying one that limits to something like 12 passwords
         # (the prolog version included the cost for usernames, not currently included)
         self.recallThreshold = 0.5  # from bruno_user.pl
         self.passwordReusePriority = 'long'
@@ -312,7 +312,7 @@ transient doWork
             return [{}]
 
     def reset_password(self, (goal, service)):
-        #print 'Resetting: agent beliefs for service', service, 'are', self.beliefs[service]
+        print 'Resetting: agent beliefs for service', service, 'are', self.beliefs[service]
         [username, old_password, belief] = self.beliefs[service]
 
         new_password = self.choose_password(username)
@@ -341,6 +341,7 @@ transient doWork
     # Extracted by Jim from setUpAccount and resetPassword, and modified to match the description in papers
     # such as the HotSoS 15 paper.
     def choose_password(self, username, requirements=None):
+        print "Choosing new password"
                 ### choose Password
         # Note - this fails when the password_list is exhausted, which happens because passwords are moved
         # from this list to the knownPasswords list. I'm not sure what the correct behavior is here -
@@ -549,7 +550,7 @@ def expected_number_of_sites(reuses):
 if __name__ == "__main__":
     results = []
     for i in range(0, 14):
-        hardnesses = [['weak', 1 + i, i/6.0, 0.33], ['average', 5+i, i/4.0, 0.67], ['strong', 8+i, i/3.0, 1.0]]
+        hardnesses = [['weak', 1 + i, i/6, 0.33], ['average', 5+i, i/4, 0.67], ['strong', 8+i, i/3, 1.0]]
         print "hardnesses:"
         print hardnesses
         local_result = [run_one(hardnesses) for trial in xrange(1, 30)]

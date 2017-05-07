@@ -82,6 +82,9 @@ class PasswordAgent(DASHAgent):
         self.cognitiveThreshold = 30  # was 68 in the prolog but trying one that limits to something like 12 passwords
         #self.cognitiveThreshold = 30  # was 68 in the prolog but trying one that limits to something like 12 passwords
         # (the prolog version included the cost for usernames, not currently included)
+        self.memorizeThreshold = 0.99 # once the user has 99% belief in a password,
+                                      # it can be considered "known" - used for
+                                      # for spaced repetition technique
         self.recallThreshold = 0.5  # from bruno_user.pl
         self.passwordReusePriority = 'long'
         self.passwordReuseThreshold = 54
@@ -239,6 +242,9 @@ transient doWork
         # Select password: essentially the weaker the belief is the greater the chance
         # that user will just pick one of their known username/passwords
         distribution = [(password, belief), ('other_known', 1.0)]
+        if belief >= self.memorizeThreshold:
+            print "password is now known - changing to longer pw"
+
         if distPicker(distribution, random.random()) == 'other_known' and self.knownUsernames and self.known_passwords:
             changed_password = True
             username = random.choice(self.knownUsernames)
@@ -531,7 +537,7 @@ def expected_number_of_sites(reuses):
 
 if __name__ == "__main__":
     results = []
-    for i in range(0, 14):
+    for i in range(0, 4):
         hardnesses = [['weak', 1 + i, i/6, 0.33], ['average', 5+i, i/4, 0.67], ['strong', 8+i, i/3, 1.0]]
         print "hardnesses:"
         print hardnesses
