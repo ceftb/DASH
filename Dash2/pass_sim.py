@@ -27,7 +27,7 @@ Probably the uncanniness will depend on those numbers, which points to the value
 """
 
 
-from dash import DASHAgent, isConstant, isVar, Parameter, Uniform, Boolean, Range
+from dash import DASHAgent, isConstant, isVar, Parameter, Uniform, Boolean, Range, Measure
 import math
 import random
 from utils import distPicker
@@ -39,7 +39,14 @@ import minimum_spanning_tree
 class PasswordAgent(DASHAgent):
 
     parameters = [Parameter('initial_belief', default=0.65, range=(0, 1)),  # initial strength of beliefs
+                  Parameter('cognitive_threshold', default=30),
+                  Parameter('initial_password_forget_rate', default=0.0025),  # from bruno_user.pl
+                  Parameter('strengthen_factor', default=4),  # Factor in strengthening the pwd each successful use (strengthenScalar in bruno_user.pl)
+                  # how passwords are chosen either from the list of new or existing passwords
+                  Parameter('choose_password_method', value_set=['random', 'list-order'], default='random'),
                   ]
+
+    measures = [Measure('proportion_of_resets', target=0.15, backing='Florencio & Herley 07')]
 
     def __init__(self):
         DASHAgent.__init__(self)
@@ -66,26 +73,30 @@ class PasswordAgent(DASHAgent):
         # initial strength of beliefs
         #self.initial_belief = 0.65  # now a parameter
         # forgetting rate - percent of belief lost
-        self.initial_password_forget_rate = 0.0025  # from bruno_user.pl
         self.password_forget_rate = {}
         # strengthening rate
+<<<<<<< HEAD
         self.strengtheningRate = 0.2
         #self.strengthen_factor = 4  # strengthenScalar from bruno_user.pl
         self.strengthen_factor = 8  # chris changed - change back
+=======
+        self.strengtheningRate = 0.2  # not currently used
+>>>>>>> 5832f51f4bc7ef60a462e138f85c51379412db0e
 
-        self.choose_password_method = 'random'  # 'list-order' or 'random' -
-        # how passwords are chosen either from the list of new or existing passwords
 
         self.cognitiveBurden = 0  # Perhaps this is computed at each point, haven't figured out the details yet.
         # These were copied from bruno_user.pl in lib/logic - check for comments there.
+<<<<<<< HEAD
         # chris changed below - revert
         self.cognitiveThreshold = 30  # was 68 in the prolog but trying one that limits to something like 12 passwords
+=======
+>>>>>>> 5832f51f4bc7ef60a462e138f85c51379412db0e
         #self.cognitiveThreshold = 30  # was 68 in the prolog but trying one that limits to something like 12 passwords
         # (the prolog version included the cost for usernames, not currently included)
-        self.recallThreshold = 0.5  # from bruno_user.pl
-        self.passwordReusePriority = 'long'
-        self.passwordReuseThreshold = 54
-        self.passwordForgetRateStoppingCriterion = 0.0005  # from bruno_user.pl
+        self.recallThreshold = 0.5  # from bruno_user.pl, not currently used
+        self.passwordReusePriority = 'long' # not currently used
+        self.passwordReuseThreshold = 54  # not currently used
+        self.passwordForgetRateStoppingCriterion = 0.0005  # from bruno_user.pl, not currently used
         # pairs used - dict {service:[username, password]}
         self.known = {}
         # usernames used - dict {username:complexity} (I changed to just a list - Jim)
@@ -436,7 +447,7 @@ transient doWork
         else:
             new_cost = levenshtein_set_cost(self.known_passwords + [password])
             # Should also check username cost, but currently don't
-            return new_cost > self.cognitiveThreshold
+            return new_cost > self.cognitive_threshold
 
     # Should return a measure of the complexity of the password by our usual standards.
     # Here I'm just using the length to get this up and running - and not sure this is what will be used finally
@@ -458,6 +469,11 @@ transient doWork
                 node.add_neighbor(other, 1)
                 other.add_neighbor(node, 1)
         #print 'linked', node
+
+    # This is a measure that can be called on the agent at any time, returning the proportion of logins
+    # where the agent also reset the password
+    def proportion_of_resets(self):
+        return 7
 
 
 # The cost of a set of strings is the cost of the minimum spanning tree over the set, with
@@ -504,6 +520,7 @@ def levenshtein_distance(str1, str2):
 #print(levenshtein_distance("rosettacode","raisethysword"))
 
 
+# This is replaced by pass_experiment.py
 def run_one(hardnesses):
     pa = PasswordAgent()
     pa.sendAction('set_service_hardness', hardnesses)
@@ -519,14 +536,14 @@ def run_one(hardnesses):
     pa.disconnect()
     print 'reuses:', reuses
     print 'cog burden is', levenshtein_set_cost(pa.known_passwords), 'for', len(pa.known_passwords), \
-       'passwords. Threshold is', pa.cognitiveThreshold
+       'passwords. Threshold is', pa.cognitive_threshold
     return len(pa.known_passwords), expected_number_of_sites(reuses), reuses
 
 
 # expected number of sites turned over (* p) based on prob attack of p and reuse prob of 1
 def expected_number_of_sites(reuses):
-    total = sum(i * v for i,v in reuses)
-    return sum([i*i*v for i,v in reuses])/float(total) if total > 0 else 0
+    total = sum(i * v for i, v in reuses)  # each pair means v username/password combinations are used i times
+    return sum([i*i*v for i, v in reuses])/float(total) if total > 0 else 0
 
 
 if __name__ == "__main__":

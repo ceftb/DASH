@@ -3,12 +3,14 @@ from system2 import System2Agent, substitute, isConstant, isVar
 from client import Client
 from human_traits import HumanTraits
 from parameter import Parameter, Uniform, Boolean, Range
+from measure import Measure
 import re
 
 
 class DASHAgent(Client, System2Agent, System1Agent, HumanTraits):
 
-    parameters = []
+    parameters = []  # Input parameters, each an instance of Parameter giving a name and info about the possible values
+    measures = []  # Possible measures on the performance of the agent used for validation or as an outcome
 
     def __init__(self):
         Client.__init__(self)
@@ -28,8 +30,7 @@ class DASHAgent(Client, System2Agent, System1Agent, HumanTraits):
         # otherwise sample the distribution
         # Need some code for when there is no distribution etc.
         for p in self.__class__.parameters:
-            v = p.distribution.sample() if p.default is None else p.default
-            setattr(self, p.name, v)
+            setattr(self, p.name, p.distribution.sample() if p.default is None else p.default)
 
     # This is in the java part in the old agent
     def agentLoop(self, max_iterations=-1, disconnect_at_end=True):
