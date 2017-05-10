@@ -2,6 +2,7 @@ from experiment import Experiment
 from trial import Trial
 from client import Client
 import nurse01
+from parameter import Range
 from nurse_hub import Event
 
 # To see the results, start a nurse_hub and run this file.
@@ -17,6 +18,7 @@ class NurseTrial(Trial):
         self.agents = []
         self.misses = []
         self.events = []
+        self.processed_output = []
         self.tick = 1
 
     def initialize(self):
@@ -42,7 +44,7 @@ class NurseTrial(Trial):
     # After each step with every agent, cause the hub to go one 'tick', which is used to apply timeouts
     def process_after_iteration(self):
         self.experiment_client.sendAction("tick")
-        print "sent tick", self.tick
+        #print "sent tick", self.tick
         self.tick += 1
 
     def process_after_run(self):
@@ -69,6 +71,16 @@ class NurseTrial(Trial):
         print 'computer, number of uses, number of misses'
         for ce in computer_events:
             print ce, len(computer_events[ce]), len(computer_misses[ce]) if ce in computer_misses else 0
+        #self.processed_output = [[ce,
+        #                          len(computer_events[ce]),
+        #                         len(computer_misses[ce]) if ce in computer_misses else 0]
+        #                         for ce in computer_events]
+        # Just store number of misses
+        self.processed_output = (sum([len(computer_misses[ce]) if ce in computer_misses else 0
+                                     for ce in computer_events]), self.misses)
+
+    def output(self):
+        return self.processed_output
 
     # Return a list of events matching the type name
     def events_of_type(self, type_name):
@@ -77,28 +89,33 @@ class NurseTrial(Trial):
 
 # This spits out the results as the number of computers varies, creating a couple of hundred agents in the process.
 def test_num_computers():
-    exp = Experiment(NurseTrial, exp_data={'num_nurses': 20, 'num_patients': 5, 'num_medications': 10, 'timeout': 0},
+    exp = Experiment(NurseTrial,
+                     exp_data={'num_nurses': 20, 'num_patients': 5, 'num_medications': 10, 'timeout': 0},
+                     independent=['num_computers', Range(5, 21, 5)],  # Range gets expanded with python range()
                      num_trials=1)
-    runs = [exp.run(run_data={'num_computers': c}) for c in range(2, 5, 3)]
-    outputs = [[(trial.timeout, trial.num_computers, trial.misses, trial.iteration, len(trial.events_of_type("login"))) for trial in e]
-               for e in runs]
-    print "Timeout, Number of computers, Number of misses, Number of iterations, Number of logins"
-    for output in outputs:
-        print output
-    return runs
+    outputs = exp.run()
+    #outputs = [[(t.timeout, t.num_computers, t.misses, t.iteration, len(t.events_of_type("login"))) for t in r]
+    #          for r in runs]
+    print "Experiment data:", exp.exp_data
+    print "Number of computers, Number of misses, Number of iterations, Number of logins"
+    for independent_val in sorted(outputs):
+        print independent_val, ":", outputs[independent_val]
+    print 'exp results:', exp.process_results()
+    return outputs
 
 
 def test_timeout():
     exp = Experiment(NurseTrial,
                      exp_data={'num_nurses': 20, 'num_patients': 5, 'num_medications': 10, 'num_computers': 20},
-                     num_trials=1)
-    runs = [exp.run(run_data={'timeout': 65 }) for t in range(0, 8)]
-    outputs = [[(trial.timeout, trial.misses, trial.iteration,
-                 len(trial.events_of_type("login")), len(trial.events_of_type("autologout")))
-                for trial in run]
-               for run in runs]
+                     num_trials=8)
+    #runs = [exp.run(run_data={'timeout': 65}) for t in range(0, 8)]  # looks like I wanted timeout to vary, coming back to that
+    #outputs = [[(trial.timeout, trial.misses, trial.iteration,
+    #             len(trial.events_of_type("login")), len(trial.events_of_type("autologout")))
+    #            for trial in run]
+    #           for run in runs]
+    outputs = exp.run(run_data={'timeout': 65})
     print outputs
-    return runs
+    #return runs
 
 #timeout_runs = test_timeout()
 

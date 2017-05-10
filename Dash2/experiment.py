@@ -34,6 +34,8 @@ class Experiment(object):
         if self.independent is not None and isinstance(self.independent[1], Range):
             independent_vals = range(self.independent[1].min, self.independent[1].max, self.independent[1].step)
             print 'expanded range to', independent_vals
+        elif self.independent is not None and isinstance(self.independent[1], (list, tuple)):  # allow a direct list
+            independent_vals = self.independent[1]
         for independent_val in independent_vals:
             trial_data = trial_data_for_all_values.copy()
             if self.independent is not None:

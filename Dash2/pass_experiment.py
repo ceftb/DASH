@@ -21,6 +21,7 @@ class PasswordTrial(trial.Trial):
         self.agents = [pass_sim.PasswordAgent()]
         # Set up hardnesses for the current run
         h = self.hardness
+        print 'hardness is', h
         if h >= 0:  # a negative value turns this off so we can test other things
             self.agents[0].sendAction('set_service_hardness',
                                       [['weak', 1 + h, h/6, 0.33], ['average', 5+h, h/4, 0.67], ['strong', 8+h, h/3, 1.0]])
@@ -42,8 +43,8 @@ class PasswordTrial(trial.Trial):
 
 
 def run_one(arguments):
-    e = Experiment(PasswordTrial, independent=['hardness', Range(0, 10)])  # typically 0,14 but shortened for testing
-    results = e.run(run_data={'max_iterations': 100})  # typically max_iterations is 100, but lowered for testing
+    e = Experiment(PasswordTrial, num_trials=1, independent=['hardness', [0, 7]])  # Range(0, 2)])  # typically 0,14 but shortened for testing
+    results = e.run(run_data={'max_iterations': 300})  # typically max_iterations is 100, but lowered for testing
     print results
     return e, results
 
