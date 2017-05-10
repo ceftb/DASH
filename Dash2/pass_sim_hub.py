@@ -116,7 +116,7 @@ class ServiceHub(WorldHub):
                 return 'failed:logged_in', []
         else:
             print "user \'", username, "\' failed to log in: password and username do not match"
-            return 'failed:unknown_password', []
+            return 'failed:incorrect_password', []
 
     def create_account(self, agent_id, (service_name, username, password)):
         service = self.service_dictionary[service_name]
@@ -136,6 +136,7 @@ class ServiceHub(WorldHub):
 
     def get_account(self, agent_id, data):
         service_type = data[0]
+        print 'service type requested', service_type
         result = distPicker(self.serviceDist[service_type], random.random())
         print 'get account result', result
         return 'success', result.get_name(), result.get_requirements()

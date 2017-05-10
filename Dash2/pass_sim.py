@@ -40,8 +40,10 @@ class PasswordAgent(DASHAgent):
 
     parameters = [Parameter('initial_belief', default=0.65, range=(0, 1)),  # initial strength of beliefs
                   Parameter('cognitive_threshold', default=30),
-                  Parameter('initial_password_forget_rate', default=0.0025),  # from bruno_user.pl
+                  # this forget rate chosen to give ~15% resets with only 9 sites. Should be tuned for more sites.
+                  Parameter('initial_password_forget_rate', default=0.215),  # 0.0025 from bruno_user.pl
                   Parameter('strengthen_factor', default=4),  # Factor in strengthening the pwd each successful use (strengthenScalar in bruno_user.pl)
+                  Parameter('forget_rate_discount', default=2.364),  # factor by which the forget rate decreases each successful use, from bruno_user.pl
                   # how passwords are chosen either from the list of new or existing passwords
                   Parameter('choose_password_method', value_set=['random', 'list-order'], default='random'),
                   ]
@@ -100,8 +102,13 @@ class PasswordAgent(DASHAgent):
         self.username_list = ["joe@gmail.com"]  # ['user1', 'user12', 'admin']  # user names are currently randomly chosen from these
 
         # I need some clarification on this. In the prolog version, this is only incremented when the password fails
-        # I'm doing the same for now and leaving the name as 'num_logins'.
-        self.num_logins = 3  # from bruno_user.pl
+        # I'm doing the same for now and renaming as 'failed_logins'.
+        self.failed_logins = 3  # from bruno_user.pl
+
+        self.num_login_attempts = 0
+        self.num_logins = 0
+        self.num_reset_attempts = 0
+        self.num_resets = 0
 
         # The agent goal description is short, because the rational task is not that important here.
         self.readAgent("""
@@ -166,7 +173,8 @@ transient doWork
 
         # Decide the service to log into
         [status, service, requirements] = self.sendAction('getAccount', [service_type])
-        print 'chosen account to set up:', service_type, status, service, requirements
+        print 'chosen account', 'already' if service in self.beliefs else 'to', \
+            'set up', service_type, status, service, requirements
 
         ### choose Username
         # if the list of existing usernames is not empty, pick one at random,
@@ -189,7 +197,10 @@ transient doWork
         # If account is be created, update beliefs else repeat
         # I am not sure if it would make more sense to keep beliefs local in this
         # case
-        [status, data] = self.sendAction('createAccount', [service, username, password])
+        if service in self.beliefs:
+            status = 'failed:user'  # only make one account per service, fake failing if we already made one
+        else:
+            [status, data] = self.sendAction('createAccount', [service, username, password])
         #print 'create account result:', [status, data]
         if status == 'success':
             print 'Account created on', service, 'with user', username, 'and password', password, requirements
@@ -231,35 +242,47 @@ transient doWork
             3. signIn
 
         '''
+        self.num_login_attempts += 1
         # check if user has account
         if service not in self.beliefs or not self.beliefs[service]:
-            print "User has no beliefs for this account"
+            print "User has no beliefs for this account:", service, self.beliefs
 
         [username, password, belief] = self.beliefs[service]
         # Select password: essentially the weaker the belief is the greater the chance
         # that user will just pick one of their known username/passwords
-        distribution = [(password, belief), ('other_known', 1.0)]
-        if distPicker(distribution, random.random()) == 'other_known' and self.knownUsernames and self.known_passwords:
-            changed_password = True
-            username = random.choice(self.knownUsernames)
-            password = random.choice(self.known_passwords)
-        else:
-            changed_password = False
+        distribution = [(password, belief), ('other_known', (1 + belief) * 0.5), ('reset', 1.0)]
+        changed_password = False
+        decision = distPicker(distribution, random.random())
+        if decision == 'other_known':
+            if self.knownUsernames and self.known_passwords:
+                changed_password = True
+                old_username, old_password = username, password
+                username = random.choice(self.knownUsernames)
+                password = random.choice(self.known_passwords)
+                print 'changed password belief to', password, ', beliefs', distribution
+            else:
+                print 'would have changed but usernames=', self.knownUsernames, 'and pw=', self.known_passwords
+        elif decision == 'reset':
+            print 'resetting the password for', service
+            self.reset_password(('predicate', service))  # This updates the beliefs appropriately
+            [username, password, belief] = self.beliefs[service]
 
         # Try to signIn; if agent knew the password, update the strength of
         # belief; analogously it works if user did not know the password.
         # Finally, if failed, repeat the sign in process with the updated beliefs
         login_response = self.sendAction('signIn', [service, username, password])
         if login_response[0] == 'success':
+            self.num_logins += 1
             if service not in self.password_forget_rate:
                 self.password_forget_rate[service] = self.initial_password_forget_rate
             else:
-                self.password_forget_rate[service] /= 2.364  # from bruno_user.pl
+                self.password_forget_rate[service] /= self.forget_rate_discount  # from bruno_user.pl
             #if changed_password:
                 #self.beliefs[service][2] += self.beliefs[service][2] * self.strengtheningRate
                 #new_strength = min(self.beliefs[service][2], 0.9999)   # used to be 'max' but I think 'min' was intended
             self.beliefs[service] = [username, password, 1]
-            print 'signed into', service, 'with changed username and password', username, ',', password
+            print 'signed into', service, 'with', 'changed' if changed_password else 'same', \
+                  'username and password', username, ',', password, 'belief', belief
             #else:
             #    self.beliefs[service] = [username, password, 1]
             #    print 'signed into', service, 'with same username and password', username, ',', password
@@ -272,24 +295,31 @@ transient doWork
             return [{}]
         elif login_response[0] == 'failed:logged_in':
             self.degrade_all_password_beliefs()
-            self.signOut(service)
+            self.sign_out(service)
             return []
         else:
             # behavior from bruno_user.pl
-            self.num_logins += 1
-            self.password_forget_rate[service] = self.password_forget_rate[service] * 2 * math.log(self.num_logins)
+            print 'login response was', login_response, 'for', username, 'and', password, 'on', service, 'trying again'
+            self.failed_logins += 1
+            self.password_forget_rate[service] = self.password_forget_rate[service] * 2 * math.log(self.failed_logins)
             self.beliefs[service] = [username, password, 0]  # it is removed from the list in bruno_user.pl
+            # If we had changed the password, change it back!
+            if changed_password:
+                self.beliefs[service] = [old_username, old_password, 0.65]  # the constant needs to be a parameter
             self.degrade_all_password_beliefs()
             #if changed_password:
             #    self.beliefs[service][2] -= (self.beliefs[service][2]*self.strengtheningRate)
             #    new_strength = max(self.beliefs[service][2], 0.0001)  # used to be 'min' but I think 'max' was intended
             #    self.beliefs[service] = [username, password, new_strength]
-            return self.signIn((goal, service))
+            return self.sign_in((goal, service))
 
     def degrade_all_password_beliefs(self):  # same as passwordFatigue in bruno_user.pl
+        print 'degrading beliefs:'
         for service in self.beliefs:
             b = self.beliefs[service]  # [username, password, belief]
-            b[2] = max(0, b[2] - self.password_forget_rate[service])
+            newb = max(0, b[2] - self.password_forget_rate[service])
+            print '  ', service, 'from', b, 'to', newb
+            b[2] = newb
 
     def sign_out(self, (goal, service)):
         """ This should be equivalent to the signOut subgoal in prolog
@@ -312,6 +342,7 @@ transient doWork
 
     def reset_password(self, (goal, service)):
         #print 'Resetting: agent beliefs for service', service, 'are', self.beliefs[service]
+        self.num_reset_attempts += 1
         [username, old_password, belief] = self.beliefs[service]
 
         new_password = self.choose_password(username)
@@ -319,6 +350,7 @@ transient doWork
         status_response = self.sendAction('resetPassword', [service, username, old_password, new_password])
 
         if status_response[0] == 'success':
+            self.num_resets += 1
             if new_password in self.writtenPasswords:
                 self.beliefs[service] = [username, new_password, self.initial_belief, 0.999]
             else:
@@ -406,9 +438,11 @@ transient doWork
             if desired_pass not in self.known_passwords:
                 self.known_passwords.append(desired_pass)
                 # For now, compute and print the levenshtein set cost of the known passwords
-                print len(self.known_passwords), 'Levenshtein cost:', levenshtein_set_cost(self.known_passwords), self.known_passwords
+                #print len(self.known_passwords), 'Levenshtein cost:', levenshtein_set_cost(self.known_passwords), self.known_passwords
             if desired_pass in self.password_list:
                 self.password_list.remove(desired_pass)
+            if username not in self.knownUsernames:
+                self.knownUsernames.append(username)
         elif self.known_passwords and \
                 (not new_password_verified or distPicker(self.memoBias, random.random()) == 'reuse'):
             # We have to reuse if we didn't find a good enough new password.
@@ -425,7 +459,7 @@ transient doWork
             password = desired_pass
             self.writtenPasswords.append(desired_pass)
             self.password_list.remove(desired_pass)
-        print 'choose password [', requirements, '] chooses', password
+        print 'choose password', password, '[', requirements, ']'
         return password
 
     # Boolean - whether adding the password as a new password will tip the agent over its cognitive load threshold
@@ -524,7 +558,7 @@ def run_one(hardnesses):
     pa.disconnect()
     print 'reuses:', reuses
     print 'cog burden is', levenshtein_set_cost(pa.known_passwords), 'for', len(pa.known_passwords), \
-       'passwords. Threshold is', pa.cognitive_threshold
+          'passwords. Threshold is', pa.cognitive_threshold
     return len(pa.known_passwords), expected_number_of_sites(reuses), reuses
 
 
@@ -535,17 +569,32 @@ def expected_number_of_sites(reuses):
 
 
 if __name__ == "__main__":
-    results = []
-    for i in range(0, 14):
-        hardnesses = [['weak', 1 + i, i/6, 0.33], ['average', 5+i, i/4, 0.67], ['strong', 8+i, i/3, 1.0]]
-        print hardnesses
-        local_result = [run_one(hardnesses) for trial in xrange(1, 30)]
-        results.append((i, local_result, hardnesses))
-        print i, 'ave n', sum(r[0] for r in local_result)/float(len(local_result))
-        print i, 'ave r', sum(r[1] for r in local_result)/float(len(local_result))
-    for [i, local_result, h] in results:
-        print i, 'ave n', sum(r[0] for r in local_result)/float(len(local_result))
-        print i, 'ave r', sum(r[1] for r in local_result)/float(len(local_result))
+    # Run one agent until quiescence (just for n steps until there is evidence of forgetting)
+    pa = PasswordAgent()
+    pa.agentLoop(500, disconnect_at_end=False)
+    reuses = pa.sendAction('send_reuses')
+    pa.disconnect()
+    print pa.num_login_attempts, 'login attempts', pa.num_logins, 'successful.', \
+          pa.num_reset_attempts, 'reset attempts', pa.num_resets, 'successful.'
+    print 'reuses:', reuses
+    print 'cog burden is', levenshtein_set_cost(pa.known_passwords), 'for', len(pa.known_passwords), \
+       'passwords. Threshold is', pa.cognitive_threshold
+    print 'known usernames is', pa.knownUsernames, 'passwords', pa.known_passwords
+
+
+# This ran a set of trials, now subsumed in pass_experiment.py
+#if __name__ == "__main__":
+#    results = []
+#    for i in range(0, 14):
+#        hardnesses = [['weak', 1 + i, i/6, 0.33], ['average', 5+i, i/4, 0.67], ['strong', 8+i, i/3, 1.0]]
+#        print hardnesses
+#        local_result = [run_one(hardnesses) for trial in xrange(1, 30)]
+#        results.append((i, local_result, hardnesses))
+#        print i, 'ave n', sum(r[0] for r in local_result)/float(len(local_result))
+#        print i, 'ave r', sum(r[1] for r in local_result)/float(len(local_result))
+#    for [i, local_result, h] in results:
+#        print i, 'ave n', sum(r[0] for r in local_result)/float(len(local_result))
+#        print i, 'ave r', sum(r[1] for r in local_result)/float(len(local_result))
 
 # what I used
 #for [i, local_result, h] in results:
