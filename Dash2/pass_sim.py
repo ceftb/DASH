@@ -493,9 +493,9 @@ transient doWork
         #print 'linked', node
 
     # This is a measure that can be called on the agent at any time, returning the proportion of logins
-    # where the agent also reset the password
+    # where the agent also attempted to reset the password
     def proportion_of_resets(self):
-        return 7
+        return float(self.num_resets)/self.num_login_attempts
 
 
 # The cost of a set of strings is the cost of the minimum spanning tree over the set, with
@@ -598,4 +598,6 @@ if __name__ == "__main__":
 
 # what I used
 #for [i, local_result, h] in results:
+#     This is a weighted sum of the hardness and the estimated probability that a site is safe from a reuse attack
+#     (9 sites were used for these runs)
 #     print min((i * 0.2 + sum(9 - r[1] for r in local_result)/float(len(local_result))) / 9, 1.0)
