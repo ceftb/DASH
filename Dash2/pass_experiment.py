@@ -43,7 +43,7 @@ class PasswordTrial(trial.Trial):
 
 def run_one(arguments):
     e = Experiment(PasswordTrial, independent=['hardness', Range(0, 10)])  # typically 0,14 but shortened for testing
-    results = e.run(run_data={'max_iterations': 10})  # typically max_iterations is 100, but lowered for testing
+    results = e.run(run_data={'max_iterations': 100})  # typically max_iterations is 100, but lowered for testing
     print results
     return e, results
 

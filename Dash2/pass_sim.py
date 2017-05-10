@@ -75,22 +75,9 @@ class PasswordAgent(DASHAgent):
         # forgetting rate - percent of belief lost
         self.password_forget_rate = {}
         # strengthening rate
-<<<<<<< HEAD
-        self.strengtheningRate = 0.2
-        #self.strengthen_factor = 4  # strengthenScalar from bruno_user.pl
-        self.strengthen_factor = 8  # chris changed - change back
-=======
         self.strengtheningRate = 0.2  # not currently used
->>>>>>> 5832f51f4bc7ef60a462e138f85c51379412db0e
-
-
         self.cognitiveBurden = 0  # Perhaps this is computed at each point, haven't figured out the details yet.
         # These were copied from bruno_user.pl in lib/logic - check for comments there.
-<<<<<<< HEAD
-        # chris changed below - revert
-        self.cognitiveThreshold = 30  # was 68 in the prolog but trying one that limits to something like 12 passwords
-=======
->>>>>>> 5832f51f4bc7ef60a462e138f85c51379412db0e
         #self.cognitiveThreshold = 30  # was 68 in the prolog but trying one that limits to something like 12 passwords
         # (the prolog version included the cost for usernames, not currently included)
         self.recallThreshold = 0.5  # from bruno_user.pl, not currently used
