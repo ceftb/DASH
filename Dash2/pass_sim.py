@@ -580,6 +580,8 @@ if __name__ == "__main__":
     print 'cog burden is', levenshtein_set_cost(pa.known_passwords), 'for', len(pa.known_passwords), \
        'passwords. Threshold is', pa.cognitive_threshold
     print 'known usernames is', pa.knownUsernames, 'passwords', pa.known_passwords
+    for m in pa.measures:
+        print m, m.eval(pa), "target: " + str(m.target) if m.target is not None else ""
 
 
 # This ran a set of trials, now subsumed in pass_experiment.py
