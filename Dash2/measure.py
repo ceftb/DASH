@@ -13,7 +13,17 @@ class Measure:
 
     def __init__(self, name, function=None, target=None, backing=None):
         self.name = name
-        self.function = function
+        self.function = self.name if function is None else function
         self.target = target
         self.backing = backing
+
+    def __repr__(self):
+        return "M: " + str(self.name)
+
+    # Evaluate the measure on an object for which it is defined, e.g. an agent or experiment.
+    def eval(self, measure_object):
+        # If the function slot is a string, find it as a method on the object and call it.
+        if isinstance(self.function, basestring):
+            if getattr(measure_object, self.function) and callable(getattr(measure_object, self.function)):
+                return getattr(measure_object, self.function)()
 

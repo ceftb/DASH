@@ -113,6 +113,18 @@ class DASHAgent(Client, System2Agent, System1Agent, HumanTraits):
                     self.knownTuple(('performed', concrete_result))   # Adding both lets both idioms be used in the agent code.
                 self.add_activation(concrete_result, 0.8)
 
+    # Call a named measure on the agent
+    def call_measure(self, name):
+        measure = self.find_measure(name)
+        if measure is not None:
+            return measure.eval(self)
+
+    # Find a measure given a name
+    def find_measure(self, name):
+        for m in self.measures:
+            if m.name == name:
+                return m
+
     # Generic primitive actions
 
     # A null action that always succeeds, useful for dummy steps

@@ -33,23 +33,26 @@ class PasswordTrial(trial.Trial):
         pa = self.agents[0]
         reuses = pa.sendAction('send_reuses')
         print 'reuses:', reuses
+        resets = pa.call_measure('proportion_of_resets')
         print 'cog burden is', pass_sim.levenshtein_set_cost(pa.known_passwords), 'for', len(pa.known_passwords), \
               'passwords. Threshold is', pa.cognitive_threshold, \
-              'proportion of resets is', pa.proportion_of_resets()
-        self.results = len(pa.known_passwords), pass_sim.expected_number_of_sites(reuses), pa.proportion_of_resets()  #, reuses
+              'proportion of resets is', resets
+        self.results = len(pa.known_passwords), pass_sim.expected_number_of_sites(reuses), resets  #, reuses
 
     def output(self):
         return self.results
 
 
 def run_one(arguments):
-    e = Experiment(PasswordTrial, num_trials=1, independent=['hardness', [0, 7]])  # Range(0, 2)])  # typically 0,14 but shortened for testing
-    results = e.run(run_data={'max_iterations': 300})  # typically max_iterations is 100, but lowered for testing
-    print results
-    return e, results
+    e = Experiment(PasswordTrial, num_trials=2, independent=['hardness', [0, 7]])  # Range(0, 2)])  # typically 0,14 but shortened for testing
+    run_results = e.run(run_data={'max_iterations': 300})  # typically max_iterations is 100, but lowered for testing
+    print run_results
+    print 'processing'
+    processed_run_results = e.process_results()
+    print 'processed:', processed_run_results
+    return e, run_results, processed_run_results
 
 
-# can be called from the command line with the number of agents per trial.
+# can be called from the command line with e.g. the number of agents per trial.
 if __name__ == "__main__":
-    exp, results = \
-        run_one(sys.argv)
+    exp, results, processed_results = run_one(sys.argv)
