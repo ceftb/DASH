@@ -44,12 +44,15 @@ class PasswordTrial(trial.Trial):
 
 
 def run_one(arguments):
-    e = Experiment(PasswordTrial, num_trials=2, independent=['hardness', [0, 7]])  # Range(0, 2)])  # typically 0,14 but shortened for testing
-    run_results = e.run(run_data={'max_iterations': 300})  # typically max_iterations is 100, but lowered for testing
+    #e = Experiment(PasswordTrial, num_trials=2, independent=['hardness', [0, 7]])  # Range(0, 2)])  # typically 0,14 but shortened for testing
+    # Setting up one trial to test the Magi integration
+    e = Experiment(PasswordTrial, num_trials=1, independent=['hardness', [0]])  # Range(0, 2)])  # typically 0,14 but shortened for testing
+    run_results = e.run(run_data={'max_iterations': 100})  # typically max_iterations is 100, but lowered for testing
     print run_results
     print 'processing'
     processed_run_results = e.process_results()
     print 'processed:', processed_run_results
+    print 'args were', arguments
     return e, run_results, processed_run_results
 
 
