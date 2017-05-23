@@ -509,6 +509,8 @@ transient doWork
     # This is a measure that can be called on the agent at any time, returning the proportion of logins
     # where the agent also attempted to reset the password
     def proportion_of_resets(self):
+        if self.num_login_attempts == 0:
+            return 1.0
         return float(self.num_resets)/self.num_login_attempts
 
 
@@ -601,6 +603,8 @@ if __name__ == "__main__":
     print 'cog burden is', cb, 'for', len(pa.known_passwords), \
        'passwords. Threshold is', pa.cognitive_threshold
     print 'known usernames is', pa.knownUsernames, 'passwords', pa.known_passwords
+    for m in pa.measures:
+        print m, m.eval(pa), "target: " + str(m.target) if m.target is not None else ""
 
 
 # This ran a set of trials, now subsumed in pass_experiment.py

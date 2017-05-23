@@ -1,13 +1,13 @@
 """
 3/15/17 - created, based on phish_experiment_class. Allows iterating on, e.g. password constraints and measuring
-aggregate security for the pass_sim.py agent. pass_sim_hub.py should be running.
+aggregate security for the pass_sim_repetition.py agent. pass_sim_repetition_hub.py should be running.
 """
 
 from experiment import Experiment
 from parameter import Range
 import trial
 import sys
-import pass_sim
+import pass_sim_repetition
 
 
 class PasswordTrial(trial.Trial):
@@ -18,7 +18,7 @@ class PasswordTrial(trial.Trial):
     # need to set up the self.agents list for iteration.
     # Just run one at a time, or there may appear to be more password sharing than is warranted.
     def initialize(self):
-        self.agents = [pass_sim.PasswordAgent()]
+        self.agents = [pass_sim_repetition.PasswordAgent()]
         # Set up hardnesses for the current run
         h = self.hardness
         print 'hardness is', h
@@ -34,17 +34,17 @@ class PasswordTrial(trial.Trial):
         reuses = pa.sendAction('send_reuses')
         print 'reuses:', reuses
         resets = pa.call_measure('proportion_of_resets')
-        print 'cog burden is', pass_sim.levenshtein_set_cost(pa.known_passwords), 'for', len(pa.known_passwords), \
+        print 'cog burden is', pass_sim_repetition.levenshtein_set_cost(pa.known_passwords), 'for', len(pa.known_passwords), \
               'passwords. Threshold is', pa.cognitive_threshold, \
               'proportion of resets is', resets
-        self.results = len(pa.known_passwords), pass_sim.expected_number_of_sites(reuses), resets  #, reuses
+        self.results = len(pa.known_passwords), pass_sim_repetition.expected_number_of_sites(reuses), resets  #, reuses
 
     def output(self):
         return self.results
 
 
 def run_one(arguments):
-    e = Experiment(PasswordTrial, num_trials=14, independent=['hardness', Range(0, 14)])  # Range(0, 2)])  # typically 0,14 but shortened for testing
+    e = Experiment(PasswordTrial, num_trials=2, independent=['hardness', [0, 7]])  # Range(0, 2)])  # typically 0,14 but shortened for testing
     run_results = e.run(run_data={'max_iterations': 300})  # typically max_iterations is 100, but lowered for testing
     print run_results
     print 'processing'

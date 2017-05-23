@@ -101,12 +101,12 @@ class PasswordAgent(DASHAgent):
         self.knownUsernames = []
         # passwords used - dict {password:complexity} (I changed to just a list - Jim)
         self.known_passwords = []
+        self.known_lengthened_passwords = []
         # list of writen pairs
         self.writtenPasswords = []
         # USER beliefs. self.beliefs[belief] is a triple [username, password, belief] where 0 <= belief <= 1
         self.beliefs = {}
-        self.expansion_counter = {}
-        self.current_load_cap = self.cognitive_threshold
+        self.is_lengthened = {}
 
         self.username_list = ["joe@gmail.com"]  # ['user1', 'user12', 'admin']  # user names are currently randomly chosen from these
 
@@ -196,7 +196,6 @@ transient doWork
             username = random.choice(self.username_list)
 
         password = self.choose_password(username, requirements)
-        self.expansion_counter[service] = 0
 
         # Make sure a node exists for this password for every known service
         # The same password is linked positively across services,
@@ -253,6 +252,8 @@ transient doWork
 
         '''
         self.num_login_attempts += 1
+        lengthened = False
+
         # check if user has account
         if service not in self.beliefs or not self.beliefs[service]:
             print "User has no beliefs for this account:", service, self.beliefs
@@ -264,6 +265,7 @@ transient doWork
         changed_password = False
         decision = distPicker(distribution, random.random())
         if decision == 'other_known':
+            # TODO: model this scenario for lengthened passwords
             if self.knownUsernames and self.known_passwords:
                 changed_password = True
                 old_username, old_password = username, password
@@ -282,26 +284,29 @@ transient doWork
         # Finally, if failed, repeat the sign in process with the updated beliefs
         login_response = self.sendAction('signIn', [service, username, password])
         if login_response[0] == 'success':
-            lengthened = False
             self.num_logins += 1
-            if self.beliefs[service][2] > self.expansion_threshold and \
-                    password not in self.writtenPasswords and \
-                    self.expansion_counter[service] < self.max_num_expansions \
-                    and self.over_cog_load(None, password) is False:
-                # for now, just lengthen the password with a randomly generated string
-                # and across all services with the same password
-                lengthend = True
-                suffix = ''.join(choice(ascii_lowercase) for i in range(self.expansion_char_length))
-                for s in self.beliefs:
-                    potentially_lengthened_pw = self.beliefs[s][1]
-                    if potentially_lengthened_pw == password:
-                        self.lengthen_password(('predicate', s), suffix)
-                        self.expansion_counter[s] += 1
+
+            if service not in self.password_forget_rate:
+                self.password_forget_rate[service] = self.initial_password_forget_rate
             else:
-                if service not in self.password_forget_rate:
-                    self.password_forget_rate[service] = self.initial_password_forget_rate
-                else:
-                    self.password_forget_rate[service] /= self.forget_rate_discount  # from bruno_user.pl
+                self.password_forget_rate[service] /= self.forget_rate_discount  # from bruno_user.pl
+
+            if self.beliefs[service][2] > self.expansion_threshold and \
+                    password not in self.writtenPasswords:
+
+                suffix = ''.join(choice(ascii_lowercase) for i in range(self.expansion_char_length))
+                if self.over_cog_load(password + suffix, True) is False:
+                    # for now, just lengthen the password with a randomly generated string
+                    # and across all services with the same password
+                    lengthened = True
+                    print "lengthening"
+                    suffix = ''.join(choice(ascii_lowercase) for i in range(self.expansion_char_length))
+                    # for s in self.beliefs:
+                    #     potentially_lengthened_pw = self.beliefs[s][1]
+                    #     if potentially_lengthened_pw == password:
+                    self.lengthen_password(('predicate', service), suffix)
+
+            if not lengthened:
                 self.beliefs[service] = [username, password, 1]
             #if changed_password:
                 #self.beliefs[service][2] += self.beliefs[service][2] * self.strengtheningRate
@@ -311,7 +316,7 @@ transient doWork
             elif changed_password:
                 print 'signed into', service, 'with', 'changed password', password, 'belief', belief
             else:
-                print 'same username and password', username, ',', password, 'belief', belief
+                print 'signed into', service, 'with', 'same username and password', username, ',', password, 'belief', belief
 
             #else:
             #    self.beliefs[service] = [username, password, 1]
@@ -330,6 +335,9 @@ transient doWork
         else:
             # behavior from bruno_user.pl
             print 'login response was', login_response, 'for', username, 'and', password, 'on', service, 'trying again'
+            if lengthened:
+                # hasn't occured yet - chris
+                print "Note: lengthening impacted login response"
             self.failed_logins += 1
             self.password_forget_rate[service] = self.password_forget_rate[service] * 2 * math.log(self.failed_logins)
             self.beliefs[service] = [username, password, 0]  # it is removed from the list in bruno_user.pl
@@ -370,7 +378,7 @@ transient doWork
             print 'User successfully logged out from', service, 'as', username
             return [{}]
 
-    def reset_password(self, (goal, service), ):
+    def reset_password(self, (goal, service)):
         print 'Resetting: agent beliefs for service', service, 'are', self.beliefs[service]
         self.num_reset_attempts += 1
         [username, old_password, belief] = self.beliefs[service]
@@ -386,10 +394,21 @@ transient doWork
             else:
                 self.beliefs[service] = [username, new_password, self.initial_belief]
             print 'new beliefs for', service, 'after resetting:', self.beliefs[service]
+
+            password_exists_elsewhere = self.password_exists_multiple_services(old_password)
+            # if not password_exists_elsewhere and old_password in self.known_passwords:
+            #     self.known_passwords.remove(old_password)
+            if not password_exists_elsewhere and old_password in self.known_lengthened_passwords:
+                self.known_lengthened_passwords.remove(old_password)
+            if old_password not in self.password_list and \
+                    (service not in self.is_lengthened or not self.is_lengthened[service]):
+                self.password_list.append(old_password)
+            self.is_lengthened[service] = False
             return [{}]
         else:
             #not yet implemented handling of requirements
             print 'Reset password failed: Handle requirements'
+            print 'Status response: ' + status_response[1]
             return []
 
     def lengthen_password(self, (goal, service), suffix):
@@ -402,11 +421,32 @@ transient doWork
             # TODO: investigate effect of setting belief strength to initial_belief
             self.beliefs[service] = [username, new_password, self.initial_belief]
             print 'new beliefs for', service, 'after lengthening:', self.beliefs[service]
+            self.known_lengthened_passwords.append(new_password)
+
+            password_exists_elsewhere = self.password_exists_multiple_services(old_password)
+            # if not password_exists_elsewhere and old_password in self.known_passwords:
+            #     self.known_passwords.remove(old_password)
+            if not password_exists_elsewhere and old_password in self.known_lengthened_passwords:
+                self.known_lengthened_passwords.remove(old_password)
+            if old_password not in self.password_list and \
+                    (service not in self.is_lengthened or not self.is_lengthened[service]):
+                self.password_list.append(old_password)
+            self.is_lengthened[service] = True
             return [{}]
         else:
             #not yet implemented handling of requirements
             print 'Password lengthening failed: Handle requirements'
             return []
+
+    def password_exists_multiple_services(self, password):
+        num_uses = 0
+        for service in self.beliefs:
+            if self.beliefs[service][1] == password:
+                num_uses += 1
+        if num_uses <= 1:
+            return False
+        else:
+            return True
 
     # Will be about password forget rate stopping criterion, but for now just false
     # This means the simulation will go on forever if the agentLoop call doesn't use a finite number of steps
@@ -450,7 +490,7 @@ transient doWork
             # will run through every unused password, then every used one, so maxTries is more of a timeout
             # for long lists
             max_tries = 100
-            while (not requirements.verify(username, desired_pass) or self.over_cog_load(desired_pass, None)) and max_tries > 0:
+            while (not requirements.verify(username, desired_pass) or self.over_cog_load(desired_pass, False)) and max_tries > 0:
                 #print 'password', desired_pass, 'chosen from', len(list_of_new), len(list_of_old), \
                 #    'not verified against', requirements
                 if (self.choose_password_method == 'list-order' and new_pw_index < len(self.password_list)) or \
@@ -477,7 +517,7 @@ transient doWork
         # the decision is based on memoBias parameter
         # maybe add some distance heuristics later
         new_password_verified = (requirements is None or requirements.verify(username, desired_pass)) \
-            and not self.over_cog_load(desired_pass, None)
+            and not self.over_cog_load(desired_pass, False)
 
         if new_password_verified:
             password = desired_pass
@@ -510,59 +550,64 @@ transient doWork
         return password
 
     # Boolean - whether adding the password as a new password will tip the agent over its cognitive load threshold
-    def over_cog_load(self, password, potential_lengthening_password):
-        if password in self.known_passwords:
+    def over_cog_load(self, potential_password, is_new_lengthening):
+        if potential_password in self.known_passwords:
             return False  # only increases the load if it's not already used
+        elif potential_password in self.known_lengthened_passwords:
+            return False
         else:
-            if potential_lengthening_password is None:
-                new_cost = self.cog_load(self.known_passwords + [password],
-                                         potential_lengthening_password)
-            else:
-                new_cost = self.cog_load(self.known_passwords,
-                                         potential_lengthening_password)
-            # Should also check username cost, but currently don't
-            return new_cost > self.cognitive_threshold
+            new_cost = self.cog_load(potential_password, is_new_lengthening)
+        # Should also check username cost, but currently don't
+        return new_cost > self.cognitive_threshold
 
     # Integer - compute cognitive load determined by cognitive load parameter
-    def cog_load(self, password_set, potential_lengthening_password):
-        num_lengthenings = 0
-        for ec in self.expansion_counter:
-            num_lengthenings += self.expansion_counter[ec]
-        if num_lengthenings == 0 and potential_lengthening_password is None:
-            if self.cog_burden_type == 'both':
-                for p in adjusted_beliefs:
-                    self.add_to_word_count_dict(p)
-                return levenshtein_set_cost(password_set + [""]) + \
-                    math.fsum([self.word_count_dict[p] for p in
-                               password_set])
-            elif self.cog_burden_type == 'levenshtein':
-                return levenshtein_set_cost(password_set + [""])
-            else:
-                for p in adjusted_beliefs:
-                    self.add_to_word_count_dict(p)
-                return math.fsum([self.word_count_dict[p] for p in
-                                 password_set])
+    def cog_load(self, potential_password, is_new_lengthening):
+        adjusted_beliefs = []
+        for password in self.known_passwords:
+            adjusted_beliefs.append(password)
+        for password in self.known_lengthened_passwords:
+            adjusted_beliefs.append(password[len(password) - 1 * self.expansion_char_length:])
 
+        if is_new_lengthening and potential_password is not None:
+            adjusted_beliefs.append(potential_password[len(password) - 1 * self.expansion_char_length:])
+        elif potential_password is not None:
+            adjusted_beliefs.append(potential_password)
+
+        for p in adjusted_beliefs:
+            self.add_to_word_count_dict(p)
+
+        if self.cog_burden_type == 'both':
+            return levenshtein_set_cost(adjusted_beliefs + [""]) + \
+                math.fsum([self.word_count_dict[p] for p in
+                           adjusted_beliefs])
+        elif self.cog_burden_type == 'levenshtein':
+            return levenshtein_set_cost(adjusted_beliefs + [""])
         else:
-            return self.adjusted_cog_load(password_set, potential_lengthening_password)
-
+            return math.fsum([self.word_count_dict[p] for p in
+                             adjusted_beliefs])
 
     # once passwords have been expanded in length, ignore their stems
+    # currently not being called - add in this functionality
     def adjusted_cog_load(self, password_set, potential_lengthening_password):
         adjusted_beliefs = []
-        for service in self.expansion_counter:
-            num_expansions = self.expansion_counter[service]
+        for service in self.beliefs:
             password = self.beliefs[service][1]
-            if num_expansions is 0 and password not in adjusted_beliefs:
-                adjusted_beliefs.append(password)
-            elif num_expansions is not 0:
-                password_suffix = password[len(password) - num_expansions * self.expansion_char_length:]
-                if password_suffix not in adjusted_beliefs:
-                    adjusted_beliefs.append(password_suffix)
-
+            # TODO: add this logic back in
+            # if num_expansions is 0 and password not in adjusted_beliefs:
+            #     adjusted_beliefs.append(password)
+            # elif num_expansions is not 0:
+            #     password_suffix = password[len(password) - num_expansions * self.expansion_char_length:]
+            #     if password_suffix not in adjusted_beliefs:
+            #         adjusted_beliefs.append(password_suffix)
+            # TODO: remove this line
+            adjusted_beliefs.append(password)
+        # TODO: remove these two link_password_nodes
         if potential_lengthening_password is not None:
-            adjusted_beliefs.remove(potential_lengthening_password)
-            adjusted_beliefs.append(''.join(choice(ascii_lowercase) for i in range(self.expansion_char_length)))
+            adjusted_beliefs.append(potential_lengthening_password)
+        # TODO: add this logic back in
+        # if potential_lengthening_password is not None:
+        #     adjusted_beliefs.remove(potential_lengthening_password)
+        #     adjusted_beliefs.append(''.join(choice(ascii_lowercase) for i in range(self.expansion_char_length)))
 
         if self.cog_burden_type == 'both':
             for p in adjusted_beliefs:
@@ -583,7 +628,7 @@ transient doWork
     # word count dictionary if they do not already exist
     def add_to_word_count_dict(self, word):
         if word not in self.word_count_dict:
-            self.word_count_dict[word] = count(p)[0]
+            self.word_count_dict[word] = count(word)[0]
 
     # Should return a measure of the complexity of the password by our usual standards.
     # Here I'm just using the length to get this up and running - and not sure this is what will be used finally
@@ -609,6 +654,8 @@ transient doWork
     # This is a measure that can be called on the agent at any time, returning the proportion of logins
     # where the agent also attempted to reset the password
     def proportion_of_resets(self):
+        if self.num_login_attempts == 0:
+            return 1.0
         return float(self.num_resets)/self.num_login_attempts
 
 
@@ -671,13 +718,15 @@ def run_one(hardnesses):
     reuses = pa.sendAction('send_reuses')
     pa.disconnect()
 
-    cb = pa.cog_load(pa.known_passwords)
+    cb = pa.cog_load(None, False)
 
     print 'reuses:', reuses
-    print 'cog burden is', cb, 'for', len(pa.known_passwords), \
-          'passwords. Threshold is', pa.cognitive_threshold
+    print 'cog burden is ' + str(cb) + ' for ' + str(len(pa.known_passwords)) + \
+        ' known passwords and ' + str(len(self.known_lengthened_passwords)) + \
+        ' known lengthened passwords. Threshold is ' + str(pa.cognitive_threshold)
 
-    return len(pa.known_passwords), expected_number_of_sites(reuses), reuses
+    # TODO: model how reuses are affected by lengthened passwords: e.g. lengthened password A is similar to original password
+    return len(pa.known_passwords), len(pa.known_lengthened_passwords), expected_number_of_sites(reuses), reuses
 
 
 # expected number of sites turned over (* p) based on prob attack of p and reuse prob of 1
@@ -695,12 +744,19 @@ if __name__ == "__main__":
     print pa.num_login_attempts, 'login attempts', pa.num_logins, 'successful.', \
           pa.num_reset_attempts, 'reset attempts', pa.num_resets, 'successful.'
 
-    cb = pa.cog_load(pa.known_passwords, None)
+    cb = pa.cog_load(None, False)
 
     print 'reuses:', reuses
-    print 'cog burden is', cb, 'for', len(pa.known_passwords), \
-       'passwords. Threshold is', pa.cognitive_threshold
-    print 'known usernames is', pa.knownUsernames, 'passwords', pa.known_passwords
+    print 'cog burden is ' + str(cb) + ' for ' + str(len(pa.known_passwords)) + \
+        ' known passwords and ' + str(len(pa.known_lengthened_passwords)) + \
+        ' known lengthened passwords. Threshold is ' + str(pa.cognitive_threshold)
+    print 'known usernames: ' + str(pa.knownUsernames), ' known passwords: ' + \
+        str(pa.known_passwords) + ' known lengthened passwords: ' + \
+        str(pa.known_lengthened_passwords)
+    # TODO: model how reuses are affected by lengthened passwords: e.g. lengthened password A is similar to original password
+    # TODO: investigate these measures
+    for m in pa.measures:
+        print m, m.eval(pa), "target: " + str(m.target) if m.target is not None else ""
 
 
 # This ran a set of trials, now subsumed in pass_experiment.py
