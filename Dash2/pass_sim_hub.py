@@ -11,7 +11,7 @@ class ServiceHub(WorldHub):
         # hard default
         #self.hardnesses = [['weak', 14, 2, 0.33], ['average', 18, 3, 0.67], ['strong', 22, 4, 1.0]]
         # easy default
-        self.hardnesses = [['weak', 1, 0, 0.33], ['average', 4, 0, 0.67], ['strong', 8, 1, 1.0]]
+        self.hardnesses = [['weak', 1, 0, 0.33], ['average', 4, 0, 0.67], ['strong', 8, 0, 1.0]]
         self.initialize()
 
     # Defined separately from the __init__ method so a client can use it to reset the trial
@@ -29,6 +29,13 @@ class ServiceHub(WorldHub):
 
     def send_reuses(self, agent_id, aux_data):
         return self.compute_reuses()
+
+    def send_service_dict(self, agent_id, aux_data):
+        print "sending service dict"
+        for service in self.service_dictionary:
+            print "service", service
+            print self.service_dictionary[service].user_name_passwords
+        return self.service_dictionary.copy()
 
     def compute_reuses(self):
         user_pwd_hosts = dict()

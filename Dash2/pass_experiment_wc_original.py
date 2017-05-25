@@ -7,7 +7,7 @@ from experiment import Experiment
 from parameter import Range
 import trial
 import sys
-import pass_sim_wc
+import pass_sim_wc_original
 
 
 class PasswordTrial(trial.Trial):
@@ -18,7 +18,7 @@ class PasswordTrial(trial.Trial):
     # need to set up the self.agents list for iteration.
     # Just run one at a time, or there may appear to be more password sharing than is warranted.
     def initialize(self):
-        self.agents = [pass_sim_wc.PasswordAgent()]
+        self.agents = [pass_sim_wc_original.PasswordAgent()]
         # Set up hardnesses for the current run
         h = self.hardness
         print 'hardness is', h
@@ -34,10 +34,10 @@ class PasswordTrial(trial.Trial):
         #reuses = pa.sendAction('send_reuses')
         #print 'reuses:', reuses
         #resets = pa.call_measure('proportion_of_resets')
-        #print 'cog burden is', pass_sim_wc.levenshtein_set_cost(pa.known_passwords), 'for', len(pa.known_passwords), \
+        #print 'cog burden is', pass_sim_wc_original.levenshtein_set_cost(pa.known_passwords), 'for', len(pa.known_passwords), \
         #      'passwords. Threshold is', pa.cognitive_threshold, \
         #      'proportion of resets is', resets
-        self.results = len(pa.known_passwords), self.security_measure(pa)  # , pass_sim_wc.expected_number_of_sites(reuses), resets  #, reuses
+        self.results = len(pa.known_passwords), self.security_measure(pa)  # , pass_sim_wc_original.expected_number_of_sites(reuses), resets  #, reuses
 
     def brute_force_attack_risk(self, agent, service, service_dict):
         username = agent.knownUsernames[0]

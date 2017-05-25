@@ -65,53 +65,35 @@ class PasswordAgent(DASHAgent):
 
         # Added by Jim based on bruno_user.pl. This is the list of all possible password choices for
         # the agent, not the ones the agent currently users.
-        self.password_list = ['i', 'by', 'jut', 'mojo', 'punk', 'adjoin', 'canhajj', 'tooknoon', 'birdthink',
-                              'chiefcolor', 'oxygenspell', 'gardenhappen', 'pushsharptree', 'watchbeentheir',
-                              'marrytodaytotal', 'piecetoolshouses', 'caseenterfasttrip', 'billplacepulltools',
-                              'scalefieldstandwish', 'thesegrainproudtrust', 'richvisitgirlwashgift',
-                              'streamanswerstonetaste', 'eachcostleadhumanenergy', 'shineoutercookthusdesire',
-                              'circleeggsmotherbillshirt', 'congosingfinishcanseecrowd',
-                              'colourcropsgivesstoreresult', 'howeverexplainhundredmembers',
-                              'armyshirtvisitmilksnowsuccess', 'crosshopecornsleepthrowwritten',
-                              'rolledhurtbattlefoolselffarmers', 'belownervedevicebrokephrasevowel',
-                              'believeitselfcrosslearnscaleknown', 'termscirclestickservestrikerealize',
-                              'largeguesssimilarsceneneitherseason', 'centurylevelborrowstringyoungpicture',
-                              'cannotonehandbreadpastproveweightpush']
+        self.password_list = ['p', 'P', 'pw', 'Pw', 'pw1', 'Pw1', 'pass', 'Pass', 'pas1', 'Pas1', 'pass1', 'Pass1',
+                              'PaSs1', 'password', 'P4ssW1', 'PassWord', 'PaSs12', 'PaSsWord', 'PaSsW0rd', 'P@SsW0rd',
+                              'PassWord1', 'PaSsWord1', 'P4ssW0rd!', 'P4SsW0rd!', 'PaSsWord12', 'P@SsWord12',
+                              'P@SsWoRd12', 'PaSsWord!2', 'P@SsWord!234', 'P@SsWord!234', 'MyP4SsW0rd!',
+                              'MyP4SsW0rd!234', 'MyP@SsW0rd!234', 'MyPaSsWoRd!234?', 'MyPaSsW0Rd!234?',
+                              'MyS3cUReP@SsW0rd!2345', 'MyV3ryL0ngS3cUReP@SsW0rd!2345?']
 
         # model the complexity of each password by determining how many valid word nonoverlapping substrings it contains
-        self.word_count_dict = {'howeverexplainhundredmembers': 5, 'chiefcolor': 2, 'largeguesssimilarsceneneitherseason': 6,
-                                'shineoutercookthusdesire': 5, 'streamanswerstonetaste': 4,
-                                'cannotonehandbreadpastproveweightpush': 8, 'crosshopecornsleepthrowwritten': 6,
-                                'caseenterfasttrip': 4, 'richvisitgirlwashgift': 5, 'mojo': 1, 'scalefieldstandwish': 4,
-                                'tooknoon': 2, 'oxygenspell': 2, 'congosingfinishcanseecrowd': 7, 'canhajj': 4,
-                                'centurylevelborrowstringyoungpicture': 6, 'armyshirtvisitmilksnowsuccess': 6,
-                                'adjoin': 1, 'eachcostleadhumanenergy': 5, 'rolledhurtbattlefoolselffarmers': 7,
-                                'watchbeentheir': 3, 'circleeggsmotherbillshirt': 5, 'pushsharptree': 3,
-                                'thesegrainproudtrust': 5, 'colourcropsgivesstoreresult': 7,
-                                'belownervedevicebrokephrasevowel': 6, 'birdthink': 2, 'jut': 1, 'gardenhappen': 2, 'by': 1,
-                                'believeitselfcrosslearnscaleknown': 6, 'marrytodaytotal': 3, 'piecetoolshouses': 5, 'punk': 1,
-                                'i': 1, 'billplacepulltools': 5, 'termscirclestickservestrikerealize': 7}
+        self.word_count_dict = {'P4ssW1': 6, 'Pw': 2, 'pw1': 3, 'PaSsWord!2': 3, 'pass': 1, 'P@SsWoRd12': 6,
+                                'PassWord': 1, 'PaSsWord1': 2, 'P4ssW0rd!': 9, 'pw': 2, 'MyP4SsW0rd!234': 13,
+                                'Pass1': 2, 'Pas1': 3, 'P@SsWord12': 6, 'P4SsW0rd!': 9, 'MyP@SsW0rd!234': 13,
+                                'PaSsWord12': 3, 'PassWord1': 2, 'P@SsW0rd': 8, 'MyS3cUReP@SsW0rd!2345': 20,
+                                'MyPaSsWoRd!234?': 7, 'pass1': 2, 'PaSs1': 2, 'P': 1, 'pas1': 3, 'P@SsWord!234': 8,
+                                'password': 1, 'MyPaSsW0Rd!234?': 11, 'MyP4SsW0rd!': 10, 'Pw1': 3,
+                                'MyV3ryL0ngS3cUReP@SsW0rd!2345?': 29, 'PaSs12': 3, 'p': 1, 'Pass': 1, 'PaSsW0rd': 5,
+                                'PaSsWord': 1}
 
-        self.word_complexity_dict = {'howeverexplainhundredmembers': 85782913044408, 'chiefcolor': 2033476,
-                                     'largeguesssimilarsceneneitherseason': 8408473370086874112,
-                                     'shineoutercookthusdesire': 4652926700035835904,
-                                     'streamanswerstonetaste': 222611151278388,
-                                     'cannotonehandbreadpastproveweightpush': 9223372036854775807,
-                                     'crosshopecornsleepthrowwritten': 9223372036854775807, 'caseenterfasttrip': 1444068914448,
-                                     'richvisitgirlwashgift': 23475135670120344, 'mojo': 10497,
-                                     'scalefieldstandwish': 3592773865464, 'tooknoon': 20267738, 'oxygenspell': 149193861,
-                                     'congosingfinishcanseecrowd': 9223372036854775807, 'canhajj': 67598648,
-                                     'centurylevelborrowstringyoungpicture': 9223372036854775807,
-                                     'armyshirtvisitmilksnowsuccess': 9223372036854775807,
-                                     'adjoin': 320612, 'eachcostleadhumanenergy': 5896545140313376,
-                                     'rolledhurtbattlefoolselffarmers': 9223372036854775807, 'watchbeentheir': 2899736776,
-                                     'circleeggsmotherbillshirt': 2452824320565060608, 'pushsharptree': 455677835124,
-                                     'thesegrainproudtrust': 1928431166524956,
-                                     'colourcropsgivesstoreresult': 2537715916592721920,
-                                     'belownervedevicebrokephrasevowel': 9223372036854775807, 'birdthink': 9343152, 'jut': 17576,
-                                     'gardenhappen': 2033476, 'by': 676, 'believeitselfcrosslearnscaleknown': 8408473370086874112,
-                                     'marrytodaytotal': 144931934948, 'piecetoolshouses': 157126674834, 'punk': 10429, 'i': 26,
-                                     'billplacepulltools': 10630007990856, 'termscirclestickservestrikerealize': 9223372036854775807}
+        self.word_complexity_dict = {'P4ssW1': 56800235584, 'Pw': 5704, 'pw1': 46656, 'PaSsWord!2': 452454912,
+                                     'pass': 498, 'P@SsWoRd12': 6601185408000, 'PassWord': 27888, 'PaSsWord1': 1673280,
+                                     'P4ssW0rd!': 1423311812421484544, 'pw': 676, 'MyP4SsW0rd!234': 9223372036854775807,
+                                     'Pass1': 19920, 'Pas1': 37170, 'P@SsWord12': 1650296352000,
+                                     'P4SsW0rd!': 1423311812421484544, 'MyP@SsW0rd!234': 9223372036854775807,
+                                     'PaSsWord12': 16732800, 'PassWord1': 278880, 'P@SsW0rd': 13685690504052736,
+                                     'MyS3cUReP@SsW0rd!2345': 9223372036854775807, 'MyPaSsWoRd!234?': 28124597329920,
+                                     'pass1': 4980, 'PaSs1': 59760, 'P': 26, 'pas1': 12390, 'P@SsWord!234': 4884877201920,
+                                     'password': 498, 'MyPaSsW0Rd!234?': 182095427746068480,
+                                     'MyP4SsW0rd!': 9223372036854775807, 'Pw1': 238328,
+                                     'MyV3ryL0ngS3cUReP@SsW0rd!2345?': 9223372036854775807, 'PaSs12': 597600, 'p': 26,
+                                     'Pass': 1992, 'PaSsW0rd': 3526992, 'PaSsWord': 167328}
 
         # distribution of probabilities for every service type. These are cumulative probabilities, so order matters.
         self.service_type_probs = [('mail', 0.35), ('social_net', 0.85), ('bank', 1.0)]
