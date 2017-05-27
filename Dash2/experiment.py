@@ -1,4 +1,5 @@
 import numbers
+import subprocess
 import numpy
 from trial import Trial
 from parameter import Range
@@ -8,7 +9,8 @@ from parameter import Range
 
 
 class Experiment(object):
-    def __init__(self, trial_class=Trial, independent=None, dependent=None, exp_data={}, num_trials=3):
+    def __init__(self, trial_class=Trial, independent=None, dependent=None, exp_data={}, num_trials=3,
+                 file_output=None, hosts=None):
         self.goal = ""  # The goal is a declarative representation of the aim of the experiment.
                         # It is used where possible to automate experiment setup and some amount of validation.
         self.trial_class = trial_class
@@ -17,11 +19,44 @@ class Experiment(object):
         self.trial_outputs = {}  # A dict with the independent variable as key
         self.independent = independent
         self.dependent = dependent
+        self.hosts = hosts  # If there is a host list, assume it is for Magi on Deter for now
+        self.file_output = file_output
+
+    # Run the experiment. If several hosts are named, parcel out the trials and independent variables
+    # to each one and call them up. If none are named, we are running all of this here (perhaps
+    # as part of a multi-host solution).
+    def run(self, run_data={}):
+        if self.hosts is None or not self.hosts:
+            return self.run_this_host(run_data)
+        else:
+            return self.scatter_gather(run_data)
+
+    # For now, create a .aal file, assume this is running on a deter users host and call up the orchestrator.
+    # I am just testing this with hard-wired experiments for the password simulator for now.
+    def scatter_gather(self, run_data={}):
+        # For a first pass, run one trial on each host and aggregate the results
+        for host in self.hosts:
+            print 'will create a .aal file implicating this host..'
+            # But for now use ssh
+            self.run_remote_process(host, run_data)
+
+    # Will think about how to pass the arguments later. For now, hard-wire password simulation.
+    def run_remote_process(self, host, run_data, user="blythe"):
+        call = ["ssh", user+"@"+host, "python", "/users/blythe/webdash/Dash2/pass_experiment.py"]
+        try:
+            process = subprocess.Popen(call, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+        except BaseException as e:
+            print 'unable to run python subprocess:', e
+        line = process.stdout.readline()
+        while line != "":
+            if line.startswith("processed:"):
+                print '** getting data from', host, line
+        print process.communicate()
 
     # Runs a set of trials for each value of the independent variable, keeping all other values constant,
     # and returning the set of trial outputs.
     # run_data may be a function of the independent variable or a constant.
-    def run(self, run_data={}):
+    def run_this_host(self, run_data={}):
         self.trial_outputs = {}
         # Build up trial data from experiment data and run data
         trial_data_for_all_values = self.exp_data.copy()
@@ -36,6 +71,7 @@ class Experiment(object):
             print 'expanded range to', independent_vals
         elif self.independent is not None and isinstance(self.independent[1], (list, tuple)):  # allow a direct list
             independent_vals = self.independent[1]
+
         for independent_val in independent_vals:
             trial_data = trial_data_for_all_values.copy()
             if self.independent is not None:

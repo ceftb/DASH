@@ -53,9 +53,15 @@ def run_one(arguments):
     processed_run_results = e.process_results()
     print 'processed:', processed_run_results
     print 'args were', arguments
+    # Store the results somewhere
+    f = open('/tmp/results', 'w')
+    f.write(str(processed_run_results))
+    f.write('\n')
+    f.close()
     return e, run_results, processed_run_results
 
 
 # can be called from the command line with e.g. the number of agents per trial.
 if __name__ == "__main__":
     exp, results, processed_results = run_one(sys.argv)
+    print 'end process call'
