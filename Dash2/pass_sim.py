@@ -55,8 +55,8 @@ class PasswordAgent(DASHAgent):
 
         response = self.register()
         if response is None or response[0] != "success":
-            print "Error: world hub not reachable - exiting. This agent will only run with a world hub (e.g pass_sim_hub)."
-            sys.exit()
+            print "No world hub was found. This agent requires a password simulation hub, e.g. pass_sim_hub.py"
+            return  # used to sys.exit() here but that makes it impossible to manage the process by e.g. starting a hub
         self.id = response[1]
 
         # Added by Jim based on bruno_user.pl. This is the list of all possible password choices for
