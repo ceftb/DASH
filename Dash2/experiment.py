@@ -3,6 +3,7 @@ import subprocess
 import numpy
 from trial import Trial
 from parameter import Range
+from dash import DASHAgent
 
 # An experiment consists of a varying condition and for each condition a number of trials.
 # trial.py shows how the trials can be customized, and phish_experiment.py gives an example of the experiment harness.
@@ -10,7 +11,8 @@ from parameter import Range
 
 class Experiment(object):
     def __init__(self, trial_class=Trial, independent=None, dependent=None, exp_data={}, num_trials=3,
-                 file_output=None, hosts=None):
+                 file_output=None, hosts=None, experiment_file="/users/blythe/webdash/Dash2/pass_experiment.py",
+                 user="blythe", start_hub=None):
         self.goal = ""  # The goal is a declarative representation of the aim of the experiment.
                         # It is used where possible to automate experiment setup and some amount of validation.
         self.trial_class = trial_class
@@ -21,6 +23,9 @@ class Experiment(object):
         self.dependent = dependent
         self.hosts = hosts  # If there is a host list, assume it is for Magi on Deter for now
         self.file_output = file_output
+        self.user = user
+        self.experiment_file = experiment_file
+        self.start_hub = start_hub  # If not None, specifies a path to a hub that will be started if needed on each host
 
     # Run the experiment. If several hosts are named, parcel out the trials and independent variables
     # to each one and call them up. If none are named, we are running all of this here (perhaps
@@ -38,11 +43,11 @@ class Experiment(object):
         for host in self.hosts:
             print 'will create a .aal file implicating this host..'
             # But for now use ssh
-            self.run_remote_process(host, run_data)
+            self.run_remote_process(self.user, host, self.experiment_file, run_data)
 
     # Will think about how to pass the arguments later. For now, hard-wire password simulation.
-    def run_remote_process(self, host, run_data, user="blythe"):
-        call = ["ssh", user+"@"+host, "python", "/users/blythe/webdash/Dash2/pass_experiment.py"]
+    def run_remote_process(self, user, host, run_file, run_data):
+        call = ["ssh", user+"@"+host, "python", run_file]
         try:
             process = subprocess.Popen(call, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
         except BaseException as e:
@@ -51,12 +56,15 @@ class Experiment(object):
         while line != "":
             if line.startswith("processed:"):
                 print '** getting data from', host, line
+            line = process.stdout.readline()
         print process.communicate()
 
     # Runs a set of trials for each value of the independent variable, keeping all other values constant,
     # and returning the set of trial outputs.
     # run_data may be a function of the independent variable or a constant.
     def run_this_host(self, run_data={}):
+        # Make sure there is a hub if needed
+        process = self.start_hub_if_needed()
         self.trial_outputs = {}
         # Build up trial data from experiment data and run data
         trial_data_for_all_values = self.exp_data.copy()
@@ -83,7 +91,28 @@ class Experiment(object):
                 trial = self.trial_class(data=trial_data)
                 trial.run()
                 self.trial_outputs[independent_val].append(trial.output())
+        # Kill the hub process if one was created
+        if process is not None:
+            process.stdin.write("q\n")
+            process.communicate()
         return self.trial_outputs
+
+    def start_hub_if_needed(self):
+        if self.start_hub is not None:
+            # Create a DASH agent and attempt to register to see if there is a hub
+            agent = DASHAgent()
+            agent.register()
+            if not agent.connected:
+                print "** Starting hub on current host with", self.start_hub
+                try:
+                    process = subprocess.Popen(["python", self.start_hub], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+                    line = process.stdout.readline()
+                    while "if you wish" not in line:
+                        print '**', line
+                        line = process.stdout.readline()
+                except BaseException as e:
+                    print 'unable to run process for hub:', e
+        return None
 
     def process_results(self):  # After calling run(), use to process and return the results
         # If the results are a dictionary, assume the key is the independent variable and process the outcomes
