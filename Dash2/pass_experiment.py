@@ -46,7 +46,8 @@ class PasswordTrial(trial.Trial):
 def run_one(arguments):
     #e = Experiment(PasswordTrial, num_trials=2, independent=['hardness', [0, 7]])  # Range(0, 2)])  # typically 0,14 but shortened for testing
     # Setting up one trial to test the Magi integration
-    e = Experiment(PasswordTrial, num_trials=1, independent=['hardness', [0]], start_hub="pass_sim_hub.py")  # Range(0, 2)])  # typically 0,14 but shortened for testing
+    e = Experiment(PasswordTrial, num_trials=1, independent=['hardness', [0]], start_hub="pass_sim_hub.py",
+                   hosts=arguments)  # Range(0, 2)])  # typically 0,14 but shortened for testing
     run_results = e.run(run_data={'max_iterations': 100})  # typically max_iterations is 100, but lowered for testing
     print run_results
     print 'processing'
@@ -63,5 +64,5 @@ def run_one(arguments):
 
 # can be called from the command line with e.g. the number of agents per trial.
 if __name__ == "__main__":
-    exp, results, processed_results = run_one(sys.argv)
+    exp, results, processed_results = run_one(sys.argv[1:])
     print 'end process call'

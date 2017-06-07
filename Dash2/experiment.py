@@ -1,5 +1,6 @@
-import numbers
 import subprocess
+import threading
+import numbers
 import numpy
 from trial import Trial
 from parameter import Range
@@ -40,24 +41,47 @@ class Experiment(object):
     # I am just testing this with hard-wired experiments for the password simulator for now.
     def scatter_gather(self, run_data={}):
         # For a first pass, run one trial on each host and aggregate the results
+        all_threads = []
         for host in self.hosts:
-            print 'will create a .aal file implicating this host..'
+            print 'will create a .aal file implicating this host,', host
             # But for now use ssh
-            self.run_remote_process(self.user, host, self.experiment_file, run_data)
+            t = self.RunProcess(self.user, host, self.experiment_file, run_data)
+            t.start()
+            all_threads.append(t)
+        # Wait for them all to finis
+        for t in all_threads:
+            t.join()
+        # Collate the results
+        all_data = [t.result for t in all_threads]
+        print '++ all data is', all_data
+        return all_data
+            
 
-    # Will think about how to pass the arguments later. For now, hard-wire password simulation.
-    def run_remote_process(self, user, host, run_file, run_data):
-        call = ["ssh", user+"@"+host, "python", run_file]
-        try:
-            process = subprocess.Popen(call, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-        except BaseException as e:
-            print 'unable to run python subprocess:', e
-        line = process.stdout.readline()
-        while line != "":
-            if line.startswith("processed:"):
-                print '** getting data from', host, line
+    class RunProcess(threading.Thread):
+
+        def __init__(self, user, host, run_file, run_data):
+            threading.Thread.__init__(self)
+            self.user = user
+            self.host = host
+            self.run_file = run_file
+            self.run_data = run_data
+            self.result = None
+
+        def run(self):
+            call = ["ssh", self.user+"@"+self.host, "python", self.run_file]
+            try:
+                process = subprocess.Popen(call, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+            except BaseException as e:
+                print 'unable to run python subprocess:', e
+                return
             line = process.stdout.readline()
-        print process.communicate()
+            self.result = None
+            while line != "":
+                if line.startswith("processed:"):
+                    print '** getting data from', self.host, line
+                    self.result = eval(line[line.find('processed:') + 10:])
+                line = process.stdout.readline()
+            print process.communicate()
 
     # Runs a set of trials for each value of the independent variable, keeping all other values constant,
     # and returning the set of trial outputs.
