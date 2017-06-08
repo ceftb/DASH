@@ -55,9 +55,8 @@ class Experiment(object):
         all_data = [t.result for t in all_threads]
         print '++ all data is', all_data
         return all_data
-            
 
-    class RunProcess(threading.Thread):
+    class RunProcess(threading.Thread):  # thread class for managing processes on other hosts
 
         def __init__(self, user, host, run_file, run_data):
             threading.Thread.__init__(self)
@@ -88,7 +87,7 @@ class Experiment(object):
     # run_data may be a function of the independent variable or a constant.
     def run_this_host(self, run_data={}):
         # Make sure there is a hub if needed
-        process = self.start_hub_if_needed()
+        hub_thread = self.start_hub_if_needed()
         self.trial_outputs = {}
         # Build up trial data from experiment data and run data
         trial_data_for_all_values = self.exp_data.copy()
@@ -116,10 +115,25 @@ class Experiment(object):
                 trial.run()
                 self.trial_outputs[independent_val].append(trial.output())
         # Kill the hub process if one was created
-        if process is not None:
-            process.stdin.write("q\n")
-            process.communicate()
+        if hub_thread is not None:
+            hub_thread.stop_hub()
         return self.trial_outputs
+
+    class HubThread(threading.Thread):  # thread class for managing a hub
+
+        def __init__(self, process):
+            threading.Thread.__init__(self)
+            self.process = subprocess
+
+        def run(self):
+            line = self.process.stdout.readline()
+            while line != "":
+                print "hub:", line
+                line = self.process.stdout.readline()
+
+        def stop_hub(self):
+            self.process.stdin.write("q\n")
+            self.process.communicate()
 
     def start_hub_if_needed(self):
         if self.start_hub is not None:
@@ -132,8 +146,11 @@ class Experiment(object):
                     process = subprocess.Popen(["python", self.start_hub], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
                     line = process.stdout.readline()
                     while "if you wish" not in line:
-                        print '**', line
+                        print 'hub:', line
                         line = process.stdout.readline()
+                    hub_thread = self.HubThread(process)
+                    hub_thread.start()
+                    return hub_thread
                 except BaseException as e:
                     print 'unable to run process for hub:', e
         return None
