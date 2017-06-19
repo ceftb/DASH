@@ -2,6 +2,7 @@ import subprocess
 import threading
 import numbers
 import numpy
+import time
 from trial import Trial
 from parameter import Range
 from dash import DASHAgent
@@ -40,12 +41,25 @@ class Experiment(object):
     # For now, create a .aal file, assume this is running on a deter users host and call up the orchestrator.
     # I am just testing this with hard-wired experiments for the password simulator for now.
     def scatter_gather(self, run_data={}):
-        # For a first pass, run one trial on each host and aggregate the results
+        # For a second pass, split up the independent values among the hosts
+        independent_vals = self.compute_independent_vals()
         all_threads = []
+        i = 0  # index into independent_vals
+        h = 0  # host index
+        g = len(independent_vals) / len(self.hosts)
+        rem = len(independent_vals) % len(self.hosts)
         for host in self.hosts:
-            print 'will create a .aal file implicating this host,', host
+            # Gets a segment of the independent values (currently this leaves hosts unused if there are more
+            # hosts than values, need to fix by combining with number of trials).
+            num_vals = g + 1 if h < rem else g
+            vals = [independent_vals[j + i] for j in range(0, num_vals)]
+            i += num_vals
+            h += 1
+            #time.sleep(1)  # so the printing routines don't overwrite each other
+            print 'will create a .aal file implicating this host,', host, 'with vals', vals
+            #time.sleep(1)  # so the printing routines don't overwrite each other
             # But for now use ssh
-            t = self.RunProcess(self.user, host, self.experiment_file, run_data)
+            t = self.RunProcess(self.user, host, self.experiment_file, run_data, vals)
             t.start()
             all_threads.append(t)
         # Wait for them all to finis
@@ -58,16 +72,24 @@ class Experiment(object):
 
     class RunProcess(threading.Thread):  # thread class for managing processes on other hosts
 
-        def __init__(self, user, host, run_file, run_data):
+        def __init__(self, user, host, run_file, run_data, args=[]):
             threading.Thread.__init__(self)
             self.user = user
             self.host = host
             self.run_file = run_file
             self.run_data = run_data
+            self.args = args
             self.result = None
 
+        # I'm having trouble sending the arguments, so this creates a custom file for each host,
+        # relies on it having the same file system, and attempts to execute it on the host
         def run(self):
-            call = ["ssh", self.user+"@"+self.host, "python", self.run_file]
+            filename = "/users/blythe/webdash/Magi/PassExp/f-" + self.host
+            call = ["ssh", self.user+"@"+self.host, "python", filename]
+            print 'call is', call
+            with open(filename, 'w') as f:
+                # for now, args is the set of independent variables this host will work on
+                f.write('import sys\nsys.path.insert(0, \'/users/blythe/webdash/Dash2\')\nimport pass_experiment\nfrom parameter import Range\npass_experiment.run_one([], ' + str(self.args) + ')\n')
             try:
                 process = subprocess.Popen(call, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
             except BaseException as e:
@@ -79,6 +101,8 @@ class Experiment(object):
                 if line.startswith("processed:"):
                     print '** getting data from', self.host, line
                     self.result = eval(line[line.find('processed:') + 10:])
+#                else:
+#                    print self.host, 'prints', line
                 line = process.stdout.readline()
             print process.communicate()
 
@@ -94,14 +118,7 @@ class Experiment(object):
         for key in run_data:
             trial_data_for_all_values[key] = run_data[key]
         # Append different data for the independent variable in each iteration
-        independent_vals = [None]
-        # The representation for independent variables isn't fixed yet. For now, a two-element list with
-        # the name of the variable and a range object.
-        if self.independent is not None and isinstance(self.independent[1], Range):
-            independent_vals = range(self.independent[1].min, self.independent[1].max, self.independent[1].step)
-            print 'expanded range to', independent_vals
-        elif self.independent is not None and isinstance(self.independent[1], (list, tuple)):  # allow a direct list
-            independent_vals = self.independent[1]
+        independent_vals = self.compute_independent_vals()
 
         for independent_val in independent_vals:
             trial_data = trial_data_for_all_values.copy()
@@ -118,6 +135,18 @@ class Experiment(object):
         if hub_thread is not None:
             hub_thread.stop_hub()
         return self.trial_outputs
+
+    def compute_independent_vals(self):
+        independent_vals = [None]
+        # The representation for independent variables isn't fixed yet. For now, a two-element list with
+        # the name of the variable and a range object.
+        if self.independent is not None and isinstance(self.independent[1], Range):
+            independent_vals = range(self.independent[1].min, self.independent[1].max, self.independent[1].step)
+            print 'expanded range to', independent_vals
+        elif self.independent is not None and isinstance(self.independent[1], (list, tuple)):  # allow a direct list
+            independent_vals = self.independent[1]
+        return independent_vals
+        
 
     class HubThread(threading.Thread):  # thread class for managing a hub
 
@@ -181,5 +210,5 @@ def process_list_results(list_results):
 def simple_statistics(numlist):
     print 'running simple statistics on', numlist
     if all([isinstance(x, numbers.Number) for x in numlist]):
-        return [numpy.mean(numlist), numpy.median(numlist), numpy.var(numlist)]
+        return [numpy.mean(numlist), numpy.median(numlist), numpy.var(numlist), len(numlist)]
 
