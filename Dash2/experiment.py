@@ -38,7 +38,7 @@ class Experiment(object):
         else:
             return self.scatter_gather(run_data)
 
-    # For now, create a .aal file, assume this is running on a deter users host and call up the orchestrator.
+    # For now, create ssh calls in subprocesses for the other hosts.
     # I am just testing this with hard-wired experiments for the password simulator for now.
     def scatter_gather(self, run_data={}):
         # For a second pass, split up the independent values among the hosts
@@ -48,6 +48,8 @@ class Experiment(object):
         h = 0  # host index
         g = len(independent_vals) / len(self.hosts)
         rem = len(independent_vals) % len(self.hosts)
+        # Need to iterate over packets of work, probably single independent variable values and reduced trials
+        # for now, so we can dole these out as machines finish tasks and faster machines naturally do more work.
         for host in self.hosts:
             # Gets a segment of the independent values (currently this leaves hosts unused if there are more
             # hosts than values, need to fix by combining with number of trials).
@@ -59,10 +61,10 @@ class Experiment(object):
             print 'will create a .aal file implicating this host,', host, 'with vals', vals
             #time.sleep(1)  # so the printing routines don't overwrite each other
             # But for now use ssh
-            t = self.RunProcess(self.user, host, self.experiment_file, run_data, vals)
+            t = self.RunProcess(self.user, host, self.experiment_file, run_data, self.num_trials, vals)
             t.start()
             all_threads.append(t)
-        # Wait for them all to finis
+        # Wait for them all to finish
         for t in all_threads:
             t.join()
         # Collate the results
@@ -72,12 +74,13 @@ class Experiment(object):
 
     class RunProcess(threading.Thread):  # thread class for managing processes on other hosts
 
-        def __init__(self, user, host, run_file, run_data, args=[]):
+        def __init__(self, user, host, run_file, run_data, num_trials, args=[]):
             threading.Thread.__init__(self)
             self.user = user
             self.host = host
             self.run_file = run_file
             self.run_data = run_data
+            self.num_trials = num_trials
             self.args = args
             self.result = None
 
@@ -89,7 +92,8 @@ class Experiment(object):
             print 'call is', call
             with open(filename, 'w') as f:
                 # for now, args is the set of independent variables this host will work on
-                f.write('import sys\nsys.path.insert(0, \'/users/blythe/webdash/Dash2\')\nimport pass_experiment\nfrom parameter import Range\npass_experiment.run_one([], ' + str(self.args) + ')\n')
+                f.write('import sys\nsys.path.insert(0, \'/users/blythe/webdash/Dash2\')\nimport pass_experiment\nfrom parameter import Range\npass_experiment.run_one([], ' + str(self.args) + ', num_trials=' + str(self.num_trials) + ')\n')
+            start = time.time()
             try:
                 process = subprocess.Popen(call, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
             except BaseException as e:
@@ -104,6 +108,7 @@ class Experiment(object):
 #                else:
 #                    print self.host, 'prints', line
                 line = process.stdout.readline()
+            print self.host, 'took', time.time() - start
             print process.communicate()
 
     # Runs a set of trials for each value of the independent variable, keeping all other values constant,

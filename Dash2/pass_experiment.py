@@ -43,10 +43,10 @@ class PasswordTrial(trial.Trial):
         return self.results
 
 
-def run_one(hosts, exp_range=Range(0,20)):
+def run_one(hosts, exp_range=Range(0,20), num_trials=30, output_file="/tmp/results"):
     #e = Experiment(PasswordTrial, num_trials=2, independent=['hardness', [0, 7]])  # Range(0, 2)])  # typically 0,14 but shortened for testing
     # Setting up one trial to test the Magi integration
-    e = Experiment(PasswordTrial, num_trials=5,
+    e = Experiment(PasswordTrial, num_trials=num_trials,
                    independent=['hardness', exp_range],
                    start_hub="pass_sim_hub.py",
                    hosts=hosts)  # Range(0, 2)])  # typically 0,14 but shortened for testing
@@ -57,19 +57,25 @@ def run_one(hosts, exp_range=Range(0,20)):
             for k in result:
                 print '  ', k, result[k]
         else:
-            print result    
+            print result
+    for result in run_results:
+        if type(result) is dict:
+            print 'num reuses'
+            for k in result:
+                print k, result[k][2][1], result[k][2][3]
     processed_run_results = e.process_results()
     print 'processed:', processed_run_results
     print 'hosts were', hosts, 'range was', exp_range
-    # Store the results somewhere
-    f = open('/tmp/results', 'w')
-    f.write(str(processed_run_results))
-    f.write('\n')
-    f.close()
+    if output_file is not None:
+        # Store the results
+        f = open(output_file, 'w')
+        f.write(str(processed_run_results))
+        f.write('\n')
+        f.close()
     return e, run_results, processed_run_results
 
 
 # can be called from the command line with e.g. the number of agents per trial.
 if __name__ == "__main__":
-    exp, results, processed_results = run_one(sys.argv[1:])
+    exp, results, processed_results = run_one(sys.argv[1:], num_trials=10)
     print 'end process call'
