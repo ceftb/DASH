@@ -15,8 +15,8 @@ class Event:
         self.spreadsheet_loaded = spreadsheet_loaded
 
     def __str__(self):
-        return "N" + str(self.agent) + " " + self.type + " " + \
-               ((self.medication + " to " + self.patient) if self.type == "write" else "") +\
+        return "N" + str(self.agent) + " " + self.type + \
+               ((" " + self.medication + " to " + self.patient) if self.type == "write" else "") +\
                " on C" + str(self.computer) +\
                ("" if self.spreadsheet_loaded is None else (" in S:" + self.spreadsheet_loaded))
 

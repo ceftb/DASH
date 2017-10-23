@@ -14,11 +14,14 @@ class PasswordTrial(trial.Trial):
     def __init__(self, data={}, max_iterations=None):
         self.results = None  # process_after_run() stores the results here, picked up by output()
         trial.Trial.__init__(self, data=data, max_iterations=max_iterations)
+        self.reuses = []
+        self.agent = None  # There is only one agent in this simulation so make it an accessible member
 
     # need to set up the self.agents list for iteration.
     # Just run one at a time, or there may appear to be more password sharing than is warranted.
     def initialize(self):
-        self.agents = [pass_sim.PasswordAgent()]
+        self.agent = pass_sim.PasswordAgent()
+        self.agents = [self.agent]
         # Set up hardnesses for the current run
         h = self.hardness
         print 'hardness is', h
@@ -30,23 +33,21 @@ class PasswordTrial(trial.Trial):
         return False  # Stop when max_iterations reached, which is tested separately in should_stop
 
     def process_after_run(self):
-        pa = self.agents[0]
-        reuses = pa.sendAction('send_reuses')
-        print 'reuses:', reuses
-        resets = pa.call_measure('proportion_of_resets')
-        print 'cog burden is', pass_sim.levenshtein_set_cost(pa.known_passwords), 'for', len(pa.known_passwords), \
-              'passwords. Threshold is', pa.cognitive_threshold, \
+        self.reuses = self.agent.sendAction('send_reuses')
+        print 'reuses:', self.reuses
+        resets = self.agent.call_measure('proportion_of_resets')
+        print 'cog burden is', pass_sim.levenshtein_set_cost(self.agent.known_passwords), \
+              'for', len(self.agent.known_passwords), \
+              'passwords. Threshold is', self.agent.cognitive_threshold, \
               'proportion of resets is', resets
-        self.results = len(pa.known_passwords), pass_sim.expected_number_of_sites(reuses), resets  #, reuses
-
-    def output(self):
-        return self.results
 
 
 def run_one(hosts, exp_range=Range(0,20), num_trials=30, max_iterations=100, output_file="/tmp/results"):
     #e = Experiment(PasswordTrial, num_trials=2, independent=['hardness', [0, 7]])  # Range(0, 2)])  # typically 0,14 but shortened for testing
     # Setting up one trial to test the Magi integration
     e = Experiment(PasswordTrial, num_trials=num_trials, independent=['hardness', exp_range],
+                   dependent=lambda t: (len(t.agent.known_passwords), pass_sim.expected_number_of_sites(t.reuses),
+                                        t.agent.call_measure('proportion of resets')),
                    start_hub="pass_sim_hub.py", imports='import pass_experiment', hosts=hosts)  # Range(0, 2)])  # typically 0,14 but shortened for testing
     run_results = e.run(run_data={'max_iterations': max_iterations})  # gives the agent enough time to create and forget passwords
     print run_results

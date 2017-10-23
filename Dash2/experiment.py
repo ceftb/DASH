@@ -13,7 +13,6 @@ from dash import DASHAgent
 
 class Experiment(object):
     def __init__(self, trial_class=Trial, independent=None, dependent=None, exp_data={}, num_trials=3,
-                 measure=None,  # The output measured for the experiment if given, as a function of the trial object
                  file_output=None, hosts=None,
                  #experiment_file="/users/blythe/webdash/Dash2/pass_experiment.py",
                  dash_home="/users/blythe/webdash",
@@ -24,8 +23,8 @@ class Experiment(object):
         self.trial_class = trial_class
         self.exp_data = exp_data
         self.num_trials = num_trials
-        self.measure = measure
         self.trial_outputs = {}  # A dict with the independent variable as key
+        # dependent may be a function of a trial or a member variable of the trial.
         self.independent = independent
         self.dependent = dependent
         self.hosts = hosts  # If there is a host list, assume it is for Magi on Deter for now
@@ -127,8 +126,6 @@ class Experiment(object):
         self.trial_outputs = {}
         # Build up trial data from experiment data and run data
         trial_data_for_all_values = self.exp_data.copy()
-        if self.measure is not None:
-            trial_data_for_all_values['measure'] = self.measure  # Pass the measure through to the trial
         for key in run_data:
             trial_data_for_all_values[key] = run_data[key]
         # Append different data for the independent variable in each iteration
@@ -144,7 +141,8 @@ class Experiment(object):
                     independent_val
                 trial = self.trial_class(data=trial_data)
                 trial.run()
-                self.trial_outputs[independent_val].append(trial.output())
+                trial_dependent = self.dependent(trial) if callable(self.dependent) else getattr(trial, self.dependent)
+                self.trial_outputs[independent_val].append(trial_dependent)
         # Kill the hub process if one was created
         if hub_thread is not None:
             hub_thread.stop_hub()
