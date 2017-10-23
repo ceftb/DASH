@@ -76,7 +76,7 @@ known haveControl(_localhost)  # attack can launch scans etc from these hosts
         self.readAgent(self.agentDef)
 
         # For now
-        self.traceGoals = True
+        #self.traceGoals = True
 
     # Define primitive actions by specifying the bound variables in the input
     # and returning a list of tuples of the other variables.

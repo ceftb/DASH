@@ -18,7 +18,8 @@ class NurseTrial(Trial):
         self.agents = []
         self.misses = []
         self.events = []
-        self.processed_output = []
+        self.computer_events = {}
+        self.computer_misses = {}
         self.tick = 1
 
     def initialize(self):
@@ -28,7 +29,7 @@ class NurseTrial(Trial):
 
         # Set up the agents. Each of n nurses is given a different list of k patients
         self.agents = [nurse01.Nurse(ident=n,
-                                     patients=["_p_" + str(n) + "_" + str(p)for p in range(1, self.num_patients + 1)])
+                                     patients=["_p_" + str(n) + "_" + str(p) for p in range(1, self.num_patients + 1)])
                        for n in range(0, self.num_nurses)]
         for agent in self.agents:
             agent.active = True
@@ -56,31 +57,19 @@ class NurseTrial(Trial):
         self.misses = len([e for e in self.events if e.patient != e.spreadsheet_loaded])
         print self.misses, "misses out of", len([e for e in self.events if e.type in ["write", "read"]]), "reads and writes"
         # Find out which computers were used most heavily
-        computer_events = {}
-        computer_misses = {}
         for event in self.events:
-            if event.computer in computer_events:
-                computer_events[event.computer].append(event)
+            if event.computer in self.computer_events:
+                self.computer_events[event.computer].append(event)
             else:
-                computer_events[event.computer] = [event]
+                self.computer_events[event.computer] = [event]
             if event.patient != event.spreadsheet_loaded:
-                if event.computer in computer_misses:
-                    computer_misses[event.computer].append(event)
-            else:
-                computer_misses[event.computer] = [event]
+                if event.computer in self.computer_misses:
+                    self.computer_misses[event.computer].append(event)
+                else:
+                    self.computer_misses[event.computer] = [event]
         print 'computer, number of uses, number of misses'
-        for ce in computer_events:
-            print ce, len(computer_events[ce]), len(computer_misses[ce]) if ce in computer_misses else 0
-        #self.processed_output = [[ce,
-        #                          len(computer_events[ce]),
-        #                         len(computer_misses[ce]) if ce in computer_misses else 0]
-        #                         for ce in computer_events]
-        # Just store number of misses
-        self.processed_output = (sum([len(computer_misses[ce]) if ce in computer_misses else 0
-                                     for ce in computer_events]), self.misses)
-
-    def output(self):
-        return self.processed_output
+        for ce in self.computer_events:
+            print ce, len(self.computer_events[ce]), len(self.computer_misses[ce]) if ce in self.computer_misses else 0
 
     # Return a list of events matching the type name
     def events_of_type(self, type_name):
@@ -90,8 +79,11 @@ class NurseTrial(Trial):
 # This spits out the results as the number of computers varies, creating a couple of hundred agents in the process.
 def test_num_computers():
     exp = Experiment(NurseTrial,
-                     exp_data={'num_nurses': 20, 'num_patients': 5, 'num_medications': 10, 'timeout': 0},
-                     independent=['num_computers', Range(5, 21, 5)],  # Range gets expanded with python range()
+                     exp_data={'num_nurses': 10, 'num_patients': 5, 'num_medications': 10, 'timeout': 0},  # was 20
+                     independent=['num_computers', Range(5, 11, 5)],  # Range gets expanded with python range(), was 21
+                     measure=lambda nt: (sum([len(nt.computer_misses[ce]) if ce in nt.computer_misses else 0
+                                              for ce in nt.computer_events]),
+                                         nt.misses),
                      num_trials=1)
     outputs = exp.run()
     #outputs = [[(t.timeout, t.num_computers, t.misses, t.iteration, len(t.events_of_type("login"))) for t in r]
@@ -119,4 +111,4 @@ def test_timeout():
 
 #timeout_runs = test_timeout()
 
-nc_runes = test_num_computers()
+nc_runs = test_num_computers()

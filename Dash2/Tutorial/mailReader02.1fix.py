@@ -43,15 +43,13 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
         result = [{flight_variable: flight} for flight in self.flights_to_buy]
         return result
 
-    def buy_flight(self,call):
-        flight = call[1]
+    def buy_flight(self, (goal, flight)):
         print 'buys flight tickets for', flight
         self.flights_to_buy.remove(flight)
         return [{}]
 
-    def read_mail(self, call):
-        mail_var = call[1]
-        [status, data] = ["", {'subject': 'buyTickets'}]
+    def read_mail(self, (goal, mail_var)):
+        status, data = "", {'subject': 'buyTickets'}
         print 'response to getMail is', status, data
         print "read mail success with", data
         return [{mail_var: data}]
@@ -63,7 +61,6 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
         print 'send mail success with data', data
         return [{}]
 
-    
     def process_mail(self, call):
         print call
         mail = call[1]['subject']

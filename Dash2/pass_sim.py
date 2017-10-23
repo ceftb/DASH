@@ -48,6 +48,7 @@ class PasswordAgent(DASHAgent):
                   Parameter('choose_password_method', value_set=['random', 'list-order'], default='random'),
                   ]
 
+    # Note: this is really a measure of a set of agents, derived from
     measures = [Measure('proportion_of_resets', target=0.15, backing='Florencio & Herley 07')]
 
     def __init__(self):

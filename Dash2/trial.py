@@ -58,6 +58,8 @@ class Trial(object):
     def process_after_run(self):  # do any book-keeping needed after the trial ends and before agents are disconnected
         pass
 
-    def output(self):  # overridden with a function to compute and return the output from the trial
+    def output(self):  # can be overridden with a function to compute and return the output from the trial
+        if self.measure is not None:
+            return self.measure(self)
         return self    # By default, store the trial and the user can access information that is saved there
 

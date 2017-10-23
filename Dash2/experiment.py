@@ -13,21 +13,28 @@ from dash import DASHAgent
 
 class Experiment(object):
     def __init__(self, trial_class=Trial, independent=None, dependent=None, exp_data={}, num_trials=3,
-                 file_output=None, hosts=None, experiment_file="/users/blythe/webdash/Dash2/pass_experiment.py",
+                 measure=None,  # The output measured for the experiment if given, as a function of the trial object
+                 file_output=None, hosts=None,
+                 #experiment_file="/users/blythe/webdash/Dash2/pass_experiment.py",
+                 dash_home="/users/blythe/webdash",
+                 imports="",  # e.g. 'import pass_experiment'
                  user="blythe", start_hub=None):
         self.goal = ""  # The goal is a declarative representation of the aim of the experiment.
                         # It is used where possible to automate experiment setup and some amount of validation.
         self.trial_class = trial_class
         self.exp_data = exp_data
         self.num_trials = num_trials
+        self.measure = measure
         self.trial_outputs = {}  # A dict with the independent variable as key
         self.independent = independent
         self.dependent = dependent
         self.hosts = hosts  # If there is a host list, assume it is for Magi on Deter for now
+        self.dash_home = dash_home
         self.file_output = file_output
         self.user = user
-        self.experiment_file = experiment_file
+        #self.experiment_file = experiment_file
         self.start_hub = start_hub  # If not None, specifies a path to a hub that will be started if needed on each host
+
 
     # Run the experiment. If several hosts are named, parcel out the trials and independent variables
     # to each one and call them up. If none are named, we are running all of this here (perhaps
@@ -61,7 +68,7 @@ class Experiment(object):
             print 'will create a .aal file implicating this host,', host, 'with vals', vals
             #time.sleep(1)  # so the printing routines don't overwrite each other
             # But for now use ssh
-            t = self.RunProcess(self.user, host, self.experiment_file, run_data, self.num_trials, vals)
+            t = self.RunProcess(self.user, host, self.num_trials, vals)
             t.start()
             all_threads.append(t)
         # Wait for them all to finish
@@ -72,14 +79,12 @@ class Experiment(object):
         print '++ all data is', all_data
         return all_data
 
-    class RunProcess(threading.Thread):  # thread class for managing processes on other hosts
+    class RunProcess(threading.Thread):  # thread class for managing processes on another host
 
-        def __init__(self, user, host, run_file, run_data, num_trials, args=[]):
+        def __init__(self, user, host, num_trials, args=[]):
             threading.Thread.__init__(self)
             self.user = user
             self.host = host
-            self.run_file = run_file
-            self.run_data = run_data
             self.num_trials = num_trials
             self.args = args
             self.result = None
@@ -87,12 +92,14 @@ class Experiment(object):
         # I'm having trouble sending the arguments, so this creates a custom file for each host,
         # relies on it having the same file system, and attempts to execute it on the host
         def run(self):
-            filename = "/users/blythe/webdash/Magi/PassExp/f-" + self.host
+            filename = self.dash_home + "/Magi/PassExp/f-" + self.host
             call = ["ssh", self.user+"@"+self.host, "python", filename]
             print 'call is', call
             with open(filename, 'w') as f:
-                # for now, args is the set of independent variables this host will work on
-                f.write('import sys\nsys.path.insert(0, \'/users/blythe/webdash/Dash2\')\nimport pass_experiment\nfrom parameter import Range\npass_experiment.run_one([], ' + str(self.args) + ', num_trials=' + str(self.num_trials) + ')\n')
+                # for now, args is the set of independent variables this host will work on. Needs to be cleaned up.
+                f.write('import sys\nsys.path.insert(0, \'' + self.dash_home + '/Dash2\')\nfrom parameter import Range\n'\
+                        + self.imports + '\npass_experiment.run_one([], ' + str(self.args)\
+                        + ', num_trials=' + str(self.num_trials) + ')\n')
             start = time.time()
             try:
                 process = subprocess.Popen(call, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
@@ -120,6 +127,8 @@ class Experiment(object):
         self.trial_outputs = {}
         # Build up trial data from experiment data and run data
         trial_data_for_all_values = self.exp_data.copy()
+        if self.measure is not None:
+            trial_data_for_all_values['measure'] = self.measure  # Pass the measure through to the trial
         for key in run_data:
             trial_data_for_all_values[key] = run_data[key]
         # Append different data for the independent variable in each iteration
@@ -213,7 +222,7 @@ def process_list_results(list_results):
 
 
 def simple_statistics(numlist):
-    print 'running simple statistics on', numlist
+    #print 'running simple statistics on', numlist
     if all([isinstance(x, numbers.Number) for x in numlist]):
         return [numpy.mean(numlist), numpy.median(numlist), numpy.var(numlist), len(numlist)]
 

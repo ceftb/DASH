@@ -43,14 +43,12 @@ class PasswordTrial(trial.Trial):
         return self.results
 
 
-def run_one(hosts, exp_range=Range(0,20), num_trials=30, output_file="/tmp/results"):
+def run_one(hosts, exp_range=Range(0,20), num_trials=30, max_iterations=100, output_file="/tmp/results"):
     #e = Experiment(PasswordTrial, num_trials=2, independent=['hardness', [0, 7]])  # Range(0, 2)])  # typically 0,14 but shortened for testing
     # Setting up one trial to test the Magi integration
-    e = Experiment(PasswordTrial, num_trials=num_trials,
-                   independent=['hardness', exp_range],
-                   start_hub="pass_sim_hub.py",
-                   hosts=hosts)  # Range(0, 2)])  # typically 0,14 but shortened for testing
-    run_results = e.run(run_data={'max_iterations': 100})  # gives the agent enough time to create and forget passwords
+    e = Experiment(PasswordTrial, num_trials=num_trials, independent=['hardness', exp_range],
+                   start_hub="pass_sim_hub.py", imports='import pass_experiment', hosts=hosts)  # Range(0, 2)])  # typically 0,14 but shortened for testing
+    run_results = e.run(run_data={'max_iterations': max_iterations})  # gives the agent enough time to create and forget passwords
     print run_results
     for result in run_results:
         if type(result) is dict:
@@ -77,5 +75,5 @@ def run_one(hosts, exp_range=Range(0,20), num_trials=30, output_file="/tmp/resul
 
 # can be called from the command line with e.g. the number of agents per trial.
 if __name__ == "__main__":
-    exp, results, processed_results = run_one(sys.argv[1:], num_trials=10)
+    exp, results, processed_results = run_one(sys.argv[1:], num_trials=10, max_iterations=10)
     print 'end process call'
