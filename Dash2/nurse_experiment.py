@@ -1,3 +1,4 @@
+import sys
 from experiment import Experiment
 from trial import Trial
 from client import Client
@@ -73,14 +74,14 @@ class NurseTrial(Trial):
 
 
 # This spits out the results as the number of computers varies, creating a couple of hundred agents in the process.
-def test_num_computers():
+def test_num_computers(hosts=None):
     exp = Experiment(NurseTrial,
                      exp_data={'num_nurses': 10, 'num_patients': 5, 'num_medications': 10, 'timeout': 0},  # was 20
                      independent=['num_computers', Range(5, 21, 5)],  # Range gets expanded with python range(), was 21
                      dependent=lambda nt: (sum([len(nt.computer_misses[ce]) if ce in nt.computer_misses else 0
                                                 for ce in nt.computer_events]),
                                            nt.misses, nt),
-                     num_trials=3)
+                     num_trials=3, hosts=hosts)
     outputs = exp.run()
     #outputs = [[(t.timeout, t.num_computers, t.misses, t.iteration, len(t.events_of_type("login"))) for t in r]
     #          for r in runs]
@@ -89,7 +90,7 @@ def test_num_computers():
     for independent_val in sorted(outputs):
         print independent_val, ":", outputs[independent_val]
     print 'exp results:', exp.process_results()
-    return outputs
+    return exp, outputs
 
 
 def test_timeout():
@@ -103,8 +104,16 @@ def test_timeout():
     #           for run in runs]
     outputs = exp.run(run_data={'timeout': 65})
     print outputs
-    #return runs
+
+
+def run_one(hosts, num_trials=10, max_iterations=10):
+    return test_num_computers(hosts)
 
 #timeout_runs = test_timeout()
 
 nc_runs = test_num_computers()
+
+# can be called from the command line with e.g. the number of agents per trial.
+if __name__ == "__main__":
+    exp, results = run_one(sys.argv[1:], num_trials=10, max_iterations=10)
+    print 'end process call'

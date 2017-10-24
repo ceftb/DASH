@@ -94,7 +94,7 @@ class Experiment(object):
         # I'm having trouble sending the arguments, so this creates a custom file for each host,
         # relies on it having the same file system, and attempts to execute it on the host
         def run(self):
-            filename = self.dash_home + "/Magi/PassExp/f-" + self.host
+            filename = self.dash_home + "/Magi/Exp/f-" + self.host
             call = ["ssh", self.user+"@"+self.host, "python", filename]
             print 'call is', call
             with open(filename, 'w') as f:
