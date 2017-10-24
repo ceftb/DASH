@@ -67,7 +67,7 @@ class Experiment(object):
             print 'will create a .aal file implicating this host,', host, 'with vals', vals
             #time.sleep(1)  # so the printing routines don't overwrite each other
             # But for now use ssh
-            t = self.RunProcess(self.user, host, self.num_trials, vals, dash_home=self.dash_home)
+            t = self.RunProcess(self.user, host, self.num_trials, vals, dash_home=self.dash_home, imports=self.imports)
             t.start()
             all_threads.append(t)
         # Wait for them all to finish
@@ -80,13 +80,14 @@ class Experiment(object):
 
     class RunProcess(threading.Thread):  # thread class for managing processes on another host
 
-        def __init__(self, user, host, num_trials, args=[], dash_home=""):
+        def __init__(self, user, host, num_trials, args=[], dash_home="", imports=""):
             threading.Thread.__init__(self)
             self.user = user
             self.host = host
             self.num_trials = num_trials
             self.args = args
             self.dash_home = dash_home
+            self.imports = imports
             self.result = None
 
         # I'm having trouble sending the arguments, so this creates a custom file for each host,
