@@ -29,6 +29,7 @@ class Experiment(object):
         self.dependent = dependent
         self.hosts = hosts  # If there is a host list, assume it is for Magi on Deter for now
         self.dash_home = dash_home
+        self.imports = imports
         self.file_output = file_output
         self.user = user
         #self.experiment_file = experiment_file
