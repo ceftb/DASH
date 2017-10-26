@@ -42,13 +42,16 @@ class PasswordTrial(trial.Trial):
               'proportion of resets is', resets
 
 
-def run_one(hosts, exp_range=Range(0,20), num_trials=30, max_iterations=100, output_file="/tmp/results"):
+def run_one(hosts=[], exp_range=Range(0, 20), num_trials=30, max_iterations=100, output_file="/tmp/results"):
     #e = Experiment(PasswordTrial, num_trials=2, independent=['hardness', [0, 7]])  # Range(0, 2)])  # typically 0,14 but shortened for testing
     # Setting up one trial to test the Magi integration
     e = Experiment(PasswordTrial, num_trials=num_trials, independent=['hardness', exp_range],
                    dependent=lambda t: (len(t.agent.known_passwords), pass_sim.expected_number_of_sites(t.reuses),
                                         t.agent.call_measure('proportion of resets')),
-                   start_hub="pass_sim_hub.py", imports='import pass_experiment', hosts=hosts)  # Range(0, 2)])  # typically 0,14 but shortened for testing
+                   start_hub="pass_sim_hub.py",
+                   imports='import pass_experiment',
+                   callback='pass_experiment.run_one',
+                   hosts=hosts)  # Range(0, 2)])  # typically 0,14 but shortened for testing
     run_results = e.run(run_data={'max_iterations': max_iterations})  # gives the agent enough time to create and forget passwords
     print run_results
     for result in run_results:

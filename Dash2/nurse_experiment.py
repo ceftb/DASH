@@ -74,14 +74,16 @@ class NurseTrial(Trial):
 
 
 # This spits out the results as the number of computers varies, creating a couple of hundred agents in the process.
-def test_num_computers(hosts=None):
+def test_num_computers(hosts=None, num_trials=3):
     exp = Experiment(NurseTrial,
                      exp_data={'num_nurses': 10, 'num_patients': 5, 'num_medications': 10, 'timeout': 0},  # was 20
                      independent=['num_computers', Range(5, 21, 5)],  # Range gets expanded with python range(), was 21
                      dependent=lambda nt: (sum([len(nt.computer_misses[ce]) if ce in nt.computer_misses else 0
                                                 for ce in nt.computer_events]),
                                            nt.misses, nt),
-                     num_trials=3, hosts=hosts)
+                     num_trials=num_trials,
+                     imports='import nurse_experiment', hosts=hosts,
+                     callback='nurse_experiment.test_num_computers_local')
     outputs = exp.run()
     #outputs = [[(t.timeout, t.num_computers, t.misses, t.iteration, len(t.events_of_type("login"))) for t in r]
     #          for r in runs]
@@ -91,6 +93,11 @@ def test_num_computers(hosts=None):
         print independent_val, ":", outputs[independent_val]
     print 'exp results:', exp.process_results()
     return exp, outputs
+
+
+# This will be called back by the distribution code on each node
+def test_num_computers_local(hosts=[], num_trials=None, **args):
+    return 'processed:', ['args from central were hosts=', hosts, ' and num trials =', num_trials, args]
 
 
 def test_timeout():

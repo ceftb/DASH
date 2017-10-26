@@ -65,7 +65,7 @@ class Experiment(object):
             i += num_vals
             h += 1
             #time.sleep(1)  # so the printing routines don't overwrite each other
-            print 'will create a .aal file implicating this host,', host, 'with vals', vals
+            print 'will create a .aal file usingq host,', host, 'with vals', vals
             #time.sleep(1)  # so the printing routines don't overwrite each other
             # But for now use ssh
             t = self.RunProcess(self.user, host, self.num_trials, vals, dash_home=self.dash_home, imports=self.imports)
@@ -99,9 +99,10 @@ class Experiment(object):
             print 'call is', call
             with open(filename, 'w') as f:
                 # for now, args is the set of independent variables this host will work on. Needs to be cleaned up.
-                f.write('import sys\nsys.path.insert(0, \'' + self.dash_home + '/Dash2\')\nfrom parameter import Range\n'\
-                        + self.imports + '\npass_experiment.run_one([], ' + str(self.args)\
-                        + ', num_trials=' + str(self.num_trials) + ')\n')
+                f.write('import sys\nsys.path.insert(0, \'' + self.dash_home +
+                        '/Dash2\')\nfrom parameter import Range\n' + self.imports + '\n' +
+                        # The callback has to be a function that takes hosts and num_trials among other things
+                        self.callback + '([], ' + str(self.args) + ', num_trials=' + str(self.num_trials) + ')\n')
             start = time.time()
             try:
                 process = subprocess.Popen(call, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
