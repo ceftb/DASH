@@ -16,7 +16,8 @@ class Experiment(object):
                  file_output=None, hosts=None,
                  #experiment_file="/users/blythe/webdash/Dash2/pass_experiment.py",
                  dash_home="/users/blythe/webdash",
-                 imports="",  # e.g. 'import pass_experiment'
+                 imports="",  # e.g. 'import pass_experiment',
+                 callback="",
                  user="blythe", start_hub=None):
         self.goal = ""  # The goal is a declarative representation of the aim of the experiment.
                         # It is used where possible to automate experiment setup and some amount of validation.
@@ -30,6 +31,7 @@ class Experiment(object):
         self.hosts = hosts  # If there is a host list, assume it is for Magi on Deter for now
         self.dash_home = dash_home
         self.imports = imports
+        self.callback = callback
         self.file_output = file_output
         self.user = user
         #self.experiment_file = experiment_file
@@ -68,7 +70,8 @@ class Experiment(object):
             print 'will create a .aal file usingq host,', host, 'with vals', vals
             #time.sleep(1)  # so the printing routines don't overwrite each other
             # But for now use ssh
-            t = self.RunProcess(self.user, host, self.num_trials, vals, dash_home=self.dash_home, imports=self.imports)
+            t = self.RunProcess(self.user, host, self.num_trials, vals, dash_home=self.dash_home, imports=self.imports,
+                                callback=self.callback)
             t.start()
             all_threads.append(t)
         # Wait for them all to finish
@@ -81,7 +84,7 @@ class Experiment(object):
 
     class RunProcess(threading.Thread):  # thread class for managing processes on another host
 
-        def __init__(self, user, host, num_trials, args=[], dash_home="", imports=""):
+        def __init__(self, user, host, num_trials, args=[], dash_home="", imports="", callback=""):
             threading.Thread.__init__(self)
             self.user = user
             self.host = host
@@ -89,6 +92,7 @@ class Experiment(object):
             self.args = args
             self.dash_home = dash_home
             self.imports = imports
+            self.callback = callback
             self.result = None
 
         # I'm having trouble sending the arguments, so this creates a custom file for each host,

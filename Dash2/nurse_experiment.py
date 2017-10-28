@@ -118,7 +118,7 @@ def run_one(hosts, num_trials=10, max_iterations=10):
 
 #timeout_runs = test_timeout()
 
-nc_runs = test_num_computers()
+#nc_runs = test_num_computers()
 
 # can be called from the command line with e.g. the number of agents per trial.
 if __name__ == "__main__":
