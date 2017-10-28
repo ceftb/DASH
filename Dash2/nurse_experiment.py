@@ -96,8 +96,8 @@ def test_num_computers(hosts=None, num_trials=3):
 
 
 # This will be called back by the distribution code on each node
-def test_num_computers_local(hosts=[], num_trials=None, **args):
-    return 'processed:', ['args from central were hosts=', hosts, ' and num trials =', num_trials, args]
+def test_num_computers_local(hosts=[], values=None, num_trials=None, **args):
+    print 'processed:', ['args from central were hosts=', hosts, ' and num trials =', num_trials, values, args]
 
 
 def test_timeout():

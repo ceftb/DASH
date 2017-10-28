@@ -70,8 +70,7 @@ class Experiment(object):
             print 'will create a .aal file usingq host,', host, 'with vals', vals
             #time.sleep(1)  # so the printing routines don't overwrite each other
             # But for now use ssh
-            t = self.RunProcess(self.user, host, self.num_trials, vals, dash_home=self.dash_home, imports=self.imports,
-                                callback=self.callback)
+            t = self.RunProcess(self, host, vals)
             t.start()
             all_threads.append(t)
         # Wait for them all to finish
@@ -84,29 +83,30 @@ class Experiment(object):
 
     class RunProcess(threading.Thread):  # thread class for managing processes on another host
 
-        def __init__(self, user, host, num_trials, args=[], dash_home="", imports="", callback=""):
+        def __init__(self, experiment, host, vals):
             threading.Thread.__init__(self)
-            self.user = user
+            self.experiment = experiment
             self.host = host
-            self.num_trials = num_trials
-            self.args = args
-            self.dash_home = dash_home
-            self.imports = imports
-            self.callback = callback
+            self.print_all_lines = True
             self.result = None
 
         # I'm having trouble sending the arguments, so this creates a custom file for each host,
         # relies on it having the same file system, and attempts to execute it on the host
         def run(self):
-            filename = self.dash_home + "/Magi/Exp/f-" + self.host
-            call = ["ssh", self.user+"@"+self.host, "python", filename]
+            filename = self.experiment.dash_home + "/Magi/Exp/f-" + self.host
+            call = ["ssh", self.experiment.user+"@"+self.host, "python", filename]
             print 'call is', call
             with open(filename, 'w') as f:
                 # for now, args is the set of independent variables this host will work on. Needs to be cleaned up.
-                f.write('import sys\nsys.path.insert(0, \'' + self.dash_home +
+                f.write('import sys\nsys.path.insert(0, \'' + self.experiment.dash_home +
                         '/Dash2\')\nfrom parameter import Range\n' + self.imports + '\n' +
                         # The callback has to be a function that takes hosts and num_trials among other things
-                        self.callback + '([], ' + str(self.args) + ', num_trials=' + str(self.num_trials) + ')\n')
+                        self.experiment.callback + '([], ' + str(self.experiment.args) +
+                        ', num_trials=' + str(self.experiment.num_trials) +
+                        ', exp_data=' + str(self.experiment.exp_data) +
+                        ', independent=' + str(self.experiment.independent) +
+                        ', dependent=' + str(self.experiment.dependent) +
+                        ')\n')
             start = time.time()
             try:
                 process = subprocess.Popen(call, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
@@ -119,8 +119,8 @@ class Experiment(object):
                 if line.startswith("processed:"):
                     print '** getting data from', self.host, line
                     self.result = eval(line[line.find('processed:') + 10:])
-#                else:
-#                    print self.host, 'prints', line
+                elif self.print_all_lines:
+                    print self.host, 'prints', line
                 line = process.stdout.readline()
             print self.host, 'took', time.time() - start
             print process.communicate()
