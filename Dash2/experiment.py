@@ -136,7 +136,10 @@ class Experiment(object):
             trial_data_for_all_values[key] = run_data[key]
         # Append different data for the independent variable in each iteration
         independent_vals = self.compute_independent_vals()
-
+        # Dependent might be a method or a string representing a function or a member variable
+        # If it's a string representing a function it is changed to the function here. We don't pass this to another host.
+        if isinstance(self.dependent, str) and not hasattr(self.trial_class, self.dependent):
+            self.dependent = eval(self.dependent)
         for independent_val in independent_vals:
             trial_data = trial_data_for_all_values.copy()
             if self.independent is not None:
