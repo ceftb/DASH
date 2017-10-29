@@ -101,8 +101,16 @@ def test_num_computers(hosts=None, num_trials=3):
 
 
 # This will be called back by the distribution code on each node
-def test_num_computers_local(num_trials=None, **args):
-    print 'processed:', ['args from central were num trials =', num_trials, 'rest', args]
+def test_num_computers_local(**args):
+    print 'local:', ['args from central were', args]
+    exp = Experiment(NurseTrial,
+                     exp_data=args['exp_data'] if 'exp_data' in args else None,
+                     independent=args['independent'] if 'independent' in args else None,
+                     dependent=args['dependent'] if 'dependent' in args else None,
+                     num_trials=args['num_trials'] if 'num_trials' in args else 3)
+    outputs = exp.run()
+    print 'processed:', outputs
+
 
 
 def test_timeout():
