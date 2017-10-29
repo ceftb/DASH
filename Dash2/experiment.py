@@ -104,8 +104,7 @@ class Experiment(object):
                         self.experiment.callback + '(num_trials=' + str(self.experiment.num_trials) +
                         ', exp_data=' + str(self.experiment.exp_data) +
                         ', independent=' + str(self.experiment.independent) +
-                        ', dependent=' + str(self.experiment.dependent) +
-                        ')\n')
+                        ', dependent=\'' + str(self.experiment.dependent) + '\')\n')
             start = time.time()
             try:
                 process = subprocess.Popen(call, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
