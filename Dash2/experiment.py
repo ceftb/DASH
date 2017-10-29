@@ -99,10 +99,9 @@ class Experiment(object):
             with open(filename, 'w') as f:
                 # for now, args is the set of independent variables this host will work on. Needs to be cleaned up.
                 f.write('import sys\nsys.path.insert(0, \'' + self.experiment.dash_home +
-                        '/Dash2\')\nfrom parameter import Range\n' + self.imports + '\n' +
+                        '/Dash2\')\nfrom parameter import Range\n' + self.experiment.imports + '\n' +
                         # The callback has to be a function that takes hosts and num_trials among other things
-                        self.experiment.callback + '([], ' + str(self.experiment.args) +
-                        ', num_trials=' + str(self.experiment.num_trials) +
+                        self.experiment.callback + '(num_trials=' + str(self.experiment.num_trials) +
                         ', exp_data=' + str(self.experiment.exp_data) +
                         ', independent=' + str(self.experiment.independent) +
                         ', dependent=' + str(self.experiment.dependent) +

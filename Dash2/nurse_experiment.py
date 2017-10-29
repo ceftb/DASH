@@ -73,14 +73,19 @@ class NurseTrial(Trial):
             print ce, len(self.computer_events[ce]), len(self.computer_misses[ce]) if ce in self.computer_misses else 0
 
 
+# This is the dependent function for testing the number of computers
+def test_num_computers_dependent(nurse_trial):
+    (sum([len(nurse_trial.computer_misses[ce]) if ce in nurse_trial.computer_misses else 0
+          for ce in nurse_trial.computer_events]),
+    nurse_trial.misses, nurse_trial)
+
+
 # This spits out the results as the number of computers varies, creating a couple of hundred agents in the process.
 def test_num_computers(hosts=None, num_trials=3):
     exp = Experiment(NurseTrial,
                      exp_data={'num_nurses': 10, 'num_patients': 5, 'num_medications': 10, 'timeout': 0},  # was 20
                      independent=['num_computers', Range(5, 21, 5)],  # Range gets expanded with python range(), was 21
-                     dependent=lambda nt: (sum([len(nt.computer_misses[ce]) if ce in nt.computer_misses else 0
-                                                for ce in nt.computer_events]),
-                                           nt.misses, nt),
+                     dependent='nurse_experiment.test_num_computers_dependent',
                      num_trials=num_trials,
                      imports='import nurse_experiment', hosts=hosts,
                      callback='nurse_experiment.test_num_computers_local')
@@ -96,8 +101,8 @@ def test_num_computers(hosts=None, num_trials=3):
 
 
 # This will be called back by the distribution code on each node
-def test_num_computers_local(hosts=[], values=None, num_trials=None, **args):
-    print 'processed:', ['args from central were hosts=', hosts, ' and num trials =', num_trials, values, args]
+def test_num_computers_local(num_trials=None, **args):
+    print 'processed:', ['args from central were num trials =', num_trials, 'rest', args]
 
 
 def test_timeout():

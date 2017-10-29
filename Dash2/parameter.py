@@ -43,7 +43,7 @@ class Range:
         self.step = step
 
     def __repr__(self):
-        return "Range(" + str(self.min) + ", " + str(self.max) + " by " + str(self.step) + ")"
+        return "Range(" + str(self.min) + ", " + str(self.max) + ", " + str(self.step) + ")"
 
 
 # General class of distributions for parameters
