@@ -85,7 +85,7 @@ def test_num_computers(hosts=None, num_trials=3):
     exp = Experiment(NurseTrial,
                      exp_data={'num_nurses': 10, 'num_patients': 5, 'num_medications': 10, 'timeout': 0},  # was 20
                      independent=['num_computers', Range(5, 21, 5)],  # Range gets expanded with python range(), was 21
-                     dependent='nurse_experiment.test_num_computers_dependent',
+                     dependent='nurse_experiment.test_num_computers_local',
                      num_trials=num_trials,
                      imports='import nurse_experiment', hosts=hosts,
                      callback='nurse_experiment.test_num_computers_local')
