@@ -104,7 +104,7 @@ class Experiment(object):
                         '/Dash2\')\nimport experiment\nfrom parameter import Range\n' + self.experiment.imports + '\n' +
                         # The callback has to be a function that takes these arguments
                         ('run_local_part' if self.experiment.callback is None else self.experiment.callback) +
-                        '(trial_class=' + str(self.trial_class_str) +
+                        '(trial_class=' + str(self.experiment.trial_class_str) +
                         ', num_trials=' + str(self.experiment.num_trials) +
                         ', exp_data=' + str(self.experiment.exp_data) +
                         ', independent=' + str(self.experiment.independent) +
