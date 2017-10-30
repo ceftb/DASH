@@ -17,7 +17,8 @@ class Experiment(object):
                  #experiment_file="/users/blythe/webdash/Dash2/pass_experiment.py",
                  dash_home="/users/blythe/webdash",
                  imports="",  # e.g. 'import pass_experiment',
-                 callback="",
+                 callback=None,  # For multiple hosts, a default function calling each host is used if this is None
+                 trial_class_str=None,  # If callback is not given, runs a generic experiment on this class for each host
                  user="blythe", start_hub=None):
         self.goal = ""  # The goal is a declarative representation of the aim of the experiment.
                         # It is used where possible to automate experiment setup and some amount of validation.
@@ -33,6 +34,7 @@ class Experiment(object):
         self.imports = imports
         self.callback = callback
         self.file_output = file_output
+        self.trial_class_str = trial_class_str
         self.user = user
         #self.experiment_file = experiment_file
         self.start_hub = start_hub  # If not None, specifies a path to a hub that will be started if needed on each host
@@ -67,7 +69,7 @@ class Experiment(object):
             i += num_vals
             h += 1
             #time.sleep(1)  # so the printing routines don't overwrite each other
-            print 'will create a .aal file usingq host,', host, 'with vals', vals
+            print 'will create a .aal file using host,', host, 'with vals', vals
             #time.sleep(1)  # so the printing routines don't overwrite each other
             # But for now use ssh
             t = self.RunProcess(self, host, vals)
@@ -99,9 +101,11 @@ class Experiment(object):
             with open(filename, 'w') as f:
                 # for now, args is the set of independent variables this host will work on. Needs to be cleaned up.
                 f.write('import sys\nsys.path.insert(0, \'' + self.experiment.dash_home +
-                        '/Dash2\')\nfrom parameter import Range\n' + self.experiment.imports + '\n' +
-                        # The callback has to be a function that takes hosts and num_trials among other things
-                        self.experiment.callback + '(num_trials=' + str(self.experiment.num_trials) +
+                        '/Dash2\')\nimport experiment\nfrom parameter import Range\n' + self.experiment.imports + '\n' +
+                        # The callback has to be a function that takes these arguments
+                        'run_local_part' if self.experiment.callback is None else self.experiment.callback +
+                        '(trial_class=' + str(self.trial_class_str) +
+                        ', num_trials=' + str(self.experiment.num_trials) +
                         ', exp_data=' + str(self.experiment.exp_data) +
                         ', independent=' + str(self.experiment.independent) +
                         ', dependent=\'' + str(self.experiment.dependent) + '\')\n')
@@ -167,7 +171,6 @@ class Experiment(object):
         elif self.independent is not None and isinstance(self.independent[1], (list, tuple)):  # allow a direct list
             independent_vals = self.independent[1]
         return independent_vals
-        
 
     class HubThread(threading.Thread):  # thread class for managing a hub
 
@@ -214,6 +217,17 @@ class Experiment(object):
                 result[key] = process_list_results(self.trial_outputs[key])
             return result
         return process_list_results(self.trial_outputs)
+
+
+def run_local_part(**args):
+    print 'local:', ['args from central were', args]
+    exp = Experiment(args['trial_class'] if 'trial_class' in args else Trial,
+                     exp_data=args['exp_data'] if 'exp_data' in args else None,
+                     independent=args['independent'] if 'independent' in args else None,
+                     dependent=args['dependent'] if 'dependent' in args else None,
+                     num_trials=args['num_trials'] if 'num_trials' in args else 3)
+    outputs = exp.run()
+    print 'processed:', outputs
 
 
 def process_list_results(list_results):

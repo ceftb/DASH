@@ -72,23 +72,25 @@ class NurseTrial(Trial):
         for ce in self.computer_events:
             print ce, len(self.computer_events[ce]), len(self.computer_misses[ce]) if ce in self.computer_misses else 0
 
-
-# This is the dependent function for testing the number of computers
-def test_num_computers_dependent(nurse_trial):
-    (sum([len(nurse_trial.computer_misses[ce]) if ce in nurse_trial.computer_misses else 0
-          for ce in nurse_trial.computer_events]),
-    nurse_trial.misses, nurse_trial)
+    # This is the dependent function for testing the number of computers. It has to be a method so that it
+    # can be evaluated in the final context where it is run - this file might not be imported but this class is available
+    def test_num_computers_dependent(self):
+        (sum([len(self.computer_misses[ce]) if ce in self.computer_misses else 0
+             for ce in self.computer_events]),
+        self.misses, self)
 
 
 # This spits out the results as the number of computers varies, creating a couple of hundred agents in the process.
 def test_num_computers(hosts=None, num_trials=3):
     exp = Experiment(NurseTrial,
+                     hosts=hosts,
                      exp_data={'num_nurses': 10, 'num_patients': 5, 'num_medications': 10, 'timeout': 0},  # was 20
                      independent=['num_computers', Range(5, 21, 5)],  # Range gets expanded with python range(), was 21
-                     dependent='nurse_experiment.test_num_computers_local',
+                     dependent='test_num_computers_dependent',
                      num_trials=num_trials,
-                     imports='import nurse_experiment', hosts=hosts,
-                     callback='nurse_experiment.test_num_computers_local')
+                     # The imports must be sufficient to access the callback function (if any) and trial class.
+                     imports='import nurse_experiment',
+                     trial_class_str='nurse_experiment.NurseTrial')
     outputs = exp.run()
     #outputs = [[(t.timeout, t.num_computers, t.misses, t.iteration, len(t.events_of_type("login"))) for t in r]
     #          for r in runs]
@@ -100,16 +102,17 @@ def test_num_computers(hosts=None, num_trials=3):
     return exp, outputs
 
 
-# This will be called back by the distribution code on each node
-def test_num_computers_local(**args):
-    print 'local:', ['args from central were', args]
-    exp = Experiment(NurseTrial,
-                     exp_data=args['exp_data'] if 'exp_data' in args else None,
-                     independent=args['independent'] if 'independent' in args else None,
-                     dependent=args['dependent'] if 'dependent' in args else None,
-                     num_trials=args['num_trials'] if 'num_trials' in args else 3)
-    outputs = exp.run()
-    print 'processed:', outputs
+# This will be called back by the distribution code on each node.
+# This is a completely generic function that I'm moving to experiment, passing the name of the trial class
+#def test_num_computers_local(**args):
+#    print 'local:', ['args from central were', args]
+#    exp = Experiment(NurseTrial,
+#                     exp_data=args['exp_data'] if 'exp_data' in args else None,
+#                     independent=args['independent'] if 'independent' in args else None,
+#                     dependent=args['dependent'] if 'dependent' in args else None,
+#                     num_trials=args['num_trials'] if 'num_trials' in args else 3)
+#    outputs = exp.run()
+#    print 'processed:', outputs
 
 
 
