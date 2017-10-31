@@ -89,7 +89,7 @@ def test_num_computers(hosts=None, num_trials=3):
                      dependent='test_num_computers_dependent',
                      num_trials=num_trials,
                      # The imports must be sufficient to access the callback function (if any) and trial class.
-                     imports='import nurse_experiment',
+                     imports='import nurse_experiment\nfrom nurse_hub import Event',
                      trial_class_str='nurse_experiment.NurseTrial')
     outputs = exp.run()
     #outputs = [[(t.timeout, t.num_computers, t.misses, t.iteration, len(t.events_of_type("login"))) for t in r]

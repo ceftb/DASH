@@ -142,8 +142,16 @@ class Experiment(object):
         independent_vals = self.compute_independent_vals()
         # Dependent might be a method or a string representing a function or a member variable
         # If it's a string representing a function it is changed to the function here. We don't pass this to another host.
-        if isinstance(self.dependent, str) and not hasattr(self.trial_class, self.dependent):
-            self.dependent = eval(self.dependent)
+        if isinstance(self.dependent, str):
+            if hasattr(self.trial_class, self.dependent) and callable(getattr(self.trial_class, self.dependent)):
+                print "Dependent is callable on the trial, so switching to the method"
+                self.dependent = getattr(self.trial_class, self.dependent)
+            elif not hasattr(self.trial_class, self.dependent):
+                print "Dependent is not a callable method, but is a variable on the trial"
+            else:
+                print "Dependent is a string"
+        else:
+            print "dependent is not a string"
         for independent_val in independent_vals:
             trial_data = trial_data_for_all_values.copy()
             if self.independent is not None:
@@ -155,6 +163,7 @@ class Experiment(object):
                 trial = self.trial_class(data=trial_data)
                 trial.run()
                 trial_dependent = self.dependent(trial) if callable(self.dependent) else getattr(trial, self.dependent)
+                print "Dependent", self.dependent, "evaluated to", trial_dependent
                 self.trial_outputs[independent_val].append(trial_dependent)
         # Kill the hub process if one was created
         if hub_thread is not None:
