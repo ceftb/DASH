@@ -40,7 +40,7 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
         return []  # otherwise fail
 
     def buy_flight(self, (goal, flight)):
-        print 'buys flight tickets for', flight
+        print 'buying flight tickets for', flight
         self.flights_to_buy.remove(flight)
         return [{}]
 
@@ -62,12 +62,12 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
                 if ix == -1:
                     return []    # Can't read the destination: fail
                 destination = mail['body'][ix + 16:]
-                print 'buy tickets', destination, 'Friday', mail
+                print '  buy tickets', destination, 'Friday', mail
                 self.flights_to_buy.append([destination, 'Friday'])
             elif mail['subject'] == 'cancelFlight':
-                print 'cancels flight'
+                print '  cancels flight'
             else:
-                print 'unknown request:', mail['subject']
+                print '  unknown request:', mail['subject']
         return [{}]
 
 

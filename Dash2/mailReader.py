@@ -38,7 +38,7 @@ goalRequirements doWork
   processMail(newmail)
   forget([sendMailFromStack(x), haveMailInStack(x), sendMail(x), readMail(x), processMail(x), sleep(x)])
 # Turned off sleep for the experiment harness, so it runs quickly.
-#  sleep(1)
+  sleep(1)
 
 # This line can replace the first line in the doWork clause above, but commenting it there messes up the reader
 #   sendMail(_self, _test, 'this is a test message', 'http://click.here')
