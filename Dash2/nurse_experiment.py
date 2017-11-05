@@ -75,9 +75,9 @@ class NurseTrial(Trial):
     # This is the dependent function for testing the number of computers. It has to be a method so that it
     # can be evaluated in the final context where it is run - this file might not be imported but this class is available
     def test_num_computers_dependent(self):
-        (sum([len(self.computer_misses[ce]) if ce in self.computer_misses else 0
-             for ce in self.computer_events]),
-        self.misses, self)
+        return (sum([len(self.computer_misses[ce]) if ce in self.computer_misses else 0
+                     for ce in self.computer_events]),
+                 self.misses, self)
 
 
 # This spits out the results as the number of computers varies, creating a couple of hundred agents in the process.
@@ -130,7 +130,7 @@ def test_timeout():
 
 
 def run_one(hosts, num_trials=10, max_iterations=10):
-    return test_num_computers(hosts)
+    return test_num_computers(hosts, num_trials=num_trials)
 
 #timeout_runs = test_timeout()
 
@@ -138,5 +138,5 @@ def run_one(hosts, num_trials=10, max_iterations=10):
 
 # can be called from the command line with e.g. the number of agents per trial.
 if __name__ == "__main__":
-    exp, results = run_one(sys.argv[1:], num_trials=10, max_iterations=10)
+    exp, results = run_one(sys.argv[1:], num_trials=3, max_iterations=10)
     print 'end process call'

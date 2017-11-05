@@ -30,6 +30,6 @@ class HumanTraits:
         self.emotional_stability = self.big_5_random(big_5_range)
         self.openness = self.big_5_random(big_5_range)
 
-    def big_5_random(self, big_5_range):
-        return random.uniform(big_5_range[0], big_5_range[1])
+    def big_5_random(self, range):
+        return random.uniform(range[0], range[1])
 

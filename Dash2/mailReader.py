@@ -225,7 +225,8 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
         for mail in s1node.fact[1]:
             s1node.add_neighbor(self.fact_to_node(['mail', mail]))
             # Turning off the urge to click a link right now for testing
-            #node.add_neighbor(self.fact_to_node(['action', 'click', mail]))
+            # (turning back on to demo.)
+            s1node.add_neighbor(self.fact_to_node(['action', 'click', mail]))
 
 
 if __name__ == "__main__":
