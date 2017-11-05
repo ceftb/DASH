@@ -82,7 +82,16 @@ class Experiment(object):
         # Collate the results
         all_data = [t.result for t in all_threads]
         print '++ all data is', all_data
-        return all_data
+        # Data should be a dictionary indexed by independent variable of results for each host
+        # (as returned by run_this_host). To gather, combine into one dictionary.
+        combo = dict()
+        for result in all_data:
+            for i in result:
+                if i in combo:
+                    combo[i] += result[i]
+                else:
+                    combo[i] = result[i]
+        return combo
 
     class RunProcess(threading.Thread):  # thread class for managing processes on another host
 
