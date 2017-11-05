@@ -99,7 +99,7 @@ class Experiment(object):
             threading.Thread.__init__(self)
             self.experiment = experiment
             self.host = host
-            self.print_all_lines = True
+            self.print_all_lines = False
             self.result = None
 
         # I'm having trouble sending the arguments, so this creates a custom file for each host,
