@@ -77,7 +77,7 @@ class NurseTrial(Trial):
     def test_num_computers_dependent(self):
         return (sum([len(self.computer_misses[ce]) if ce in self.computer_misses else 0
                      for ce in self.computer_events]),
-                 self.misses, self)
+                self.misses)
 
 
 # This spits out the results as the number of computers varies, creating a couple of hundred agents in the process.
@@ -95,6 +95,7 @@ def test_num_computers(hosts=None, num_trials=3):
     #outputs = [[(t.timeout, t.num_computers, t.misses, t.iteration, len(t.events_of_type("login"))) for t in r]
     #          for r in runs]
     print "Experiment data:", exp.exp_data
+    print 'print_through: outputs are', outputs
     print "Number of computers, Number of misses, Number of iterations, Number of logins"
     for independent_val in sorted(outputs):
         print independent_val, ":", outputs[independent_val]

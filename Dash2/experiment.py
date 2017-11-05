@@ -19,6 +19,7 @@ class Experiment(object):
                  imports="",  # e.g. 'import pass_experiment',
                  callback=None,  # For multiple hosts, a default function calling each host is used if this is None
                  trial_class_str=None,  # If callback is not given, runs a generic experiment on this class for each host
+                 reading_local_results=True,  # If False, results are being read as a string on another host
                  user="blythe", start_hub=None):
         self.goal = ""  # The goal is a declarative representation of the aim of the experiment.
                         # It is used where possible to automate experiment setup and some amount of validation.
@@ -121,6 +122,8 @@ class Experiment(object):
                 if line.startswith("processed:"):
                     print '** getting data from', self.host, line
                     self.result = eval(line[line.find('processed:') + 10:])
+                elif line.startswith("print_through:"):
+                    print '** print through from', self.host, line
                 elif self.print_all_lines:
                     print self.host, 'prints', line
                 line = process.stdout.readline()
@@ -234,7 +237,8 @@ def run_local_part(**args):
                      exp_data=args['exp_data'] if 'exp_data' in args else None,
                      independent=args['independent'] if 'independent' in args else None,
                      dependent=args['dependent'] if 'dependent' in args else None,
-                     num_trials=args['num_trials'] if 'num_trials' in args else 3)
+                     num_trials=args['num_trials'] if 'num_trials' in args else 3,
+                     reading_local_results=False)
     outputs = exp.run()
     print 'processed:', outputs
 
