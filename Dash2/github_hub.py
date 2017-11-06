@@ -9,6 +9,10 @@ class GitHub(WorldHub):
     def request_repos(self, id, data):
         return 'success', self.repositories
 
+    def clone(self, id, data):
+        print 'request to clone', data, 'from agent', id
+        return 'success', []
+
     def processRegisterRequest(self, agent_id, aux_data):
         id = aux_data[0]
         self.github_ids.append(id)

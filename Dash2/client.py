@@ -88,8 +88,12 @@ class Client(object):
             aux_data(list) # any extra information you want to relay to the world hub during registration
         """
 
-        if self.trace_client:
-            print "establishing connection..."
+        try:
+            if self.trace_client:
+                print "establishing connection..."
+        except AttributeError as ae:
+            print 'It looks as though there was an attempt to register an agent without first calling the base class constructor:'
+            print ae
 
         self.establishConnection()
 
