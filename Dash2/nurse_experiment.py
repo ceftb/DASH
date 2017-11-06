@@ -81,11 +81,11 @@ class NurseTrial(Trial):
 
 
 # This spits out the results as the number of computers varies, creating a couple of hundred agents in the process.
-def test_num_computers(hosts=None, num_trials=3):
+def test_num_computers(hosts=None, num_trials=3, independent=['num_computers', Range(5, 21, 5)]):
     exp = Experiment(NurseTrial,
                      hosts=hosts,
                      exp_data={'num_nurses': 10, 'num_patients': 5, 'num_medications': 10, 'timeout': 0},  # was 20
-                     independent=['num_computers', Range(5, 21, 5)],  # Range gets expanded with python range(), was 21
+                     independent=independent,  # Range gets expanded with python range(), was 21
                      dependent='test_num_computers_dependent',
                      num_trials=num_trials,
                      # The imports must be sufficient to access the callback function (if any) and trial class.
@@ -130,8 +130,8 @@ def test_timeout():
     print outputs
 
 
-def run_one(hosts, num_trials=10, max_iterations=10):
-    return test_num_computers(hosts, num_trials=num_trials)
+def run_one(hosts, num_trials=10, max_iterations=10, independent=None):
+    return test_num_computers(hosts, num_trials=num_trials, independent=independent)
 
 #timeout_runs = test_timeout()
 
@@ -139,5 +139,5 @@ def run_one(hosts, num_trials=10, max_iterations=10):
 
 # can be called from the command line with e.g. the number of agents per trial.
 if __name__ == "__main__":
-    exp, results = run_one(sys.argv[1:], num_trials=3, max_iterations=10)
+    exp, results = run_one(sys.argv[1:], num_trials=3, max_iterations=10, independent=['num_computers', [5]])
     print 'end process call'
