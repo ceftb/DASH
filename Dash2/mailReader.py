@@ -20,7 +20,7 @@ class MailReader(DASHAgent):
                   # Threshold at which actions suggested by system 1 are chosen. At 0.3 this scenario uses only
                   # goal-directed actions. At 0.2 the agent clicks a link in the email once, then carries on with the
                   # goal. At 0.1 it clicks two links.
-                  Parameter('system1_threshold', default=0.3)
+                  Parameter('system1_threshold', default=0.1)
                   ]
 
     def __init__(self, address, register=True):
