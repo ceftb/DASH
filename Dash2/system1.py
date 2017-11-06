@@ -10,11 +10,12 @@
 class Node:
     default_decay = 0.1  # activation goes down by this much each cycle in the absence of spreading activation
 
-    def __init__(self, node_id, fact, activation=0, decay=default_decay, neighbors=None):
+    def __init__(self, node_id, fact, activation=0, valence=0, decay=default_decay, neighbors=None):
         self.node_id = node_id
         self.fact = fact
         self.decay = decay
         self.activation = activation
+        self.valence = valence
         # neighbors is a list of pairs (node, link_strength)
         self.neighbors = [] if neighbors is None else neighbors
         # This keeps track of whether activation should be passed to neighbors so we don't loop

@@ -17,12 +17,17 @@ class MailReader(DASHAgent):
                   # probability that email deemed to be legitimate leisure mail will be forwarded to a friend.
                   # Shortly this should be calculated based on agreeableness, extraversion and conscientiousness.
                   Parameter('forward_probability', default={'leisure': 0.5, 'work': 0.5}),
+                  # Threshold at which actions suggested by system 1 are chosen. At 0.3 this scenario uses only
+                  # goal-directed actions. At 0.2 the agent clicks a link in the email once, then carries on with the
+                  # goal. At 0.1 it clicks two links.
+                  Parameter('system1_threshold', default=0.3)
                   ]
 
     def __init__(self, address, register=True):
         DASHAgent.__init__(self)
 
         self.trace_client = False
+        #self.traceAction = True
 
         # Not currently used
         #self.competence_with_internet = 0.5  # general level of competence e.g. Alseadoon et al. 12
@@ -38,7 +43,7 @@ goalRequirements doWork
   processMail(newmail)
   forget([sendMailFromStack(x), haveMailInStack(x), sendMail(x), readMail(x), processMail(x), sleep(x)])
 # Turned off sleep for the experiment harness, so it runs quickly.
-  sleep(1)
+# sleep(1)
 
 # This line can replace the first line in the doWork clause above, but commenting it there messes up the reader
 #   sendMail(_self, _test, 'this is a test message', 'http://click.here')
@@ -83,10 +88,7 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
 
         # Adding spreading activation rules by code until the language for them is set
 
-        # Threshold at which actions suggested by system 1 are chosen. At 0.3 this scenario uses only goal-directed
-        # actions. At 0.2 the agent clicks a link in the email once, then carries on with the goal.
-        # At 0.1 it clicks it twice.
-        self.system1_threshold = 0.3
+        #self.system1_threshold = 0.2
 
         # Reading email creates a list of emails. Add activation to each separate email node in system 1.
         self.create_neighbor_rule('readMail', self.create_mail_nodes)
@@ -204,7 +206,7 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
 
     # This one isn't called through system 2 reasoning, but by system 1
     def click_link_in_mail(self, (predicate, mail)):
-        #print 'clicked link in', mail
+        print 'clicked link in', mail
         if 'url' in mail:
             self.urls_clicked.append(mail['url'])
         return [{}]
@@ -226,7 +228,7 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
             s1node.add_neighbor(self.fact_to_node(['mail', mail]))
             # Turning off the urge to click a link right now for testing
             # (turning back on to demo.)
-            s1node.add_neighbor(self.fact_to_node(['action', 'click', mail]))
+            s1node.add_neighbor(self.fact_to_node(['action', 'clickLinkInMail', mail]))
 
 
 if __name__ == "__main__":
@@ -235,5 +237,5 @@ if __name__ == "__main__":
     # Print out the system 1 nodes at the end
     print 'nodes:'
     for node in mr.nodes:
-        print node
+        print ' ', node
 
