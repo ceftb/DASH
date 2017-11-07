@@ -59,12 +59,18 @@ class Experiment(object):
         h = 0  # host index
         g = len(independent_vals) / len(self.hosts)
         rem = len(independent_vals) % len(self.hosts)
+        # If there are more hosts than values, figure out how many hosts are being used per value
+        # and divide up the number of trials. Each host here might do too much work but it's a start.
+        trials = self.num_trials
+        if g == 0:
+            hosts_per_value = len(self.hosts) / len(independent_vals)
+            trials = self.num_trials / hosts_per_value
         # Need to iterate over packets of work, probably single independent variable values and reduced trials
         # for now, so we can dole these out as machines finish tasks and faster machines naturally do more work.
         for host in self.hosts:
             # Gets a segment of the independent values (currently this leaves hosts unused if there are more
             # hosts than values, need to fix by combining with number of trials).
-            num_vals = g + 1 if h < rem else g
+            num_vals = g + 1 if h < rem else max(g, 1)
             vals = [independent_vals[j + i] for j in range(0, num_vals)]
             i += num_vals
             h += 1
@@ -72,7 +78,7 @@ class Experiment(object):
             print 'will create a .aal file using host,', host, 'with vals', vals
             #time.sleep(1)  # so the printing routines don't overwrite each other
             # But for now use ssh
-            t = self.RunProcess(self, host, vals)
+            t = self.RunProcess(self, host, vals, trials)
             t.start()
             all_threads.append(t)
         # Wait for them all to finish
@@ -94,11 +100,12 @@ class Experiment(object):
 
     class RunProcess(threading.Thread):  # thread class for managing processes on another host
 
-        def __init__(self, experiment, host, vals):
+        def __init__(self, experiment, host, vals, num_trials):
             threading.Thread.__init__(self)
             self.experiment = experiment
             self.host = host
             self.vals = vals
+            self.num_trials = num_trials  # May be less than experiment.num_trials if there are enough hosts
             self.print_all_lines = False
             self.result = None
             print 'set up for', host, 'with vals', vals
@@ -116,9 +123,9 @@ class Experiment(object):
                         # The callback has to be a function that takes these arguments
                         ('experiment.run_local_part' if self.experiment.callback is None else self.experiment.callback) +
                         '(trial_class=' + str(self.experiment.trial_class_str) +
-                        ', num_trials=' + str(self.experiment.num_trials) +
+                        ', num_trials=' + str(self.num_trials) +
                         ', exp_data=' + str(self.experiment.exp_data) +
-                        ', independent=[' + str(self.experiment.independent[0]) + ', ' + str(self.vals) + ']' +
+                        ', independent=[\'' + str(self.experiment.independent[0]) + '\', ' + str(self.vals) + ']' +
                         ', dependent=\'' + str(self.experiment.dependent) + '\')\n')
             start = time.time()
             try:
