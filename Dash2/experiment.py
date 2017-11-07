@@ -98,8 +98,10 @@ class Experiment(object):
             threading.Thread.__init__(self)
             self.experiment = experiment
             self.host = host
+            self.vals = vals
             self.print_all_lines = False
             self.result = None
+            print 'set up for', host, 'with vals', vals
 
         # I'm having trouble sending the arguments, so this creates a custom file for each host,
         # relies on it having the same file system, and attempts to execute it on the host
@@ -116,7 +118,7 @@ class Experiment(object):
                         '(trial_class=' + str(self.experiment.trial_class_str) +
                         ', num_trials=' + str(self.experiment.num_trials) +
                         ', exp_data=' + str(self.experiment.exp_data) +
-                        ', independent=' + str(self.experiment.independent) +
+                        ', independent=[' + str(self.experiment.independent[0]) + ', ' + str(self.vals) + ']' +
                         ', dependent=\'' + str(self.experiment.dependent) + '\')\n')
             start = time.time()
             try:
