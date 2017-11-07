@@ -51,7 +51,6 @@ class Experiment(object):
             return self.scatter_gather(run_data)
 
     # For now, create ssh calls in subprocesses for the other hosts.
-    # I am just testing this with hard-wired experiments for the password simulator for now.
     def scatter_gather(self, run_data={}):
         # For a second pass, split up the independent values among the hosts
         independent_vals = self.compute_independent_vals()

@@ -75,17 +75,16 @@ class NurseTrial(Trial):
     # This is the dependent function for testing the number of computers. It has to be a method so that it
     # can be evaluated in the final context where it is run - this file might not be imported but this class is available
     def test_num_computers_dependent(self):
-        return (sum([len(self.computer_misses[ce]) if ce in self.computer_misses else 0
-                     for ce in self.computer_events]),
-                self.misses)
+        return self.misses
 
 
 # This spits out the results as the number of computers varies, creating a couple of hundred agents in the process.
+# For the independent variable, the Range object gets expanded with python range()
 def test_num_computers(hosts=None, num_trials=3, independent=['num_computers', Range(5, 21, 5)]):
     exp = Experiment(NurseTrial,
                      hosts=hosts,
                      exp_data={'num_nurses': 10, 'num_patients': 5, 'num_medications': 10, 'timeout': 0},  # was 20
-                     independent=independent,  # Range gets expanded with python range(), was 21
+                     independent=independent,
                      dependent='test_num_computers_dependent',
                      num_trials=num_trials,
                      # The imports must be sufficient to access the callback function (if any) and trial class.

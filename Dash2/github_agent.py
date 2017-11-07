@@ -3,9 +3,9 @@ from dash import DASHAgent
 
 class GithubAgent(DASHAgent):
 
-    def __init__(self):
+    def __init__(self, agent_id):
         DASHAgent.__init__(self)
-        self.register([1])
+        self.register([agent_id])
         self.readAgent("""
 
 goalWeight cloneARepo 1
@@ -28,5 +28,5 @@ goalRequirements cloneARepo
 
 
 if __name__ == "__main__":
-    gh = GithubAgent()
+    gh = GithubAgent(1)
     gh.agentLoop()

@@ -6,10 +6,10 @@ class GitHub(WorldHub):
     github_ids = []
     repositories = ['repA', 'repB']
 
-    def request_repos(self, id, data):
+    def request_repos(self, agent_id, data):
         return 'success', self.repositories
 
-    def clone(self, id, data):
+    def clone(self, agent_id, data):
         print 'request to clone', data, 'from agent', id
         return 'success', []
 
