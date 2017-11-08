@@ -83,7 +83,7 @@ class NurseTrial(Trial):
 def test_num_computers(hosts=None, num_trials=3, independent=['num_computers', Range(5, 21, 5)]):
     exp = Experiment(NurseTrial,
                      hosts=hosts,
-                     exp_data={'num_nurses': 10, 'num_patients': 5, 'num_medications': 10, 'timeout': 0},  # was 20
+                     exp_data={'num_nurses': 20, 'num_patients': 5, 'num_medications': 10, 'timeout': 0},  # was 20
                      independent=independent,
                      dependent='test_num_computers_dependent',
                      num_trials=num_trials,
@@ -137,5 +137,5 @@ def run_one(hosts, num_trials=10, max_iterations=10, independent=None):
 
 # can be called from the command line with e.g. the number of agents per trial.
 if __name__ == "__main__":
-    exp, results = run_one(sys.argv[1:], num_trials=3, max_iterations=10, independent=['num_computers', [5]])
+    exp, results = run_one(sys.argv[1:], num_trials=3, max_iterations=10, independent=['num_computers', Range(4,20)])
     print 'end process call'
