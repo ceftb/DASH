@@ -30,14 +30,15 @@ class PhishTrial(Trial):
         self.phish_start_time = 0
         self.phish_end_time = 0
 
-        self.objective = 'number'
+        #self.objective = 'number'  # superseded by dependent functions
 
         self.iteration = 0
 
         self.big_5_range = [0.2, 0.9]
         # self.reply_range = {'work': [0, 0.8], 'leisure': [0, 0.8]}  # Note there is currently no separate reply in mailReader
         self.forward_range = {'leisure': [0, 0.8], 'work': [0, 0.8]}
-        self.p_recognize_phish = 0.5  # this default is overridden in the trial
+        self.p_recognize_phish = None  # this default can be overridden in the trial
+        self.p_click_unrecognized_phish = None  # as above
 
         self.total_mail_stack = 0
         self.total_mails_read = 0
@@ -63,7 +64,11 @@ class PhishTrial(Trial):
             for mode in ['leisure', 'work']:
                 w.forward_probability[mode] = random.uniform(self.forward_range[mode][0], self.forward_range[mode][1])
             choose_recipients(w, i, self.num_workers, self.num_recipients, attachment='budget.xlsx')
-            w.probability_recognize_phish = self.p_recognize_phish
+            # This would be more clearly handled by manipulating the parameters
+            if self.p_recognize_phish is not None:
+                w.probability_recognize_phish = self.p_recognize_phish
+            if self.p_click_unrecognized_phish is not None:
+                w.probability_click_unrecognized_phish = self.p_click_unrecognized_phish
             w.active = True
             if i % 100 == 0:
                 print (i + 1), 'agents created'
@@ -196,17 +201,18 @@ def run_subprocess(trials=100, num_phish_candidates=[5, 10, 15, 20, 25]):
         print pt, '-', total[pt], 'of', trials, 'ave', ave[pt]
 
 
-# To test scalability, running with max_iterations 1 and num_workers increasing.
+# When testing scalability, ran with max_iterations 1 and num_workers increasing.
 def run_one(phish_targets, num_workers=50, num_trials=10, hosts=None):
     e = Experiment(PhishTrial,
                    hosts=hosts,
+                   independent=['p_click_unrecognized_phish', [0.3]],  # each mail worker is set from this in init
                    dependent='num_attachments_per_worker',
                    num_trials=num_trials)
     e.run(run_data={'max_iterations': 20,  # (was 1) The phishing attachment is opened in step 9 in the current setup
                     #'objective': 'number',  # replaced with 'dependent' above
                     'num_workers': num_workers, 'num_recipients': 4,
                     # variables on the trial object that are passed to the agents
-                    'phish_targets': phish_targets, 'p_recognize_phish': 0.8, 'p_open_attachment': 0.3,
+                    'phish_targets': phish_targets, 'p_recognize_phish': 0.8,  # 'p_open_attachment': 0.3,
                     #'register': False    # don't register with a hub, to test raw numbers of agents
                     })
     r = e.process_results()

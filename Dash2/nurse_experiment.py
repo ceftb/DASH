@@ -115,7 +115,6 @@ def test_num_computers(hosts=None, num_trials=3, independent=['num_computers', R
 #    print 'processed:', outputs
 
 
-
 def test_timeout():
     exp = Experiment(NurseTrial,
                      exp_data={'num_nurses': 20, 'num_patients': 5, 'num_medications': 10, 'num_computers': 20},
