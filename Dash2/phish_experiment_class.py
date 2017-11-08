@@ -49,6 +49,8 @@ class PhishTrial(Trial):
 
         self.agents_iterated = 0
 
+        self.register = True  # can be turned off so the agent won't register with a hub, to save time.
+
         Trial.__init__(self, data=data)  # Call the trial initialization here so data will override the other defaults
 
     def initialize(self):
@@ -104,6 +106,7 @@ class PhishTrial(Trial):
               'total sent', self.total_mails_sent, 'generations since change', self.generations_since_change
         self.agents_iterated = 0
 
+    # This monolithic output function is replace with alternatives that can be named the 'dependent' in the experiment
     def output(self):
         if self.objective == 'number':
             return numpy.mean([len([1 for attachment in worker.attachments_opened if attachment == 'phish.xlsx'])
@@ -113,6 +116,10 @@ class PhishTrial(Trial):
                 return self.phish_end_time
             else:
                 return -1
+
+    def num_attachments_per_worker(self):
+        return numpy.mean([len([1 for attachment in worker.attachments_opened if attachment == 'phish.xlsx'])
+                           for worker in self.workers])
 
 
 def choose_recipients(agent, worker_i, num_workers, num_recipients, attachment=None, modes=['work', 'leisure'],
@@ -190,20 +197,25 @@ def run_subprocess(trials=100, num_phish_candidates=[5, 10, 15, 20, 25]):
 
 
 # To test scalability, running with max_iterations 1 and num_workers increasing.
-def run_one(phish_targets, num_workers=50):
-    e = Experiment(PhishTrial, num_trials=1)
-    e.run(run_data={'max_iterations': 1,  # (was 1) The phishing attachment is opened in step 9 in the current setup
-                    'objective': 'number',
+def run_one(phish_targets, num_workers=50, num_trials=10, hosts=None):
+    e = Experiment(PhishTrial,
+                   hosts=hosts,
+                   dependent='num_attachments_per_worker',
+                   num_trials=num_trials)
+    e.run(run_data={'max_iterations': 20,  # (was 1) The phishing attachment is opened in step 9 in the current setup
+                    #'objective': 'number',  # replaced with 'dependent' above
                     'num_workers': num_workers, 'num_recipients': 4,
                     # variables on the trial object that are passed to the agents
                     'phish_targets': phish_targets, 'p_recognize_phish': 0.8, 'p_open_attachment': 0.3,
-                    'register': False})  # don't register with a hub to test raw numbers of agents
+                    #'register': False    # don't register with a hub, to test raw numbers of agents
+                    })
     r = e.process_results()
-    print "Final", r[0]
+    print "Final", r
+    return r
 
 
 if __name__ == "__main__":
     print 'argv is', sys.argv
     if len(sys.argv) > 1 and sys.argv[1] == "run":  # usage: python xx run 5 100 ; nTargets then nWorkers
-        run_one(int(sys.argv[2]), int(sys.argv[3]))
+        run_one(int(sys.argv[2]), int(sys.argv[3]), hosts=sys.argv[4:])  # rest of the arguments are hosts to run on
 

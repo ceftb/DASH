@@ -20,7 +20,7 @@ class MailReader(DASHAgent):
                   # Threshold at which actions suggested by system 1 are chosen. At 0.3 this scenario uses only
                   # goal-directed actions. At 0.2 the agent clicks a link in the email once, then carries on with the
                   # goal. At 0.1 it clicks two links.
-                  Parameter('system1_threshold', default=0.1)
+                  Parameter('system1_threshold', default=0.3)  # turned off for FARM experiments
                   ]
 
     def __init__(self, address, register=True):
@@ -63,7 +63,8 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
 
         self.address = address
         if register:
-            print 'registering', address
+            print 'registering', address, 'prph', self.probability_recognize_phish,  \
+                'pcuph', self.probability_click_unrecognized_phish
             self.register([address])    # Register with the running mail_hub
 
         # Stack of emails to send. This way it is easy enough to task the agent with a set of emails, even dynamically.
@@ -87,10 +88,8 @@ transient doWork     # Agent will forget goal's achievement or failure as soon a
         self.attachments_opened = []
 
         # Adding spreading activation rules by code until the language for them is set
-
-        #self.system1_threshold = 0.2
-
-        # Reading email creates a list of emails. Add activation to each separate email node in system 1.
+        # Reading email creates a list of emails. Add activation to each separate email node in system 1 and
+        # a neighbor node for clicking a link in the email.
         self.create_neighbor_rule('readMail', self.create_mail_nodes)
 
         # Record phish that are identified as such (i.e. emails from bmail.com, not amail.com addresses).
