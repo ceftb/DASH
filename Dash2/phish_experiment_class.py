@@ -205,18 +205,19 @@ def run_subprocess(trials=100, num_phish_candidates=[5, 10, 15, 20, 25]):
 def run_one(phish_targets, num_workers=50, num_trials=10, hosts=None):
     e = Experiment(PhishTrial,
                    hosts=hosts,
+                   exp_data={'max_iterations': 20,  # (was 1) The phishing attachment is opened in step 9 in the current setup
+                             #'objective': 'number',  # replaced with 'dependent' above
+                             'num_workers': num_workers, 'num_recipients': 4,
+                             # variables on the trial object that are passed to the agents
+                             'phish_targets': phish_targets, 'p_recognize_phish': 0.8,  # 'p_open_attachment': 0.3,
+                             #'register': False    # don't register with a hub, to test raw numbers of agents
+                    },
                    independent=['p_click_unrecognized_phish', [0.3]],  # each mail worker is set from this in init
                    dependent='num_attachments_per_worker',
                    num_trials=num_trials,
                    imports='import phish_experiment_class',
                    trial_class_str='phish_experiment_class.PhishTrial')
-    e.run(run_data={'max_iterations': 20,  # (was 1) The phishing attachment is opened in step 9 in the current setup
-                    #'objective': 'number',  # replaced with 'dependent' above
-                    'num_workers': num_workers, 'num_recipients': 4,
-                    # variables on the trial object that are passed to the agents
-                    'phish_targets': phish_targets, 'p_recognize_phish': 0.8,  # 'p_open_attachment': 0.3,
-                    #'register': False    # don't register with a hub, to test raw numbers of agents
-                    })
+    e.run()
     r = e.process_results()
     print "Final", r
     return r
