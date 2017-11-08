@@ -207,7 +207,9 @@ def run_one(phish_targets, num_workers=50, num_trials=10, hosts=None):
                    hosts=hosts,
                    independent=['p_click_unrecognized_phish', [0.3]],  # each mail worker is set from this in init
                    dependent='num_attachments_per_worker',
-                   num_trials=num_trials)
+                   num_trials=num_trials,
+                   imports='import phish_experiment_class',
+                   trial_class_str='phish_experiment_class.PhishTrial')
     e.run(run_data={'max_iterations': 20,  # (was 1) The phishing attachment is opened in step 9 in the current setup
                     #'objective': 'number',  # replaced with 'dependent' above
                     'num_workers': num_workers, 'num_recipients': 4,
