@@ -75,7 +75,7 @@ class NurseTrial(Trial):
     # This is the dependent function for testing the number of computers. It has to be a method so that it
     # can be evaluated in the final context where it is run - this file might not be imported but this class is available
     def test_num_computers_dependent(self):
-        return self.misses
+        return (self.misses, self.tick)
 
 
 # This spits out the results as the number of computers varies, creating a couple of hundred agents in the process.

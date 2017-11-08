@@ -80,6 +80,24 @@ class Uniform(Distribution):
         return (self.max_value - self.min_value)/2.0
 
 
+# Identical to above, but will only return an integer between min_value and max_value, which should be integers
+# included in the range.
+class IntegerUniform(Distribution):
+
+    def __init__(self, min_value, max_value):
+        self.min_value = min_value
+        self.max_value = max_value
+
+    def __repr__(self):
+        return "Integer uniform(" + str(self.min_value) + ", " + str(self.max_value) + ")"
+
+    def sample(self):
+        return random.randrange(self.min_value, self.max_value + 1)
+
+    def mean(self):
+        return (self.max_value - self.min_value)/2.0  # mean need not be an integer
+
+
 # This class currently assumes an immutable finite set of possible values, so the mean is precomputed if applicable.
 class Equiprobable(Distribution):
 

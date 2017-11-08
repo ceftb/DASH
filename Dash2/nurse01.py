@@ -1,13 +1,18 @@
 
-from dash import DASHAgent
+from dash import DASHAgent, Parameter, IntegerUniform
 import sys
 from system2 import isVar
 
 
 class Nurse(DASHAgent):
 
+    parameters = [Parameter('n_steps_to_patient', distribution=IntegerUniform(1, 3))]  # unlike randrange, includes 3
+
     def __init__(self, ident=0, patients=['_joe', '_harry', '_david', '_bob'], prob_check_spreadsheet=0):
         DASHAgent.__init__(self)
+
+        # Testing
+        print 'agent', ident, 'number of steps is', self.n_steps_to_patient
 
         self.readAgent("""
 
@@ -17,7 +22,8 @@ goalRequirements doWork
     pickPatient(patient)
     findMedications(patient, medications, computer)
     walkAway(computer)
-    deliverMedications(patient, medications, 3)
+    findStepsNeeded(patient, nsteps)
+    deliverMedications(patient, medications, nsteps)
     forgetNT([alreadyLoggedOn(c, s), findComputer(c, s)])
     logDelivery(patient, medications)
     forget([pickPatient(x), findMedications(x, y), deliverMedications(x, y), logDelivery(x, y), alreadyLoggedOn(c, s), logIn(c, s), logOut(c), findComputer(c, s), readSpreadsheet(p, c, m), loadSpreadsheet(p), writeSpreadsheet(p, c, m), walkAway(c), oneLess(x,y)])
@@ -214,6 +220,10 @@ transient doWork
             return [{}]
         else:
             return []
+
+    # Bind the steps to the parameter
+    def find_steps_needed(self, (goal, patient, steps)):
+        return [{steps: self.n_steps_to_patient}]
 
 
 # maybe add some sort of variable to account for human error, even if logged in successfully 

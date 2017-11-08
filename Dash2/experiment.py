@@ -71,7 +71,7 @@ class Experiment(object):
             # Gets a segment of the independent values (currently this leaves hosts unused if there are more
             # hosts than values, need to fix by combining with number of trials).
             num_vals = g + 1 if h < rem else max(g, 1)
-            vals = [independent_vals[j + i] for j in range(0, num_vals)]
+            vals = [independent_vals[(j + i) % len(independent_vals)] for j in range(0, num_vals)]
             i += num_vals
             h += 1
             #time.sleep(1)  # so the printing routines don't overwrite each other
