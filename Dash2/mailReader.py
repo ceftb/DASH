@@ -7,8 +7,8 @@ class MailReader(DASHAgent):
 
     # Class-level information about parameter probability distributions
                   # If the message is phish, it is recognized with this constant probability
-    parameters = [Parameter('probability_recognize_phish', distribution=Uniform(0.7, 0.9)),
-                  Parameter('probability_click_unrecognized_phish', distribution=Uniform(0.1, 0.4)),
+    parameters = [Parameter('probability_recognize_phish', distribution=Uniform(0.4, 0.6)),
+                  Parameter('probability_click_unrecognized_phish', distribution=Uniform(0.2, 0.4)),
                   # messages are scored from 0 to 1 and classified as phish if they score over this threshold
                   # (This number isn't really used right now, since we return a score above or below based on whether
                   # the agent identifies the message as phish, not the other way around.)

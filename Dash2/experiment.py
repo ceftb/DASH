@@ -161,7 +161,7 @@ class Experiment(object):
         # Append different data for the independent variable in each iteration
         independent_vals = self.compute_independent_vals()
         # Dependent might be a method or a string representing a function or a member variable
-        # If it's a string representing a function it is changed to the function here. We don't pass this to another host.
+        # If it's a string representing a function it's changed to the function. We don't pass this to another host.
         if isinstance(self.dependent, str):
             if hasattr(self.trial_class, self.dependent) and callable(getattr(self.trial_class, self.dependent)):
                 print "Dependent is callable on the trial, so switching to the method"
@@ -195,7 +195,9 @@ class Experiment(object):
         # The representation for independent variables isn't fixed yet. For now, a two-element list with
         # the name of the variable and a range object.
         if self.independent is not None and isinstance(self.independent[1], Range):
-            independent_vals = range(self.independent[1].min, self.independent[1].max, self.independent[1].step)
+            #independent_vals = range(self.independent[1].min, self.independent[1].max, self.independent[1].step)
+            # Need something that handles floats. Leaving the old code above in case this causes trouble
+            independent_vals = numpy.arange(self.independent[1].min, self.independent[1].max, self.independent[1].step)
             print 'expanded range to', independent_vals
         elif self.independent is not None and isinstance(self.independent[1], (list, tuple)):  # allow a direct list
             independent_vals = self.independent[1]

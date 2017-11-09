@@ -9,6 +9,7 @@ share memory between agents in the same image for e.g. the goal table and see if
 
 from experiment import Experiment
 from trial import Trial
+from parameter import Range
 import mailReader
 import random
 import numpy
@@ -74,6 +75,7 @@ class PhishTrial(Trial):
                 print (i + 1), 'agents created'
 
         self.phisher = mailReader.MailReader('phisher@bmail.com')
+        # Might want to investigate what happens when victims are chosen non-randomly based on demographics etc.
         choose_recipients(self.phisher, -1, self.num_workers, self.phish_targets, attachment='phish.xlsx')
         self.phisher.active = True
         self.phisher.print_sent_mail = True
@@ -202,17 +204,20 @@ def run_subprocess(trials=100, num_phish_candidates=[5, 10, 15, 20, 25]):
 
 
 # When testing scalability, ran with max_iterations 1 and num_workers increasing.
-def run_one(phish_targets, num_workers=50, num_trials=10, hosts=None):
+def run_one(num_workers=50, num_trials=20, hosts=None):
     e = Experiment(PhishTrial,
                    hosts=hosts,
                    exp_data={'max_iterations': 20,  # (was 1) The phishing attachment is opened in step 9 in the current setup
                              #'objective': 'number',  # replaced with 'dependent' above
                              'num_workers': num_workers, 'num_recipients': 4,
                              # variables on the trial object that are passed to the agents
-                             'phish_targets': phish_targets, 'p_recognize_phish': 0.8,  # 'p_open_attachment': 0.3,
+                             #'phish_targets': phish_targets,
+                             'p_recognize_phish': 0.8,  # 'p_open_attachment': 0.3,
                              #'register': False    # don't register with a hub, to test raw numbers of agents
                     },
-                   independent=['p_click_unrecognized_phish', [0.3]],  # each mail worker is set from this in init
+                   #independent=['p_click_unrecognized_phish', [0.3]],  # each mail worker is set from this in init
+                   # Now testing effect of number of phish sent
+                   independent=['phish_targets', [0, 20]],
                    dependent='num_attachments_per_worker',
                    num_trials=num_trials,
                    imports='import phish_experiment_class',
@@ -225,6 +230,6 @@ def run_one(phish_targets, num_workers=50, num_trials=10, hosts=None):
 
 if __name__ == "__main__":
     print 'argv is', sys.argv
-    if len(sys.argv) > 1 and sys.argv[1] == "run":  # usage: python xx run 5 100 ; nTargets then nWorkers
-        run_one(int(sys.argv[2]), int(sys.argv[3]), hosts=sys.argv[4:])  # rest of the arguments are hosts to run on
+    if len(sys.argv) > 1 and sys.argv[1] == "run":  # usage: python xx run 100 host..; nWorkers then host list
+        run_one(int(sys.argv[2]), hosts=sys.argv[3:])  # rest of the arguments are hosts to run on
 
