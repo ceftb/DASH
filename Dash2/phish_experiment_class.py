@@ -23,9 +23,9 @@ class PhishTrial(Trial):
     # Class-level information about parameter ranges and distributions
     # Parameters can be independent variables, see 'run_one' below
     parameters = [Parameter('phish_targets', distribution=Uniform(1, 20), default=10),
-                  Parameter('num_recipients', default=4),
                   Parameter('num_workers', default=50),
-                  Parameter('p_recognize_phish', default=0.3),
+                  Parameter('num_recipients', default=4),
+                  Parameter('p_recognize_phish', default=0.5),
                   Parameter('p_forward_email', default=0.5)
                   ]
 
@@ -141,8 +141,11 @@ class PhishTrial(Trial):
                 return -1
 
     def num_attachments_per_worker(self):
-        return numpy.mean([len([1 for attachment in worker.attachments_opened if attachment == 'phish.xlsx'])
-                           for worker in self.workers])
+        # Mean is better for comparing across different numbers of workers, but sum is more intuitive when this is fixed
+        #return numpy.mean([len([1 for attachment in worker.attachments_opened if attachment == 'phish.xlsx'])
+        #                   for worker in self.workers])
+        return sum([len([1 for attachment in worker.attachments_opened if attachment == 'phish.xlsx'])
+                        for worker in self.workers])
 
 
 def choose_recipients(agent, worker_i, num_workers, num_recipients, attachment=None, modes=['work', 'leisure'],
