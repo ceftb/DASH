@@ -91,11 +91,12 @@ class Experiment(object):
         # (as returned by run_this_host). To gather, combine into one dictionary.
         combo = dict()
         for result in all_data:
-            for i in result:
-                if i in combo:
-                    combo[i] += result[i]
-                else:
-                    combo[i] = result[i]
+            if result is not None:  # If a host failed, combine the remaining results
+                for i in result:
+                    if i in combo:
+                        combo[i] += result[i]
+                    else:
+                        combo[i] = result[i]
         self.trial_outputs = combo
         return combo
 
