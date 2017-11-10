@@ -38,6 +38,7 @@ class PhishTrial(Trial):
         self.big_5_range = [0.2, 0.9]
         # self.reply_range = {'work': [0, 0.8], 'leisure': [0, 0.8]}  # Note there is currently no separate reply in mailReader
         self.forward_range = {'leisure': [0, 0.8], 'work': [0, 0.8]}
+        self.p_forward_email = None  # Overrides the above if set
         self.p_recognize_phish = None  # this default can be overridden in the trial
         self.p_click_unrecognized_phish = None  # as above
 
@@ -63,7 +64,10 @@ class PhishTrial(Trial):
             w.choose_random_gender_personality(self.big_5_range)
             self.workers.append(w)
             for mode in ['leisure', 'work']:
-                w.forward_probability[mode] = random.uniform(self.forward_range[mode][0], self.forward_range[mode][1])
+                if self.p_forward_email is None:
+                    w.forward_probability[mode] = random.uniform(self.forward_range[mode][0], self.forward_range[mode][1])
+                else:
+                    w.forward_probability[mode] = self.p_forward_email
             choose_recipients(w, i, self.num_workers, self.num_recipients, attachment='budget.xlsx')
             # This would be more clearly handled by manipulating the parameters
             if self.p_recognize_phish is not None:
@@ -209,15 +213,18 @@ def run_one(num_workers=50, num_trials=20, hosts=None):
                    hosts=hosts,
                    exp_data={'max_iterations': 20,  # (was 1) The phishing attachment is opened in step 9 in the current setup
                              #'objective': 'number',  # replaced with 'dependent' above
-                             'num_workers': num_workers, 'num_recipients': 4,
+                             'num_workers': num_workers,
+                             'num_recipients': 4,  # used for forwarding
                              # variables on the trial object that are passed to the agents
-                             #'phish_targets': phish_targets,
-                             'p_recognize_phish': 0.8,  # 'p_open_attachment': 0.3,
+                             'phish_targets': 10,
+                             'p_recognize_phish': 0.5,  # 'p_open_attachment': 0.3,
                              #'register': False    # don't register with a hub, to test raw numbers of agents
                     },
                    #independent=['p_click_unrecognized_phish', [0.3]],  # each mail worker is set from this in init
                    # Now testing effect of number of phish sent
-                   independent=['phish_targets', [0, 20]],
+                   #independent=['phish_targets', Range(1, 20)],
+                   # Now testing the probability of forwarding and/or number of recipients
+                   independent=['p_forward_email', Range(0.1, 0.9, 0.1)],
                    dependent='num_attachments_per_worker',
                    num_trials=num_trials,
                    imports='import phish_experiment_class',
@@ -231,5 +238,5 @@ def run_one(num_workers=50, num_trials=20, hosts=None):
 if __name__ == "__main__":
     print 'argv is', sys.argv
     if len(sys.argv) > 1 and sys.argv[1] == "run":  # usage: python xx run 100 host..; nWorkers then host list
-        run_one(int(sys.argv[2]), hosts=sys.argv[3:])  # rest of the arguments are hosts to run on
+        run_one(num_workers=int(sys.argv[2]), hosts=sys.argv[3:])  # rest of the arguments are hosts to run on
 
