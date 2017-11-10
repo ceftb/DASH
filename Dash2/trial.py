@@ -7,6 +7,11 @@ class Trial(object):
     def __init__(self, data={}, max_iterations=-1):
         self.agents = []
         self.data = data  # This passes parameter data to be used in the trial. The names are available as attributes
+        # Initialize from parameter list first, then any passed data
+        if self.__class__.parameters:
+            print 'initializing trial from parameters'
+            for p in self.__class__.parameters:
+                setattr(self, p.name, p.distribution.sample() if p.default is None else p.default)
         print 'initializing trial with data', data
         self.max_iterations = max_iterations
         for attr in data:

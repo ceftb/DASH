@@ -96,6 +96,7 @@ class Experiment(object):
                     combo[i] += result[i]
                 else:
                     combo[i] = result[i]
+        self.trial_outputs = combo
         return combo
 
     class RunProcess(threading.Thread):  # thread class for managing processes on another host

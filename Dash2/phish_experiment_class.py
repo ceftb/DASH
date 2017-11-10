@@ -9,7 +9,8 @@ share memory between agents in the same image for e.g. the goal table and see if
 
 from experiment import Experiment
 from trial import Trial
-from parameter import Range
+from parameter import Range, Parameter, Uniform
+from measure import Measure
 import mailReader
 import random
 import numpy
@@ -18,6 +19,16 @@ import sys
 
 
 class PhishTrial(Trial):
+
+    # Class-level information about parameter ranges and distributions
+    # Parameters can be independent variables, see 'run_one' below
+    parameters = [Parameter('phish_targets', distribution=Uniform(1, 20), default=10),
+                  Parameter('num_recipients', default=4),
+                  Parameter('num_workers', default=50),
+                  Parameter('p_recognize_phish', default=0.3),
+                  ]
+
+    measures = [Measure('num_attachments_per_worker')]
 
     def __init__(self, num_workers=100, num_recipients=4, num_phishers=1, phish_targets=20, max_iterations=20, data={}):
         self.max_iterations = max_iterations
@@ -54,10 +65,10 @@ class PhishTrial(Trial):
 
         self.register = True  # can be turned off so the agent won't register with a hub, to save time.
 
-        Trial.__init__(self, data=data)  # Call the trial initialization here so data will override the other defaults
+        Trial.__init__(self, data=data)  # Call the trial initialization here so parameters and data will override the other defaults
 
     def initialize(self):
-        print 'initializing with', self.num_workers, 'workers'
+        print 'initializing with', self.num_workers, 'workers and', self.phish_targets, 'targets'
         self.workers = []
         for i in range(0, self.num_workers):
             w = mailReader.MailReader('mailagent'+str(i+1)+'@amail.com', self.register)
@@ -208,16 +219,17 @@ def run_subprocess(trials=100, num_phish_candidates=[5, 10, 15, 20, 25]):
 
 
 # When testing scalability, ran with max_iterations 1 and num_workers increasing.
-def run_one(num_workers=50, num_trials=20, hosts=None):
+def run_one(hosts=None):
     e = Experiment(PhishTrial,
                    hosts=hosts,
+                   # Many of these are now replaced with explicit parameters on the trial class
                    exp_data={'max_iterations': 20,  # (was 1) The phishing attachment is opened in step 9 in the current setup
-                             #'objective': 'number',  # replaced with 'dependent' above
-                             'num_workers': num_workers,
-                             'num_recipients': 4,  # used for forwarding
+                             # These are now parameters on the PhishTrial class
+                             #'num_workers': num_workers,
+                             #'num_recipients': 4,  # used for forwarding
                              # variables on the trial object that are passed to the agents
-                             'phish_targets': 10,
-                             'p_recognize_phish': 0.5,  # 'p_open_attachment': 0.3,
+                             #'phish_targets': 5,
+                             #'p_recognize_phish': 0.3,  # 'p_open_attachment': 0.3,
                              #'register': False    # don't register with a hub, to test raw numbers of agents
                     },
                    #independent=['p_click_unrecognized_phish', [0.3]],  # each mail worker is set from this in init
@@ -226,17 +238,18 @@ def run_one(num_workers=50, num_trials=20, hosts=None):
                    # Now testing the probability of forwarding and/or number of recipients
                    independent=['p_forward_email', Range(0.1, 0.9, 0.1)],
                    dependent='num_attachments_per_worker',
-                   num_trials=num_trials,
+                   num_trials=20,
+                   # These values could be inferred from the trial_class, but are set here for now.
                    imports='import phish_experiment_class',
                    trial_class_str='phish_experiment_class.PhishTrial')
-    e.run()
+    d = e.run()  # The combined dict from all sub-results
     r = e.process_results()
-    print "Final", r
-    return r
+    print "Final", d, r
+    return d, r
 
 
 if __name__ == "__main__":
     print 'argv is', sys.argv
-    if len(sys.argv) > 1 and sys.argv[1] == "run":  # usage: python xx run 100 host..; nWorkers then host list
-        run_one(num_workers=int(sys.argv[2]), hosts=sys.argv[3:])  # rest of the arguments are hosts to run on
+    if len(sys.argv) > 1 and sys.argv[1] == "run":  # usage: python xx run host..; host list
+        d, r = run_one(hosts=sys.argv[2:])  # rest of the arguments are hosts to run on
 
