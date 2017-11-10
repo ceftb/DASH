@@ -26,3 +26,5 @@ class Measure:
         if isinstance(self.function, basestring):
             if getattr(measure_object, self.function) and callable(getattr(measure_object, self.function)):
                 return getattr(measure_object, self.function)()
+
+

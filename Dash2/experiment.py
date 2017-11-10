@@ -1,6 +1,7 @@
 import subprocess
 import threading
 import numbers
+import math
 import numpy
 import time
 from trial import Trial
@@ -279,5 +280,7 @@ def process_list_results(list_results):
 def simple_statistics(numlist):
     #print 'running simple statistics on', numlist
     if all([isinstance(x, numbers.Number) for x in numlist]):
-        return [numpy.mean(numlist), numpy.median(numlist), numpy.var(numlist), len(numlist)]
+        return [numpy.mean(numlist), numpy.median(numlist), numpy.var(numlist),
+                numpy.std(numlist)/math.sqrt(len(numlist)),  # standard error
+                len(numlist)]
 

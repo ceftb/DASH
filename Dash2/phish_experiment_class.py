@@ -26,9 +26,10 @@ class PhishTrial(Trial):
                   Parameter('num_recipients', default=4),
                   Parameter('num_workers', default=50),
                   Parameter('p_recognize_phish', default=0.3),
+                  Parameter('p_forward_email', default=0.5)
                   ]
 
-    measures = [Measure('num_attachments_per_worker')]
+    measures = [Measure('num_attachments_per_worker', target=Range(0.15, 0.25))]  # if matching observed data
 
     def __init__(self, num_workers=100, num_recipients=4, num_phishers=1, phish_targets=20, max_iterations=20, data={}):
         self.max_iterations = max_iterations
@@ -248,8 +249,38 @@ def run_one(hosts=None):
     return d, r
 
 
+# To find a posterior distribution of parameters given observations that may not be directly settable
+# (e.g. I observe 6 hits and want to know likely numbers of phish + prob of recognition given 5-7 hits)
+# Set the measure as well as parameter values as the dependent variable, run a series of trials and
+# plot the measure as 'too low', 'just right', 'too high'. Then can sample this for e.g. p(recognition & n phish)
+def find_posterior(hosts=None):
+    # Should be able to take the cross product of parameters of interest and generate all the trials in one
+    # experiment, but currently doesn't
+    all_results = dict()
+    for p_rec in range(0.1, 0.9, 0.1):
+        e = Experiment(PhishTrial,
+                       hosts=hosts,
+                       exp_data={'max_iterations': 20,
+                                 'p_recognize_phish': p_rec},
+                       independent=['phish_targets', Range(1, 20)],
+                       dependent='num_attachments_per_worker',
+                       num_trials=20,
+                       # These values could be inferred from the trial_class, but are set here for now.
+                       imports='import phish_experiment_class',
+                       trial_class_str='phish_experiment_class.PhishTrial')
+        print '** running experiment for p_rec =', p_rec
+        d = e.run()
+        r = e.process_results()
+        print '** experiment for p_rec = ', p_rec, 'yielded', d, r
+        all_results[p_rec] = [d, r]
+    print 'final results', all_results
+    return all_results
+
+
 if __name__ == "__main__":
     print 'argv is', sys.argv
     if len(sys.argv) > 1 and sys.argv[1] == "run":  # usage: python xx run host..; host list
-        d, r = run_one(hosts=sys.argv[2:])  # rest of the arguments are hosts to run on
+        md, mr = run_one(hosts=sys.argv[2:])  # rest of the arguments are hosts to run on
+    elif len(sys.argv) > 1 and sys.argv[1] == "find":  # usage: python xx run host..; host list
+        ar = find_posterior(hosts=sys.argv[2:])
 
