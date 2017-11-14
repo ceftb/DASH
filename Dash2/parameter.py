@@ -1,5 +1,6 @@
 import random
 import numbers
+import scipy.stats
 
 
 # A parameter represents a variable for an agent that the FARM system can investigate.
@@ -8,19 +9,22 @@ import numbers
 # drawn from the distribution declared for the parameter.
 class Parameter:
 
-    def __init__(self, name, distribution=None, default=None, value_set=None, range=None):
+    def __init__(self, name, distribution=None, default=None, value_set=None, range=None, source=None):
         self.name = name
         self.distribution = distribution
         self.default = default
         self.value_set = value_set  # value_set may be a list or a range such as Range(0,1) (assumed to be closed)
         if value_set is None and range is not None:
             self.value_set = Range(range[0], range[1])
+        self.source = source
 
     def __repr__(self):
         string = "P[" + self.name + ", " + \
                  (str(self.distribution) if self.distribution is not None else str(self.value_set))
         if self.default is not None:
             string += ", " + str(self.default)
+        if self.source is not None:
+            string += " (source=", str(self.source) + ")"
         return string + "]"
 
 
@@ -117,4 +121,44 @@ class Equiprobable(Distribution):
     # mean is defined if all the values are numbers. Don't want to test that every time
     def mean(self):
         return self.mean
+
+
+class Normal(Distribution):
+
+    def __init__(self, mean, variance):
+        self.mean = mean
+        self.variance = variance
+
+    def __repr__(self):
+        return "Normal(" + str(self.mean) + "," + str(self.variance) + ")"
+
+    def sample(self):
+        return random.gauss(self.mean, self.variance)
+
+    def mean(self):
+        return self.mean
+
+    def variance(self):
+        return self.variance
+
+
+# Truncated normal, i.e. normal distribution but with fixed min and max. I'm using this
+# for distributions of probabilities, with min 0 and max 1.
+class TruncNorm(Distribution):
+
+    def __init__(self, orig_mean, orig_std, mymin, mymax):
+        self.min = mymin
+        self.max = mymax
+        self.orig_mean = orig_mean  # mean of the underlying normal distribution
+        self.orig_std = orig_std  # variance of the underlying normal distribution
+        # truncnorm always has mean 0 variance 1 so adjust min and max, then re-adjust on sampling.
+        self.rv = scipy.stats.truncnorm((self.min - self.orig_mean)/float(self.orig_std),
+                                        (self.max - self.orig_mean)/float(self.orig_std))
+
+    def __repr__(self):
+        return "Truncated Normal(" + str(self.orig_mean) + ", " + str(self.orig_std) + ") [" + str(self.min) \
+            + ", " + str(self.max) + "]"
+
+    def sample(self):
+        return self.rv.rvs() * self.orig_std + self.orig_mean
 

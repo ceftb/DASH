@@ -9,7 +9,7 @@ share memory between agents in the same image for e.g. the goal table and see if
 
 from experiment import Experiment
 from trial import Trial
-from parameter import Range, Parameter, Uniform
+from parameter import Range, Parameter, Uniform, TruncNorm
 from measure import Measure
 import mailReader
 import random
@@ -25,7 +25,7 @@ class PhishTrial(Trial):
     parameters = [Parameter('phish_targets', distribution=Uniform(1, 20), default=10),
                   Parameter('num_workers', default=50),
                   Parameter('num_recipients', default=4),
-                  Parameter('p_recognize_phish', default=0.5),
+                  Parameter('p_recognize_phish', TruncNorm(0.5, 0.15, 0, 1), source="caputo14"),
                   Parameter('p_forward_email', default=0.5)
                   ]
 
@@ -260,7 +260,7 @@ def find_posterior(hosts=None):
     # Should be able to take the cross product of parameters of interest and generate all the trials in one
     # experiment, but currently doesn't
     all_results = dict()
-    for p_rec in range(0.1, 0.9, 0.1):
+    for p_rec in numpy.arange(0.1, 0.9, 0.1):
         e = Experiment(PhishTrial,
                        hosts=hosts,
                        exp_data={'max_iterations': 20,
