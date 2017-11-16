@@ -25,6 +25,11 @@ class GitServerHub(WorldHub):
         self.repos = []
         self.users = []
 
+    def processRegisterRequest(self, agent_id, aux_data):
+        aux_response = []
+        # add user to self.users
+        return ["successful registration of user", agent_id, aux_response]
+
     def create_repo(self, agent_id, repo_info):
         """
         Requests that the hub create and start a new repo server given 
