@@ -47,6 +47,8 @@ class GitRepoHub(WorldHub):
         """
         super(GitServerHub, self).__init__()
 
+        # Need to register with?? um server?
+
         self.repo_id  = repo_id
         self.repo_name = repo_name
         self.is_public = is_public
@@ -63,12 +65,12 @@ class GitRepoHub(WorldHub):
         self.total_issue_count = 0
         self.open_issues_count = 0
         # Sets???
-        self.watchers = [] #[{login_name, user_id, account_type, watching_date}]
-        self.forks = [] #[{repo_id, repo_name, full_name, forked_date}]
+        self.watchers = set() #[{login_name, user_id, account_type, watching_date}]
+        self.forks = set() #[{repo_id, repo_name, full_name, forked_date}]
         self.pull_requests = []
-        self.collaborators = [] #[{login_name, user_id, account_type, permissions}]
-        self.branches = []
-        self.tags = []
+        self.collaborators = set() #[{login_name, user_id, account_type, permissions}]
+        self.branches = set()
+        self.tags = set()
 
     def commit_comment_event(self, agent_id, commit_info):
         """

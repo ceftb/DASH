@@ -51,7 +51,7 @@ class GitUserAgent(DASHAgent):
         self.register([{'login_name': login_name,
                         'user_id': user_id,
                         'account_type': account_type,
-                        'date': date}]) # maybe just send id?
+                        'date': date}]) # maybe just send id? maybe server handle date?
 
         self.login_name = login_name
         self.user_id = user_id
@@ -68,10 +68,10 @@ class GitUserAgent(DASHAgent):
         self.num_public_repos = 0
         self.num_followers = 0
         self.num_following = 0
-        self.followers = [] #maybe make these sets
-        self.following = []
-        self.starred = []
-        self.watching = []
+        self.followers = set()
+        self.following = set()
+        self.starred = set()
+        self.watching = set()
 
 
     def commit_comment_event(self, (goal, var)):

@@ -22,12 +22,12 @@ class GitServerHub(WorldHub):
         super(GitServerHub, self).__init__()
 
         # Sets probably.. or maybe dict based on ids? or just ref to object
-        self.repos = []
-        self.users = []
+        self.repos = dict{}
+        self.users = dict{}
 
     def processRegisterRequest(self, agent_id, aux_data):
         aux_response = []
-        # add user to self.users
+        # add user to self.users prob: self.users['agent_id'] = aux_data[0]
         return ["successful registration of user", agent_id, aux_response]
 
     def create_repo(self, agent_id, repo_info):
