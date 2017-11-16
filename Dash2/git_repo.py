@@ -1,54 +1,62 @@
-from world_hub import WorldHub
-
-class GitRepoHub(WorldHub):
-    """
-    # Data
-
-    # Sending
-
-    # Receiving
-    user -> CommitCommentEvent
-    user -> CreateRepo
-    user -> CreateEvent (tag/branch)
-    user -> DeleteEvent (tag/branch)
-    user -> FollowEvent
-    user -> IssueCommentEvent
-    user -> IssueEvent
-    user -> MemberEvent
-    user -> PullRequestEvent
-    user -> PushEvent
-    user -> WatchEvent
-    user -> PublicEvent
-    user -> ForkEvent
-    """
+class GitRepo(object):
 
     def __init__(self, repo_id, repo_name, owner, is_public, date, **kwargs):
         """
-        owner: {'login_name', 'user_id', 'account_type'}
+        repo_id
+        repo_name
+        full_name (owner_name/repo_name)
+        is_public
+        owner = {'login_name', 'user_id', 'account_type'}
+        description
+        fork
+        created_on
+        language
+        languages = {"<lang name>":# bytes in that language}
+        watchers_count
+        forks_count
+        total_issue_count
+        open_issues_count
+        watchers = [{login_name, user_id, account_type, watching_date}]
+        forks = [{repo_id, repo_name, full_name, forked_date}]
+        pull_requests = [{???}]
+        collaborators = [{login_name, user_id, account_type, permissions}]
+        branches?
+        tags?
         """
-        super(GitServerHub, self).__init__()
 
-        self.local_repos = dict{} # keyed by repo_id, valued by repo object
-        self.all_repos = set() # by repo_id
-        self.users = set() # set of user_ids
+        self.repo_id  = repo_id
+        self.repo_name = repo_name
+        self.is_public = is_public
+        self.owner = owner
+        self.created_on = date
+        self.description = kwargs.get("description", "")
+        self.fork = kwargs.get("fork", False)
 
-    def processRegisterRequest(self, agent_id, aux_data):
-        aux_response = []
-        # add user to self.users prob: self.users['agent_id'] = aux_data[0]
-        return ["successful registration of user", agent_id, aux_response]
+        self.full_name = owner['login_name'] + '/' + self.repo_name
+        self.language = "" # string of dominant language in repo
+        self.languages = {} # keyed by language string, valued by bytes of repo in language 
+        self.watchers_count = 0
+        self.forks_count = 0
+        self.total_issue_count = 0
+        self.open_issues_count = 0
+        
+        # These might be sets of dictionaries??
+        self.watchers = set() #{login_name, user_id, account_type, watching_date}
+        self.forks = set() #{repo_id, repo_name, full_name, forked_date}
+        self.collaborators = set() #{login_name, user_id, account_type, permissions}
+        self.branches = set()
+        self.tags = set()
+        # pull requests are temporal, maybe a queue or list, depends on how
+        # agent will prioritize addressing pulls
+        self.pull_requests = []
 
+    # Below methods match RepoHub actions
+    # RepoHub would call the corresponding repo's method for the user action
     def commit_comment_event(self, agent_id, repo_id, commit_info):
         """
         user requests to make a commit to the repo
         check if collab
         repo takes commit info and applies commit
-        """
-        pass
-
-    def create_repo(self, agent_id, repo_info):
-        """
-        Requests that a git_repo_hub create and start a new repo given 
-        the provided repository information
         """
         pass
 
@@ -146,23 +154,6 @@ class GitRepoHub(WorldHub):
         repo adds new fork to its info
         """
         pass
-
-    def request_repos(self, agent_id, None):
-        """
-        User requests a set of public repos
-        Server returns a set of public repos
-        """
-        pass
-
-    def request_users(self, agent_id, None):
-        """
-        User requests a set of users
-        Server returns said set
-        """
-        pass
-
-
-# Make friendly fork function that copies necessary information
 
 if __name__ == '__main__':
     """

@@ -48,10 +48,11 @@ class GitUserAgent(DASHAgent):
     def __init__(self, login_name, user_id, account_type, date, **kwargs):
         super(DASHAgent, self).__init__()
 
+        # maybe just send id? maybe server handle & return date?
         self.register([{'login_name': login_name,
                         'user_id': user_id,
                         'account_type': account_type,
-                        'date': date}]) # maybe just send id? maybe server handle date?
+                        'date': date}])
 
         self.login_name = login_name
         self.user_id = user_id
@@ -74,7 +75,7 @@ class GitUserAgent(DASHAgent):
         self.watching = set()
 
 
-    def commit_comment_event(self, (goal, var)):
+    def commit_comment_event(self, ()):
         """
         agent sends comment to repo
         """
