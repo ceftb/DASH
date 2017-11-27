@@ -26,7 +26,7 @@ class GitRepoHub(WorldHub):
         """
         owner: {'login_name', 'user_id', 'account_type'}
         """
-        super(GitServerHub, self).__init__()
+        super(WorldHub, self).__init__()
 
         self.local_repos = dict{} # keyed by repo_id, valued by repo object
         self.all_repos = set() # by repo_id
