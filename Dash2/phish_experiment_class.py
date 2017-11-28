@@ -29,7 +29,7 @@ class PhishTrial(Trial):
                   Parameter('p_forward_email', default=0.5)
                   ]
 
-    measures = [Measure('num_attachments_per_worker', target=Range(0.15, 0.25))]  # if matching observed data
+    measures = [Measure('num_attachments_per_worker')]
 
     def __init__(self, num_workers=100, num_recipients=4, num_phishers=1, phish_targets=20, max_iterations=20, data={}):
         self.max_iterations = max_iterations
@@ -63,6 +63,9 @@ class PhishTrial(Trial):
         self.generations_since_change = 0
 
         self.agents_iterated = 0
+
+        self.imports = 'import phish_experiment_class'
+        self.class_str = 'phish_experiment_class.PhishTrial'
 
         self.register = True  # can be turned off so the agent won't register with a hub, to save time.
 
@@ -243,7 +246,7 @@ def run_one(hosts=None):
                    independent=['p_forward_email', Range(0.1, 0.9, 0.1)],
                    dependent='num_attachments_per_worker',
                    num_trials=20,
-                   # These values could be inferred from the trial_class, but are set here for now.
+                   # These values could be inferred from the trial_class, and will be stored there, but are set here for now.
                    imports='import phish_experiment_class',
                    trial_class_str='phish_experiment_class.PhishTrial')
     d = e.run()  # The combined dict from all sub-results
@@ -256,6 +259,8 @@ def run_one(hosts=None):
 # (e.g. I observe 6 hits and want to know likely numbers of phish + prob of recognition given 5-7 hits)
 # Set the measure as well as parameter values as the dependent variable, run a series of trials and
 # plot the measure as 'too low', 'just right', 'too high'. Then can sample this for e.g. p(recognition & n phish)
+# This experiment is identical to exploring the relationship between the iterated parameter and the independent
+# variable, while the outcome constraint comes in later. So I'll rewrite it that way when it is generalized.
 def find_posterior(hosts=None):
     # Should be able to take the cross product of parameters of interest and generate all the trials in one
     # experiment, but currently doesn't
@@ -268,7 +273,7 @@ def find_posterior(hosts=None):
                        independent=['phish_targets', Range(1, 20)],
                        dependent='num_attachments_per_worker',
                        num_trials=20,
-                       # These values could be inferred from the trial_class, but are set here for now.
+                       # These values could be inferred from the trial_class, and will be stored there, but are set here for now.
                        imports='import phish_experiment_class',
                        trial_class_str='phish_experiment_class.PhishTrial')
         print '** running experiment for p_rec =', p_rec
