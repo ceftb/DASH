@@ -59,10 +59,10 @@ class GitUserAgent(DASHAgent):
         self.account_type = account_type
         self.company = kwargs.get("company", "")
         self.created_on = date
-        self.lat = kwargs.get('lat': None)
-        self.lon = kwargs.get('lon': None)
-        self.state = kwargs.get('state': None)
-        self.city = kwargs.get('city': None)
+        self.lat = kwargs.get('lat')
+        self.lon = kwargs.get('lon')
+        self.state = kwargs.get('state')
+        self.city = kwargs.get('city')
         self.country_code = kwargs.get('country_code', None)
         self.site_admin = kwargs.get('site_admin', None)
 
