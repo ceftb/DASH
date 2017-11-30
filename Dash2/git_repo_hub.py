@@ -38,6 +38,13 @@ class GitRepoHub(WorldHub):
         """
         pass
 
+    def generate_repo_configuration(self):
+        """
+        This will probably be a virtual member that a subclass can fill out
+        to specify repo_info needed for the create_repo_event
+        """
+        pass
+
     def create_repo_event(self, agent_id, repo_info):
         """
         Requests that a git_repo_hub create and start a new repo given 
