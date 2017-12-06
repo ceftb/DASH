@@ -145,7 +145,7 @@ class GitRepo(object):
         repo says okay
         """
         
-        watcher_list[user_info['ght_id_h']] = { key:user_info[key] for key in watcher_keys }
+        watcher_list[user_info['ght_id_h']] = { key:user_info.get(key, None) for key in watcher_keys }
 
         return "Success"
 
