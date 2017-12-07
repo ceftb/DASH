@@ -38,7 +38,8 @@ class GitUserAgent(DASHAgent):
 goalWeight MakeRepo 1
 
 goalRequirements MakeRepo
-  create_repo(repoinfo)
+  create_repo(_myRepoName)
+  commit_comment_event(_myRepoName, 'intial commit')
             """)
 
         # Registration
@@ -61,15 +62,16 @@ goalRequirements MakeRepo
 
         # Assigned information
         self.id = registration[1]
-        self.created_at = 0 # How do we want to simulate dates, if at all?
+        self.created_at = 0  # How do we want to simulate dates, if at all?
         self.num_public_repos = 0
         self.num_following = 0
         self.num_followers = 0
-        self.followers = set() # user id's
-        self.following = set() # user id's
-        self.starred = set() # repo id's
-        self.watching = set() # repo id's
-        self.owned_repos = set() # repo_id's
+        self.followers = set()  # user id's
+        self.following = set()  # user id's
+        self.starred = set()  # repo id's
+        self.watching = set()  # repo id's
+        self.owned_repos = set()  # repo_id's
+        self.name_to_repo_id = {}  # Map name into unique id given by github simulator
 
         # State
         self.user_feed = []
@@ -107,17 +109,26 @@ goalRequirements MakeRepo
         agent requests server to make new repo
         """
         
-        _, repo_info = args
-        print(args)
-        status, repo_id = self.sendAction("create_repo_event", [repo_info])
+        _, repo_name = args
+        repo_info = [('name:', repo_name)]
+        status, repo_id = self.sendAction("create_repo_event", repo_info)
+        print 'repo', repo_name, 'creation status', status, 'id', repo_id
         self.owned_repos.add(repo_id)
+        self.name_to_repo_id[repo_name] = repo_id
 
         return [{}]
 
-    def commit_comment_event(self):
+    def commit_comment_event(self, args):
         """
         agent sends comment to repo
         """
+
+        _, repo_name, comment = args
+        if repo_name not in self.name_to_repo_id:
+            print 'Agent does not know the id of the repo, cannot commit'
+            return []
+        status = self.sendAction("commit_comment_event", (self.name_to_repo_id[repo_name], comment))
+        print 'commit comment event:', status, repo_name, self.name_to_repo_id[repo_name], comment
         pass
 
     def create_tag_event(self):
@@ -200,4 +211,4 @@ goalRequirements MakeRepo
 if __name__ == '__main__':
     """
     """
-    GitUserAgent('bob', 'pro', host='0', port=6000).agentLoop(1)
+    GitUserAgent('bob', 'pro', host='0', port=6000).agentLoop(10)

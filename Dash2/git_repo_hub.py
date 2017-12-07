@@ -26,10 +26,10 @@ class GitRepoHub(WorldHub):
     def __init__(self, repo_hub_id, **kwargs):
 
         WorldHub.__init__(self, kwargs.get('port', None))
-        self.local_repos = {} # keyed by repo_id, valued by repo object
+        self.local_repos = {}  # keyed by repo_id, valued by repo object
         self.repo_hub_id = repo_hub_id
         self.host = str(self.repo_hub_id)
-        self.repos_hubs = kwargs.get('repos_hubs', {}).update({self.host : self.port})
+        self.repos_hubs = kwargs.get('repos_hubs', {}).update({self.host: self.port})
         self.lowest_unassigned_repo_id = 0
 
     def synch_repo_hub(self, host, port):
@@ -45,25 +45,37 @@ class GitRepoHub(WorldHub):
         """
         pass
 
-    def create_repo_event(self, agent_id, repo_info):
+    def create_repo_event(self, agent_id, repo_pairs):
         """
         Requests that a git_repo_hub create and start a new repo given 
         the provided repository information
         """
         
-        print('Request to create repo from', agent_id, 'for', repo_info)
+        print('Request to create repo from', agent_id, 'for', repo_pairs)
         repo_id = self.host + '_' + str(self.port) + '_' + str(self.lowest_unassigned_repo_id)
-        self.local_repos[repo_id] = GitRepo(repo_id, **repo_info)
+        repo_info = {a: b for (a, b) in repo_pairs}
+        self.local_repos[repo_id] = GitRepo(repo_id,
+                                            repo_info.get('name', str('name' + repo_id)),
+                                            {'login_name': str(agent_id)},
+                                            repo_info.get('public', True),
+                                            **repo_info)
         # self.local_repos[repo_id] = GitRepo(repo_id, 'boop', {'user_id': agent_id, 'login_name':'bob'}, True)
 
         return 'success', repo_id
 
-    def commit_comment_event(self, agent_id, repo_id, commit_info):
+    def commit_comment_event(self, agent_id, (repo_id, commit_info)):
         """
         user requests to make a commit to the repo
         check if collab
         repo takes commit info and applies commit
         """
+
+        # commit_info is assumed to be a comment string for now
+        if repo_id not in self.local_repos:
+            print 'unknown repo id for comment_comment_event:', repo_id
+            return 'fail'
+        self.local_repos[repo_id].commit_comment(agent_id, repo_id, commit_info)
+        return 'success'
         pass
 
     def create_tag_event(self, agent_id, repo_id, tag_info):

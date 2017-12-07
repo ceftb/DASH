@@ -24,7 +24,7 @@ class GitRepo(object):
         tags?
         """
 
-        self.repo_id  = repo_id
+        self.repo_id = repo_id
         self.repo_name = repo_name
         self.owner = owner
         self.is_public = is_public
@@ -49,6 +49,7 @@ class GitRepo(object):
         # pull requests are temporal, maybe a queue or list, depends on how
         # agent will prioritize addressing pulls
         self.pull_requests = []
+        self.commit_comments = []
 
     # Below methods match RepoHub actions
     # RepoHub would call the corresponding repo's method for the user action
@@ -58,6 +59,7 @@ class GitRepo(object):
         check if collab
         repo takes commit info and applies commit
         """
+        self.commit_comments.append((agent_id, commit_info))
         pass
 
     def create_tag(self, agent_id, repo_id, tag_info):

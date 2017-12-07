@@ -1,0 +1,127 @@
+## The mapping from the AAL procedure to the experiment apparatus
+groups:
+  server_group: &serverNodes [ victim ]
+  monitor_group: [ router ]
+  client_group: [ client1 ]
+  attacker_group: [ attacker1 ]
+
+## The agent implementation and addressing information
+agents:
+  client_agent:
+    group: client_group
+    path: /share/magi/modules/http_client/http_client.tar.gz
+    execargs: {}
+
+  server_agent:
+    group: server_group
+    path: /share/magi/modules/apache/apache.tar.gz
+    execargs: {}
+
+  monitor_agent:
+    group: monitor_group
+    path: /share/magi/modules/pktcounters/pktCountersAgent.tar.gz
+    execargs: {}
+
+  attacker_agent:
+    group: attacker_group
+    path: /share/magi/modules/flooder/flooder.tar.gz
+    execargs: {}
+
+streamstarts: [ serverstream, clientstream, cleanupstream ]
+
+eventstreams:
+  serverstream:
+      - type: event
+        agent: server_agent
+        method: startServer
+        trigger: serverStarted
+        args: {}
+
+      - type: trigger
+        triggers: [ { event: clientStopped } ]
+
+      - type: event
+        agent: server_agent
+        method: stopServer
+        trigger: serverStopped
+        args: {}
+
+  monitorstream:
+      - type: trigger
+        triggers: [ { event: clientConfigured, agent: client_agent } ]
+
+      - type: event
+        agent: monitor_agent
+        method: startCollection
+        trigger: collectionServer
+        args: {}
+
+      - type: trigger
+        triggers: [ { event: clientStopped } ]
+
+      - type: event
+        agent: monitor_agent
+        method: stopCollection
+        args: {}
+
+  clientstream:
+      - type: trigger
+        triggers: [ { event: serverStarted } ]
+
+      - type: event
+        agent: client_agent
+        method: setConfiguration
+        trigger: clientConfigured
+        args:
+          servers: *serverNodes
+
+      - type: trigger
+        triggers: [ { event: clientConfigured, agent: client_agent } ]
+
+      - type: event
+        agent: client_agent
+        method: startClient
+        args: {}
+
+      - type: trigger
+        triggers: [ { timeout: 60000 } ]
+
+      - type: event
+        agent: attacker_agent
+        method: setConfiguration
+        trigger: attackerConfigured
+        args:
+            dst: '10.1.1.2'
+            proto: 'udp'
+            length: '10'
+            ratetype: 'flat'
+            highrate: '5000'
+
+      - type: trigger
+        triggers: [ { event: attackerConfigured, agent: attacker_agent } ]
+
+      - type: event
+        agent: attacker_agent
+        method: startFlood
+        args: {}
+
+      - type: trigger
+        triggers: [ { timeout: 10000 } ]
+
+      - type: event
+        agent: attacker_agent
+        method: stopFlood
+        args: {}
+
+      - type: trigger
+        triggers: [ { timeout: 600000 } ]
+
+      - type: event
+        agent: client_agent
+        method: stopClient
+        trigger: clientStopped
+        args: {}
+
+  cleanupstream:
+      - type: trigger
+        triggers: [ { event: serverStopped, target: exit } ]
