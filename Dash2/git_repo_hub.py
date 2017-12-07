@@ -1,4 +1,5 @@
 from world_hub import WorldHub
+from git_repo import GitRepo
 
 class GitRepoHub(WorldHub):
     """
@@ -22,20 +23,40 @@ class GitRepoHub(WorldHub):
     user -> ForkEvent
     """
 
-    def __init__(self, repo_id, repo_name, owner, is_public, date, **kwargs):
-        """
-        owner: {'login_name', 'user_id', 'account_type'}
-        """
-        super(WorldHub, self).__init__()
+    def __init__(self, repo_hub_id, **kwargs):
 
-        self.local_repos = dict() # keyed by repo_id, valued by repo object
-        self.all_repos = set() # by repo_id
-        self.users = set() # set of user_ids
+        WorldHub.__init__(self, kwargs.get('port', None))
+        self.local_repos = {} # keyed by repo_id, valued by repo object
+        self.repo_hub_id = repo_hub_id
+        self.host = str(self.repo_hub_id)
+        self.repos_hubs = kwargs.get('repos_hubs', {}).update({self.host : self.port})
+        self.lowest_unassigned_repo_id = 0
 
-    def processRegisterRequest(self, agent_id, aux_data):
-        aux_response = []
-        # add user to self.users prob: self.users['agent_id'] = aux_data[0]
-        return ["successful registration of user", agent_id, aux_response]
+    def synch_repo_hub(self, host, port):
+        """
+        Synchronizes repository hub with other hubs
+        """
+        pass
+
+    def generate_repo_configuration(self):
+        """
+        This will probably be a virtual member that a subclass can fill out
+        to specify repo_info needed for the create_repo_event
+        """
+        pass
+
+    def create_repo_event(self, agent_id, repo_info):
+        """
+        Requests that a git_repo_hub create and start a new repo given 
+        the provided repository information
+        """
+        
+        print('Request to create repo from', agent_id, 'for', repo_info)
+        repo_id = self.host + '_' + str(self.port) + '_' + str(self.lowest_unassigned_repo_id)
+        self.local_repos[repo_id] = GitRepo(repo_id, **repo_info)
+        # self.local_repos[repo_id] = GitRepo(repo_id, 'boop', {'user_id': agent_id, 'login_name':'bob'}, True)
+
+        return 'success', repo_id
 
     def commit_comment_event(self, agent_id, repo_id, commit_info):
         """
@@ -45,14 +66,7 @@ class GitRepoHub(WorldHub):
         """
         pass
 
-    def create_repo(self, agent_id, repo_info):
-        """
-        Requests that a git_repo_hub create and start a new repo given 
-        the provided repository information
-        """
-        pass
-
-    def create_tag(self, agent_id, repo_id, tag_info):
+    def create_tag_event(self, agent_id, repo_id, tag_info):
         """
         user requests to make a new tag
         check if collab
@@ -60,7 +74,7 @@ class GitRepoHub(WorldHub):
         """
         pass
 
-    def create_branch(self, agent_id, repo_id, branch_info):
+    def create_branch_event(self, agent_id, repo_id, branch_info):
         """
         user requests to make a new branch
         check if collab
@@ -68,7 +82,7 @@ class GitRepoHub(WorldHub):
         """
         pass
 
-    def delete_tag(self, agent_id, repo_id, tag_id):
+    def delete_tag_event(self, agent_id, repo_id, tag_id):
         """
         user requests repo delete tag
         check if collab
@@ -76,7 +90,7 @@ class GitRepoHub(WorldHub):
         """
         pass
 
-    def delete_branch(self, agent_id, repo_id, branch_id):
+    def delete_branch_event(self, agent_id, repo_id, branch_id):
         """
         user requests repo delete branch
         check if collab
@@ -147,24 +161,21 @@ class GitRepoHub(WorldHub):
         """
         pass
 
-    def request_repos(self, agent_id, None):
+    def request_repos(self, agent_id):
         """
         User requests a set of public repos
         Server returns a set of public repos
         """
         pass
 
-    def request_users(self, agent_id, None):
+    def request_users(self, agent_id):
         """
         User requests a set of users
         Server returns said set
         """
         pass
 
-
-# Make friendly fork function that copies necessary information
-
 if __name__ == '__main__':
     """
     """
-    pass
+    GitRepoHub(0, port=6000).run()

@@ -1,17 +1,17 @@
 class GitRepo(object):
 
-    def __init__(self, repo_id, repo_name, owner, is_public, date, **kwargs):
+    def __init__(self, repo_id, repo_name, owner, is_public, **kwargs):
         """
         repo_id
         repo_name
         full_name (owner_name/repo_name)
         is_public
-        owner = {'login_name', 'user_id', 'account_type'}
+        owner = {'login_name', 'user_id'}
         description
         fork
         created_on
         language
-        languages = {"<lang name>":# bytes in that language}
+        languages = {"<lang name>": ammount of code in that languages}
         watchers_count
         forks_count
         total_issue_count
@@ -26,24 +26,24 @@ class GitRepo(object):
 
         self.repo_id  = repo_id
         self.repo_name = repo_name
-        self.is_public = is_public
         self.owner = owner
-        self.created_on = date
+        self.is_public = is_public
+        self.created_at = kwargs.get("date", 0)
         self.description = kwargs.get("description", "")
         self.fork = kwargs.get("fork", False)
 
         self.full_name = owner['login_name'] + '/' + self.repo_name
         self.language = "" # string of dominant language in repo
-        self.languages = {} # keyed by language string, valued by bytes of repo in language 
+        self.languages = {} # keyed by language string, valued by ammount of code in that language
         self.watchers_count = 0
         self.forks_count = 0
         self.total_issue_count = 0
         self.open_issues_count = 0
         
-        # These might be sets of dictionaries??
-        self.watchers = set() #{login_name, user_id, account_type, watching_date}
-        self.forks = set() #{repo_id, repo_name, full_name, forked_date}
-        self.collaborators = set() #{login_name, user_id, account_type, permissions}
+        # These might be just dictionaries, keyed by id and valued by another dict
+        self.watchers = {} #{login_name, user_id, account_type, watching_date}
+        self.forks = {} #{repo_id, repo_name, full_name, forked_date}
+        self.collaborators = {} #{login_name, user_id, account_type, permissions}
         self.branches = set()
         self.tags = set()
         # pull requests are temporal, maybe a queue or list, depends on how
@@ -52,7 +52,7 @@ class GitRepo(object):
 
     # Below methods match RepoHub actions
     # RepoHub would call the corresponding repo's method for the user action
-    def commit_comment_event(self, agent_id, repo_id, commit_info):
+    def commit_comment(self, agent_id, repo_id, commit_info):
         """
         user requests to make a commit to the repo
         check if collab
@@ -92,14 +92,14 @@ class GitRepo(object):
         """
         pass
 
-    def issue_comment_event(self, agent_id, repo_id, comment_info):
+    def issue_comment(self, agent_id, repo_id, comment_info):
         """
         user repuests repo add new comment
         repo addes new comment
         """
         pass
 
-    def issue_event(self, agent_id, repo_id, issue_info):
+    def issue(self, agent_id, repo_id, issue_info):
         """
         user requests change in issue status
         check if collab
@@ -107,7 +107,7 @@ class GitRepo(object):
         """
         pass
 
-    def member_event(self, agent_id, repo_id, collaborator_info):
+    def member(self, agent_id, repo_id, collaborator_info):
         """
         user requests add a new collaborator to repo
         check if collab
@@ -117,14 +117,14 @@ class GitRepo(object):
         """
         pass
 
-    def pull_request_event(self, agent_id, repo_id, pull_request):
+    def pull_request(self, agent_id, repo_id, pull_request):
         """
         user requests a pull from a fork
         repo adds the pull request to the stack
         """
         pass
 
-    def push_event(self, agent_id, repo_id, push_request):
+    def push(self, agent_id, repo_id, push_request):
         """
         user requests to push to repo
         check if collab 
@@ -132,14 +132,14 @@ class GitRepo(object):
         """
         pass
 
-    def watch_event(self, agent_id, repo_id, status):
+    def watch(self, agent_id, repo_id, status):
         """
         user tells repo it will watch it quietly
         repo says okay
         """
         pass
 
-    def public_event(self, server_id, repo_id, status):
+    def make_public(self, server_id, repo_id, status):
         """
         server -> PublicEvent
         server tells repo to set public/private status
@@ -147,7 +147,7 @@ class GitRepo(object):
         """
         pass
 
-    def fork_event(self, server_id, repo_id, fork_info):
+    def fork(self, server_id, repo_id, fork_info):
         """
         server -> ForkEvent
         server tells repo that it is being forked
