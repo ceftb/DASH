@@ -1,6 +1,7 @@
 from world_hub import WorldHub
 from git_repo import GitRepo
 from time import time
+import pickle
 
 class GitRepoHub(WorldHub):
     """
@@ -17,6 +18,37 @@ class GitRepoHub(WorldHub):
         self.host = str(self.repo_hub_id)
         self.repos_hubs = kwargs.get('repos_hubs', {}).update({self.host: self.port})
         self.lowest_unassigned_repo_id = 0
+        self.local_event_log = [] # A dictionary with keys 'userID', 'repoID', 'eventType', 'subeventtype', 'time'
+
+    def log_event(self, user_id, repo_id, event_type, subevent_type, time):
+        """
+        Logs the event in the hubs local log list
+        """
+
+        self.local_event_log.append({
+            'userID':user_id,
+            'repoID':repo_id,
+            'eventType':event_type,
+            'subeventType':subevent_type,
+            'time':time})
+
+    def dump_event_log(self, agent_id):
+        """
+        prompts the hub to dump it's log to file
+        """
+
+        try:
+            save_object(str(self.repo_hub_id) + "_hub_log_list.pyobj")
+            return "Success"
+        except:
+            return "Failed to pickle and save log list."
+
+    def return_event_log(self, agent_id):
+        """
+        Prompts the hub to return its local event log
+        """
+
+        return "Success", self.local_event_log
 
     def processRegisterRequest(self, id, aux_data):
         aux_response = []
@@ -43,6 +75,7 @@ class GitRepoHub(WorldHub):
         self.lowest_unassigned_repo_id += 1
         print('Request to create repo from', agent_id, 'for', repo_info)
         self.local_repos[repo_id] = GitRepo(repo_id, **repo_info)
+        self.log_event(agent_id, repo_id, 'CreateRepoEvent', 'None', time())
 
         return 'success', repo_id
       
@@ -58,6 +91,7 @@ class GitRepoHub(WorldHub):
             print 'unknown repo id for comment_comment_event:', repo_id
             return 'fail'
         self.local_repos[repo_id].commit_comment_event(agent_id, commit_info)
+        self.log_event(agent_id, repo_id, 'CommitCommentEvent','None',time())
         return 'success'
 
     def create_tag_event(self, agent_id, tag_info):
@@ -122,6 +156,7 @@ class GitRepoHub(WorldHub):
 
         if collaborator_info[0]['user_ght_id_h'] in self.users:
             if collaborator_info[0]['repo_ght_id_h'] in self.local_repos:
+                self.log_event(agent_id, collaborator_info[0]['repo_ght_id_h'], 'MemberEvent', 'None', time())
                 return self.local_repos[collaborator_info[0]['repo_ght_id_h']].member_event(agent_id, **(collaborator_info[0]))
             else:
                 if collaborator_info[0]['repo_ght_id_h'] in self.foreign_repos:
@@ -159,13 +194,13 @@ class GitRepoHub(WorldHub):
         """
         
         repo_id, user_info = data
-        print "WATCHING", agent_id, repo_id, user_info
         if repo_id in self.local_repos:
             self.local_repos[repo_id].watch_event(user_info)
             watch_info = {'full_name_h': self.local_repos[repo_id].full_name_h, 
                     'watching_date': time(), 
                     'watching_dow': None} # TODO: Internal simulation of DOW
             print agent_id, "is now watching", repo_id, "at", watch_info['watching_date']
+            self.log_event(agent_id, repo_id, 'WatchEvent', 'None', time())
             return "Success", watch_info
         else:
             if repo_id in self.foreign_repos:
@@ -180,6 +215,7 @@ class GitRepoHub(WorldHub):
         """
 
         if repo_id[0] in self.local_repos:
+            self.log_event(agent_id, repo_id[0], 'PublicEvent', 'None', time())
             return self.local_repos[repo_id[0]].public_event(agent_id)
         else:
             if repo_id[0] in self.foreign_repos:
@@ -214,6 +250,23 @@ class GitRepoHub(WorldHub):
         Server returns said set
         """
         pass
+
+def save_object(obj, filename):
+    """
+    Save an object to file for later use.
+    """
+    
+    file = open(filename, 'wb')
+    pickle.dump(obj, file)
+    file.close()
+
+def load_object(filename):
+    """
+    Load a previously saved object.
+    """
+    
+    file = open(filename, 'rb')
+    return pickle.load(file)
 
 if __name__ == '__main__':
     """
