@@ -3,46 +3,33 @@ from git_repo import GitRepo
 
 class GitRepoHub(WorldHub):
     """
-    # Data
-
-    # Sending
-
-    # Receiving
-    user -> CommitCommentEvent
-    user -> CreateRepo
-    user -> CreateEvent (tag/branch)
-    user -> DeleteEvent (tag/branch)
-    user -> FollowEvent
-    user -> IssueCommentEvent
-    user -> IssueEvent
-    user -> MemberEvent
-    user -> PullRequestEvent
-    user -> PushEvent
-    user -> WatchEvent
-    user -> PublicEvent
-    user -> ForkEvent
+    A class that handles client requests and modifies the desired repositories
     """
 
     def __init__(self, repo_hub_id, **kwargs):
 
         WorldHub.__init__(self, kwargs.get('port', None))
-        self.local_repos = {}  # keyed by repo_id, valued by repo object
+        self.users = set() # User ids
+        self.local_repos = {} # keyed by repo id, valued by repo object
+        self.foreign_repos = {} # keyed by repo id, valued by host
         self.repo_hub_id = repo_hub_id
         self.host = str(self.repo_hub_id)
         self.repos_hubs = kwargs.get('repos_hubs', {}).update({self.host: self.port})
         self.lowest_unassigned_repo_id = 0
 
+    def processRegisterRequest(self, id, aux_data):
+        aux_response = []
+        self.users.add(id)
+        return ["success", id, aux_response]
+
     def synch_repo_hub(self, host, port):
         """
         Synchronizes repository hub with other hubs
         """
-        pass
 
-    def generate_repo_configuration(self):
-        """
-        This will probably be a virtual member that a subclass can fill out
-        to specify repo_info needed for the create_repo_event
-        """
+        # Needs to update lowest_unassigned_repo_id
+        # Needs to synch available users
+
         pass
 
     def create_repo_event(self, agent_id, repo_pairs):
@@ -51,18 +38,14 @@ class GitRepoHub(WorldHub):
         the provided repository information
         """
         
+        repo_id = self.lowest_unassigned_repo_id
+        self.lowest_unassigned_repo_id += 1
         print('Request to create repo from', agent_id, 'for', repo_pairs)
-        repo_id = self.host + '_' + str(self.port) + '_' + str(self.lowest_unassigned_repo_id)
         repo_info = {a: b for (a, b) in repo_pairs}
-        self.local_repos[repo_id] = GitRepo(repo_id,
-                                            repo_info.get('name', str('name' + repo_id)),
-                                            {'login_name': str(agent_id)},
-                                            repo_info.get('public', True),
-                                            **repo_info)
-        # self.local_repos[repo_id] = GitRepo(repo_id, 'boop', {'user_id': agent_id, 'login_name':'bob'}, True)
+        self.local_repos[repo_id] = GitRepo(repo_id, **repo_info)
 
         return 'success', repo_id
-
+      
     def commit_comment_event(self, agent_id, (repo_id, commit_info)):
         """
         user requests to make a commit to the repo
@@ -76,9 +59,8 @@ class GitRepoHub(WorldHub):
             return 'fail'
         self.local_repos[repo_id].commit_comment(agent_id, repo_id, commit_info)
         return 'success'
-        pass
 
-    def create_tag_event(self, agent_id, repo_id, tag_info):
+    def create_tag_event(self, agent_id, tag_info):
         """
         user requests to make a new tag
         check if collab
@@ -86,7 +68,7 @@ class GitRepoHub(WorldHub):
         """
         pass
 
-    def create_branch_event(self, agent_id, repo_id, branch_info):
+    def create_branch_event(self, agent_id, branch_info):
         """
         user requests to make a new branch
         check if collab
@@ -94,7 +76,7 @@ class GitRepoHub(WorldHub):
         """
         pass
 
-    def delete_tag_event(self, agent_id, repo_id, tag_id):
+    def delete_tag_event(self, agent_id, tag_info):
         """
         user requests repo delete tag
         check if collab
@@ -102,7 +84,7 @@ class GitRepoHub(WorldHub):
         """
         pass
 
-    def delete_branch_event(self, agent_id, repo_id, branch_id):
+    def delete_branch_event(self, agent_id, branch_info):
         """
         user requests repo delete branch
         check if collab
@@ -110,22 +92,34 @@ class GitRepoHub(WorldHub):
         """
         pass
 
-    def issue_comment_event(self, agent_id, repo_id, comment_info):
+    def commit_comment_event(self, agent_id, commit_info):
+        """
+        user requests to make a commit to the repo
+        check if collab
+        repo takes commit info and applies commit
+        """
+        pass
+
+    def issue_comment_event(self, agent_id, comment_info):
         """
         user repuests repo add new comment
         repo addes new comment
         """
         pass
 
-    def issue_event(self, agent_id, repo_id, issue_info):
+    def issues_event(self, agent_id, issue_info):
         """
         user requests change in issue status
         check if collab
         repo changes issue status
+
+        types: open issue, close issue, assign issue, unassign issue, 
+        label issue, unlabel issue, milestone issue, demilestone issue,
+        reopen issue
         """
         pass
 
-    def member_event(self, agent_id, repo_id, collaborator_info):
+    def member_event(self, agent_id, collaborator_info):
         """
         user requests add a new collaborator to repo
         check if collab
@@ -133,16 +127,31 @@ class GitRepoHub(WorldHub):
         if successful repo adds collaborator
         if unsuccessful repo doesn't add collaborator
         """
-        pass
 
-    def pull_request_event(self, agent_id, repo_id, pull_request):
+        if collaborator_info[0]['user_ght_id_h'] in self.users:
+            if collaborator_info[0]['repo_ght_id_h'] in self.local_repos:
+                return self.local_repos[collaborator_info[0]['repo_ght_id_h']].member_event(agent_id, **(collaborator_info[0]))
+            else:
+                if collaborator_info[0]['repo_ght_id_h'] in self.foreign_repos:
+                    raise NotImplementedError # Will add when we know how reps will be handled
+                else:
+                    return 'Failure: repo not found'
+        else:
+            return 'Failure: user not found'
+
+    def pull_request_event(self, agent_id, pull_request):
         """
         user requests a pull from a fork
         repo adds the pull request to the stack
+
+        types: submit pull request, close pull request, assign pull request,
+        unassign pull request, label pull request, unlabel pull request, 
+        request review, remove review request, reopen pull request, 
+        edit pull request
         """
         pass
 
-    def push_event(self, agent_id, repo_id, push_request):
+    def push_event(self, agent_id, push_request):
         """
         user requests to push to repo
         check if collab 
@@ -150,28 +159,50 @@ class GitRepoHub(WorldHub):
         """
         pass
 
-    def watch_event(self, agent_id, repo_id, status):
+    def watch_event(self, agent_id, data):
         """
         user tells repo it will watch it quietly
         repo says okay
         """
-        pass
+        
+        repo_id, user_info = data
 
-    def public_event(self, server_id, repo_id, status):
-        """
-        server -> PublicEvent
-        server tells repo to set public/private status
-        repo sets status 
-        """
-        pass
+        if repo_id in self.local_repos:
+            ###### Need to add Time here, and then return time
+            return self.local_repos[repo_id].watch_event(user_info)
+        else:
+            if repo_id in self.foreign_repos:
+                raise NotImplementedError # Will add when we know how reps will be handled
+            else:
+                return 'Failure: repo not found'  
 
-    def fork_event(self, server_id, repo_id, fork_info):
+    def public_event(self, agent_id, repo_id):
         """
-        server -> ForkEvent
+        server toggles repo status
+        repo sets status
+        """
+
+        if repo_id[0] in self.local_repos:
+            return self.local_repos[repo_id[0]].public_event(agent_id)
+        else:
+            if repo_id[0] in self.foreign_repos:
+                raise NotImplementedError # Will add when we know how reps will be handled
+            else:
+                return 'Failure: repo not found'
+
+    def fork_event(self, agent_id, fork_info):
+        """
         server tells repo that it is being forked
         repo adds new fork to its info
         """
         pass
+
+    def follow_event(self, agent_id, target_user_id):
+        """
+        server notifies target user that agent is following it
+        """
+
+        raise NotImplementedError # Not sure yet how to notify user
 
     def request_repos(self, agent_id):
         """

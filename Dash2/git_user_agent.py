@@ -1,98 +1,108 @@
 from dash import DASHAgent
+import random
 
 class GitUserAgent(DASHAgent):
     """
-    # Data
-    login_name, user_id, account_type, company, location, created_at,
-    lat, lon, state, city, country_code, site_admin, num_public_repos,
-    num_followers, num_following, followers, following, starred, watching
-
-    # Sending
-    CommitCommentEvent -> repo_hub
-    CreateEvent (tag/branch) -> repo_hub
-    DeleteEvent (tag/branch) -> repo_hub
-    ForkEvent -> repo_hub
-    IssueCommentEvent -> repo_hub
-    IssueEvent -> repo_hub [open/close/edited/assigned/unassigned/etc]
-    PullRequestEvent -> repo_hub
-    PushEvent -> repo_hub
-    WatchEvent -> repo_hub
-    MemberEvent -> repo_hub -> user
-    FollowEvent -> user [needs to add user to follower and increment follow count]
-    PublicEvent -> repo_hub
-    CreateEvent (repo) -> repo_hub
-
-    # Receiving
-    user -> FollowEvent
-
-    # Goals/Tasks
-        maybe agent can check repos for updates & pull requests
+    A basic Git user agent that can communicate with a Git repository hub and
+    perform basic actions. Can be inherited to perform other specific functions.
     """
 
-    def __init__(self, login_name, account_type, **kwargs):
+    def __init__(self, **kwargs):
         super(GitUserAgent, self).__init__()
 
-        # Goals
+        # Goals Should add goals in child class
         self.readAgent(
             """
 goalWeight MakeRepo 1
 
 goalRequirements MakeRepo
-  create_repo(_myRepoName)
+  create_repo_event(_myRepoName)
   commit_comment_event(_myRepoName, 'intial commit')
             """)
 
         # Registration
-        self.server_host = kwargs.get('host', 'localhost')
-        self.server_port = kwargs.get('port', 5678)
+        self.server_host = kwargs.get("host", "localhost")
+        self.server_port = kwargs.get("port", 5678)
         registration = self.register()
 
-        # Required information
-        self.login_name = login_name
-        self.account_type = account_type
-
-        # Optional information
+        # Setup information
+        self.type = kwargs.get("type", "user")
+        self.login_h = kwargs.get("login_h", None)
+        self.ght_id_h = kwargs.get("ght_id_h", None)
         self.company = kwargs.get("company", "")
-        self.lat = kwargs.get('lat', None)
-        self.lon = kwargs.get('lon', None)
-        self.state = kwargs.get('state', None)
-        self.city = kwargs.get('city', None)
-        self.country_code = kwargs.get('country_code', None)
-        self.site_admin = kwargs.get('site_admin', None)
+        self.location = kwargs.get("location", "")
+        self.created_at = kwargs.get("created_at", None)
+        self.created_dow = kwargs.get("created_dow", None)
+        self.fake = kwargs.get("fake", False)
+        self.deleted = kwargs.get("deleted", False)
+        self.lat = kwargs.get("lat", None)
+        self.lon = kwargs.get("lon", None)
+        self.state = kwargs.get("state", None)
+        self.city = kwargs.get("city", None)
+        self.country_code = kwargs.get("country_code", None)
+        self.site_admin = kwargs.get("site_admin", False)
+        self.public_repos = kwargs.get("public_repos", 0)
+        self.followers = kwargs.get("followers", 0)
+        self.following = kwargs.get("following", 0)
+        # Follower list would be composed of dictionaries with items:
+        # login_h, type, ght_id_h, following_date, following_dow
+        self.follower_list = kwargs.get('follower_list', {}) # Keyed by id
+
+        # If account is an organization it can have members
+        # members is a list of dictionaries with keys for
+        # user: login_h, type, ght_id_h, joined_at_date, joined_at_dow
+        if self.type.lower() == "organization":
+            self.members = kwargs.get("members", {}) # Keyed by id
 
         # Assigned information
         self.id = registration[1]
-        self.created_at = 0  # How do we want to simulate dates, if at all?
-        self.num_public_repos = 0
-        self.num_following = 0
-        self.num_followers = 0
-        self.followers = set()  # user id's
-        self.following = set()  # user id's
-        self.starred = set()  # repo id's
-        self.watching = set()  # repo id's
-        self.owned_repos = set()  # repo_id's
-        self.name_to_repo_id = {}  # Map name into unique id given by github simulator
+        # I want an internal Global time here, but not clear how to assign it
 
-        # State
-        self.user_feed = []
+        # Other Non-Schema information
+        self.following_list = {} # ght_id_h: {full_name_h, following_date, following_dow}
+        self.watching_list = {} # ght_id_h: {full_name_h, watching_date, watching_dow}
+        self.owned_repos = set() # ght_id_h
 
         # Actions
         self.primitiveActions([
-            ('create_repo', self.create_repo_event),
-            ('commit_comment', self.commit_comment_event),
-            ('create_tag', self.create_tag_event),
-            ('create_branch', self.create_branch_event),
-            ('delete_tag', self.delete_tag_event),
-            ('delete_branch', self.delete_branch_event),
-            ('fork', self.fork_event),
-            ('issue_comment', self.issue_comment_event),
-            ('issue', self.issue_event),
-            ('pull_request', self.pull_request_event),
-            ('push', self.push_event),
-            ('watch', self.watch_event),
-            ('follow', self.follow_event),
-            ('member', self.member_event),
-            ('make_public', self.public_event)])
+            ('create_repo_event', self.create_repo_event),
+            ('commit_comment_event', self.commit_comment_event),
+            ('create_tag_event', self.create_tag_event),
+            ('create_branch_event', self.create_branch_event),
+            ('delete_tag_event', self.delete_tag_event),
+            ('delete_branch_event', self.delete_branch_event),
+            ('fork_event', self.fork_event),
+            ('issue_comment_event', self.issue_comment_event),
+            ('issue_event', self.issue_event),
+            ('pull_request_event', self.pull_request_event),
+            ('push_event', self.push_event),
+            ('watch_event', self.watch_event),
+            ('follow_event', self.follow_event),
+            ('member_event', self.member_event),
+            ('public_event', self.public_event)])
+
+    ############################################################################
+    # Model dependent methods
+    ############################################################################
+
+    def generate_repo(self):
+        """
+        Funtion that will return a dictionary with the necessary information
+        to build a repository.
+
+        Returns bare minimum randomly generated repo
+        """
+
+        alphabet = "abcdefghijklmnopqrstuvwxyz"
+        return {'name_h': ''.join(random.sample(alphabet, random.randint(1,20))),
+                'owner': {'login_h': self.login_h, 
+                          'ght_id_h': self.ght_id_h, 
+                          'type': self.type}
+                }
+
+    ############################################################################
+    # Core git user methods
+    ############################################################################
 
     def connect_to_new_server(self, host, port):
         """
@@ -109,13 +119,10 @@ goalRequirements MakeRepo
         agent requests server to make new repo
         """
         
-        _, repo_name = args
-        repo_info = [('name:', repo_name)]
-        status, repo_id = self.sendAction("create_repo_event", repo_info)
-        print 'repo', repo_name, 'creation status', status, 'id', repo_id
+        repo_info = self.generate_repo()
+        status, repo_id = self.sendAction("create_repo_event", [repo_info])
         self.owned_repos.add(repo_id)
-        self.name_to_repo_id[repo_name] = repo_id
-
+  
         return [{}]
 
     def commit_comment_event(self, args):
@@ -129,7 +136,6 @@ goalRequirements MakeRepo
             return []
         status = self.sendAction("commit_comment_event", (self.name_to_repo_id[repo_name], comment))
         print 'commit comment event:', status, repo_name, self.name_to_repo_id[repo_name], comment
-        pass
 
     def create_tag_event(self):
         """
@@ -155,9 +161,9 @@ goalRequirements MakeRepo
         """
         pass
 
-    def fork_event(self):
+    def commit_comment_event(self):
         """
-        agent tells server it wants a fork of repo
+        agent sends comment to repo
         """
         pass
 
@@ -167,7 +173,7 @@ goalRequirements MakeRepo
         """
         pass
 
-    def issue_event(self):
+    def issues_event(self):
         """
         agent sends status change of issue to repo
         """
@@ -177,6 +183,7 @@ goalRequirements MakeRepo
         """
         agent sends a pull request to repo
         """
+        pass
 
     def push_event(self):
         """
@@ -184,31 +191,66 @@ goalRequirements MakeRepo
         """
         pass
 
-    def watch_event(self):
+    def fork_event(self):
+        """
+        agent tells server it wants a fork of repo
+        """
+        pass
+
+    def watch_event(self, args):
         """
         agent decides to watch repo
         """
-        pass
+        
+        _, target_repo_id = *args
 
-    def follow_event(self):
+        # Check if already watching
+        if target_repo_id not in self.watching_list:
+            user_info = {'login_h': self.login_h, 'type':self.type, 'ght_id_h': self.ght_id_h}
+            status, watch_info = self.sendAction("watch_event", [target_repo_id, user_info])
+            self.watching_list[target_repo_id] = watch_info
+
+        return [{}]
+
+    def follow_event(self, args):
         """
         agent decides to follow person
         """
-        pass
+        
+        _, target_user_id = *args
 
-    def member_event(self):
-        """
-        agent requests repo to add another user to collaborators
-        """
-        pass
+        # Check if already following
+        if target_user_id not in self.following_list:
+            status, follow_info = self.sendAction("follow_event", [target_user_id])
+            self.following += 1
+            self.following_list[target_user_id] = follow_info
 
-    def public_event(self):
+        return [{}]
+
+    def member_event(self, args):
+        """
+        agent requests for hub to add/remove/modify collaborators from repo
+        """
+        
+        _, target_user_id, repo_id, action, permissions = *args
+        collaborator_info = {'user_ght_id_h': target_user_id,
+                             'repo_ght_id_h': repo_id,
+                             'action': action,
+                             'permissions': permissions}
+        status = self.sendAction("member_event", [collaborator_info])
+
+        return [{}]
+
+    def public_event(self, args):
         """
         agent requests server change repo public status
         """
-        pass
+        
+        status = self.sendAction("public_event", [])
+
+        return [{}]
 
 if __name__ == '__main__':
     """
     """
-    GitUserAgent('bob', 'pro', host='0', port=6000).agentLoop(10)
+    GitUserAgent(host='0', port=6000).agentLoop(10)
