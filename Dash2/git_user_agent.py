@@ -16,10 +16,10 @@ class GitUserAgent(DASHAgent):
 goalWeight MakeRepo 1
 
 goalRequirements MakeRepo
-  create_repo_event(_myRepoName)
-  commit_comment_event(_myRepoName, 'intial commit')
+  create_repo_event()
+  pick_repo(repo_id)
+  commit_comment_event(repo_id, 'intial commit')
             """)
-
         # Registration
         self.server_host = kwargs.get("host", "localhost")
         self.server_port = kwargs.get("port", 5678)
@@ -61,10 +61,11 @@ goalRequirements MakeRepo
         # Other Non-Schema information
         self.following_list = {} # ght_id_h: {full_name_h, following_date, following_dow}
         self.watching_list = {} # ght_id_h: {full_name_h, watching_date, watching_dow}
-        self.owned_repos = set() # ght_id_h
+        self.owned_repos = {} # {ght_id_h : name_h}
 
         # Actions
         self.primitiveActions([
+            ('pick_repo', self.pick_repo),
             ('create_repo_event', self.create_repo_event),
             ('commit_comment_event', self.commit_comment_event),
             ('create_tag_event', self.create_tag_event),
@@ -73,7 +74,7 @@ goalRequirements MakeRepo
             ('delete_branch_event', self.delete_branch_event),
             ('fork_event', self.fork_event),
             ('issue_comment_event', self.issue_comment_event),
-            ('issue_event', self.issue_event),
+            ('issues_event', self.issues_event),
             ('pull_request_event', self.pull_request_event),
             ('push_event', self.push_event),
             ('watch_event', self.watch_event),
@@ -94,11 +95,18 @@ goalRequirements MakeRepo
         """
 
         alphabet = "abcdefghijklmnopqrstuvwxyz"
-        return {'name_h': ''.join(random.sample(alphabet, random.randint(1,20))),
+        return {'name_h': ''.join(random.sample(alphabet, random.randint(1,10))),
                 'owner': {'login_h': self.login_h, 
                           'ght_id_h': self.ght_id_h, 
                           'type': self.type}
                 }
+
+    def pick_repo(self, (goal, repo_id)):
+        """
+        Function that will randomly pick a repository and return the id
+        """
+
+        return [{'repo_id' : random.choice(self.owned_repos.keys()) }]
 
     ############################################################################
     # Core git user methods
@@ -119,23 +127,24 @@ goalRequirements MakeRepo
         agent requests server to make new repo
         """
         
+        # _, repo_name = args
         repo_info = self.generate_repo()
-        status, repo_id = self.sendAction("create_repo_event", [repo_info])
-        self.owned_repos.add(repo_id)
+        status, repo_id = self.sendAction("create_repo_event", repo_info)
+        self.owned_repos[repo_id] = repo_info['name_h']
   
         return [{}]
 
-    def commit_comment_event(self, args):
+    def commit_comment_event(self, (goal, repo_id, comment)):
         """
         agent sends comment to repo
         """
 
-        _, repo_name, comment = args
-        if repo_name not in self.name_to_repo_id:
+        print goal, repo_id, comment
+        if repo_id not in self.owned_repos: # Maybe use something like self.known_repos???
             print 'Agent does not know the id of the repo, cannot commit'
             return []
-        status = self.sendAction("commit_comment_event", (self.name_to_repo_id[repo_name], comment))
-        print 'commit comment event:', status, repo_name, self.name_to_repo_id[repo_name], comment
+        status = self.sendAction("commit_comment_event", (repo_id, comment))
+        print 'commit comment event:', status, repo_id, comment
 
     def create_tag_event(self):
         """
@@ -158,12 +167,6 @@ goalRequirements MakeRepo
     def delete_branch_event(self):
         """
         agent removes branch from repo
-        """
-        pass
-
-    def commit_comment_event(self):
-        """
-        agent sends comment to repo
         """
         pass
 
@@ -202,7 +205,7 @@ goalRequirements MakeRepo
         agent decides to watch repo
         """
         
-        _, target_repo_id = *args
+        _, target_repo_id = args
 
         # Check if already watching
         if target_repo_id not in self.watching_list:
@@ -217,7 +220,7 @@ goalRequirements MakeRepo
         agent decides to follow person
         """
         
-        _, target_user_id = *args
+        _, target_user_id = args
 
         # Check if already following
         if target_user_id not in self.following_list:
@@ -232,7 +235,7 @@ goalRequirements MakeRepo
         agent requests for hub to add/remove/modify collaborators from repo
         """
         
-        _, target_user_id, repo_id, action, permissions = *args
+        _, target_user_id, repo_id, action, permissions = args
         collaborator_info = {'user_ght_id_h': target_user_id,
                              'repo_ght_id_h': repo_id,
                              'action': action,

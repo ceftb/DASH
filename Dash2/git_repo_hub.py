@@ -32,7 +32,7 @@ class GitRepoHub(WorldHub):
 
         pass
 
-    def create_repo_event(self, agent_id, repo_pairs):
+    def create_repo_event(self, agent_id, repo_info):
         """
         Requests that a git_repo_hub create and start a new repo given 
         the provided repository information
@@ -40,8 +40,7 @@ class GitRepoHub(WorldHub):
         
         repo_id = self.lowest_unassigned_repo_id
         self.lowest_unassigned_repo_id += 1
-        print('Request to create repo from', agent_id, 'for', repo_pairs)
-        repo_info = {a: b for (a, b) in repo_pairs}
+        print('Request to create repo from', agent_id, 'for', repo_info)
         self.local_repos[repo_id] = GitRepo(repo_id, **repo_info)
 
         return 'success', repo_id
@@ -57,7 +56,7 @@ class GitRepoHub(WorldHub):
         if repo_id not in self.local_repos:
             print 'unknown repo id for comment_comment_event:', repo_id
             return 'fail'
-        self.local_repos[repo_id].commit_comment(agent_id, repo_id, commit_info)
+        self.local_repos[repo_id].commit_comment_event(agent_id, commit_info)
         return 'success'
 
     def create_tag_event(self, agent_id, tag_info):
@@ -89,14 +88,6 @@ class GitRepoHub(WorldHub):
         user requests repo delete branch
         check if collab
         repo deletes branch
-        """
-        pass
-
-    def commit_comment_event(self, agent_id, commit_info):
-        """
-        user requests to make a commit to the repo
-        check if collab
-        repo takes commit info and applies commit
         """
         pass
 

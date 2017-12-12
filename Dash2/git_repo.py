@@ -46,14 +46,13 @@ class GitRepo(object):
 
     # Below methods match RepoHub actions
     # RepoHub would call the corresponding repo's method for the user action
-    def commit_comment(self, agent_id, repo_id, commit_info):
+    def commit_comment_event(self, agent_id, commit_info):
         """
         user requests to make a commit to the repo
         check if collab
         repo takes commit info and applies commit
         """
         self.commit_comments.append((agent_id, commit_info))
-        pass
         
     # Following methods match RepoHub actions
     # RepoHub would call the corresponding repo's method for the user action
@@ -86,14 +85,6 @@ class GitRepo(object):
         user requests repo delete branch
         check if collab
         repo deletes branch
-        """
-        pass
-
-    def commit_comment_event(self, agent_id, commit_info):
-        """
-        user requests to make a commit to the repo
-        check if collab
-        repo takes commit info and applies commit
         """
         pass
 
