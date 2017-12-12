@@ -1,5 +1,6 @@
 from world_hub import WorldHub
 from git_repo import GitRepo
+from time import time
 
 class GitRepoHub(WorldHub):
     """
@@ -124,7 +125,7 @@ class GitRepoHub(WorldHub):
                 return self.local_repos[collaborator_info[0]['repo_ght_id_h']].member_event(agent_id, **(collaborator_info[0]))
             else:
                 if collaborator_info[0]['repo_ght_id_h'] in self.foreign_repos:
-                    raise NotImplementedError # Will add when we know how reps will be handled
+                    raise NotImplementedError # TODO: Will add when we know how reps will be handled
                 else:
                     return 'Failure: repo not found'
         else:
@@ -154,18 +155,23 @@ class GitRepoHub(WorldHub):
         """
         user tells repo it will watch it quietly
         repo says okay
+        returns {full_name_h, watching_date, watching_dow}
         """
         
         repo_id, user_info = data
-
+        print "WATCHING", agent_id, repo_id, user_info
         if repo_id in self.local_repos:
-            ###### Need to add Time here, and then return time
-            return self.local_repos[repo_id].watch_event(user_info)
+            self.local_repos[repo_id].watch_event(user_info)
+            watch_info = {'full_name_h': self.local_repos[repo_id].full_name_h, 
+                    'watching_date': time(), 
+                    'watching_dow': None} # TODO: Internal simulation of DOW
+            print agent_id, "is now watching", repo_id, "at", watch_info['watching_date']
+            return "Success", watch_info
         else:
             if repo_id in self.foreign_repos:
-                raise NotImplementedError # Will add when we know how reps will be handled
+                raise NotImplementedError # TODO: Will add when we know how reps will be handled
             else:
-                return 'Failure: repo not found'  
+                return 'Failure: repo not found'
 
     def public_event(self, agent_id, repo_id):
         """
@@ -177,7 +183,7 @@ class GitRepoHub(WorldHub):
             return self.local_repos[repo_id[0]].public_event(agent_id)
         else:
             if repo_id[0] in self.foreign_repos:
-                raise NotImplementedError # Will add when we know how reps will be handled
+                raise NotImplementedError # TODO: Will add when we know how reps will be handled
             else:
                 return 'Failure: repo not found'
 
@@ -193,7 +199,7 @@ class GitRepoHub(WorldHub):
         server notifies target user that agent is following it
         """
 
-        raise NotImplementedError # Not sure yet how to notify user
+        raise NotImplementedError # TODO: Not sure yet how to notify user
 
     def request_repos(self, agent_id):
         """

@@ -18,6 +18,7 @@ goalWeight MakeRepo 1
 goalRequirements MakeRepo
   create_repo_event()
   pick_repo(repo_id)
+  watch_event(repo_id)
   commit_comment_event(repo_id, 'intial commit')
             """)
         # Registration
@@ -204,13 +205,13 @@ goalRequirements MakeRepo
         """
         agent decides to watch repo
         """
-        
+
         _, target_repo_id = args
 
         # Check if already watching
         if target_repo_id not in self.watching_list:
             user_info = {'login_h': self.login_h, 'type':self.type, 'ght_id_h': self.ght_id_h}
-            status, watch_info = self.sendAction("watch_event", [target_repo_id, user_info])
+            status, watch_info = self.sendAction("watch_event", (target_repo_id, user_info))
             self.watching_list[target_repo_id] = watch_info
 
         return [{}]
