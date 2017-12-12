@@ -1,4 +1,4 @@
-from dash import DASHAgent
+from dash import DASHAgent, isVar
 import random
 
 class GitUserAgent(DASHAgent):
@@ -59,9 +59,10 @@ goalRequirements MakeRepo
         # I want an internal Global time here, but not clear how to assign it
 
         # Other Non-Schema information
-        self.following_list = {} # ght_id_h: {full_name_h, following_date, following_dow}
-        self.watching_list = {} # ght_id_h: {full_name_h, watching_date, watching_dow}
-        self.owned_repos = set() # ght_id_h
+        self.following_list = {}  # ght_id_h: {full_name_h, following_date, following_dow}
+        self.watching_list = {}  # ght_id_h: {full_name_h, watching_date, watching_dow}
+        self.owned_repos = set()  # ght_id_h
+        self.name_to_repo_id = dict()  # hub expects ids in calls other than create_repo_event, not names
 
         # Actions
         self.primitiveActions([
@@ -73,7 +74,7 @@ goalRequirements MakeRepo
             ('delete_branch_event', self.delete_branch_event),
             ('fork_event', self.fork_event),
             ('issue_comment_event', self.issue_comment_event),
-            ('issue_event', self.issue_event),
+            #('issue_event', self.issue_event),  # Not defined
             ('pull_request_event', self.pull_request_event),
             ('push_event', self.push_event),
             ('watch_event', self.watch_event),
@@ -85,7 +86,7 @@ goalRequirements MakeRepo
     # Model dependent methods
     ############################################################################
 
-    def generate_repo(self):
+    def generate_repo(self, name=None):
         """
         Funtion that will return a dictionary with the necessary information
         to build a repository.
@@ -94,7 +95,9 @@ goalRequirements MakeRepo
         """
 
         alphabet = "abcdefghijklmnopqrstuvwxyz"
-        return {'name_h': ''.join(random.sample(alphabet, random.randint(1,20))),
+        if name is None:
+            name = ''.join(random.sample(alphabet, random.randint(1,20)))
+        return {'name_h': name,
                 'owner': {'login_h': self.login_h, 
                           'ght_id_h': self.ght_id_h, 
                           'type': self.type}
@@ -114,16 +117,19 @@ goalRequirements MakeRepo
         self.server_port = port
         self.establishConnection()
 
-    def create_repo_event(self, args):
+    def create_repo_event(self, (_, name_var)):
         """
         agent requests server to make new repo
         """
         
-        repo_info = self.generate_repo()
+        repo_info = self.generate_repo(None if isVar(name_var) else name_var)
         status, repo_id = self.sendAction("create_repo_event", [repo_info])
+        print 'create repo result:', status, repo_id, 'for', repo_info
         self.owned_repos.add(repo_id)
-  
-        return [{}]
+        self.name_to_repo_id[repo_info['name_h']] = repo_id
+
+        # Binds the name of the repo if it was not bound before this call
+        return [{name_var: repo_info['name_h']}] if isVar(name_var) else [{}]
 
     def commit_comment_event(self, args):
         """
@@ -132,7 +138,7 @@ goalRequirements MakeRepo
 
         _, repo_name, comment = args
         if repo_name not in self.name_to_repo_id:
-            print 'Agent does not know the id of the repo, cannot commit'
+            print 'Agent does not know the id of the repo with name', repo_name, 'cannot commit'
             return []
         status = self.sendAction("commit_comment_event", (self.name_to_repo_id[repo_name], comment))
         print 'commit comment event:', status, repo_name, self.name_to_repo_id[repo_name], comment
@@ -158,12 +164,6 @@ goalRequirements MakeRepo
     def delete_branch_event(self):
         """
         agent removes branch from repo
-        """
-        pass
-
-    def commit_comment_event(self):
-        """
-        agent sends comment to repo
         """
         pass
 
@@ -202,7 +202,7 @@ goalRequirements MakeRepo
         agent decides to watch repo
         """
         
-        _, target_repo_id = *args
+        _, target_repo_id = args
 
         # Check if already watching
         if target_repo_id not in self.watching_list:
@@ -217,7 +217,7 @@ goalRequirements MakeRepo
         agent decides to follow person
         """
         
-        _, target_user_id = *args
+        _, target_user_id = args
 
         # Check if already following
         if target_user_id not in self.following_list:
@@ -232,7 +232,7 @@ goalRequirements MakeRepo
         agent requests for hub to add/remove/modify collaborators from repo
         """
         
-        _, target_user_id, repo_id, action, permissions = *args
+        _, target_user_id, repo_id, action, permissions = args
         collaborator_info = {'user_ght_id_h': target_user_id,
                              'repo_ght_id_h': repo_id,
                              'action': action,

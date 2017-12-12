@@ -3,7 +3,7 @@ class GitRepo(object):
     An object representing a Github repository
     """
     
-    def __init__(self, ght_id_h, name_h, owner, **kwargs):
+    def __init__(self, ght_id_h=None, name_h=None, owner=None, **kwargs):  # don't crash if agent doesn't supply args
 
         # Setup information
         self.ght_id_h = kwargs.get("ght_id_h")

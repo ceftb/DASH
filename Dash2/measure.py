@@ -11,9 +11,10 @@
 
 class Measure:
 
-    def __init__(self, name, function=None, backing=None):
+    def __init__(self, name, function=None, target=None, backing=None):
         self.name = name
         self.function = self.name if function is None else function
+        self.target = target
         self.backing = backing
 
     def __repr__(self):
