@@ -16,7 +16,8 @@ class GitUserAgent(DASHAgent):
 goalWeight MakeRepo 1
 
 goalRequirements MakeRepo
-  create_repo_event()
+  create_repo_event(_myRepoName)
+  commit_comment_event(_myRepoName, 'intial commit')
             """)
 
         # Registration
@@ -121,8 +122,20 @@ goalRequirements MakeRepo
         repo_info = self.generate_repo()
         status, repo_id = self.sendAction("create_repo_event", [repo_info])
         self.owned_repos.add(repo_id)
-
+  
         return [{}]
+
+    def commit_comment_event(self, args):
+        """
+        agent sends comment to repo
+        """
+
+        _, repo_name, comment = args
+        if repo_name not in self.name_to_repo_id:
+            print 'Agent does not know the id of the repo, cannot commit'
+            return []
+        status = self.sendAction("commit_comment_event", (self.name_to_repo_id[repo_name], comment))
+        print 'commit comment event:', status, repo_name, self.name_to_repo_id[repo_name], comment
 
     def create_tag_event(self):
         """
@@ -240,4 +253,4 @@ goalRequirements MakeRepo
 if __name__ == '__main__':
     """
     """
-    GitUserAgent(host='0', port=6000).agentLoop(1)
+    GitUserAgent(host='0', port=6000).agentLoop(10)

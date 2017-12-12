@@ -14,7 +14,7 @@ class GitRepoHub(WorldHub):
         self.foreign_repos = {} # keyed by repo id, valued by host
         self.repo_hub_id = repo_hub_id
         self.host = str(self.repo_hub_id)
-        self.repos_hubs = kwargs.get('repos_hubs', {}).update({self.host : self.port})
+        self.repos_hubs = kwargs.get('repos_hubs', {}).update({self.host: self.port})
         self.lowest_unassigned_repo_id = 0
 
     def processRegisterRequest(self, id, aux_data):
@@ -32,18 +32,33 @@ class GitRepoHub(WorldHub):
 
         pass
 
-    def create_repo_event(self, agent_id, repo_info):
+    def create_repo_event(self, agent_id, repo_pairs):
         """
         Requests that a git_repo_hub create and start a new repo given 
         the provided repository information
         """
         
         repo_id = self.lowest_unassigned_repo_id
-        print('Request to create repo from', agent_id, 'for', repo_id)
-        self.local_repos[repo_id] = GitRepo(repo_id, **(repo_info[0]))
         self.lowest_unassigned_repo_id += 1
+        print('Request to create repo from', agent_id, 'for', repo_pairs)
+        repo_info = {a: b for (a, b) in repo_pairs}
+        self.local_repos[repo_id] = GitRepo(repo_id, **repo_info)
 
         return 'success', repo_id
+      
+    def commit_comment_event(self, agent_id, (repo_id, commit_info)):
+        """
+        user requests to make a commit to the repo
+        check if collab
+        repo takes commit info and applies commit
+        """
+
+        # commit_info is assumed to be a comment string for now
+        if repo_id not in self.local_repos:
+            print 'unknown repo id for comment_comment_event:', repo_id
+            return 'fail'
+        self.local_repos[repo_id].commit_comment(agent_id, repo_id, commit_info)
+        return 'success'
 
     def create_tag_event(self, agent_id, tag_info):
         """

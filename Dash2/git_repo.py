@@ -2,7 +2,7 @@ class GitRepo(object):
     """
     An object representing a Github repository
     """
-
+    
     def __init__(self, ght_id_h, name_h, owner, **kwargs):
 
         # Setup information
@@ -25,7 +25,7 @@ class GitRepo(object):
         self.forks_count = kwargs.get("forks_count", 0)
         self.open_issues_count = kwargs.get("open_issues_count", 0)
         self.total_issue_count = kwargs.get("total_issue_count", 0)
-        
+
         # Watch list would be composed of dictionaries with items:
         # login_h, type, ght_id_h, watching_date, watching_dow
         self.watcher_keys = ('type', 'login_h', 'watching_date', 'watching_dow')
@@ -42,7 +42,19 @@ class GitRepo(object):
         # # pull requests are temporal, maybe a queue or list, depends on how
         # # agent will prioritize addressing pulls
         # self.pull_requests = []
+        self.commit_comments = []
 
+    # Below methods match RepoHub actions
+    # RepoHub would call the corresponding repo's method for the user action
+    def commit_comment(self, agent_id, repo_id, commit_info):
+        """
+        user requests to make a commit to the repo
+        check if collab
+        repo takes commit info and applies commit
+        """
+        self.commit_comments.append((agent_id, commit_info))
+        pass
+        
     # Following methods match RepoHub actions
     # RepoHub would call the corresponding repo's method for the user action
     def create_tag_event(self, agent_id, tag_info):

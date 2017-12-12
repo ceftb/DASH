@@ -11,10 +11,9 @@
 
 class Measure:
 
-    def __init__(self, name, function=None, target=None, backing=None):
+    def __init__(self, name, function=None, backing=None):
         self.name = name
         self.function = self.name if function is None else function
-        self.target = target
         self.backing = backing
 
     def __repr__(self):
@@ -28,3 +27,13 @@ class Measure:
                 return getattr(measure_object, self.function)()
 
 
+# A constraint in this context is a constraint on the outcome of an experiment, so in simple form it names a measure
+# and target values for the measure.
+class Constraint:
+
+    def __init__(self, measure, target):
+        self.measure = measure
+        self.target = target
+
+
+# e.g. Constraint(Measure('num_attachments_per_worker'), Range(0.15, 0.45))

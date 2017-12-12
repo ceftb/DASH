@@ -1,0 +1,20 @@
+streamstarts: [main]
+
+groups:
+    myExperimentGroup: [outside1]
+
+agents:
+    myExperimenters:
+        group: myExperimentGroup
+        # (note: the "PATH" argument is the agent directory. The
+        # direcory must contain an IDL and agent implementation.)
+        path: /users/blythe/webdash/Magi/PassExp
+        execargs: []
+
+eventstreams:
+    main:
+        - type: event
+          agent: myExperimenters
+          method: runMagiAgent
+          args: {'file_contents': 1}
+
