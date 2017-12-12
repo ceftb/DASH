@@ -27,6 +27,7 @@ goalRequirements MakeRepo
         registration = self.register()
 
         # Setup information
+        self.use_model_assignment = kwargs.get("use_model", True) # TODO: Need to check if id/ght_id cause conflicts (also issue w/ time, it all comes from time, which won't work with created_at in the data)
         self.type = kwargs.get("type", "user")
         self.login_h = kwargs.get("login_h", None)
         self.ght_id_h = kwargs.get("ght_id_h", None)
@@ -57,9 +58,12 @@ goalRequirements MakeRepo
 
         # Assigned information
         self.id = registration[1]
-        # I want an internal Global time here, but not clear how to assign it
+        if self.use_model_assignment:
+            self.ght_id_h = self.id 
+            self.created_at = registration[2]
 
         # Other Non-Schema information
+        self.total_activity = 0
         self.following_list = {} # ght_id_h: {full_name_h, following_date, following_dow}
         self.watching_list = {} # ght_id_h: {full_name_h, watching_date, watching_dow}
         self.owned_repos = {} # {ght_id_h : name_h}
@@ -132,6 +136,7 @@ goalRequirements MakeRepo
         repo_info = self.generate_repo()
         status, repo_id = self.sendAction("create_repo_event", repo_info)
         self.owned_repos[repo_id] = repo_info['name_h']
+        self.total_activity += 1
   
         return [{}]
 
@@ -146,59 +151,69 @@ goalRequirements MakeRepo
             return []
         status = self.sendAction("commit_comment_event", (repo_id, comment))
         print 'commit comment event:', status, repo_id, comment
+        self.total_activity += 1
 
     def create_tag_event(self):
         """
         agent sends new tag in repo
         """
+        self.total_activity += 1
         pass
 
     def create_branch_event(self):
         """
         agent sends new tag in repo
         """
+        self.total_activity += 1
         pass
 
     def delete_tag_event(self):
         """
         agent removes tag from repo
         """
+        self.total_activity += 1
         pass
 
     def delete_branch_event(self):
         """
         agent removes branch from repo
         """
+        self.total_activity += 1
         pass
 
     def issue_comment_event(self):
         """
         send a comment to a repo
         """
+        self.total_activity += 1
         pass
 
     def issues_event(self):
         """
         agent sends status change of issue to repo
         """
+        self.total_activity += 1
         pass
 
     def pull_request_event(self):
         """
         agent sends a pull request to repo
         """
+        self.total_activity += 1
         pass
 
     def push_event(self):
         """
         agent pushes to repo
         """
+        self.total_activity += 1
         pass
 
     def fork_event(self):
         """
         agent tells server it wants a fork of repo
         """
+        self.total_activity += 1
         pass
 
     def watch_event(self, args):
@@ -213,6 +228,7 @@ goalRequirements MakeRepo
             user_info = {'login_h': self.login_h, 'type':self.type, 'ght_id_h': self.ght_id_h}
             status, watch_info = self.sendAction("watch_event", (target_repo_id, user_info))
             self.watching_list[target_repo_id] = watch_info
+            self.total_activity += 1
 
         return [{}]
 
@@ -228,6 +244,7 @@ goalRequirements MakeRepo
             status, follow_info = self.sendAction("follow_event", [target_user_id])
             self.following += 1
             self.following_list[target_user_id] = follow_info
+            self.total_activity += 1
 
         return [{}]
 
@@ -242,6 +259,7 @@ goalRequirements MakeRepo
                              'action': action,
                              'permissions': permissions}
         status = self.sendAction("member_event", [collaborator_info])
+        self.total_activity += 1
 
         return [{}]
 
@@ -251,6 +269,7 @@ goalRequirements MakeRepo
         """
         
         status = self.sendAction("public_event", [])
+        self.total_activity += 1
 
         return [{}]
 

@@ -15,7 +15,7 @@ class GitRepoHub(WorldHub):
         self.local_repos = {} # keyed by repo id, valued by repo object
         self.foreign_repos = {} # keyed by repo id, valued by host
         self.repo_hub_id = repo_hub_id
-        self.host = str(self.repo_hub_id)
+        self.host = kwargs.get("host", str(self.repo_hub_id))
         self.repos_hubs = kwargs.get('repos_hubs', {}).update({self.host: self.port})
         self.lowest_unassigned_repo_id = 0
         self.local_event_log = [] # A dictionary with keys 'userID', 'repoID', 'eventType', 'subeventtype', 'time'
@@ -51,7 +51,9 @@ class GitRepoHub(WorldHub):
         return "Success", self.local_event_log
 
     def processRegisterRequest(self, id, aux_data):
-        aux_response = []
+        creation_time = time()
+        aux_response = [creation_time]
+        self.log_event(id, None, "CreateUser", "None", creation_time)
         self.users.add(id)
         return ["success", id, aux_response]
 
