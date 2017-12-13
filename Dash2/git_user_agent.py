@@ -275,6 +275,7 @@ goalWeight MakeRepo 1
 goalRequirements MakeRepo
   generate_random_repo_name(RepoName)
   create_repo_event(RepoName)
+  commit_comment_event(RepoName, 'intial commit')
             """)
   # pick_repo(RepoName)
   # watch_event(RepoName)

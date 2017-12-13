@@ -165,18 +165,16 @@ if __name__ == '__main__':
 
     # Parameters
     test_agent = WatcherAgent(host='0', port=6000)
-    test_agent.readAgent(
-            """
-goalWeight Thing 1
+#     test_agent.readAgent(
+#             """
+# goalWeight Thing 1
 
-goalRequirements Thing
-  pick_repo(repo_id)
-  watch_event(repo_id)
-  commit_comment_event(repo_id, 'intial commit')
-            """)
-    test_agent.printGoals()
+# goalRequirements Thing
+#   pick_repo(repo_id)
+#   watch_event(repo_id)
+#   commit_comment_event(repo_id, 'intial commit')
+#             """)
+    # test_agent.printGoals()
 #     test_agent.agentLoop(10)
-    # result = test_agent.performAction(["create_repo_event"])
-    # test_agent.update_beliefs(result, "create_repo_event")
     test_agent.disconnect()
     
