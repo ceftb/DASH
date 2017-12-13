@@ -10,17 +10,6 @@ class GitUserAgent(DASHAgent):
     def __init__(self, **kwargs):
         super(GitUserAgent, self).__init__()
 
-        # Goals Should add goals in child class
-        self.readAgent(
-            """
-goalWeight MakeRepo 1
-
-goalRequirements MakeRepo
-  create_repo_event()
-  pick_repo(repo_id)
-  watch_event(repo_id)
-  commit_comment_event(repo_id, 'intial commit')
-            """)
         # Registration
         self.server_host = kwargs.get("host", "localhost")
         self.server_port = kwargs.get("port", 5678)
@@ -67,6 +56,8 @@ goalRequirements MakeRepo
         self.following_list = {} # ght_id_h: {full_name_h, following_date, following_dow}
         self.watching_list = {} # ght_id_h: {full_name_h, watching_date, watching_dow}
         self.owned_repos = {} # {ght_id_h : name_h}
+        self.name_to_repo_id = {} # {name_h : ght_id_h} Contains all repos known by the agent
+        self.name_to_user_id = {} # {login_h : ght_id_h} Contains all users known by the agent
 
         # Actions
         self.primitiveActions([
@@ -132,25 +123,30 @@ goalRequirements MakeRepo
         agent requests server to make new repo
         """
         
-        # _, repo_name = args
-        repo_info = self.generate_repo()
-        status, repo_id = self.sendAction("create_repo_event", repo_info)
+        _, repo_name = args
+        repo_info = {'name_h': repo_name,
+                     'owner': {'login_h': self.login_h, 
+                               'ght_id_h': self.ght_id_h, 
+                               'type': self.type}}
+        status, repo_id = self.sendAction("create_repo_event", [repo_info])
+        print 'repo', repo_name, 'creation status', status, 'id', repo_id
         self.owned_repos[repo_id] = repo_info['name_h']
+        self.name_to_repo_id[repo_name] = repo_id
         self.total_activity += 1
   
         return [{}]
 
-    def commit_comment_event(self, (goal, repo_id, comment)):
+    def commit_comment_event(self, (goal, repo_name, comment)):
         """
         agent sends comment to repo
         """
 
-        print goal, repo_id, comment
-        if repo_id not in self.owned_repos: # Maybe use something like self.known_repos???
+        print goal, repo_name, comment
+        if repo_name not in self.name_to_repo_id: # Maybe use something like self.known_repos???
             print 'Agent does not know the id of the repo, cannot commit'
             return []
-        status = self.sendAction("commit_comment_event", (repo_id, comment))
-        print 'commit comment event:', status, repo_id, comment
+        status = self.sendAction("commit_comment_event", (self.name_to_repo_id[repo_name], comment))
+        print 'commit comment event:', status, repo_name, self.name_to_repo_id[repo_name], comment
         self.total_activity += 1
 
     def create_tag_event(self):
@@ -221,13 +217,13 @@ goalRequirements MakeRepo
         agent decides to watch repo
         """
 
-        _, target_repo_id = args
+        _, target_repo_name = args
 
         # Check if already watching
-        if target_repo_id not in self.watching_list:
+        if self.name_to_repo_id[target_repo_name] not in self.watching_list:
             user_info = {'login_h': self.login_h, 'type':self.type, 'ght_id_h': self.ght_id_h}
-            status, watch_info = self.sendAction("watch_event", (target_repo_id, user_info))
-            self.watching_list[target_repo_id] = watch_info
+            status, watch_info = self.sendAction("watch_event", (self.name_to_repo_id[target_repo_name], user_info))
+            self.watching_list[self.name_to_repo_id[target_repo_name]] = watch_info
             self.total_activity += 1
 
         return [{}]
@@ -237,13 +233,13 @@ goalRequirements MakeRepo
         agent decides to follow person
         """
         
-        _, target_user_id = args
+        _, target_user_name = args
 
         # Check if already following
-        if target_user_id not in self.following_list:
-            status, follow_info = self.sendAction("follow_event", [target_user_id])
+        if self.name_to_user_id[target_user_name] not in self.following_list:
+            status, follow_info = self.sendAction("follow_event", [self.name_to_user_id[target_user_name]])
             self.following += 1
-            self.following_list[target_user_id] = follow_info
+            self.following_list[self.name_to_user_id[target_user_name]] = follow_info
             self.total_activity += 1
 
         return [{}]
@@ -253,9 +249,9 @@ goalRequirements MakeRepo
         agent requests for hub to add/remove/modify collaborators from repo
         """
         
-        _, target_user_id, repo_id, action, permissions = args
-        collaborator_info = {'user_ght_id_h': target_user_id,
-                             'repo_ght_id_h': repo_id,
+        _, target_user_name, repo_name, action, permissions = args
+        collaborator_info = {'user_ght_id_h': self.name_to_user_id[target_user_name],
+                             'repo_ght_id_h': self.name_to_repo_id[repo_name],
                              'action': action,
                              'permissions': permissions}
         status = self.sendAction("member_event", [collaborator_info])
@@ -276,4 +272,15 @@ goalRequirements MakeRepo
 if __name__ == '__main__':
     """
     """
-    GitUserAgent(host='0', port=6000).agentLoop(10)
+    test_agent = GitUserAgent(host='0', port=6000)
+    test_agent.readAgent(
+            """
+goalWeight MakeRepo 1
+
+goalRequirements MakeRepo
+  pick_repo(_myRepoName)
+  create_repo_event(_myRepoName)
+  watch_event(_myRepoName)
+  commit_comment_event(_myRepoName, 'intial commit')
+            """)
+    test_agent.agentLoop(10)

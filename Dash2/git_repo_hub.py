@@ -50,12 +50,11 @@ class GitRepoHub(WorldHub):
 
         return "Success", self.local_event_log
 
-    def processRegisterRequest(self, id, aux_data):
+    def processRegisterRequest(self, agent_id, aux_data):
         creation_time = time()
-        aux_response = [creation_time]
-        self.log_event(id, None, "CreateUser", "None", creation_time)
-        self.users.add(id)
-        return ["success", id, aux_response]
+        self.log_event(agent_id, None, "CreateUser", "None", creation_time)
+        self.users.add(agent_id)
+        return ["success", agent_id, creation_time]
 
     def synch_repo_hub(self, host, port):
         """
@@ -67,7 +66,7 @@ class GitRepoHub(WorldHub):
 
         pass
 
-    def create_repo_event(self, agent_id, repo_info):
+    def create_repo_event(self, agent_id, (repo_info,)):
         """
         Requests that a git_repo_hub create and start a new repo given 
         the provided repository information
@@ -76,8 +75,10 @@ class GitRepoHub(WorldHub):
         repo_id = self.lowest_unassigned_repo_id
         self.lowest_unassigned_repo_id += 1
         print('Request to create repo from', agent_id, 'for', repo_info)
+        repo_creation_date = time()
+        repo_info['created_at'] = repo_creation_date
         self.local_repos[repo_id] = GitRepo(repo_id, **repo_info)
-        self.log_event(agent_id, repo_id, 'CreateRepoEvent', 'None', time())
+        self.log_event(agent_id, repo_id, 'CreateRepoEvent', 'None', repo_creation_date)
 
         return 'success', repo_id
       

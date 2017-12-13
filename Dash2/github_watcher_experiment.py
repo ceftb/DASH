@@ -1,8 +1,42 @@
-from dash import DASHAgent
 import random
+from bisect import insort
+from dash import DASHAgent
 from git_user_agent import GitUserAgent
 from git_repo_hub import GitRepoHub
 from multiprocessing import Process
+
+class RepoWatch(object):
+
+    def __init__(self, repo_id, watch_count):
+
+        self.repo_id = repo_id
+        self.watch_count = watch_count
+
+    def __cmp__(self, other):
+
+        return -1 if self.watch_count < other.watch_count else \
+                1 if self.watch_count > other.watch_count else \
+                0
+
+# insort on new
+# bisect + swap on change?
+
+class WatchSortedHub(GitRepoHub):
+
+    def __init__(self, repo_hub_id, **kwargs):
+        super(WatchSortedHub, self).__init__(repo_hub_id, **kwargs)
+        self.repo_ids_sorted_by_most_watched = []
+
+class WatcherAgent(GitUserAgent):
+    """
+    Agent specialized in watching and making repositories
+    """
+
+    def __init__(self, **kwargs):
+        super(WatcherAgent, self).__init__(**kwargs)
+        self.gamma = kwargs.get('gamma', 1)
+
+
 
 class HubManager(DASHAgent):
     """
@@ -87,8 +121,12 @@ class WatcherExperiment(object):
         self.W = 1 - U - R
         assert(U > 0)
         assert(R > 0)
-        assert(abs(1 - U + R + W) < 0.0001) # Rough check that probs sum to 1
+        assert(abs(1 - U - R - W) < 0.0001) # check probability sum to 1
 
+        self.beta = beta 
+        self.gamma = gamma
+
+        self.users = {} # id : user_object
 
     def __call__(self, iterations=1):
 
@@ -126,3 +164,19 @@ if __name__ == '__main__':
     """
 
     # Parameters
+    test_agent = WatcherAgent(host='0', port=6000)
+    test_agent.readAgent(
+            """
+goalWeight Thing 1
+
+goalRequirements Thing
+  pick_repo(repo_id)
+  watch_event(repo_id)
+  commit_comment_event(repo_id, 'intial commit')
+            """)
+    test_agent.printGoals()
+#     test_agent.agentLoop(10)
+    # result = test_agent.performAction(["create_repo_event"])
+    # test_agent.update_beliefs(result, "create_repo_event")
+    test_agent.disconnect()
+    
