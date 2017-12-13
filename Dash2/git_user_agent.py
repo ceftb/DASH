@@ -61,7 +61,8 @@ class GitUserAgent(DASHAgent):
 
         # Actions
         self.primitiveActions([
-            ('pick_repo', self.pick_repo),
+            ('generate_random_repo_name', self.generate_random_repo_name),
+            ('pick_random_repo', self.pick_random_repo),
             ('create_repo_event', self.create_repo_event),
             ('commit_comment_event', self.commit_comment_event),
             ('create_tag_event', self.create_tag_event),
@@ -82,27 +83,21 @@ class GitUserAgent(DASHAgent):
     # Model dependent methods
     ############################################################################
 
-    def generate_repo(self):
+    def generate_random_repo_name(self, (goal, repo_name_variable)):
         """
-        Funtion that will return a dictionary with the necessary information
-        to build a repository.
-
-        Returns bare minimum randomly generated repo
+        Function that randomly generates name for a repo
         """
 
         alphabet = "abcdefghijklmnopqrstuvwxyz"
-        return {'name_h': ''.join(random.sample(alphabet, random.randint(1,10))),
-                'owner': {'login_h': self.login_h, 
-                          'ght_id_h': self.ght_id_h, 
-                          'type': self.type}
-                }
+        return [{repo_name_variable : ''.join([random.choice(alphabet) 
+                                       for i in range(random.randint(3,10))])}]
 
-    def pick_repo(self, (goal, repo_id)):
+    def pick_random_repo(self, (goal, repo_name_variable)):
         """
         Function that will randomly pick a repository and return the id
         """
 
-        return [{'repo_id' : random.choice(self.owned_repos.keys()) }]
+        return [{repo_name_variable : random.choice(self.name_to_repo_id.keys()) }]
 
     ############################################################################
     # Core git user methods
@@ -142,7 +137,7 @@ class GitUserAgent(DASHAgent):
         """
 
         print goal, repo_name, comment
-        if repo_name not in self.name_to_repo_id: # Maybe use something like self.known_repos???
+        if repo_name not in self.name_to_repo_id:
             print 'Agent does not know the id of the repo, cannot commit'
             return []
         status = self.sendAction("commit_comment_event", (self.name_to_repo_id[repo_name], comment))
@@ -278,9 +273,10 @@ if __name__ == '__main__':
 goalWeight MakeRepo 1
 
 goalRequirements MakeRepo
-  pick_repo(_myRepoName)
-  create_repo_event(_myRepoName)
-  watch_event(_myRepoName)
-  commit_comment_event(_myRepoName, 'intial commit')
+  generate_random_repo_name(RepoName)
+  create_repo_event(RepoName)
             """)
+  # pick_repo(RepoName)
+  # watch_event(RepoName)
+  # commit_comment_event(RepoName, 'intial commit')
     test_agent.agentLoop(10)
