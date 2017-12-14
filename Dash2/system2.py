@@ -241,6 +241,14 @@ class System2Agent:
         for goal in self.goalWeightDict:
             print goal, self.goalWeightDict[goal]
 
+    def clearGoalsAndPlans(self):
+        # Remove goals and plans, allowing new behaviors while leaving primitive actions
+        self.goalWeightDict = {}
+        self.goalRequirementsDict = {}
+        self.projectionRuleDict = {}
+        self.triggerRules = []
+        self.utilityRules = []
+
     # Adds 'goal' as a known fact or completed goal
     def knownTuple(self, t):
         self.addTuple(t, self.knownDict)
