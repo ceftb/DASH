@@ -10,6 +10,19 @@ class GitUserAgent(DASHAgent):
     def __init__(self, **kwargs):
         super(GitUserAgent, self).__init__()
 
+        self.readAgent(
+            """
+goalWeight MakeRepo 1
+
+goalRequirements MakeRepo
+  generate_random_repo_name(RepoName)
+  create_repo_event(RepoName)
+  commit_comment_event(RepoName, 'intial commit')
+  pick_repo(RepoName)
+  watch_event(RepoName)
+  public_event(RepoName)
+            """)
+
         # Registration
         self.server_host = kwargs.get("host", "localhost")
         self.server_port = kwargs.get("port", 5678)
@@ -254,12 +267,16 @@ class GitUserAgent(DASHAgent):
 
         return [{}]
 
-    def public_event(self, args):
+    def public_event(self, (goal, repo_name)):
         """
         agent requests server change repo public status
         """
         
-        status = self.sendAction("public_event", [])
+        if repo_name not in self.name_to_repo_id:
+            print 'Agent does not know the id of the repo, cannot commit'
+            return []
+        status = self.sendAction("public_event", [self.name_to_repo_id[repo_name]])
+        print "Toggling", repo_name, "public", status
         self.total_activity += 1
 
         return [{}]
@@ -267,17 +284,4 @@ class GitUserAgent(DASHAgent):
 if __name__ == '__main__':
     """
     """
-    test_agent = GitUserAgent(host='0', port=6000)
-    test_agent.readAgent(
-            """
-goalWeight MakeRepo 1
-
-goalRequirements MakeRepo
-  generate_random_repo_name(RepoName)
-  create_repo_event(RepoName)
-  commit_comment_event(RepoName, 'intial commit')
-            """)
-  # pick_repo(RepoName)
-  # watch_event(RepoName)
-  # commit_comment_event(RepoName, 'intial commit')
-    test_agent.agentLoop(10)
+    GitUserAgent(host='0', port=6000).agentLoop(50)
