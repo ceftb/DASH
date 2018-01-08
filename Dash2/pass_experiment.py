@@ -42,10 +42,11 @@ class PasswordTrial(trial.Trial):
               'proportion of resets is', resets
 
 
-def run_one(hosts=[], exp_range=Range(0, 20), num_trials=30, max_iterations=100, output_file="/tmp/results"):
+def run_one(hosts=None, exp_range=Range(0, 20), num_trials=30, max_iterations=100, output_file="/tmp/results"):
     #e = Experiment(PasswordTrial, num_trials=2, independent=['hardness', [0, 7]])  # Range(0, 2)])  # typically 0,14 but shortened for testing
     # Setting up one trial to test the Magi integration
-    e = Experiment(PasswordTrial, num_trials=num_trials, independent=['hardness', exp_range],
+    e = Experiment(PasswordTrial, num_trials=num_trials,
+                   independent=['hardness', exp_range],
                    dependent=lambda t: (len(t.agent.known_passwords), pass_sim.expected_number_of_sites(t.reuses),
                                         t.agent.call_measure('proportion of resets')),
                    start_hub="pass_sim_hub.py",
@@ -79,5 +80,5 @@ def run_one(hosts=[], exp_range=Range(0, 20), num_trials=30, max_iterations=100,
 
 # can be called from the command line with e.g. the number of agents per trial.
 if __name__ == "__main__":
-    exp, results, processed_results = run_one(sys.argv[1:], num_trials=10, max_iterations=10)
+    exp, results, processed_results = run_one(sys.argv[1:], num_trials=50, max_iterations=30)
     print 'end process call'
