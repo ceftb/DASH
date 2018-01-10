@@ -91,7 +91,7 @@ goalRequirements ReviewCode
         status = self.sendAction("commit_comment_event", (self.name_to_repo_id[repo_name], comment))
         print 'commit comment event:', status, repo_name, self.name_to_repo_id[repo_name], comment
 
-    def pull_repo_event(self):
+    def pull_repo_event(self, args):
         """
         This event describes local code update (pull from the repo)
         """

@@ -96,7 +96,7 @@ goalRequirements MakeRepo
     # Model dependent methods
     ############################################################################
 
-    def generate_repo(self, name=None):
+    def generate_random_repo_name(self, name=None):
         """
         Function that randomly generates name for a repo
         """
