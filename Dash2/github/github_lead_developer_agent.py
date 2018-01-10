@@ -46,15 +46,6 @@ goalRequirements ReviewCode
         self.public_repos = kwargs.get("public_repos", 0)
         self.followers = kwargs.get("followers", 0)
         self.following = kwargs.get("following", 0)
-        # Follower list would be composed of dictionaries with items:
-        # login_h, type, ght_id_h, following_date, following_dow
-        self.follower_list = kwargs.get('follower_list', {})  # Keyed by id
-
-        # If account is an organization it can have members
-        # members is a list of dictionaries with keys for
-        # user: login_h, type, ght_id_h, joined_at_date, joined_at_dow
-        if self.type.lower() == "organization":
-            self.members = kwargs.get("members", {})  # Keyed by id
 
         # Assigned information
         self.id = registration[1]
@@ -76,7 +67,6 @@ goalRequirements ReviewCode
             ('delete_branch_event', self.delete_branch_event),
             ('fork_event', self.fork_event),
             ('issue_comment_event', self.issue_comment_event),
-            # ('issue_event', self.issue_event),  # Not defined
             ('pull_request_event', self.pull_request_event),
             ('push_event', self.push_event),
             ('watch_event', self.watch_event),
