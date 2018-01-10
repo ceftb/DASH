@@ -194,6 +194,69 @@ goalRequirements MakeRepo
         self.total_activity += 1
         pass
 
+    def issue_open_event(self):
+        """
+        open a new issue
+        """
+        self.total_activity += 1
+        pass
+
+    def issue_reopen_event(self):
+        """
+        reopen issue
+        """
+        self.total_activity += 1
+        pass
+
+    def issue_close_event(self):
+        """
+        close issue
+        """
+        self.total_activity += 1
+        pass
+
+    def issue_assign_event(self):
+        """
+        assign issue
+        """
+        self.total_activity += 1
+        pass
+
+    def issue_unassign_event(self):
+        """
+        unassign issue
+        """
+        self.total_activity += 1
+        pass
+
+    def issue_label_event(self):
+        """
+        label issue
+        """
+        self.total_activity += 1
+        pass
+
+    def issue_unlable_event(self):
+        """
+        unlabel issue
+        """
+        self.total_activity += 1
+        pass
+
+    def issue_milestone_event(self):
+        """
+        milestone issue
+        """
+        self.total_activity += 1
+        pass
+
+    def issue_demilestone_event(self):
+        """
+        demilestone issue
+        """
+        self.total_activity += 1
+        pass
+
     def issues_event(self):
         """
         agent sends status change of issue to repo
