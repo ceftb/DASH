@@ -187,6 +187,10 @@ goalRequirements MakeRepo
         self.total_activity += 1
         pass
 
+    ############################################################################
+    # Issues Events methods
+    ############################################################################
+
     def issue_comment_event(self):
         """
         send a comment to a repo
@@ -253,6 +257,87 @@ goalRequirements MakeRepo
     def issue_demilestone_event(self):
         """
         demilestone issue
+        """
+        self.total_activity += 1
+        pass
+
+    ############################################################################
+    # Pull Request Events methods
+    ############################################################################
+
+    def submit_pull_request_event(self):
+        """
+        submit pull request
+        """
+        self.total_activity += 1
+        pass
+
+    def close_pull_request_event(self):
+        """
+        close pull request
+        """
+        self.total_activity += 1
+        pass
+
+    def assign_pull_request_event(self):
+        """
+        assign pull request
+        """
+        self.total_activity += 1
+        pass
+
+    def unassign_pull_rreopenequest_event(self):
+        """
+        unassign pull request
+        """
+        self.total_activity += 1
+        pass
+
+    def label_pull_request_event(self):
+        """
+        label pull request
+        """
+        self.total_activity += 1
+        pass
+
+    def unlabel_pull_request_event(self):
+        """
+        unlabel pull request
+        """
+        self.total_activity += 1
+        pass
+
+    def request_review_event(self):
+        """
+        request review pull request
+        """
+        self.total_activity += 1
+        pass
+
+    def request_review_event(self):
+        """
+        request review pull request
+        """
+        self.total_activity += 1
+        pass
+
+    def remove_review_request_event(self):
+        """
+        remove pull request review request
+        """
+        self.total_activity += 1
+        pass
+
+    def reopen_pull_request_event(self):
+        """
+        reopen pull request
+        """
+        self.total_activity += 1
+        pass
+
+    def edit_pull_request_event(self):
+        """
+        edit pull request
         """
         self.total_activity += 1
         pass
