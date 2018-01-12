@@ -1,3 +1,4 @@
+import sys; sys.path.extend(['../../'])
 import sys
 from Dash2.core.experiment import Experiment
 from Dash2.core.trial import Trial

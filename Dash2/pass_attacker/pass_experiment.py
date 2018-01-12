@@ -5,6 +5,7 @@ aggregate security for the pass_sim.py agent. pass_sim_hub.py should be running.
 
 from Dash2.core.experiment import Experiment
 from Dash2.core.parameter import Range
+import sys; sys.path.extend(['../../'])
 from Dash2.core.trial import Trial
 import sys
 import pass_sim

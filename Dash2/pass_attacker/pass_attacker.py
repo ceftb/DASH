@@ -1,6 +1,6 @@
 # Initial attacker agent for password agents
+import sys; sys.path.extend(['../../'])
 import random
-
 from Dash2.core.dash import DASHAgent
 from Dash2.core.system2 import isVar
 

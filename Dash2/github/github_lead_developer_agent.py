@@ -1,3 +1,4 @@
+import sys; sys.path.extend(['../../'])
 from Dash2.github.git_user_agent import GitUserAgent
 
 

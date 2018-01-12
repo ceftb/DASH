@@ -1,7 +1,9 @@
+import sys; sys.path.extend(['../../'])
 from Dash2.core.world_hub import WorldHub
 from git_repo import GitRepo
 from time import time
 import pickle
+
 
 class GitRepoHub(WorldHub):
     """

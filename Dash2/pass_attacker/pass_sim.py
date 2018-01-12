@@ -27,6 +27,7 @@ Probably the uncanniness will depend on those numbers, which points to the value
 """
 
 
+import sys; sys.path.extend(['../../'])
 from Dash2.core.dash import DASHAgent
 from Dash2.core.parameter import Parameter
 from Dash2.core.system2 import isVar

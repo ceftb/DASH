@@ -1,3 +1,4 @@
+import sys; sys.path.extend(['../../'])
 import random
 from Dash2.core.dash import DASHAgent
 from git_user_agent import GitUserAgent

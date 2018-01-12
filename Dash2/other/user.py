@@ -1,3 +1,4 @@
+import sys; sys.path.extend(['../../'])
 from Dash2.core.dash import DASHAgent
 import subprocess
 import logging

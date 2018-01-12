@@ -21,6 +21,7 @@
 ##### finish elaborate pass choosing
 
 
+import sys; sys.path.extend(['../../'])
 from Dash2.core.dash import DASHAgent
 from Dash2.core.system2 import isVar
 from utils import distPicker

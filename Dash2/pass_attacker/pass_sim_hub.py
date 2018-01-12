@@ -1,3 +1,4 @@
+import sys; sys.path.extend(['../../'])
 from Dash2.core.world_hub import WorldHub
 from utils import distPicker, Service
 import random

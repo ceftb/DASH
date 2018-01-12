@@ -1,3 +1,4 @@
+import sys; sys.path.extend(['../../'])
 import random
 import copy
 from Dash2.core.dash import DASHAgent

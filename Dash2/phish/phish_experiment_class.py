@@ -7,6 +7,7 @@ scale to 1m in one image on my 16g laptop while running the OS and a browser. I 
 share memory between agents in the same image for e.g. the goal table and see if that improves the outlook.
 """
 
+import sys; sys.path.extend(['../../'])
 from Dash2.core.experiment import Experiment
 from Dash2.core.trial import Trial
 from Dash2.core.parameter import Range, Parameter, Uniform, TruncNorm

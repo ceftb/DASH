@@ -1,4 +1,4 @@
-
+import sys; sys.path.extend(['../../'])
 from Dash2.core.dash import DASHAgent
 from Dash2.core.parameter import Parameter, IntegerUniform
 import sys
