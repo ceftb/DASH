@@ -1,6 +1,4 @@
-import sys
-sys.path.insert(0, '..')
-from git_user_agent import GitUserAgent
+from Dash2.github.git_user_agent import GitUserAgent
 
 
 class GitLeadDeveloperAgent(GitUserAgent):
@@ -29,7 +27,7 @@ goalRequirements ReviewCode
             ('pull_repo_event', self.pull_repo_event),
             ('public_event', self.public_event)])
 
-        self.traceGoals = True
+        #self.traceGoals = True
 
     ############################################################################
     # Lead developer git user methods
