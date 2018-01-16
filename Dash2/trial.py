@@ -32,22 +32,29 @@ class Trial(object):
             for a in self.agents:
                 if not self.agent_should_stop(a):
                     return False
-        return True   # if not overridden, the trial will have no iterations
+        if self.max_iterations > 0 and self.iteration < self.max_iterations:
+            return False  # Follow the number of iterations by default
+        else:
+            return True
 
     # Default method for whether an agent should stop. By default, true, so if neither
     # this method nor should_stop are overridden, nothing will happen.
     def agent_should_stop(self, agent):
         return True
 
+    # Default method to run one iteration of the trial: run one iteration of every active agent
+    def run_one_iteration(self):
+        for agent in self.agents:
+            if not self.agent_should_stop(agent):
+                next_action = agent.agentLoop(max_iterations=1, disconnect_at_end=False)  # don't disconnect since will run again
+                self.process_after_agent_action(agent, next_action)
+
     def run(self):  # overridden in each subclass to do something useful
         self.initialize()
         for agent in self.agents:
             agent.traceLoop = False
         while not self.should_stop():
-            for agent in self.agents:
-                if not self.agent_should_stop(agent):
-                    next_action = agent.agentLoop(max_iterations=1, disconnect_at_end=False)  # don't disconnect since will run again
-                    self.process_after_agent_action(agent, next_action)
+            self.run_one_iteration()
             self.process_after_iteration()
             self.iteration += 1
         self.process_after_run()
