@@ -43,6 +43,7 @@ class GitRepo(object):
         # # agent will prioritize addressing pulls
         # self.pull_requests = []
         self.commit_comments = []
+        self.commits = []
 
     # Below methods match RepoHub actions
     # RepoHub would call the corresponding repo's method for the user action
@@ -134,13 +135,16 @@ class GitRepo(object):
         """
         pass
 
-    def push_event(self, agent_id, push_request):
+    def push_event(self, agent_id, commit_to_push):
         """
         user requests to push to repo
         check if collab 
         repo pushes
         """
-        pass
+        # if agent_id not in self.collaborators: # need to add agent to collaborators first
+         #    return "Failure: Agent not a collaborator"
+        self.commits.append(commit_to_push)
+        return "Successfully pushed"
 
     def watch_event(self, user_info):
         """

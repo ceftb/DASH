@@ -74,7 +74,7 @@ goalRequirements CommitCode
         if repo_name not in self.name_to_repo_id:
             print 'Agent does not know the id of the repo with name', repo_name, 'cannot push'
             return []
-        status = self.sendAction("push_event", (self.name_to_repo_id[repo_name]))
+        status = self.sendAction("push_event", (self.name_to_repo_id[repo_name], "commit to push"))
         self.total_activity += 1
         print 'push event:', status, repo_name, self.name_to_repo_id[repo_name]
         return [{}]

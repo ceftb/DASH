@@ -22,6 +22,7 @@ class GitRepoHub(WorldHub):
         self.lowest_unassigned_repo_id = 0
         self.local_event_log = [] # A dictionary with keys 'userID', 'repoID', 'eventType', 'subeventtype', 'time'
 
+
     def log_event(self, user_id, repo_id, event_type, subevent_type, time):
         """
         Logs the event in the hubs local log list
@@ -79,6 +80,7 @@ class GitRepoHub(WorldHub):
         print('Request to create repo from', agent_id, 'for', repo_info)
         repo_creation_date = time()
         repo_info['created_at'] = repo_creation_date
+        repo_info['owner'] = {agent_id : 'owner'}
         self.local_repos[repo_id] = GitRepo(repo_id, **repo_info)
         self.log_event(agent_id, repo_id, 'CreateRepoEvent', 'None', repo_creation_date)
 
@@ -196,7 +198,7 @@ class GitRepoHub(WorldHub):
         """
         pass
 
-    def push_event(self, agent_id, (repo_id)):
+    def push_event(self, agent_id, (repo_id, commit_to_push)):
         """
         user pushes to remote repository
         """
@@ -204,7 +206,7 @@ class GitRepoHub(WorldHub):
         if repo_id not in self.local_repos:
             print 'unknown repo id for push_event:', repo_id
             return 'fail'
-
+        self.local_repos[repo_id].push_event(agent_id, commit_to_push)
         self.log_event(agent_id, repo_id, 'PushEvent','None',time())
         print 'agent ', agent_id, 'Pushed to repo id ', repo_id
         return 'success'
