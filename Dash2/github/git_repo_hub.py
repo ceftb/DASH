@@ -105,7 +105,7 @@ class GitRepoHub(WorldHub):
         """
 
         if repo_id not in self.local_repos:
-            print 'unknown repo id for comment_comment_event:', repo_id
+            print 'unknown repo id for pull_repo_event:', repo_id
             return 'fail'
 
         self.log_event(agent_id, repo_id, 'PullEvent','None',time())
@@ -196,13 +196,18 @@ class GitRepoHub(WorldHub):
         """
         pass
 
-    def push_event(self, agent_id, push_request):
+    def push_event(self, agent_id, (repo_id)):
         """
-        user requests to push to repo
-        check if collab 
-        repo pushes
+        user pushes to remote repository
         """
-        pass
+
+        if repo_id not in self.local_repos:
+            print 'unknown repo id for push_event:', repo_id
+            return 'fail'
+
+        self.log_event(agent_id, repo_id, 'PushEvent','None',time())
+        print 'agent ', agent_id, 'Pushed to repo id ', repo_id
+        return 'success'
 
     def watch_event(self, agent_id, data):
         """
