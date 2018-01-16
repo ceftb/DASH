@@ -53,32 +53,6 @@ goalRequirements CommitCode
         print 'commit comment event:', status, repo_name, self.name_to_repo_id[repo_name], comment
         return [{}]
 
-    def pull_repo_event(self, args):
-        """
-        This event describes local code update (pull from the repo)
-        """
-        _, repo_name = args
-        if repo_name not in self.name_to_repo_id:
-            print 'Agent does not know the id of the repo with name', repo_name, 'cannot pull'
-            return []
-        status = self.sendAction("pull_repo_event", (self.name_to_repo_id[repo_name]))
-        self.total_activity += 1
-        print 'pull event:', status, repo_name, self.name_to_repo_id[repo_name]
-        return [{}]
-
-    def push_event(self, args):
-        """
-        This event describes local code update (pull from the repo)
-        """
-        _, repo_name = args
-        if repo_name not in self.name_to_repo_id:
-            print 'Agent does not know the id of the repo with name', repo_name, 'cannot push'
-            return []
-        status = self.sendAction("push_event", (self.name_to_repo_id[repo_name], "commit to push"))
-        self.total_activity += 1
-        print 'push event:', status, repo_name, self.name_to_repo_id[repo_name]
-        return [{}]
-
 if __name__ == '__main__':
     """
     """
