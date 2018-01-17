@@ -6,6 +6,7 @@ existing agent is chosen or a new agent is created with some probability, then t
 existing repo or creates a new one with some probability. If it picks an existing repo, it picks an event
 and sends it to the hub, for a new repo the create event is sent.
 """
+import sys; sys.path.extend(['../../'])
 
 from Dash2.core.experiment import Experiment
 from Dash2.core.trial import Trial
