@@ -279,7 +279,8 @@ class System2Agent:
         if goal is not None:
             return self.chooseActionForGoals([goal])
         else:
-            print 'no unsatisfied goals'
+            if self.traceGoals:
+                print 'no unsatisfied goals'
             return None
 
     def chooseGoal(self):

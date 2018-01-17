@@ -11,7 +11,7 @@ class GitUserAgent(DASHAgent):
 
     def __init__(self, **kwargs):
         super(GitUserAgent, self).__init__()
-        #self.isSharedSocketEnabled = True # if it is True, than common socket for all agents is used.
+        self.isSharedSocketEnabled = True # if it is True, than common socket for all agents is used.
         # The first agent to use the socket, gets to set up the connection. All other agents with
         # isSharedSocketEnabled = True will reuse it.
 
@@ -30,6 +30,7 @@ goalRequirements MakeRepo
         # Registration
         self.server_host = kwargs.get("host", "localhost")
         self.server_port = kwargs.get("port", 5678)
+        self.trace_client = kwargs.get("trace_client", True)
         registration = self.register()
 
         # Setup information
@@ -68,6 +69,8 @@ goalRequirements MakeRepo
             self.ght_id_h = self.id 
             self.created_at = registration[2]
 
+        self.trace_github = True  # Will print far less to the screen if this is False
+
         # Other Non-Schema information
         self.total_activity = 0
         self.following_list = {} # ght_id_h: {full_name_h, following_date, following_dow}
@@ -104,7 +107,8 @@ goalRequirements MakeRepo
         """
         Function that randomly generates name for a repo
         """
-        print 'generat random repo name'
+        if self.trace_github:
+            print 'generate random repo name'
         alphabet = "abcdefghijklmnopqrstuvwxyz"
         if name is None:
             name = ''.join(random.sample(alphabet, random.randint(1,20)))
@@ -140,10 +144,12 @@ goalRequirements MakeRepo
         """
         agent requests server to make new repo
         """
-        print 'create repo event'
+        if self.trace_github:
+            print 'create repo event'
         repo_info = self.generate_random_repo_name(None if isVar(name_var) else name_var)
         status, repo_id = self.sendAction("create_repo_event", [repo_info])
-        print 'create repo result:', status, repo_id, 'for', repo_info
+        if self.trace_github:
+            print 'create repo result:', status, repo_id, 'for', repo_info
         self.owned_repos.update({repo_id: repo_info['name_h']})
         self.name_to_repo_id[repo_info['name_h']] = repo_id
         self.total_activity += 1
@@ -154,12 +160,15 @@ goalRequirements MakeRepo
         """
         agent sends comment to repo
         """
-        print goal, repo_name, comment
+        if self.trace_github:
+            print goal, repo_name, comment
         if repo_name not in self.name_to_repo_id:
-            print 'Agent does not know the id of the repo with name', repo_name, 'cannot commit'
+            if self.trace_github:
+                print 'Agent does not know the id of the repo with name', repo_name, 'cannot commit'
             return []
         status = self.sendAction("commit_comment_event", (self.name_to_repo_id[repo_name], comment))
-        print 'commit comment event:', status, repo_name, self.name_to_repo_id[repo_name], comment
+        if self.trace_github:
+            print 'commit comment event:', status, repo_name, self.name_to_repo_id[repo_name], comment
         self.total_activity += 1
         return [{}]
 
@@ -184,7 +193,9 @@ goalRequirements MakeRepo
         self.total_activity += 1
         pass
 
-        print 'create repo event'
+        if self.trace_github:
+            print 'delete tag event'
+
     def delete_branch_event(self):
         """
         agent removes branch from repo
@@ -369,11 +380,13 @@ goalRequirements MakeRepo
         """
         _, repo_name = args
         if repo_name not in self.name_to_repo_id:
-            print 'Agent does not know the id of the repo with name', repo_name, 'cannot push'
+            if self.trace_github:
+                print 'Agent does not know the id of the repo with name', repo_name, 'cannot push'
             return []
         status = self.sendAction("push_event", (self.name_to_repo_id[repo_name], "commit to push"))
         self.total_activity += 1
-        print 'push event:', status, repo_name, self.name_to_repo_id[repo_name]
+        if self.trace_github:
+            print 'push event:', status, repo_name, self.name_to_repo_id[repo_name]
         return [{}]
 
     def fork_event(self):
@@ -435,10 +448,12 @@ goalRequirements MakeRepo
         """
         
         if repo_name not in self.name_to_repo_id:
-            print 'Agent does not know the id of the repo, cannot commit'
+            if self.trace_github:
+                print 'Agent does not know the id of the repo, cannot commit'
             return []
         status = self.sendAction("public_event", [self.name_to_repo_id[repo_name]])
-        print "Toggling", repo_name, "public", status
+        if self.trace_github:
+            print "Toggling", repo_name, "public", status
         self.total_activity += 1
 
         return [{}]
@@ -450,11 +465,13 @@ goalRequirements MakeRepo
         """
         _, repo_name = args
         if repo_name not in self.name_to_repo_id:
-            print 'Agent does not know the id of the repo with name', repo_name, 'cannot pull'
+            if self.trace_github:
+                print 'Agent does not know the id of the repo with name', repo_name, 'cannot pull'
             return []
         status = self.sendAction("pull_repo_event", (self.name_to_repo_id[repo_name]))
         self.total_activity += 1
-        print 'pull event:', status, repo_name, self.name_to_repo_id[repo_name]
+        if self.trace_github:
+            print 'pull event:', status, repo_name, self.name_to_repo_id[repo_name]
         return [{}]
 
 if __name__ == '__main__':
