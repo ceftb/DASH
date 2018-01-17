@@ -8,6 +8,8 @@ class Client(object):
     """
     Template class for the client agent
     """
+    shared_socket = None;
+
     def __init__(self, host=None, port=None):
         """ Initialization of the client.
         It is required to run Client.run() in order to recieve ID from the
@@ -32,6 +34,10 @@ class Client(object):
         self.id = None
         self.connected = False
         self.traceAction = False
+
+        self.isSharedSocketEnabled = False; # The first agent to use the socket, gets to set up the connection.
+        # All other agents with isSharedSocketEnabled = True will reuse it.
+
 
     def test(self):
         """
@@ -72,8 +78,16 @@ class Client(object):
             print "connecting to %s on port %s..." % (self.server_host, self.server_port)
 
         try:
-            self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.sock.connect((self.server_host, self.server_port))
+            if self.isSharedSocketEnabled:
+                if Client.shared_socket is None:
+                    Client.shared_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    Client.shared_socket.connect((self.server_host, self.server_port))
+                self.sock = Client.shared_socket
+                # not need to establish connection, because it is assmed that if shared socket is not None,
+                # it is already connected to a server.
+            else:
+                self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                self.sock.connect((self.server_host, self.server_port))
             self.connected = True
             if self.trace_client:
                 print "successfully connected."
@@ -182,15 +196,24 @@ class Client(object):
             aux_data(list)    # Data to be sent to the world hub
         """
 
-        if self.sock is not None:
+        if self.sock is not None and self.isSharedSocketEnabled is False:
             if self.connected:
                 self.sendMessage(message_types['disconnect'], [self.id, aux_data])
                 self.sock.shutdown(socket.SHUT_RDWR)
-
-            if self.trace_client:
-                print "disconnecting from world hub" + "." if self.connected else ", no message sent since already not connected."
-
             self.sock.close()
+
+        if self.sock is not None and self.isSharedSocketEnabled is True:
+            if self.connected and self.shared_socket :
+                try:
+                    self.sendMessage(message_types['disconnect'], [self.id, aux_data])
+                    self.sock.shutdown(socket.SHUT_RDWR)
+                except socket.error, msg:
+                    print "already closed"
+
+        if self.trace_client:
+            print "disconnecting from world hub" + "." if self.connected else ", no message sent since already not connected."
+
+
         #sys.exit(0)  # Should not automatically kill the process
 
     def processActionResponse(self, result, aux_response):

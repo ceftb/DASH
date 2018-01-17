@@ -11,6 +11,9 @@ class GitUserAgent(DASHAgent):
 
     def __init__(self, **kwargs):
         super(GitUserAgent, self).__init__()
+        #self.isSharedSocketEnabled = True # if it is True, than common socket for all agents is used.
+        # The first agent to use the socket, gets to set up the connection. All other agents with
+        # isSharedSocketEnabled = True will reuse it.
 
         self.readAgent(
             """
