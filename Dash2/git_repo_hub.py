@@ -97,6 +97,19 @@ class GitRepoHub(WorldHub):
         self.log_event(agent_id, repo_id, 'CommitCommentEvent','None',time())
         return 'success'
 
+    def pull_repo_event(self, agent_id, (repo_id)):
+        """
+        user pulls remove repository to local repository for further review
+        """
+
+        if repo_id not in self.local_repos:
+            print 'unknown repo id for comment_comment_event:', repo_id
+            return 'fail'
+
+        self.log_event(agent_id, repo_id, 'PullEvent','None',time())
+        print 'agent ', agent_id, 'pulled repo id ', repo_id
+        return 'success'
+
     def create_tag_event(self, agent_id, tag_info):
         """
         user requests to make a new tag

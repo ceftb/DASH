@@ -15,10 +15,9 @@ class GitUserAgent(DASHAgent):
 goalWeight MakeRepo 1
 
 goalRequirements MakeRepo
-  generate_random_repo_name(RepoName)
   create_repo_event(RepoName)
   commit_comment_event(RepoName, 'intial commit')
-  pick_repo(RepoName)
+  pick_random_repo(RepoName)
   watch_event(RepoName)
   public_event(RepoName)
             """)
@@ -100,21 +99,22 @@ goalRequirements MakeRepo
         """
         Function that randomly generates name for a repo
         """
-
+        print 'generat random repo name'
         alphabet = "abcdefghijklmnopqrstuvwxyz"
         if name is None:
             name = ''.join(random.sample(alphabet, random.randint(1,20)))
+        self.total_activity += 1
         return {'name_h': name,
                 'owner': {'login_h': self.login_h, 
                           'ght_id_h': self.ght_id_h, 
                           'type': self.type}
                 }
 
-    def pick_random_repo(self, (goal, repo_name_variable)):
+    def pick_random_repo(self, repo_name_variable):
         """
         Function that will randomly pick a repository and return the id
         """
-
+        self.total_activity += 1
         return [{repo_name_variable : random.choice(self.name_to_repo_id.keys()) }]
 
     ############################################################################
@@ -135,11 +135,11 @@ goalRequirements MakeRepo
         """
         agent requests server to make new repo
         """
-        
-        repo_info = self.generate_repo(None if isVar(name_var) else name_var)
+        print 'create repo event'
+        repo_info = self.generate_random_repo_name(None if isVar(name_var) else name_var)
         status, repo_id = self.sendAction("create_repo_event", [repo_info])
         print 'create repo result:', status, repo_id, 'for', repo_info
-        self.owned_repos.add(repo_id)
+        self.owned_repos.update({repo_id: repo_info['name_h']})
         self.name_to_repo_id[repo_info['name_h']] = repo_id
         self.total_activity += 1
         # Binds the name of the repo if it was not bound before this call
@@ -149,7 +149,6 @@ goalRequirements MakeRepo
         """
         agent sends comment to repo
         """
-
         print goal, repo_name, comment
         if repo_name not in self.name_to_repo_id:
             print 'Agent does not know the id of the repo with name', repo_name, 'cannot commit'
@@ -157,6 +156,7 @@ goalRequirements MakeRepo
         status = self.sendAction("commit_comment_event", (self.name_to_repo_id[repo_name], comment))
         print 'commit comment event:', status, repo_name, self.name_to_repo_id[repo_name], comment
         self.total_activity += 1
+        return [{}]
 
     def create_tag_event(self):
         """
@@ -179,6 +179,7 @@ goalRequirements MakeRepo
         self.total_activity += 1
         pass
 
+        print 'create repo event'
     def delete_branch_event(self):
         """
         agent removes branch from repo
@@ -329,6 +330,7 @@ goalRequirements MakeRepo
         pass
 
     def reopen_pull_request_event(self):
+
         """
         reopen pull request
         """
