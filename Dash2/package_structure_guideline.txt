@@ -1,0 +1,9 @@
+Dash2 folder contents _core_ package with dash framework modules and other domain/project/experiment specific packages. The root folder should not contain .py files. All packages should be name in lower case
+Existing packages:
+- tutorial
+- github
+- passwords_security
+- nurse
+- phish
+- time_test
+- attacker
