@@ -38,11 +38,11 @@ class GitHubTrial(Trial):
             self.agents.append(a)
         else:
             a = random.choice(self.agents)
-        #a.agentLoop(max_iterations=1, disconnect_at_end=False)  # don't disconnect since will run again
+        a.agentLoop(max_iterations=1, disconnect_at_end=False)  # don't disconnect since will run again
         # In the second take, disconnect and reconnect each time so we don't run out of socket resources
-        if not a.connected:
-            a.register()
-        a.agentLoop(max_iterations=1)
+        #if not a.connected:
+        #    a.register()
+        #a.agentLoop(max_iterations=1)
 
     # This is defined above as a measure
     def num_agents(self):
