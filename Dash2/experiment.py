@@ -174,7 +174,7 @@ class Experiment(object):
             else:
                 print "Dependent is a string"
         else:
-            print "dependent is not a string"
+            print "dependent is not a string:", self.dependent
         for independent_val in independent_vals:
             trial_data = trial_data_for_all_values.copy()
             if self.independent is not None:

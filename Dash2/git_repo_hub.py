@@ -11,14 +11,14 @@ class GitRepoHub(WorldHub):
     def __init__(self, repo_hub_id, **kwargs):
 
         WorldHub.__init__(self, kwargs.get('port', None))
-        self.users = set() # User ids
-        self.local_repos = {} # keyed by repo id, valued by repo object
-        self.foreign_repos = {} # keyed by repo id, valued by host
+        self.users = set()  # User ids
+        self.local_repos = {}  # keyed by repo id, valued by repo object
+        self.foreign_repos = {}  # keyed by repo id, valued by host
         self.repo_hub_id = repo_hub_id
         self.host = kwargs.get("host", str(self.repo_hub_id))
         self.repos_hubs = kwargs.get('repos_hubs', {}).update({self.host: self.port})
         self.lowest_unassigned_repo_id = 0
-        self.local_event_log = [] # A dictionary with keys 'userID', 'repoID', 'eventType', 'subeventtype', 'time'
+        self.local_event_log = []  # A dictionary with keys 'userID', 'repoID', 'eventType', 'subeventtype', 'time'
 
     def log_event(self, user_id, repo_id, event_type, subevent_type, time):
         """
@@ -95,6 +95,19 @@ class GitRepoHub(WorldHub):
             return 'fail'
         self.local_repos[repo_id].commit_comment_event(agent_id, commit_info)
         self.log_event(agent_id, repo_id, 'CommitCommentEvent','None',time())
+        return 'success'
+
+    def pull_repo_event(self, agent_id, (repo_id)):
+        """
+        user pulls remove repository to local repository for further review
+        """
+
+        if repo_id not in self.local_repos:
+            print 'unknown repo id for comment_comment_event:', repo_id
+            return 'fail'
+
+        self.log_event(agent_id, repo_id, 'PullEvent','None',time())
+        print 'agent ', agent_id, 'pulled repo id ', repo_id
         return 'success'
 
     def create_tag_event(self, agent_id, tag_info):
