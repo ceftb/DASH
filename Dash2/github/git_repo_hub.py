@@ -20,7 +20,7 @@ class GitRepoHub(WorldHub):
         self.host = kwargs.get("host", str(self.repo_hub_id))
         self.repos_hubs = kwargs.get('repos_hubs', {}).update({self.host: self.port})
         self.lowest_unassigned_repo_id = 0
-        self.local_event_log = []  # A dictionary with keys 'userID', 'repoID', 'eventType', 'subeventtype', 'time'
+        self.local_event_log = []  # Each log item stores a dictionary with keys 'userID', 'repoID', 'eventType', 'subeventtype', 'time'
 
 
     def log_event(self, user_id, repo_id, event_type, subevent_type, time):
@@ -35,13 +35,18 @@ class GitRepoHub(WorldHub):
             'subeventType':subevent_type,
             'time':time})
 
+        if len(self.local_event_log) > 1000:
+            self.dump_event_log(user_id)
+            del self.local_event_log[:]
+
+
     def dump_event_log(self, agent_id):
         """
         prompts the hub to dump it's log to file
         """
 
         try:
-            save_object(str(self.repo_hub_id) + "_hub_log_list.pyobj")
+            save_object(self.local_event_log, str(self.repo_hub_id) + "_hub_log_list.pyobj")
             return "Success"
         except:
             return "Failed to pickle and save log list."
@@ -58,6 +63,9 @@ class GitRepoHub(WorldHub):
         self.log_event(agent_id, None, "CreateUser", "None", creation_time)
         self.users.add(agent_id)
         return ["success", agent_id, creation_time]
+
+    def terminateWork(self):
+        self.dump_event_log(self.repo_hub_id);
 
     def synch_repo_hub(self, host, port):
         """
@@ -281,7 +289,7 @@ def save_object(obj, filename):
     Save an object to file for later use.
     """
     
-    file = open(filename, 'wb')
+    file = open(filename, 'ab+')
     pickle.dump(obj, file)
     file.close()
 
