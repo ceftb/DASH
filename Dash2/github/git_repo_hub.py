@@ -22,6 +22,8 @@ class GitRepoHub(WorldHub):
         self.lowest_unassigned_repo_id = 0
         self.local_event_log = []  # Each log item stores a dictionary with keys 'userID', 'repoID', 'eventType', 'subeventtype', 'time'
 
+        self.trace_handler = False
+
 
     def log_event(self, user_id, repo_id, event_type, subevent_type, time):
         """
@@ -85,7 +87,7 @@ class GitRepoHub(WorldHub):
         
         repo_id = self.lowest_unassigned_repo_id
         self.lowest_unassigned_repo_id += 1
-        print('Request to create repo from', agent_id, 'for', repo_info)
+        #print('Request to create repo from', agent_id, 'for', repo_info)
         repo_creation_date = time()
         repo_info['created_at'] = repo_creation_date
         repo_info['owner'] = {agent_id : 'owner'}
@@ -103,7 +105,7 @@ class GitRepoHub(WorldHub):
 
         # commit_info is assumed to be a comment string for now
         if repo_id not in self.local_repos:
-            print 'unknown repo id for comment_comment_event:', repo_id
+            #print 'unknown repo id for comment_comment_event:', repo_id
             return 'fail'
         self.local_repos[repo_id].commit_comment_event(agent_id, commit_info)
         self.log_event(agent_id, repo_id, 'CommitCommentEvent','None',time())
@@ -115,11 +117,11 @@ class GitRepoHub(WorldHub):
         """
 
         if repo_id not in self.local_repos:
-            print 'unknown repo id for pull_repo_event:', repo_id
+            #print 'unknown repo id for pull_repo_event:', repo_id
             return 'fail'
 
         self.log_event(agent_id, repo_id, 'PullEvent','None',time())
-        print 'agent ', agent_id, 'pulled repo id ', repo_id
+        #print 'agent ', agent_id, 'pulled repo id ', repo_id
         return 'success'
 
     def create_tag_event(self, agent_id, tag_info):
@@ -212,11 +214,11 @@ class GitRepoHub(WorldHub):
         """
 
         if repo_id not in self.local_repos:
-            print 'unknown repo id for push_event:', repo_id
+            #print 'unknown repo id for push_event:', repo_id
             return 'fail'
         self.local_repos[repo_id].push_event(agent_id, commit_to_push)
         self.log_event(agent_id, repo_id, 'PushEvent','None',time())
-        print 'agent ', agent_id, 'Pushed to repo id ', repo_id
+        #print 'agent ', agent_id, 'Pushed to repo id ', repo_id
         return 'success'
 
     def watch_event(self, agent_id, data):
@@ -232,7 +234,7 @@ class GitRepoHub(WorldHub):
             watch_info = {'full_name_h': self.local_repos[repo_id].full_name_h, 
                     'watching_date': time(), 
                     'watching_dow': None} # TODO: Internal simulation of DOW
-            print agent_id, "is now watching", repo_id, "at", watch_info['watching_date']
+            #print agent_id, "is now watching", repo_id, "at", watch_info['watching_date']
             self.log_event(agent_id, repo_id, 'WatchEvent', 'None', time())
             return "Success", watch_info
         else:

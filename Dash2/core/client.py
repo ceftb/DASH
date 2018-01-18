@@ -208,7 +208,8 @@ class Client(object):
                     self.sendMessage(message_types['disconnect'], [self.id, aux_data])
                     self.sock.shutdown(socket.SHUT_RDWR)
                 except socket.error, msg:
-                    print "already closed"
+                    if self.trace_client:
+                        print "already closed"
 
         if self.trace_client:
             print "disconnecting from world hub" + "." if self.connected else ", no message sent since already not connected."

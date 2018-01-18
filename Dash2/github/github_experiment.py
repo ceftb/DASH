@@ -14,6 +14,7 @@ from Dash2.core.parameter import Range, Parameter, Uniform, TruncNorm
 from Dash2.core.measure import Measure
 from git_user_agent import GitUserAgent
 import random
+import time
 import numpy
 import subprocess
 import sys
@@ -34,8 +35,11 @@ class GitHubTrial(Trial):
     # Override the default (which runs each agent once) to decide whether to create a new agent
     def run_one_iteration(self):
         if not self.agents or random.random() < self.prob_create_new_agent:  # Have to create an agent in the first step
-            a = GitUserAgent(port=6000)
-            print 'created agent', a
+            a = GitUserAgent(port=6000, trace_client=False)
+            a.trace_client = False  # cut chatter when connecting and disconnecting
+            a.traceLoop = False  # cut chatter when agent runs steps
+            a.trace_github = False  # cut chatter when acting in github world
+            #print 'created agent', a
             self.agents.append(a)
         else:
             a = random.choice(self.agents)
@@ -61,4 +65,7 @@ def run_exp(max_iterations=20):
                    independent=['prob_create_new_agent', Range(0.5, 0.6, 0.1)], dependent='num_agents')
     e.run()
 
-run_exp(max_iterations=100)
+start = time.time()
+run_exp(max_iterations=200000)
+print 'run took', time.time() - start, 'seconds'
+
