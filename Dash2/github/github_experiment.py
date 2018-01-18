@@ -1,3 +1,4 @@
+
 # Runs a simple github experiment using the Experiment and Trial classes.
 
 """
@@ -59,13 +60,25 @@ class GitHubTrial(Trial):
 
 
 # This is useful to run experiments of varying length and host distribution
-def run_exp(max_iterations=20):
+def run_exp(max_iterations=20, hosts=None):
     e = Experiment(GitHubTrial,
-                   exp_data={'max_iterations': max_iterations}, num_trials=1,
-                   independent=['prob_create_new_agent', Range(0.5, 0.6, 0.1)], dependent='num_agents')
+                   hosts=hosts,
+                   exp_data={'max_iterations': max_iterations},
+                   num_trials=1,
+                   independent=['prob_create_new_agent', Range(0.5, 0.6, 0.1)],
+                   dependent='num_agents',
+                   imports='import Dash2.github.github_experiment',
+                   trial_class_str='Dash2.github.github_experiment.GitHubTrial')
     e.run()
 
+if __name__ == "__main__":
+    print 'argv is', sys.argv
+    if len(sys.argv) > 1 and sys.argv[1] == "run":  # usage: python xx run host..; host list
+        md, mr = run_exp(hosts=sys.argv[2:])  # rest of the arguments are hosts to run on
+    elif len(sys.argv) > 1 and sys.argv[1] == "find":  # usage: python xx run host..; host list
+        ar = find_posterior(hosts=sys.argv[2:])
+
 start = time.time()
-run_exp(max_iterations=200000)
+run_exp(max_iterations=1000)
 print 'run took', time.time() - start, 'seconds'
 

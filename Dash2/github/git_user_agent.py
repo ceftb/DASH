@@ -64,10 +64,10 @@ goalRequirements MakeRepo
             self.members = kwargs.get("members", {}) # Keyed by id
 
         # Assigned information
-        self.id = registration[1]
+        self.id = registration[1] if registration is not None else None
         if self.use_model_assignment:
             self.ght_id_h = self.id 
-            self.created_at = registration[2]
+            self.created_at = registration[2] if registration is not None else None
 
         self.trace_github = True  # Will print far less to the screen if this is False
 

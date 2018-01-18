@@ -122,9 +122,9 @@ class Experiment(object):
             with open(filename, 'w') as f:
                 # for now, args is the set of independent variables this host will work on. Needs to be cleaned up.
                 f.write('import sys\nsys.path.insert(0, \'' + self.experiment.dash_home +
-                        '/Dash2\')\nimport experiment\nfrom parameter import Range\n' + self.experiment.imports + '\n' +
+                        '\')\nimport Dash2.core.experiment\nfrom Dash2.core.parameter import Range\n' + self.experiment.imports + '\n' +
                         # The callback has to be a function that takes these arguments
-                        ('experiment.run_local_part' if self.experiment.callback is None else self.experiment.callback) +
+                        ('Dash2.core.experiment.run_local_part' if self.experiment.callback is None else self.experiment.callback) +
                         '(trial_class=' + str(self.experiment.trial_class_str) +
                         ', num_trials=' + str(self.num_trials) +
                         ', exp_data=' + str(self.experiment.exp_data) +
