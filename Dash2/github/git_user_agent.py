@@ -18,10 +18,10 @@ goalWeight MakeRepo 1
 
 goalRequirements MakeRepo
   create_repo_event(RepoName)
-  commit_comment_event(RepoName, 'intial commit')
-  pick_random_repo(RepoName)
-  watch_event(RepoName)
-  public_event(RepoName)
+  create_comment_event(RepoName,Comment)
+  pick_random_issue(IssueID)
+  delete_comment_event(IssueID)
+
             """)
 
         # Registration
@@ -30,7 +30,7 @@ goalRequirements MakeRepo
         registration = self.register()
 
         # Setup information
-        self.use_model_assignment = kwargs.get("use_model", True) # TODO: Need to check if id/ght_id cause conflicts (also issue w/ time, it all comes from time, which won't work with created_at in the data)
+        self.use_model_assignment = kwargs.get("use_model", True)
         self.type = kwargs.get("type", "user")
         self.login_h = kwargs.get("login_h", None)
         self.ght_id_h = kwargs.get("ght_id_h", None)
@@ -72,19 +72,24 @@ goalRequirements MakeRepo
         self.owned_repos = {} # {ght_id_h : name_h}
         self.name_to_repo_id = {} # {name_h : ght_id_h} Contains all repos known by the agent
         self.name_to_user_id = {} # {login_h : ght_id_h} Contains all users known by the agent
+        self.known_issues = {} # key: (issue #) value: (repo_name)
 
         # Actions
         self.primitiveActions([
-            ('generate_random_repo_name', self.generate_random_repo_name),
+            ('generate_random_name', self.generate_random_name),
+            ('pick_random_pull_request_action', self.pick_random_pull_request_action),
             ('pick_random_repo', self.pick_random_repo),
+            ('pick_random_issue', self.pick_random_issue),
             ('create_repo_event', self.create_repo_event),
             ('commit_comment_event', self.commit_comment_event),
             ('create_tag_event', self.create_tag_event),
             ('create_branch_event', self.create_branch_event),
             ('delete_tag_event', self.delete_tag_event),
             ('delete_branch_event', self.delete_branch_event),
+            ('create_comment_event', self.create_comment_event),
+            ('edit_comment_event', self.edit_comment_event),
+            ('delete_comment_event', self.delete_comment_event),
             ('fork_event', self.fork_event),
-            ('issue_comment_event', self.issue_comment_event),
             ('issues_event', self.issues_event),
             ('pull_request_event', self.pull_request_event),
             ('push_event', self.push_event),
@@ -92,10 +97,6 @@ goalRequirements MakeRepo
             ('follow_event', self.follow_event),
             ('member_event', self.member_event),
             ('public_event', self.public_event)])
-
-    ############################################################################
-    # Model dependent methods
-    ############################################################################
 
     def generate_random_repo_name(self, name=None):
         """
@@ -105,19 +106,11 @@ goalRequirements MakeRepo
         alphabet = "abcdefghijklmnopqrstuvwxyz"
         if name is None:
             name = ''.join(random.sample(alphabet, random.randint(1,20)))
-        self.total_activity += 1
         return {'name_h': name,
                 'owner': {'login_h': self.login_h, 
                           'ght_id_h': self.ght_id_h, 
                           'type': self.type}
                 }
-
-    def pick_random_repo(self, repo_name_variable):
-        """
-        Function that will randomly pick a repository and return the id
-        """
-        self.total_activity += 1
-        return [{repo_name_variable : random.choice(self.name_to_repo_id.keys()) }]
 
     ############################################################################
     # Core git user methods
@@ -133,7 +126,43 @@ goalRequirements MakeRepo
         self.server_port = port
         self.establishConnection()
 
-    def create_repo_event(self, (_, name_var)):
+    ############################################################################
+    # Utility Primitive actions
+    ############################################################################
+
+    def generate_random_name(self, (goal, name_var)):
+        """
+        Generates a random name. Can be used for the various actions that 
+        require a name.
+        """
+        print "generating a random name"
+        alphabet = "abcdefghijklmnopqrstuvwxyz"
+        self.total_activity += 1
+        return [{name_var : ''.join(random.sample(alphabet, random.randint(1,20)))}]
+
+    def pick_random_repo(self, (goal, repo_name_variable)):
+        """
+        Function that will randomly pick a repository and return the id
+        """
+        self.total_activity += 1
+        return [{repo_name_variable : random.choice(self.name_to_repo_id.keys()) }]
+
+    def pick_random_pull_request_action(self, (goal, action)):
+        self.total_activity += 1
+        actions = ['assigned', 'unassigned', 'review_requested', 
+            'review_request_removed', 'labeled', 'unlabeled', 'opened', 
+            'edited', 'closed', 'reopened']
+        return [{action : random.choice(actions) }]
+
+    def pick_random_issue(self, (goal, issue_id)):
+        self.total_activity += 1
+        return [{issue_id : random.choice(self.known_issues.keys())}]
+
+    ############################################################################
+    # CreateEvents (Tag/branch/repo)
+    ############################################################################
+
+    def create_repo_event(self, (goal, name_var)):
         """
         agent requests server to make new repo
         """
@@ -147,42 +176,32 @@ goalRequirements MakeRepo
         # Binds the name of the repo if it was not bound before this call
         return [{name_var: repo_info['name_h']}] if isVar(name_var) else [{}]
 
-    def commit_comment_event(self, (goal, repo_name, comment)):
+    def create_tag_event(self, (goal, repo_name, tag_name)):
         """
-        agent sends comment to repo
+        agent sends new tag in repo
         """
-        print goal, repo_name, comment
-        if repo_name not in self.name_to_repo_id:
-            print 'Agent does not know the id of the repo with name', repo_name, 'cannot commit'
-            return []
-        status = self.sendAction("commit_comment_event", (self.name_to_repo_id[repo_name], comment))
-        print 'commit comment event:', status, repo_name, self.name_to_repo_id[repo_name], comment
+        print 'create tag event'
+        status = self.sendAction("create_tag_event", 
+                                [self.name_to_repo_id[repo_name], tag_name])
+        print 'create tag result:', status, 'for', tag_name
         self.total_activity += 1
         return [{}]
 
-    def create_tag_event(self):
+    def create_branch_event(self, (goal, repo_name, branch_name)):
         """
         agent sends new tag in repo
         """
         self.total_activity += 1
         pass
 
-    def create_branch_event(self):
-        """
-        agent sends new tag in repo
-        """
-        self.total_activity += 1
-        pass
-
-    def delete_tag_event(self):
+    def delete_tag_event(self, (goal, repo_name, tag_name)):
         """
         agent removes tag from repo
         """
         self.total_activity += 1
         pass
 
-        print 'create repo event'
-    def delete_branch_event(self):
+    def delete_branch_event(self, (goal, repo_name, branch_name)):
         """
         agent removes branch from repo
         """
@@ -194,12 +213,46 @@ goalRequirements MakeRepo
     # Issues Events methods
     ############################################################################
 
-    def issue_comment_event(self):
+    def create_comment_event(self, (goal, repo_name, comment)):
         """
         send a comment to a repo
         """
+        print goal, repo_name, comment
+        if repo_name not in self.name_to_repo_id:
+            print 'Agent does not know the id of the repo with name', repo_name, 'cannot create comment'
+            return []
+        status, comment_id = self.sendAction("create_comment_event", 
+            (self.name_to_repo_id[repo_name], comment))
+        print 'create comment event:', status, repo_name, self.name_to_repo_id[repo_name], comment
+        self.known_issues[comment_id] = repo_name
         self.total_activity += 1
-        pass
+        return [{}]
+
+    def edit_comment_event(self, (goal, comment_id, comment)):
+        """
+        send a comment to a repo
+        """
+        print goal, comment, comment_id
+        status = self.sendAction("edit_comment_event", 
+                                (self.name_to_repo_id[self.known_issues[comment_id]], 
+                                comment, comment_id))
+        print 'edit comment event:', status, \
+              self.name_to_repo_id[self.known_issues[comment_id]], comment
+        self.total_activity += 1
+        return [{}]
+
+    def delete_comment_event(self, (goal, comment_id)):
+        """
+        send a comment to a repo
+        """
+        print goal, comment_id
+        status = self.sendAction("delete_comment_event", 
+                                (self.name_to_repo_id[self.known_issues[comment_id]], 
+                                comment_id))
+        print 'delete comment event:', status, \
+              self.name_to_repo_id[self.known_issues[comment_id]], comment_id
+        self.total_activity += 1
+        return [{}]
 
     def issue_open_event(self):
         """
@@ -268,14 +321,22 @@ goalRequirements MakeRepo
     # Pull Request Events methods
     ############################################################################
 
-    def submit_pull_request_event(self):
+    def submit_pull_request_event(self, (goal, head_name, base_name)):
         """
         submit pull request
         """
+        if head_name not in self.name_to_repo_id:
+            print 'Agent does not know the id of the repo with name', repo_name, 'cannot push'
+            return []
+        elif base_name not in self.name_to_repo_id:
+            print 'Agent does not know the id of the repo with name', fork_name, 'cannot push'
+            return []
+        status = self.sendAction("submit_pull_request_event", 
+            (self.name_to_repo_id[head_name], self.name_to_repo_id[base_name], "submit"))
         self.total_activity += 1
-        pass
+        return [{}]
 
-    def close_pull_request_event(self):
+    def close_pull_request_event(self, (goal, head_name, base_name, request_id)):
         """
         close pull request
         """
@@ -289,7 +350,7 @@ goalRequirements MakeRepo
         self.total_activity += 1
         pass
 
-    def unassign_pull_rreopenequest_event(self):
+    def unassign_pull_request_reopen_event(self):
         """
         unassign pull request
         """
@@ -353,18 +414,46 @@ goalRequirements MakeRepo
         self.total_activity += 1
         pass
 
-    def pull_request_event(self):
+    def pull_request_event(self, (goal, action, head_name, base_name)):
         """
-        agent sends a pull request to repo
+        Agent sends a pull request to repo_name, from a branch/fork.
+        Actions can be: assigned, unassigned, review_requested, 
+        review_request_removed, labeled, unlabeled, opened, edited, 
+        closed, or reopened
         """
+        if base_name not in self.name_to_repo_id:
+            print 'Agent does not know the id of the repo with name', base_name, 'cannot push'
+            return []
+        elif head_name not in self.name_to_repo_id:
+            print 'Agent does not know the id of the repo with name', head_name, 'cannot push'
+            return []
+        status = self.sendAction("pull_request_event", 
+            (self.name_to_repo_id[head_name], self.name_to_repo_id[base_name], action))
         self.total_activity += 1
-        pass
+        return [{}]
 
-    def push_event(self, args):
+    ############################################################################
+    # Other events
+    ############################################################################
+
+    def commit_comment_event(self, (goal, repo_name, comment)):
+        """
+        agent sends comment to repo
+        """
+        print goal, repo_name, comment
+        if repo_name not in self.name_to_repo_id:
+            print 'Agent does not know the id of the repo with name', repo_name, 'cannot commit'
+            return []
+        status = self.sendAction("commit_comment_event", (self.name_to_repo_id[repo_name], comment))
+        print 'commit comment event:', status, repo_name, self.name_to_repo_id[repo_name], comment
+        self.total_activity += 1
+        return [{}]
+
+    def push_event(self, (goal , repo_name)):
         """
         This event describes local code update (pull from the repo)
         """
-        _, repo_name = args
+
         if repo_name not in self.name_to_repo_id:
             print 'Agent does not know the id of the repo with name', repo_name, 'cannot push'
             return []
@@ -380,11 +469,10 @@ goalRequirements MakeRepo
         self.total_activity += 1
         pass
 
-    def watch_event(self, args):
+    def watch_event(self, (goal, target_repo_name)):
         """
         agent decides to watch repo
         """
-        _, target_repo_name = args
 
         # Check if already watching
         if self.name_to_repo_id[target_repo_name] not in self.watching_list:
@@ -439,7 +527,6 @@ goalRequirements MakeRepo
         self.total_activity += 1
 
         return [{}]
-
 
     def pull_repo_event(self, args):
         """

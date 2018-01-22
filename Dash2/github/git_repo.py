@@ -1,14 +1,16 @@
+from collections import deque
+
 class GitRepo(object):
     """
     An object representing a Github repository
     """
     
-    def __init__(self, ght_id_h=None, name_h=None, owner=None, **kwargs):  # don't crash if agent doesn't supply args
+    def __init__(self, ght_id_h=None, name_h=None, owner=None, **kwargs):
 
         # Setup information
-        self.ght_id_h = kwargs.get("ght_id_h")
-        self.name_h = kwargs.get("name_h")
-        self.owner = kwargs.get("owner") # A dictionary with {login_h, ght_id_h, type}
+        self.ght_id_h = ght_id_h
+        self.name_h = name_h
+        self.owner = owner # A dictionary with {login_h, ght_id_h, type}
         self.full_name_h = kwargs.get("full_name_h", "")
         self.is_public = kwargs.get("is_public", True)
         self.description_m = kwargs.get("description_m", "")
@@ -36,17 +38,53 @@ class GitRepo(object):
         self.fork_list = kwargs.get("fork_list", {}) # Keyed by id
 
         # Other possible data, Not in data schema
-        self.collaborators = {} #{ght_id_h: permissions}
-        # self.branches = set()
-        # self.tags = set()
-        # # pull requests are temporal, maybe a queue or list, depends on how
-        # # agent will prioritize addressing pulls
-        # self.pull_requests = []
+        # {ght_id_h: permissions}
+        self.collaborators = {self.owner['ght_id_h'] : 'owner'}
+        self.pull_requests = deque()
         self.commit_comments = []
+        self.smallest_available_comment_id = 0
+        self.issue_comments = {}
         self.commits = []
+        # Each repo starts with a master branch. Currently just has creation date
+        self.branches = {'master': {'created_at': self.created_at} }
+        self.tags = {}
 
-    # Below methods match RepoHub actions
-    # RepoHub would call the corresponding repo's method for the user action
+    ############################################################################
+    # Below methods match RepoHub actions - called by repo_hub
+    ############################################################################
+
+    def create_comment_event(self, comment_info):
+        """
+        adds comment information to issue comments and returns the assigned id
+        to the client
+        """
+
+        self.issue_comments[self.smallest_available_comment_id] = comment_info
+
+        return self.smallest_available_comment_id
+
+    def edit_comment_event(self, comment_id, comment):
+        """
+        replaces the issue comment with new content
+        """
+
+        if comment_id in self.issue_comments:
+            self.issue_comments[comment_id] = comment
+            return True
+        else:
+            return False
+
+    def delete_comment_event(self, comment_id):
+        """
+        removes an issue comment if possible
+        """
+
+        if comment_id in self.issue_comments:
+            self.issue_comments.pop(comment_id)
+            return True
+        else:
+            return False
+
     def commit_comment_event(self, agent_id, commit_info):
         """
         user requests to make a commit to the repo
@@ -55,8 +93,6 @@ class GitRepo(object):
         """
         self.commit_comments.append((agent_id, commit_info))
         
-    # Following methods match RepoHub actions
-    # RepoHub would call the corresponding repo's method for the user action
     def create_tag_event(self, agent_id, tag_info):
         """
         user requests to make a new tag
@@ -128,12 +164,12 @@ class GitRepo(object):
             self.collaborators.pop(target_agent, None)
             return "Successfully removed collaborator"
 
-    def pull_request_event(self, agent_id, pull_request):
+    def pull_request_event(self, pull_request):
         """
         user requests a pull from a fork
         repo adds the pull request to the stack
         """
-        pass
+        self.pull_requests.append(pull_request)
 
     def push_event(self, agent_id, commit_to_push):
         """
