@@ -126,11 +126,18 @@ class WorldHub:
         self.server.close()
         for c in self.threads:
             c.join()
+        self.terminateWork()
+
 
     # This method is intended to be overridden by subclasses to point to a ServeClientThread subclass
     def createServeClientThread(self, (client, address)):
         return ServeClientThread(self, (client, address))
 
+
+    # This method is intended to operations need before termination of the hub. For example, releaseing OS resources,
+    # handling persistance, dumping cansh into files, etc.
+    def terminateWork(self):
+        pass
 
 class ServeClientThread(threading.Thread):
 

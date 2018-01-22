@@ -20,7 +20,9 @@ class GitRepoHub(WorldHub):
         self.host = kwargs.get("host", str(self.repo_hub_id))
         self.repos_hubs = kwargs.get('repos_hubs', {}).update({self.host: self.port})
         self.lowest_unassigned_repo_id = 0
-        self.local_event_log = []  # A dictionary with keys 'userID', 'repoID', 'eventType', 'subeventtype', 'time'
+        self.local_event_log = []  # Each log item stores a dictionary with keys 'userID', 'repoID', 'eventType', 'subeventtype', 'time'
+
+        self.trace_handler = False
 
     def log_event(self, user_id, repo_id, event_type, subevent_type, time):
         """
@@ -34,13 +36,18 @@ class GitRepoHub(WorldHub):
             'subeventType':subevent_type,
             'time':time})
 
+        if len(self.local_event_log) > 1000:
+            self.dump_event_log(user_id)
+            del self.local_event_log[:]
+
+
     def dump_event_log(self, agent_id):
         """
         prompts the hub to dump it's log to file
         """
 
         try:
-            save_object(str(self.repo_hub_id) + "_hub_log_list.pyobj")
+            save_object(self.local_event_log, str(self.repo_hub_id) + "_hub_log_list.pyobj")
             return "Success"
         except:
             return "Failed to pickle and save log list."
@@ -57,6 +64,9 @@ class GitRepoHub(WorldHub):
         self.log_event(agent_id, None, "CreateUser", "None", creation_time)
         self.users.add(agent_id)
         return ["success", agent_id, creation_time]
+
+    def terminateWork(self):
+        self.dump_event_log(self.repo_hub_id);
 
     def synch_repo_hub(self, host, port):
         """
@@ -80,7 +90,7 @@ class GitRepoHub(WorldHub):
         
         repo_id = self.lowest_unassigned_repo_id
         self.lowest_unassigned_repo_id += 1
-        print('Request to create repo from', agent_id, 'for', repo_info)
+        #print('Request to create repo from', agent_id, 'for', repo_info)
         repo_creation_date = time()
         repo_info['created_at'] = repo_creation_date
         self.local_repos[repo_id] = GitRepo(repo_id, **repo_info)
@@ -242,11 +252,11 @@ class GitRepoHub(WorldHub):
         """
 
         if repo_id not in self.local_repos:
-            print 'unknown repo id for push_event:', repo_id
+            #print 'unknown repo id for push_event:', repo_id
             return 'fail'
         self.local_repos[repo_id].push_event(agent_id, commit_to_push)
         self.log_event(agent_id, repo_id, 'PushEvent','None',time())
-        print 'agent ', agent_id, 'Pushed to repo id ', repo_id
+        #print 'agent ', agent_id, 'Pushed to repo id ', repo_id
         return 'success'
 
     def watch_event(self, agent_id, data):
@@ -262,7 +272,7 @@ class GitRepoHub(WorldHub):
             watch_info = {'full_name_h': self.local_repos[repo_id].full_name_h, 
                     'watching_date': time(), 
                     'watching_dow': None} # TODO: Internal simulation of DOW
-            print agent_id, "is now watching", repo_id, "at", watch_info['watching_date']
+            #print agent_id, "is now watching", repo_id, "at", watch_info['watching_date']
             self.log_event(agent_id, repo_id, 'WatchEvent', 'None', time())
             return "Success", watch_info
         else:
@@ -374,7 +384,7 @@ def save_object(obj, filename):
     Save an object to file for later use.
     """
     
-    file = open(filename, 'wb')
+    file = open(filename, 'ab+')
     pickle.dump(obj, file)
     file.close()
 

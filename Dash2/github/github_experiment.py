@@ -1,3 +1,4 @@
+
 # Runs a simple github experiment using the Experiment and Trial classes.
 
 """
@@ -6,6 +7,7 @@ existing agent is chosen or a new agent is created with some probability, then t
 existing repo or creates a new one with some probability. If it picks an existing repo, it picks an event
 and sends it to the hub, for a new repo the create event is sent.
 """
+import sys; sys.path.extend(['../../'])
 
 from Dash2.core.experiment import Experiment
 from Dash2.core.trial import Trial
@@ -13,6 +15,7 @@ from Dash2.core.parameter import Range, Parameter, Uniform, TruncNorm
 from Dash2.core.measure import Measure
 from git_user_agent import GitUserAgent
 import random
+import time
 import numpy
 import subprocess
 import sys
@@ -33,8 +36,11 @@ class GitHubTrial(Trial):
     # Override the default (which runs each agent once) to decide whether to create a new agent
     def run_one_iteration(self):
         if not self.agents or random.random() < self.prob_create_new_agent:  # Have to create an agent in the first step
-            a = GitUserAgent(port=6000)
-            print 'created agent', a
+            a = GitUserAgent(port=6000, trace_client=False)
+            a.trace_client = False  # cut chatter when connecting and disconnecting
+            a.traceLoop = False  # cut chatter when agent runs steps
+            a.trace_github = False  # cut chatter when acting in github world
+            #print 'created agent', a
             self.agents.append(a)
         else:
             a = random.choice(self.agents)
@@ -54,10 +60,25 @@ class GitHubTrial(Trial):
 
 
 # This is useful to run experiments of varying length and host distribution
-def run_exp(max_iterations=20):
+def run_exp(max_iterations=20, hosts=None):
     e = Experiment(GitHubTrial,
-                   exp_data={'max_iterations': max_iterations}, num_trials=1,
-                   independent=['prob_create_new_agent', Range(0.5, 0.6, 0.1)], dependent='num_agents')
+                   hosts=hosts,
+                   exp_data={'max_iterations': max_iterations},
+                   num_trials=1,
+                   independent=['prob_create_new_agent', Range(0.5, 0.6, 0.1)],
+                   dependent='num_agents',
+                   imports='import Dash2.github.github_experiment',
+                   trial_class_str='Dash2.github.github_experiment.GitHubTrial')
     e.run()
 
-run_exp(max_iterations=100)
+if __name__ == "__main__":
+    print 'argv is', sys.argv
+    if len(sys.argv) > 1 and sys.argv[1] == "run":  # usage: python xx run host..; host list
+        md, mr = run_exp(hosts=sys.argv[2:])  # rest of the arguments are hosts to run on
+    elif len(sys.argv) > 1 and sys.argv[1] == "find":  # usage: python xx run host..; host list
+        ar = find_posterior(hosts=sys.argv[2:])
+
+start = time.time()
+run_exp(max_iterations=1000)
+print 'run took', time.time() - start, 'seconds'
+
