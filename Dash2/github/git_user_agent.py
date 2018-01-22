@@ -142,7 +142,8 @@ goalRequirements MakeRepo
         Generates a random name. Can be used for the various actions that 
         require a name.
         """
-        print "generating a random name"
+        if self.trace_github:
+            print "generating a random name"
         alphabet = "abcdefghijklmnopqrstuvwxyz"
         self.total_activity += 1
         return [{name_var : ''.join(random.sample(alphabet, random.randint(1,20)))}]
@@ -189,10 +190,12 @@ goalRequirements MakeRepo
         """
         agent sends new tag in repo
         """
-        print 'create tag event'
+        if self.trace_github:
+            print 'create tag event'
         status = self.sendAction("create_tag_event", 
                                 [self.name_to_repo_id[repo_name], tag_name])
-        print 'create tag result:', status, 'for', tag_name
+        if self.trace_github:
+            print 'create tag result:', status, 'for', tag_name
         self.total_activity += 1
         return [{}]
 
@@ -228,13 +231,16 @@ goalRequirements MakeRepo
         """
         send a comment to a repo
         """
-        print goal, repo_name, comment
+        if self.trace_github:
+            print goal, repo_name, comment
         if repo_name not in self.name_to_repo_id:
-            print 'Agent does not know the id of the repo with name', repo_name, 'cannot create comment'
+            if self.trace_github:
+                print 'Agent does not know the id of the repo with name', repo_name, 'cannot create comment'
             return []
         status, comment_id = self.sendAction("create_comment_event", 
             (self.name_to_repo_id[repo_name], comment))
-        print 'create comment event:', status, repo_name, self.name_to_repo_id[repo_name], comment
+        if self.trace_github:
+            print 'create comment event:', status, repo_name, self.name_to_repo_id[repo_name], comment
         self.known_issues[comment_id] = repo_name
         self.total_activity += 1
         return [{}]
@@ -243,11 +249,13 @@ goalRequirements MakeRepo
         """
         send a comment to a repo
         """
-        print goal, comment, comment_id
+        if self.trace_github:
+            print goal, comment, comment_id
         status = self.sendAction("edit_comment_event", 
                                 (self.name_to_repo_id[self.known_issues[comment_id]], 
                                 comment, comment_id))
-        print 'edit comment event:', status, \
+        if self.trace_github:
+            print 'edit comment event:', status, \
               self.name_to_repo_id[self.known_issues[comment_id]], comment
         self.total_activity += 1
         return [{}]
@@ -256,11 +264,13 @@ goalRequirements MakeRepo
         """
         send a comment to a repo
         """
-        print goal, comment_id
+        if self.trace_github:
+            print goal, comment_id
         status = self.sendAction("delete_comment_event", 
                                 (self.name_to_repo_id[self.known_issues[comment_id]], 
                                 comment_id))
-        print 'delete comment event:', status, \
+        if self.trace_github:
+            print 'delete comment event:', status, \
               self.name_to_repo_id[self.known_issues[comment_id]], comment_id
         self.total_activity += 1
         return [{}]

@@ -105,7 +105,7 @@ class GitRepoHub(WorldHub):
         repo takes tag info and adds a new tag to repo
         """
         if repo_id not in self.local_repos:
-            print 'unknown repo id for push_event:', repo_id
+            # print 'unknown repo id for push_event:', repo_id
             return 'fail'
 
         if self.is_collaborator(agent_id, repo_id):
@@ -150,7 +150,7 @@ class GitRepoHub(WorldHub):
         """
 
         if repo_id not in self.local_repos:
-            print 'unknown repo id for push_event:', repo_id
+            # print 'unknown repo id for push_event:', repo_id
             return 'fail'
         comment_id = self.local_repos[repo_id].create_comment_event( 
             {'user': agent_id, 'repo_id': repo_id, 'comment': comment})
@@ -163,7 +163,7 @@ class GitRepoHub(WorldHub):
         """
 
         if repo_id not in self.local_repos:
-            print 'unknown repo id for push_event:', repo_id
+            # print 'unknown repo id for push_event:', repo_id
             return 'fail'
         if self.local_repos[repo_id].edit_comment_event(comment_id, comment):
             self.log_event(agent_id, repo_id, 'IssueCommentEvent', "edited", time())
@@ -177,7 +177,7 @@ class GitRepoHub(WorldHub):
         """
 
         if repo_id not in self.local_repos:
-            print 'unknown repo id for push_event:', repo_id
+            # print 'unknown repo id for push_event:', repo_id
             return 'fail'
         if self.local_repos[repo_id].delete_comment_event(comment_id):
             self.log_event(agent_id, repo_id, 'IssueCommentEvent', "deleted", time())
@@ -219,7 +219,7 @@ class GitRepoHub(WorldHub):
         edit pull request
         """
         if base_id not in self.local_repos:
-            print 'unknown repo id for push_event:', base_id
+            # print 'unknown repo id for push_event:', base_id
             return 'fail'
         self.local_repos[base_id].pull_request_event( 
             {'user': agent_id, 'head': head_id, 'action': action})
@@ -240,7 +240,7 @@ class GitRepoHub(WorldHub):
 
         # commit_info is assumed to be a comment string for now
         if repo_id not in self.local_repos:
-            print 'unknown repo id for comment_comment_event:', repo_id
+            # print 'unknown repo id for comment_comment_event:', repo_id
             return 'fail'
         self.local_repos[repo_id].commit_comment_event(agent_id, commit_info)
         self.log_event(agent_id, repo_id, 'CommitCommentEvent','None',time())
@@ -337,11 +337,11 @@ class GitRepoHub(WorldHub):
         """
 
         if repo_id not in self.local_repos:
-            print 'unknown repo id for pull_repo_event:', repo_id
+            # print 'unknown repo id for pull_repo_event:', repo_id
             return 'fail'
 
         self.log_event(agent_id, repo_id, 'PullEvent','None',time())
-        print 'agent ', agent_id, 'pulled repo id ', repo_id
+        # print 'agent ', agent_id, 'pulled repo id ', repo_id
         return 'success'
 
     ############################################################################
