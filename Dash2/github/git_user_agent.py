@@ -347,10 +347,12 @@ goalRequirements MakeRepo
         submit pull request
         """
         if head_name not in self.name_to_repo_id:
-            print 'Agent does not know the id of the repo with name', repo_name, 'cannot push'
+            if self.trace_github:
+                print 'Agent does not know the id of the repo with name', repo_name, 'cannot push'
             return []
         elif base_name not in self.name_to_repo_id:
-            print 'Agent does not know the id of the repo with name', fork_name, 'cannot push'
+            if self.trace_github:
+                print 'Agent does not know the id of the repo with name', fork_name, 'cannot push'
             return []
         status = self.sendAction("submit_pull_request_event", 
             (self.name_to_repo_id[head_name], self.name_to_repo_id[base_name], "submit"))
@@ -443,10 +445,12 @@ goalRequirements MakeRepo
         closed, or reopened
         """
         if base_name not in self.name_to_repo_id:
-            print 'Agent does not know the id of the repo with name', base_name, 'cannot push'
+            if self.trace_github:
+                print 'Agent does not know the id of the repo with name', base_name, 'cannot push'
             return []
         elif head_name not in self.name_to_repo_id:
-            print 'Agent does not know the id of the repo with name', head_name, 'cannot push'
+            if self.trace_github:
+                print 'Agent does not know the id of the repo with name', head_name, 'cannot push'
             return []
         status = self.sendAction("pull_request_event", 
             (self.name_to_repo_id[head_name], self.name_to_repo_id[base_name], action))
