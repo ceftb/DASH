@@ -93,37 +93,37 @@ class GitRepo(object):
         """
         self.commit_comments.append((agent_id, commit_info))
         
-    def create_tag_event(self, agent_id, tag_info):
+    def create_tag_event(self, tag_name, tag_creation_date):
         """
         user requests to make a new tag
         check if collab
         repo takes tag info and adds a new tag to repo
         """
-        pass
+        self.tags[tag_name] = {'created_at': tag_creation_date}
 
-    def create_branch_event(self, agent_id, branch_info):
+    def create_branch_event(self, branch_name, branch_creation_date):
         """
         user requests to make a new branch
         check if collab
         repo takes branch info and adds a new branch to repo
         """
-        pass
+        self.branches[branch_name] = {'created_at': branch_creation_date}
 
-    def delete_tag_event(self, agent_id, tag_id):
+    def delete_tag_event(self, tag_name):
         """
         user requests repo delete tag
         check if collab
         repo deletes tag
         """
-        pass
+        self.tags.pop(tag_name)
 
-    def delete_branch_event(self, agent_id, branch_id):
+    def delete_branch_event(self, branch_name):
         """
         user requests repo delete branch
         check if collab
         repo deletes branch
         """
-        pass
+        self.branches.pop(branch_name)
 
     def issue_comment_event(self, agent_id, comment_info):
         """

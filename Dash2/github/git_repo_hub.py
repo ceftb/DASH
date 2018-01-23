@@ -79,7 +79,7 @@ class GitRepoHub(WorldHub):
         pass
 
     ############################################################################
-    # CreateEvents (Tag/branch/repo)
+    # Create/Delete Events (Tag/branch/repo)
     ############################################################################
 
     def create_repo_event(self, agent_id, (repo_info,)):
@@ -110,35 +110,63 @@ class GitRepoHub(WorldHub):
 
         if self.is_collaborator(agent_id, repo_id):
             tag_creation_date = time()
-            self.local_repos[repo_id].tags[tag_name] = {'created_at': tag_creation_date}
+            self.local_repos[repo_id].create_tag_event(tag_name, tag_creation_date)
             self.log_event(agent_id, repo_id, 'CreateEvent', 'Tag', tag_creation_date)
             return 'success'
 
         return 'failure'
 
-    def create_branch_event(self, agent_id, (branch_info,)):
+    def create_branch_event(self, agent_id, (repo_id, branch_name)):
         """
         user requests to make a new branch
         check if collab
         repo takes branch info and adds a new branch to repo
         """
-        pass
+        if repo_id not in self.local_repos:
+            return 'fail'
 
-    def delete_tag_event(self, agent_id, (tag_info,)):
+        if self.is_collaborator(agent_id, repo_id):
+            branch_creation_date = time()
+            self.local_repos[repo_id].create_branch_event(branch_name, branch_creation_date)
+            self.log_event(agent_id, repo_id, 'CreateEvent', 'Branch', branch_creation_date)
+            return 'success'
+
+        return 'failure'
+
+    def delete_tag_event(self, agent_id, (repo_id, tag_name)):
         """
         user requests repo delete tag
         check if collab
         repo deletes tag
         """
-        pass
+        if repo_id not in self.local_repos:
+            # print 'unknown repo id for push_event:', repo_id
+            return 'fail'
 
-    def delete_branch_event(self, agent_id, (branch_info,)):
+        if self.is_collaborator(agent_id, repo_id):
+            tag_deletion_date = time()
+            self.local_repos[repo_id].delete_tag_event(tag_name)
+            self.log_event(agent_id, repo_id, 'DeleteEvent', 'Tag', tag_deletion_date)
+            return 'success'
+
+        return 'failure'
+
+    def delete_branch_event(self, agent_id, (repo_id, branch_name)):
         """
         user requests repo delete branch
         check if collab
         repo deletes branch
         """
-        pass
+        if repo_id not in self.local_repos:
+            return 'fail'
+
+        if self.is_collaborator(agent_id, repo_id):
+            branch_deletion_date = time()
+            self.local_repos[repo_id].delete_branch_event(branch_name)
+            self.log_event(agent_id, repo_id, 'DeleteEvent', 'Branch', branch_deletion_date)
+            return 'success'
+
+        return 'failure'
 
     ############################################################################
     # Issues Events methods

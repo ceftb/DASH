@@ -21,9 +21,8 @@ goalWeight MakeRepo 1
 
 goalRequirements MakeRepo
   create_repo_event(RepoName)
-  create_comment_event(RepoName,Comment)
-  pick_random_issue(IssueID)
-  delete_comment_event(IssueID)
+  create_branch_event(RepoName,Branch1)
+  delete_branch_event(RepoName,Branch1)
 
             """)
 
@@ -190,8 +189,7 @@ goalRequirements MakeRepo
         """
         agent sends new tag in repo
         """
-        if self.trace_github:
-            print 'create tag event'
+
         status = self.sendAction("create_tag_event", 
                                 [self.name_to_repo_id[repo_name], tag_name])
         if self.trace_github:
@@ -203,25 +201,36 @@ goalRequirements MakeRepo
         """
         agent sends new tag in repo
         """
+
+        status = self.sendAction("create_branch_event", 
+                                [self.name_to_repo_id[repo_name], branch_name])
+        if self.trace_github:
+            print 'create branch result:', status, 'for', branch_name
         self.total_activity += 1
-        pass
+        return [{}]
 
     def delete_tag_event(self, (goal, repo_name, tag_name)):
         """
         agent removes tag from repo
         """
+        status = self.sendAction("delete_tag_event", 
+                                [self.name_to_repo_id[repo_name], tag_name])
         if self.trace_github:
-            print 'delete tag event'
+            print 'delete tag result:', status, 'for', tag_name
         self.total_activity += 1
-        pass
+        return [{}]
 
     def delete_branch_event(self, (goal, repo_name, branch_name)):
         """
         agent removes branch from repo
         """
 
+        status = self.sendAction("delete_branch_event", 
+                                [self.name_to_repo_id[repo_name], branch_name])
+        if self.trace_github:
+            print 'delete branch result:', status, 'for', branch_name
         self.total_activity += 1
-        pass
+        return [{}]
 
     ############################################################################
     # Issues Events methods
