@@ -236,24 +236,34 @@ class GitRepoHub(WorldHub):
     # Pull Request Events methods
     ############################################################################
 
-    def pull_request_event(self, agent_id, (head_id, base_id, action)):
+    def submit_pull_request_event(self, agent_id, (head_id, base_id)):
         """
-        user requests a pull from a fork
-        repo adds the pull request to the stack
+        user submits a request to the repo, which will add the request
+        to the pull log of base
+        """
 
-        types: submit pull request, close pull request, assign pull request,
-        unassign pull request, label pull request, unlabel pull request, 
-        request review, remove review request, reopen pull request, 
-        edit pull request
-        """
-        if base_id not in self.local_repos:
-            # print 'unknown repo id for push_event:', base_id
+        if head_id not in self.local_repos:
             return 'fail'
-        self.local_repos[base_id].pull_request_event( 
-            {'user': agent_id, 'head': head_id, 'action': action})
-        self.log_event(agent_id, base_id, 'PullRequestEvent', action, time())
+        if base_id not in self.local_repos:
+            return 'fail'
+            
+        updated_at = time()
+        request_id = self.local_repos[base_id].submit_pull_request_event(head_id, updated_at)
+        self.log_event(agent_id, base_id, 'PullRequestEvent', 'submit', updated_at)
+        return 'success', request_id
 
-        return "success"
+    def close_pull_request_event(self, agent_id, (base_id, request_id)):
+        """
+        user asks to close a pull request
+        """
+
+        if base_id not in self.local_repos:
+            return 'fail'
+
+        updated_at = time()
+        self.local_repos[base_id].close_pull_request_event(request_id, updated_at)
+        self.log_event(agent_id, base_id, 'PullRequestEvent', 'close', updated_at)
+        return 'success'
 
     ############################################################################
     # Other events

@@ -21,9 +21,9 @@ goalWeight MakeRepo 1
 
 goalRequirements MakeRepo
   create_repo_event(RepoName)
-  create_branch_event(RepoName,Branch1)
-  delete_branch_event(RepoName,Branch1)
-
+  submit_pull_request_event(RepoName, RepoName)
+  pick_random_pull_request(PullRequest)
+  close_pull_request_event(PullRequest)
             """)
 
         # Registration
@@ -78,11 +78,11 @@ goalRequirements MakeRepo
         self.name_to_repo_id = {} # {name_h : ght_id_h} Contains all repos known by the agent
         self.name_to_user_id = {} # {login_h : ght_id_h} Contains all users known by the agent
         self.known_issues = {} # key: (issue #) value: (repo_name)
+        self.outgoing_requests = {} # keyed tuple of (head_name, base_name, request_id) valued by state
 
         # Actions
         self.primitiveActions([
             ('generate_random_name', self.generate_random_name),
-            ('pick_random_pull_request_action', self.pick_random_pull_request_action),
             ('pick_random_repo', self.pick_random_repo),
             ('pick_random_issue', self.pick_random_issue),
             ('create_repo_event', self.create_repo_event),
@@ -94,9 +94,11 @@ goalRequirements MakeRepo
             ('create_comment_event', self.create_comment_event),
             ('edit_comment_event', self.edit_comment_event),
             ('delete_comment_event', self.delete_comment_event),
+            ('pick_random_pull_request', self.pick_random_pull_request),
+            ('submit_pull_request_event', self.submit_pull_request_event),
+            ('close_pull_request_event', self.close_pull_request_event),
             ('fork_event', self.fork_event),
             ('issues_event', self.issues_event),
-            ('pull_request_event', self.pull_request_event),
             ('push_event', self.push_event),
             ('watch_event', self.watch_event),
             ('follow_event', self.follow_event),
@@ -147,19 +149,23 @@ goalRequirements MakeRepo
         self.total_activity += 1
         return [{name_var : ''.join(random.sample(alphabet, random.randint(1,20)))}]
 
+    def pick_random_pull_request(self, (goal, pull_request)):
+        """
+        Sets a pull request variable with head, base, and request_id.
+        """
+
+        if self.trace_github:
+            print "picking random pull request"
+
+        chosen_head, chosen_base, chosen_id = random.choice(self.outgoing_requests.keys())
+        return [{pull_request : {'head': chosen_head, 'base': chosen_base, 'id': chosen_id}}]
+
     def pick_random_repo(self, (goal, repo_name_variable)):
         """
         Function that will randomly pick a repository and return the id
         """
         self.total_activity += 1
         return [{repo_name_variable : random.choice(self.name_to_repo_id.keys()) }]
-
-    def pick_random_pull_request_action(self, (goal, action)):
-        self.total_activity += 1
-        actions = ['assigned', 'unassigned', 'review_requested', 
-            'review_request_removed', 'labeled', 'unlabeled', 'opened', 
-            'edited', 'closed', 'reopened']
-        return [{action : random.choice(actions) }]
 
     def pick_random_issue(self, (goal, issue_id)):
         self.total_activity += 1
@@ -357,23 +363,40 @@ goalRequirements MakeRepo
         """
         if head_name not in self.name_to_repo_id:
             if self.trace_github:
-                print 'Agent does not know the id of the repo with name', repo_name, 'cannot push'
+                print 'Agent does not know the id of the repo with name', head_name, 'cannot pull'
             return []
         elif base_name not in self.name_to_repo_id:
             if self.trace_github:
-                print 'Agent does not know the id of the repo with name', fork_name, 'cannot push'
+                print 'Agent does not know the id of the repo with name', base_name, 'cannot pull'
             return []
-        status = self.sendAction("submit_pull_request_event", 
-            (self.name_to_repo_id[head_name], self.name_to_repo_id[base_name], "submit"))
+        status, request_id = self.sendAction("submit_pull_request_event", 
+            (self.name_to_repo_id[head_name], self.name_to_repo_id[base_name]))
+        self.outgoing_requests[(head_name, base_name, request_id)] = 'open'
         self.total_activity += 1
+        if self.trace_github:
+            print status, 'submit_pull_request_event', head_name, base_name, request_id
         return [{}]
 
-    def close_pull_request_event(self, (goal, head_name, base_name, request_id)):
+    def close_pull_request_event(self, (goal, pull_request)):
         """
         close pull request
         """
+        head_name = pull_request['head']
+        base_name = pull_request['base']
+        request_id = pull_request['id']
+        
+        if base_name not in self.name_to_repo_id:
+            if self.trace_github:
+                print 'Agent does not know the id of the repo with name', base_name, 'cannot pull'
+            return []
+
+        status = self.sendAction("close_pull_request_event", 
+                                (self.name_to_repo_id[base_name], request_id))
+        self.outgoing_requests[(head_name, base_name, request_id)] = 'closed'
         self.total_activity += 1
-        pass
+        if self.trace_github:
+            print status, 'close_pull_request_event', head_name, base_name, request_id
+        return [{}]
 
     def assign_pull_request_event(self):
         """
@@ -399,13 +422,6 @@ goalRequirements MakeRepo
     def unlabel_pull_request_event(self):
         """
         unlabel pull request
-        """
-        self.total_activity += 1
-        pass
-
-    def request_review_event(self):
-        """
-        request review pull request
         """
         self.total_activity += 1
         pass
@@ -445,26 +461,6 @@ goalRequirements MakeRepo
         """
         self.total_activity += 1
         pass
-
-    def pull_request_event(self, (goal, action, head_name, base_name)):
-        """
-        Agent sends a pull request to repo_name, from a branch/fork.
-        Actions can be: assigned, unassigned, review_requested, 
-        review_request_removed, labeled, unlabeled, opened, edited, 
-        closed, or reopened
-        """
-        if base_name not in self.name_to_repo_id:
-            if self.trace_github:
-                print 'Agent does not know the id of the repo with name', base_name, 'cannot push'
-            return []
-        elif head_name not in self.name_to_repo_id:
-            if self.trace_github:
-                print 'Agent does not know the id of the repo with name', head_name, 'cannot push'
-            return []
-        status = self.sendAction("pull_request_event", 
-            (self.name_to_repo_id[head_name], self.name_to_repo_id[base_name], action))
-        self.total_activity += 1
-        return [{}]
 
     ############################################################################
     # Other events

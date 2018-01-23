@@ -1,5 +1,3 @@
-from collections import deque
-
 class GitRepo(object):
     """
     An object representing a Github repository
@@ -40,7 +38,8 @@ class GitRepo(object):
         # Other possible data, Not in data schema
         # {ght_id_h: permissions}
         self.collaborators = {self.owner['ght_id_h'] : 'owner'}
-        self.pull_requests = deque()
+        self.pull_requests = {}
+        self.smallest_available_pull_request_id = 0
         self.commit_comments = []
         self.smallest_available_comment_id = 0
         self.issue_comments = {}
@@ -59,9 +58,11 @@ class GitRepo(object):
         to the client
         """
 
-        self.issue_comments[self.smallest_available_comment_id] = comment_info
+        comment_id = self.smallest_available_comment_id
+        self.smallest_available_comment_id += 1
+        self.issue_comments[comment_id] = comment_info
 
-        return self.smallest_available_comment_id
+        return comment_id
 
     def edit_comment_event(self, comment_id, comment):
         """
@@ -164,13 +165,6 @@ class GitRepo(object):
             self.collaborators.pop(target_agent, None)
             return "Successfully removed collaborator"
 
-    def pull_request_event(self, pull_request):
-        """
-        user requests a pull from a fork
-        repo adds the pull request to the stack
-        """
-        self.pull_requests.append(pull_request)
-
     def push_event(self, agent_id, commit_to_push):
         """
         user requests to push to repo
@@ -181,6 +175,26 @@ class GitRepo(object):
          #    return "Failure: Agent not a collaborator"
         self.commits.append(commit_to_push)
         return "Successfully pushed"
+
+    def submit_pull_request_event(self, head_id, updated_at):
+        """
+        adds a pull request to the top of the deque
+        """
+        request_id = self.smallest_available_pull_request_id
+        self.smallest_available_pull_request_id += 1
+        self.pull_requests[request_id] = {'head': head_id, 
+                                          'updated_at': updated_at, 
+                                          'state': 'open'}
+
+        return request_id
+
+    def close_pull_request_event(self, request_id, updated_at):
+        """
+        changes status of pull request
+        """
+
+        self.pull_requests[request_id]['state'] = 'closed'
+        self.pull_requests[request_id]['updated_at'] = updated_at
 
     def watch_event(self, user_info):
         """
