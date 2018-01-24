@@ -3,12 +3,12 @@ class GitRepo(object):
     An object representing a Github repository
     """
     
-    def __init__(self, ght_id_h=None, name_h=None, owner=None, **kwargs):  # don't crash if agent doesn't supply args
+    def __init__(self, ght_id_h=None, name_h=None, owner=None, **kwargs):
 
         # Setup information
-        self.ght_id_h = kwargs.get("ght_id_h")
-        self.name_h = kwargs.get("name_h")
-        self.owner = kwargs.get("owner") # A dictionary with {login_h, ght_id_h, type}
+        self.ght_id_h = ght_id_h
+        self.name_h = name_h
+        self.owner = owner # A dictionary with {login_h, ght_id_h, type}
         self.full_name_h = kwargs.get("full_name_h", "")
         self.is_public = kwargs.get("is_public", True)
         self.description_m = kwargs.get("description_m", "")
@@ -36,17 +36,56 @@ class GitRepo(object):
         self.fork_list = kwargs.get("fork_list", {}) # Keyed by id
 
         # Other possible data, Not in data schema
-        self.collaborators = {} #{ght_id_h: permissions}
-        # self.branches = set()
-        # self.tags = set()
-        # # pull requests are temporal, maybe a queue or list, depends on how
-        # # agent will prioritize addressing pulls
-        # self.pull_requests = []
+        # {ght_id_h: permissions}
+        self.collaborators = {self.owner['ght_id_h'] : 'owner'}
+        self.pull_requests = {}
+        self.smallest_available_pull_request_id = 0
         self.commit_comments = []
+        self.smallest_available_comment_id = 0
+        self.issue_comments = {}
         self.commits = []
+        # Each repo starts with a master branch. Currently just has creation date
+        self.branches = {'master': {'created_at': self.created_at} }
+        self.tags = {}
 
-    # Below methods match RepoHub actions
-    # RepoHub would call the corresponding repo's method for the user action
+    ############################################################################
+    # Below methods match RepoHub actions - called by repo_hub
+    ############################################################################
+
+    def create_comment_event(self, comment_info):
+        """
+        adds comment information to issue comments and returns the assigned id
+        to the client
+        """
+
+        comment_id = self.smallest_available_comment_id
+        self.smallest_available_comment_id += 1
+        self.issue_comments[comment_id] = comment_info
+
+        return comment_id
+
+    def edit_comment_event(self, comment_id, comment):
+        """
+        replaces the issue comment with new content
+        """
+
+        if comment_id in self.issue_comments:
+            self.issue_comments[comment_id] = comment
+            return True
+        else:
+            return False
+
+    def delete_comment_event(self, comment_id):
+        """
+        removes an issue comment if possible
+        """
+
+        if comment_id in self.issue_comments:
+            self.issue_comments.pop(comment_id)
+            return True
+        else:
+            return False
+
     def commit_comment_event(self, agent_id, commit_info):
         """
         user requests to make a commit to the repo
@@ -55,39 +94,37 @@ class GitRepo(object):
         """
         self.commit_comments.append((agent_id, commit_info))
         
-    # Following methods match RepoHub actions
-    # RepoHub would call the corresponding repo's method for the user action
-    def create_tag_event(self, agent_id, tag_info):
+    def create_tag_event(self, tag_name, tag_creation_date):
         """
         user requests to make a new tag
         check if collab
         repo takes tag info and adds a new tag to repo
         """
-        pass
+        self.tags[tag_name] = {'created_at': tag_creation_date}
 
-    def create_branch_event(self, agent_id, branch_info):
+    def create_branch_event(self, branch_name, branch_creation_date):
         """
         user requests to make a new branch
         check if collab
         repo takes branch info and adds a new branch to repo
         """
-        pass
+        self.branches[branch_name] = {'created_at': branch_creation_date}
 
-    def delete_tag_event(self, agent_id, tag_id):
+    def delete_tag_event(self, tag_name):
         """
         user requests repo delete tag
         check if collab
         repo deletes tag
         """
-        pass
+        self.tags.pop(tag_name)
 
-    def delete_branch_event(self, agent_id, branch_id):
+    def delete_branch_event(self, branch_name):
         """
         user requests repo delete branch
         check if collab
         repo deletes branch
         """
-        pass
+        self.branches.pop(branch_name)
 
     def issue_comment_event(self, agent_id, comment_info):
         """
@@ -128,13 +165,6 @@ class GitRepo(object):
             self.collaborators.pop(target_agent, None)
             return "Successfully removed collaborator"
 
-    def pull_request_event(self, agent_id, pull_request):
-        """
-        user requests a pull from a fork
-        repo adds the pull request to the stack
-        """
-        pass
-
     def push_event(self, agent_id, commit_to_push):
         """
         user requests to push to repo
@@ -145,6 +175,26 @@ class GitRepo(object):
          #    return "Failure: Agent not a collaborator"
         self.commits.append(commit_to_push)
         return "Successfully pushed"
+
+    def submit_pull_request_event(self, head_id, updated_at):
+        """
+        adds a pull request to the top of the deque
+        """
+        request_id = self.smallest_available_pull_request_id
+        self.smallest_available_pull_request_id += 1
+        self.pull_requests[request_id] = {'head': head_id, 
+                                          'updated_at': updated_at, 
+                                          'state': 'open'}
+
+        return request_id
+
+    def close_pull_request_event(self, request_id, updated_at):
+        """
+        changes status of pull request
+        """
+
+        self.pull_requests[request_id]['state'] = 'closed'
+        self.pull_requests[request_id]['updated_at'] = updated_at
 
     def watch_event(self, user_info):
         """
