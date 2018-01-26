@@ -30,7 +30,7 @@ class GitHubTrial(Trial):
                   Parameter('prob_agent_creates_new_repo', distribution=Uniform(0,1), default=0.5),
                   ]
 
-    measures = [Measure('num_agents'), Measure('num_repos')]
+    measures = [Measure('num_agents'), Measure('num_repos'), Measure('total_agent_activity')]
 
 
     # Override the default (which runs each agent once) to decide whether to create a new agent
@@ -50,35 +50,40 @@ class GitHubTrial(Trial):
         #    a.register()
         #a.agentLoop(max_iterations=1)
 
-    # This is defined above as a measure
+    # These are defined above as measures
     def num_agents(self):
         return len(self.agents)
 
-    # This doesn't work yet - will probably query the hub (and init will reset the hub between trials)
+    # Measures should probably query the hub or use a de facto trace soon
     def num_repos(self):
-        return len(self.repos)
+        return sum([len(a.owned_repos) for a in self.agents])
+
+    def total_agent_activity(self):
+        return sum([a.total_activity for a in self.agents])
 
 
 # This is useful to run experiments of varying length and host distribution
-def run_exp(max_iterations=20, hosts=None):
+def run_exp(max_iterations=20, hosts=None, dependent='num_agents', num_trials=1):
     e = Experiment(GitHubTrial,
                    hosts=hosts,
                    exp_data={'max_iterations': max_iterations},
-                   num_trials=1,
+                   num_trials=num_trials,
                    independent=['prob_create_new_agent', Range(0.5, 0.6, 0.1)],
-                   dependent='num_agents',
+                   dependent=dependent,
                    imports='import Dash2.github.github_experiment',
                    trial_class_str='Dash2.github.github_experiment.GitHubTrial')
-    e.run()
+    return e, e.run()
 
 if __name__ == "__main__":
     print 'argv is', sys.argv
     if len(sys.argv) > 1 and sys.argv[1] == "run":  # usage: python xx run host..; host list
-        md, mr = run_exp(hosts=sys.argv[2:])  # rest of the arguments are hosts to run on
+        exp, trial_outputs = run_exp(hosts=sys.argv[2:])  # rest of the arguments are hosts to run on
     elif len(sys.argv) > 1 and sys.argv[1] == "find":  # usage: python xx run host..; host list
         ar = find_posterior(hosts=sys.argv[2:])
 
 start = time.time()
-run_exp(max_iterations=1000)
+exp, trial_outputs = run_exp(max_iterations=10000,
+                             dependent=lambda t: [t.num_agents(), t.num_repos(), t.total_agent_activity()],
+                             num_trials=1)
 print 'run took', time.time() - start, 'seconds'
 
