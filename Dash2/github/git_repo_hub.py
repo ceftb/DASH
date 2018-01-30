@@ -30,16 +30,15 @@ class GitRepoHub(WorldHub):
         """
 
         self.local_event_log.append({
-            'userID':user_id,
-            'repoID':repo_id,
-            'eventType':event_type,
-            'subeventType':subevent_type,
-            'time':time})
+            'userID': user_id,
+            'repoID': repo_id,
+            'eventType': event_type,
+            'subeventType': subevent_type,
+            'time': time})
 
         if len(self.local_event_log) > 1000:
             self.dump_event_log(user_id)
             del self.local_event_log[:]
-
 
     def dump_event_log(self, agent_id):
         """
@@ -417,22 +416,25 @@ class GitRepoHub(WorldHub):
 
         return False
 
+
 def save_object(obj, filename):
     """
     Save an object to file for later use.
     """
     
-    file = open(filename, 'ab+')
-    pickle.dump(obj, file)
-    file.close()
+    save_file = open(filename, 'ab+')
+    pickle.dump(obj, save_file)
+    save_file.close()
+
 
 def load_object(filename):
     """
     Load a previously saved object.
     """
     
-    file = open(filename, 'rb')
-    return pickle.load(file)
+    save_file = open(filename, 'rb')
+    return pickle.load(save_file)
+
 
 if __name__ == '__main__':
     """

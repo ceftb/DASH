@@ -14,6 +14,7 @@ from Dash2.core.trial import Trial
 from Dash2.core.parameter import Range, Parameter, Uniform, TruncNorm
 from Dash2.core.measure import Measure
 from git_user_agent import GitUserAgent
+from git_repo_hub import GitRepoHub
 import random
 import time
 import numpy
@@ -32,11 +33,15 @@ class GitHubTrial(Trial):
 
     measures = [Measure('num_agents'), Measure('num_repos'), Measure('total_agent_activity')]
 
+    def initialize(self):
+        # Create a hub object that will reside in the experiment with the agents
+        self.hub = GitRepoHub(1)
+
 
     # Override the default (which runs each agent once) to decide whether to create a new agent
     def run_one_iteration(self):
         if not self.agents or random.random() < self.prob_create_new_agent:  # Have to create an agent in the first step
-            a = GitUserAgent(port=6000, trace_client=False)
+            a = GitUserAgent(useInternalHub=True, hub=self.hub, port=6000, trace_client=False)
             a.trace_client = False  # cut chatter when connecting and disconnecting
             a.traceLoop = False  # cut chatter when agent runs steps
             a.trace_github = False  # cut chatter when acting in github world
@@ -82,7 +87,7 @@ if __name__ == "__main__":
         ar = find_posterior(hosts=sys.argv[2:])
 
 start = time.time()
-exp, trial_outputs = run_exp(max_iterations=10000,
+exp, trial_outputs = run_exp(max_iterations=1000,
                              dependent=lambda t: [t.num_agents(), t.num_repos(), t.total_agent_activity()],
                              num_trials=1)
 print 'run took', time.time() - start, 'seconds'

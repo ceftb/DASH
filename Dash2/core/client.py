@@ -35,9 +35,11 @@ class Client(object):
         self.connected = False
         self.traceAction = False
 
-        self.isSharedSocketEnabled = False; # The first agent to use the socket, gets to set up the connection.
-        # All other agents with isSharedSocketEnabled = True will reuse it.
+        self.useInternalHub = False  # If true the hub is an object in the same image and sendAction is a function call
+        self.hub = None  # the hub if useInternalHub is True
 
+        self.isSharedSocketEnabled = False  # The first agent to use the socket, gets to set up the connection.
+        # All other agents with isSharedSocketEnabled = True will reuse it.
 
     def test(self):
         """
@@ -83,7 +85,7 @@ class Client(object):
                     Client.shared_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                     Client.shared_socket.connect((self.server_host, self.server_port))
                 self.sock = Client.shared_socket
-                # not need to establish connection, because it is assmed that if shared socket is not None,
+                # not need to establish connection, because it is assumed that if shared socket is not None,
                 # it is already connected to a server.
             else:
                 self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -102,23 +104,26 @@ class Client(object):
             aux_data(list) # any extra information you want to relay to the world hub during registration
         """
 
-        try:
+        if self.useInternalHub:
+            response = [self.hub, self.id, None]
+        else:
+            try:
+                if self.trace_client:
+                    print "establishing connection..."
+            except AttributeError as ae:
+                print 'It looks as though there was an attempt to register an agent without first calling the base class constructor:'
+                print ae
+
+            self.establishConnection()
+
+            if not self.connected:
+                print "no connection established, agent not registered"
+                return None
+
             if self.trace_client:
-                print "establishing connection..."
-        except AttributeError as ae:
-            print 'It looks as though there was an attempt to register an agent without first calling the base class constructor:'
-            print ae
+                print "registering..."
 
-        self.establishConnection()
-
-        if not self.connected:
-            print "no connection established, agent not registered"
-            return None
-
-        if self.trace_client:
-            print "registering..."
-
-        response = self.sendAndReceive(message_types['register'], [aux_data])
+            response = self.sendAndReceive(message_types['register'], [aux_data])
 
         result = response[0]
         self.id = response[1]
@@ -142,11 +147,14 @@ class Client(object):
             #to be added
         """
 
-        if self.sock is None or not self.connected:
+        if self.useInternalHub and self.hub:
+            # todo: Currently losing scheduling info - will need to check against timed_hub
+            response = self.hub.processSendActionRequest(self.id, action, data)
+        elif self.sock is None or not self.connected:
             print 'Client sent an action, but there is no connection to a hub. Check if register() was called.'
             return None
-
-        response = self.sendAndReceive(message_types['send_action'], [self.id, action, data, time])
+        else:
+            response = self.sendAndReceive(message_types['send_action'], [self.id, action, data, time])
 
         # Allow for the result to be a list, e.g. ['success', [data]], or just an object, e.g. 'fail'.
         # However if the return object is a list it must have the first form.
@@ -179,7 +187,10 @@ class Client(object):
         Example:
             #to be added
         """
-        response = self.sendAndReceive(message_types['get_updates'], [self.id, aux_data])
+        if self.useInternalHub:
+            response = self.hub.processGetUpdatesRequest(self.id, aux_data)
+        else:
+            response = self.sendAndReceive(message_types['get_updates'], [self.id, aux_data])
         aux_response = response[0]
 
         if self.trace_client:
@@ -195,6 +206,8 @@ class Client(object):
         Args:
             aux_data(list)    # Data to be sent to the world hub
         """
+        if self.useInternalHub:
+            return
 
         if self.sock is not None and self.isSharedSocketEnabled is False:
             if self.connected:
