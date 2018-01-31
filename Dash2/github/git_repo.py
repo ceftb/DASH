@@ -38,7 +38,14 @@ class GitRepo(object):
         # Other possible data, Not in data schema
         # {ght_id_h: permissions}
         self.collaborators = {self.owner['ght_id_h'] : 'owner'}
-        self.pull_requests = {}
+        # Keyed by request id: valued by dict w/ 
+        # {'state':'open'/'closed', 'head':rep_id, 'updated_at':time, 'labeled':T/F, 'review': T/F}
+        self.pull_requests = {} 
+        # Keyed by issues id: valued by dict w/ 
+        # {'state': 'open'/'closed', 'updated_at': time, 'assignment': user_id/None, 
+        # 'labeled': True/False, 'milestone': True/False}
+        self.smallest_available_issue_id = 0
+        self.issues = {}
         self.smallest_available_pull_request_id = 0
         self.commit_comments = []
         self.smallest_available_comment_id = 0
@@ -51,6 +58,77 @@ class GitRepo(object):
     ############################################################################
     # Below methods match RepoHub actions - called by repo_hub
     ############################################################################
+
+    def issue_opened_event(self, updated_at):
+        issue_id = self.smallest_available_issue_id
+        self.smallest_available_issue_id += 1
+        self.issues[issue_id] = {'state':'open',
+                                 'updated_at': updated_at,
+                                 'assignment': None,
+                                 'labeled': False,
+                                 'milestoned': False}
+        return issue_id
+
+    def issue_reopened_event(self, issue_id, updated_at):
+        if self.issues[issue_id]['state'] == 'open':
+            return False
+        else:
+            self.issues[issue_id]['state'] = 'open'
+            self.issues[issue_id]['updated_at'] = updated_at
+            return True
+
+    def issue_closed_event(self, issue_id, updated_at):
+        if self.issues[issue_id]['state'] == 'closed':
+            return False
+        else:
+            self.issues[issue_id]['state'] = 'closed'
+            self.issues[issue_id]['updated_at'] = updated_at
+            return True
+
+    def issue_assigned_event(self, issue_id, updated_at, user_id):
+        if user_id in self.collaborators:
+            self.issues[issue_id]['updated_at'] = updated_at
+            self.issues[issue_id]['assignment'] = user_id
+            return True
+        else:
+            return False
+
+    def issue_unassigned_event(self, issue_id, updated_at):
+        self.issues[issue_id]['updated_at'] = updated_at
+        self.issues[issue_id]['assignment'] = None
+        return True
+
+    def issue_labeled_event(self, issue_id, updated_at):
+        if self.issues[issue_id]['labeled'] == False:
+            self.issues[issue_id]['updated_at'] = updated_at
+            self.issues[issue_id]['labeled'] = True
+            return True
+        else:
+            return False
+
+    def issue_unlabeled_event(self, issue_id, updated_at):
+        if self.issues[issue_id]['labeled'] != False:
+            self.issues[issue_id]['updated_at'] = updated_at
+            self.issues[issue_id]['labeled'] = False
+            return True
+        else:
+            return False
+
+    def issue_milestoned_event(self, issue_id, updated_at):
+        if self.issues[issue_id]['milestoned'] == False:
+            self.issues[issue_id]['updated_at'] = updated_at
+            self.issues[issue_id]['milestoned'] = True
+            return True
+        else:
+            return False
+
+    def issue_demilestoned_event(self, issue_id, updated_at):
+        if self.issues[issue_id]['milestoned'] != False:
+            self.issues[issue_id]['updated_at'] = updated_at
+            self.issues[issue_id]['milestoned'] = False
+            return True
+        else:
+            return False
 
     def create_comment_event(self, comment_info):
         """
@@ -126,21 +204,6 @@ class GitRepo(object):
         """
         self.branches.pop(branch_name)
 
-    def issue_comment_event(self, agent_id, comment_info):
-        """
-        user repuests repo add new comment
-        repo addes new comment
-        """
-        pass
-
-    def issues_event(self, agent_id, issue_info):
-        """
-        user requests change in issue status
-        check if collab
-        repo changes issue status
-        """
-        pass
-
     def member_event(self, agent_id, target_agent, action, permissions=None):
         """
         user requests add a new collaborator to repo
@@ -184,7 +247,9 @@ class GitRepo(object):
         self.smallest_available_pull_request_id += 1
         self.pull_requests[request_id] = {'head': head_id, 
                                           'updated_at': updated_at, 
-                                          'state': 'open'}
+                                          'state': 'open',
+                                          'labeled': False,
+                                          'review': False}
 
         return request_id
 
@@ -194,6 +259,31 @@ class GitRepo(object):
         """
 
         self.pull_requests[request_id]['state'] = 'closed'
+        self.pull_requests[request_id]['updated_at'] = updated_at
+
+    def reopened_pull_request_event(self, request_id, updated_at):
+
+        self.pull_requests[request_id]['state'] = 'open'
+        self.pull_requests[request_id]['updated_at'] = updated_at
+
+    def label_pull_request_event(self, request_id, updated_at):
+
+        self.pull_requests[request_id]['labeled'] = True
+        self.pull_requests[request_id]['updated_at'] = updated_at
+
+    def label_pull_request_event(self, request_id, updated_at):
+
+        self.pull_requests[request_id]['labeled'] = False
+        self.pull_requests[request_id]['updated_at'] = updated_at
+
+    def review_pull_request_event(self, request_id, updated_at):
+
+        self.pull_requests[request_id]['review'] = True
+        self.pull_requests[request_id]['updated_at'] = updated_at
+
+    def remove_review_pull_request_event(self, request_id, updated_at):
+
+        self.pull_requests[request_id]['review'] = False
         self.pull_requests[request_id]['updated_at'] = updated_at
 
     def watch_event(self, user_info):

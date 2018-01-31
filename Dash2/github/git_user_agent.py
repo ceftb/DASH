@@ -23,8 +23,13 @@ goalWeight MakeRepo 1
 goalRequirements MakeRepo
   create_repo_event(RepoName)
   submit_pull_request_event(RepoName, RepoName)
-  pick_random_pull_request(PullRequest)
-  close_pull_request_event(PullRequest)
+  pick_random_pull_request(Request)
+  close_pull_request_event(Request)
+  reopened_pull_request_event(Request)
+  label_pull_request_event(Request)
+  unlabel_pull_request_event(Request)
+  review_pull_request_event(Request)
+  remove_review_pull_request_event(Request)
             """)
 
         # Registration
@@ -80,13 +85,15 @@ goalRequirements MakeRepo
         self.owned_repos = {} # {ght_id_h : name_h}
         self.name_to_repo_id = {} # {name_h : ght_id_h} Contains all repos known by the agent
         self.name_to_user_id = {} # {login_h : ght_id_h} Contains all users known by the agent
-        self.known_issues = {} # key: (issue #) value: (repo_name)
+        self.known_issue_comments = {} # key: (repo_name) value: [(issue #)]
+        self.known_issues = {} # key: (repo_name) value: [(issue #)]
         self.outgoing_requests = {} # keyed tuple of (head_name, base_name, request_id) valued by state
 
         # Actions
         self.primitiveActions([
             ('generate_random_name', self.generate_random_name),
             ('pick_random_repo', self.pick_random_repo),
+            ('pick_random_issue_comment', self.pick_random_issue_comment),
             ('pick_random_issue', self.pick_random_issue),
             ('create_repo_event', self.create_repo_event),
             ('commit_comment_event', self.commit_comment_event),
@@ -96,12 +103,25 @@ goalRequirements MakeRepo
             ('delete_branch_event', self.delete_branch_event),
             ('create_comment_event', self.create_comment_event),
             ('edit_comment_event', self.edit_comment_event),
+            ('issue_opened_event', self.issue_opened_event),
+            ('issue_reopened_event', self.issue_reopened_event),
+            ('issue_closed_event', self.issue_closed_event),
+            ('issue_assigned_event', self.issue_assigned_event),
+            ('issue_unassigned_event', self.issue_unassigned_event),
+            ('issue_labeled_event', self.issue_labeled_event),
+            ('issue_unlabeled_event', self.issue_unlabeled_event),
+            ('issue_milestoned_event', self.issue_milestoned_event),
+            ('issue_demilestoned_event', self.issue_demilestoned_event),
             ('delete_comment_event', self.delete_comment_event),
             ('pick_random_pull_request', self.pick_random_pull_request),
             ('submit_pull_request_event', self.submit_pull_request_event),
             ('close_pull_request_event', self.close_pull_request_event),
+            ('reopened_pull_request_event', self.reopened_pull_request_event),
+            ('label_pull_request_event', self.label_pull_request_event),
+            ('unlabel_pull_request_event', self.unlabel_pull_request_event),
+            ('review_pull_request_event', self.review_pull_request_event),
+            ('remove_review_pull_request_event', self.remove_review_pull_request_event),
             ('fork_event', self.fork_event),
-            ('issues_event', self.issues_event),
             ('push_event', self.push_event),
             ('watch_event', self.watch_event),
             ('follow_event', self.follow_event),
@@ -170,9 +190,18 @@ goalRequirements MakeRepo
         self.total_activity += 1
         return [{repo_name_variable : random.choice(self.name_to_repo_id.keys()) }]
 
-    def pick_random_issue(self, (goal, issue_id)):
+    def pick_random_issue_comment(self, (goal, issue_comment)):
         self.total_activity += 1
-        return [{issue_id : random.choice(self.known_issues.keys())}]
+        # Picks a repo and then an id
+        repo_name = random.choice(self.known_issue_comments.keys())
+        issue_id = random.choice(self.known_issue_comments[repo_name])
+        return [{issue_comment : (repo_name, issue_id)}]
+
+    def pick_random_issue(self, (goal, issue)):
+        self.total_activity += 1
+        repo_name = random.choice(self.known_issues.keys())
+        issue_id = random.choice(self.known_issues[repo_name])
+        return [{issue : (repo_name, issue_id)}]
 
     ############################################################################
     # CreateEvents (Tag/branch/repo)
@@ -242,119 +271,180 @@ goalRequirements MakeRepo
         return [{}]
 
     ############################################################################
-    # Issues Events methods
+    # Issue Comment methods
     ############################################################################
 
-    def create_comment_event(self, (goal, repo_name, comment)):
+    def create_comment_event(self, (goal, repo_name, comment_text)):
         """
         send a comment to a repo
         """
         if self.trace_github:
-            print goal, repo_name, comment
+            print goal, repo_name, comment_text
         if repo_name not in self.name_to_repo_id:
             if self.trace_github:
                 print 'Agent does not know the id of the repo with name', repo_name, 'cannot create comment'
             return []
         status, comment_id = self.sendAction("create_comment_event", 
-            (self.name_to_repo_id[repo_name], comment))
+            (self.name_to_repo_id[repo_name], comment_text))
         if self.trace_github:
-            print 'create comment event:', status, repo_name, self.name_to_repo_id[repo_name], comment
-        self.known_issues[comment_id] = repo_name
+            print 'create comment event:', status, repo_name, self.name_to_repo_id[repo_name], comment_text
+        if repo_name in self.known_issue_comments:
+            self.known_issue_comments[repo_name].append(comment_id)
+        else:
+            self.known_issue_comments[repo_name] = [comment_id]
         self.total_activity += 1
         return [{}]
 
-    def edit_comment_event(self, (goal, comment_id, comment)):
+    def edit_comment_event(self, (goal, comment, comment_text)):
         """
         send a comment to a repo
         """
+        repo_name, comment_id = comment
         if self.trace_github:
-            print goal, comment, comment_id
+            print goal, comment_text, comment_id
         status = self.sendAction("edit_comment_event", 
-                                (self.name_to_repo_id[self.known_issues[comment_id]], 
-                                comment, comment_id))
+                                (self.name_to_repo_id[repo_name], 
+                                comment_text, comment_id))
         if self.trace_github:
             print 'edit comment event:', status, \
-              self.name_to_repo_id[self.known_issues[comment_id]], comment
+              self.name_to_repo_id[repo_name], comment_text
         self.total_activity += 1
         return [{}]
 
-    def delete_comment_event(self, (goal, comment_id)):
+    def delete_comment_event(self, (goal, comment)):
         """
         send a comment to a repo
         """
+        repo_name, comment_id = comment
         if self.trace_github:
             print goal, comment_id
         status = self.sendAction("delete_comment_event", 
-                                (self.name_to_repo_id[self.known_issues[comment_id]], 
+                                (self.name_to_repo_id[repo_name], 
                                 comment_id))
         if self.trace_github:
             print 'delete comment event:', status, \
-              self.name_to_repo_id[self.known_issues[comment_id]], comment_id
+              self.name_to_repo_id[repo_name], comment_id
         self.total_activity += 1
         return [{}]
 
-    def issue_open_event(self):
+    ############################################################################
+    # Issues Events methods
+    ############################################################################
+
+    def issue_opened_event(self, (goal, repo_name)):
         """
         open a new issue
         """
+        if self.trace_github:
+            print goal, repo_name, "issue_opened_event"
+        status, issue_id = self.sendAction("issue_opened_event",
+                                          (self.name_to_repo_id[repo_name]))
+        if self.trace_github:
+            print "issue_opened_event:", status, issue_id
+        if repo_name in self.known_issues:
+            self.known_issues[repo_name].append(issue_id)
+        else:
+            self.known_issues[repo_name] = [issue_id]
         self.total_activity += 1
-        pass
+        return [{}]
 
-    def issue_reopen_event(self):
+    def issue_reopened_event(self, (goal, issue)):
         """
         reopen issue
         """
+        if self.trace_github:
+            print goal, issue, "issue_reopened_event"
+        repo_name, issue_id = issue
+        status = self.sendAction("issue_reopened_event",
+                                (self.name_to_repo_id[repo_name], issue_id))
         self.total_activity += 1
-        pass
+        
+        return [{}]
 
-    def issue_close_event(self):
+    def issue_closed_event(self, (goal, issue)):
         """
         close issue
         """
+        if self.trace_github:
+            print goal, issue, "issue_closed_event"
+        repo_name, issue_id = issue
+        status = self.sendAction("issue_closed_event",
+                                (self.name_to_repo_id[repo_name], issue_id))
         self.total_activity += 1
-        pass
+        return [{}]
 
-    def issue_assign_event(self):
+    def issue_assigned_event(self, (goal, issue, user_name)):
         """
         assign issue
         """
+        if self.trace_github:
+            print goal, issue, user_name, "issue_assigned_event"
+        repo_name, issue_id = issue
+        status = self.sendAction("issue_assigned_event",
+                                (self.name_to_repo_id[repo_name], issue_id,
+                                 self.name_to_user_id[user_name]))
         self.total_activity += 1
-        pass
+        return [{}]
 
-    def issue_unassign_event(self):
+    def issue_unassigned_event(self, (goal, issue)):
         """
         unassign issue
         """
+        if self.trace_github:
+            print goal, issue, "issue_unassigned_event"
+        repo_name, issue_id = issue
+        status = self.sendAction("issue_unassigned_event",
+                                (self.name_to_repo_id[repo_name], issue_id))
         self.total_activity += 1
-        pass
+        return [{}]
 
-    def issue_label_event(self):
+    def issue_labeled_event(self, (goal, issue)):
         """
         label issue
         """
+        if self.trace_github:
+            print goal, issue, "issue_labeled_event"
+        repo_name, issue_id = issue
+        status = self.sendAction("issue_labeled_event",
+                                (self.name_to_repo_id[repo_name], issue_id))
         self.total_activity += 1
-        pass
+        return [{}]
 
-    def issue_unlable_event(self):
+    def issue_unlabeled_event(self, (goal, issue)):
         """
         unlabel issue
         """
+        if self.trace_github:
+            print goal, issue, "issue_unlabeled_event"
+        repo_name, issue_id = issue
+        status = self.sendAction("issue_unlabeled_event",
+                                (self.name_to_repo_id[repo_name], issue_id))
         self.total_activity += 1
-        pass
+        return [{}]
 
-    def issue_milestone_event(self):
+    def issue_milestoned_event(self, (goal, issue)):
         """
         milestone issue
         """
+        if self.trace_github:
+            print goal, issue, "issue_milestoned_event"
+        repo_name, issue_id = issue
+        status = self.sendAction("issue_milestoned_event",
+                                (self.name_to_repo_id[repo_name], issue_id))
         self.total_activity += 1
-        pass
+        return [{}]
 
-    def issue_demilestone_event(self):
+    def issue_demilestoned_event(self, (goal, issue)):
         """
         demilestone issue
         """
+        if self.trace_github:
+            print goal, issue, "issue_demilestoned_event"
+        repo_name, issue_id = issue
+        status = self.sendAction("issue_demilestoned_event",
+                                (self.name_to_repo_id[repo_name], issue_id))
         self.total_activity += 1
-        pass
+        return [{}]
 
     ############################################################################
     # Pull Request Events methods
@@ -401,6 +491,27 @@ goalRequirements MakeRepo
             print status, 'close_pull_request_event', head_name, base_name, request_id
         return [{}]
 
+    def reopened_pull_request_event(self, (goal, pull_request)):
+        """
+        close pull request
+        """
+        head_name = pull_request['head']
+        base_name = pull_request['base']
+        request_id = pull_request['id']
+        
+        if base_name not in self.name_to_repo_id:
+            if self.trace_github:
+                print 'Agent does not know the id of the repo with name', base_name, 'cannot pull'
+            return []
+
+        status = self.sendAction("reopened_request_event", 
+                                (self.name_to_repo_id[base_name], request_id))
+        self.outgoing_requests[(head_name, base_name, request_id)] = 'open'
+        self.total_activity += 1
+        if self.trace_github:
+            print status, 'reopened_request_event', head_name, base_name, request_id
+        return [{}]
+
     def assign_pull_request_event(self):
         """
         assign pull request
@@ -408,59 +519,91 @@ goalRequirements MakeRepo
         self.total_activity += 1
         pass
 
-    def unassign_pull_request_reopen_event(self):
+    def unassign_pull_request_event(self):
         """
         unassign pull request
         """
         self.total_activity += 1
         pass
 
-    def label_pull_request_event(self):
+    def label_pull_request_event(self, (goal, pull_request)):
         """
         label pull request
         """
-        self.total_activity += 1
-        pass
 
-    def unlabel_pull_request_event(self):
-        """
-        unlabel pull request
-        """
-        self.total_activity += 1
-        pass
+        head_name = pull_request['head']
+        base_name = pull_request['base']
+        request_id = pull_request['id']
 
-    def request_review_event(self):
-        """
-        request review pull request
-        """
-        self.total_activity += 1
-        pass
+        if base_name not in self.name_to_repo_id:
+            if self.trace_github:
+                print 'Agent does not know the id of the repo with name', base_name, 'cannot pull'
+            return []
 
-    def remove_review_request_event(self):
-        """
-        remove pull request review request
-        """
+        status = self.sendAction("label_pull_request_event", 
+                                (self.name_to_repo_id[base_name], request_id))
         self.total_activity += 1
-        pass
+        if self.trace_github:
+            print status, 'label_pull_request_event', head_name, base_name, request_id
+        return [{}]
 
-    def reopen_pull_request_event(self):
+    def unlabel_pull_request_event(self, (goal, pull_request)):
 
-        """
-        reopen pull request
-        """
+        head_name = pull_request['head']
+        base_name = pull_request['base']
+        request_id = pull_request['id']
+
+        if base_name not in self.name_to_repo_id:
+            if self.trace_github:
+                print 'Agent does not know the id of the repo with name', base_name, 'cannot pull'
+            return []
+
+        status = self.sendAction("unlabel_pull_request_event", 
+                                (self.name_to_repo_id[base_name], request_id))
         self.total_activity += 1
-        pass
+        if self.trace_github:
+            print status, 'unlabel_pull_request_event', head_name, base_name, request_id
+        return [{}]
+
+    def review_pull_request_event(self, (goal, pull_request)):
+
+        head_name = pull_request['head']
+        base_name = pull_request['base']
+        request_id = pull_request['id']
+
+        if base_name not in self.name_to_repo_id:
+            if self.trace_github:
+                print 'Agent does not know the id of the repo with name', base_name, 'cannot pull'
+            return []
+
+        status = self.sendAction("review_pull_request_event", 
+                                (self.name_to_repo_id[base_name], request_id))
+        self.total_activity += 1
+        if self.trace_github:
+            print status, 'review_pull_request_event', head_name, base_name, request_id
+        return [{}]
+
+    def remove_review_pull_request_event(self, (goal, pull_request)):
+
+        head_name = pull_request['head']
+        base_name = pull_request['base']
+        request_id = pull_request['id']
+
+        if base_name not in self.name_to_repo_id:
+            if self.trace_github:
+                print 'Agent does not know the id of the repo with name', base_name, 'cannot pull'
+            return []
+
+        status = self.sendAction("remove_review_pull_request_event", 
+                                (self.name_to_repo_id[base_name], request_id))
+        self.total_activity += 1
+        if self.trace_github:
+            print status, 'remove_review_pull_request_event', head_name, base_name, request_id
+        return [{}]
 
     def edit_pull_request_event(self):
         """
         edit pull request
-        """
-        self.total_activity += 1
-        pass
-
-    def issues_event(self):
-        """
-        agent sends status change of issue to repo
         """
         self.total_activity += 1
         pass
