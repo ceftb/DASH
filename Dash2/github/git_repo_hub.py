@@ -169,7 +169,7 @@ class GitRepoHub(WorldHub):
         return 'failure'
 
     ############################################################################
-    # Issues Events methods
+    # Issue comment Events methods
     ############################################################################
 
     def create_comment_event(self, agent_id, (repo_id, comment)):
@@ -213,24 +213,97 @@ class GitRepoHub(WorldHub):
         else:
             return ["Failure: can't delete comment " + str(comment_id)]
 
-    def issue_comment_event(self, agent_id, comment_info):
-        """
-        user repuests repo add new comment
-        repo addes new comment
-        """
-        pass
+    ############################################################################
+    # Issues Events methods
+    ############################################################################
+    def issue_opened_event(self, agent_id, (repo_id)):
 
-    def issues_event(self, agent_id, issue_info):
-        """
-        user requests change in issue status
-        check if collab
-        repo changes issue status
+        if repo_id not in self.local_repos:
+            return 'fail'
+        updated_at = time()
+        issue_id = self.local_repos[repo_id].issue_opened_event(updated_at)
+        self.log_event(agent_id, repo_id, 'IssuesEvent', 'opened', updated_at)
+        return 'success', issue_id
 
-        types: open issue, close issue, assign issue, unassign issue, 
-        label issue, unlabel issue, milestone issue, demilestone issue,
-        reopen issue
-        """
-        pass
+    def issue_reopened_event(self, agent_id, (repo_id, issue_id)):
+
+        if repo_id not in self.local_repos:
+            return 'fail'
+        updated_at = time()
+        if self.local_repos[repo_id].issue_reopened_event(issue_id, updated_at):
+            self.log_event(agent_id, repo_id, 'IssuesEvent', 'reopened', updated_at)
+            return 'success'
+        return 'failed, event alread open'
+
+    def issue_closed_event(self, agent_id, (repo_id, issue_id)):
+
+        if repo_id not in self.local_repos:
+            return 'fail'
+        updated_at = time()
+        if self.local_repos[repo_id].issue_closed_event(issue_id, updated_at):
+            self.log_event(agent_id, repo_id, 'IssuesEvent', 'closed', updated_at)
+            return 'success'
+        return 'failed, event alread closed'
+
+    def issue_assigned_event(self, agent_id, (repo_id, issue_id, user_id)):
+
+        if repo_id not in self.local_repos:
+            return 'fail'
+        updated_at = time()
+        if self.local_repos[repo_id].issue_assigned_event(issue_id, updated_at, user_id):
+            self.log_event(agent_id, repo_id, 'IssuesEvent', 'assigned', updated_at)
+            return 'success'
+        return 'failed, to assign user to issue'
+
+    def issue_unassigned_event(self, agent_id, (repo_id, issue_id)):
+
+        if repo_id not in self.local_repos:
+            return 'fail'
+        updated_at = time()
+        if self.local_repos[repo_id].issue_assigned_event(issue_id, updated_at):
+            self.log_event(agent_id, repo_id, 'IssuesEvent', 'unassigned', updated_at)
+            return 'success'
+        return 'failed, to unassign user'
+
+    def issue_labeled_event(self, agent_id, (repo_id, issue_id)):
+
+        if repo_id not in self.local_repos:
+            return 'fail'
+        updated_at = time()
+        if self.local_repos[repo_id].issue_labeled_event(issue_id, updated_at):
+            self.log_event(agent_id, repo_id, 'IssuesEvent', 'labeled', updated_at)
+            return 'success'
+        return 'failed, issue already labeled'
+
+    def issue_unlabeled_event(self, agent_id, (repo_id, issue_id)):
+
+        if repo_id not in self.local_repos:
+            return 'fail'
+        updated_at = time()
+        if self.local_repos[repo_id].issue_unlabeled_event(issue_id, updated_at):
+            self.log_event(agent_id, repo_id, 'IssuesEvent', 'unlabeled', updated_at)
+            return 'success'
+        return 'failed, issue already unlabeled'
+
+    def issue_milestoned_event(self, agent_id, (repo_id, issue_id)):
+
+        if repo_id not in self.local_repos:
+            return 'fail'
+        updated_at = time()
+        if self.local_repos[repo_id].issue_milestoned_event(issue_id, updated_at):
+            self.log_event(agent_id, repo_id, 'IssuesEvent', 'milestoned', updated_at)
+            return 'success'
+        return 'failed, issue already milestone'
+
+    def issue_demilestoned_event(self, agent_id, (repo_id, issue_id)):
+
+        if repo_id not in self.local_repos:
+            return 'fail'
+        updated_at = time()
+        if self.local_repos[repo_id].issue_demilestoned_event(issue_id, updated_at):
+            self.log_event(agent_id, repo_id, 'IssuesEvent', 'demilestoned', updated_at)
+            return 'success'
+        return 'failed, issue already demilestoned'
 
     ############################################################################
     # Pull Request Events methods
@@ -263,6 +336,56 @@ class GitRepoHub(WorldHub):
         updated_at = time()
         self.local_repos[base_id].close_pull_request_event(request_id, updated_at)
         self.log_event(agent_id, base_id, 'PullRequestEvent', 'close', updated_at)
+        return 'success'
+
+    def reopened_pull_request_event(self, agent_id, (base_id, request_id)):
+
+        if base_id not in self.local_repos:
+            return 'fail'
+
+        updated_at = time()
+        self.local_repos[base_id].reopened_request_event(request_id, updated_at)
+        self.log_event(agent_id, base_id, 'PullRequestEvent', 'reopen', updated_at)
+        return 'success'
+
+    def label_pull_request_event(self, agent_id, (base_id, request_id)):
+
+        if base_id not in self.local_repos:
+            return 'fail'
+
+        updated_at = time()
+        self.local_repos[base_id].label_pull_request_event(request_id, updated_at)
+        self.log_event(agent_id, base_id, 'PullRequestEvent', 'label', updated_at)
+        return 'success'
+
+    def unlabel_pull_request_event(self, agent_id, (base_id, request_id)):
+
+        if base_id not in self.local_repos:
+            return 'fail'
+
+        updated_at = time()
+        self.local_repos[base_id].label_pull_request_event(request_id, updated_at)
+        self.log_event(agent_id, base_id, 'PullRequestEvent', 'unlabel', updated_at)
+        return 'success'
+
+    def review_pull_request_event(self, agent_id, (base_id, request_id)):
+
+        if base_id not in self.local_repos:
+            return 'fail'
+
+        updated_at = time()
+        self.local_repos[base_id].review_pull_request_event(request_id, updated_at)
+        self.log_event(agent_id, base_id, 'PullRequestEvent', 'review', updated_at)
+        return 'success'
+
+    def remove_review_pull_request_event(self, agent_id, (base_id, request_id)):
+
+        if base_id not in self.local_repos:
+            return 'fail'
+
+        updated_at = time()
+        self.local_repos[base_id].remove_review_pull_request_event(request_id, updated_at)
+        self.log_event(agent_id, base_id, 'PullRequestEvent', 'unreview', updated_at)
         return 'success'
 
     ############################################################################
