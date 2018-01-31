@@ -3,6 +3,7 @@ from Dash2.core.dash import DASHAgent
 from Dash2.core.system2 import isVar
 import random
 
+
 class GitUserAgent(DASHAgent):
     """
     A basic Git user agent that can communicate with a Git repository hub and
@@ -11,7 +12,7 @@ class GitUserAgent(DASHAgent):
 
     def __init__(self, **kwargs):
         super(GitUserAgent, self).__init__()
-        self.isSharedSocketEnabled = True # if it is True, than common socket for all agents is used.
+        self.isSharedSocketEnabled = True  # if it is True, then common socket for all agents is used.
         # The first agent to use the socket, gets to set up the connection. All other agents with
         # isSharedSocketEnabled = True will reuse it.
 
@@ -32,6 +33,8 @@ goalRequirements MakeRepo
             """)
 
         # Registration
+        self.useInternalHub = kwargs.get("useInternalHub")
+        self.hub = kwargs.get("hub")
         self.server_host = kwargs.get("host", "localhost")
         self.server_port = kwargs.get("port", 5678)
         self.trace_client = kwargs.get("trace_client", True)
