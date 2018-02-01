@@ -18,7 +18,7 @@ cd $REPO_CLONES_HOME/kazoo
 # install kazoo 
 echo "installing kazoo ..."
 sudo apt-get install python-setuptools --yes
-sudo python setup.py install
+yes | sudo python setup.py install
 
 # install zookeeper 
 echo "installing zookeeper base ..."
