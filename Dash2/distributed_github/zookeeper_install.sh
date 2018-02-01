@@ -2,6 +2,8 @@
 # This scrip installs Apache Zookeeper and Kazoo python library (zookeeper client API for Python). 
 # Tested on Ubuntu 16.04 LTS
 
+sudo su
+
 # $KAZOO_CLONE is a local path where kazoo is cloned (git clone https://github.com/2600hz/kazoo.git  ).
 sudo apt-get install mc --yes
  
