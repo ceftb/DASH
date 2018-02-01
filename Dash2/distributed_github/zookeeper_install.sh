@@ -31,10 +31,8 @@ sudo apt-get install zookeeperd --yes
 
 # set up conf file and node id
 # need root access to write in /etc
-sudo su 
-echo 1 > $ZK_ID
-cat ./zoo.conf > $ZK_CONF
-sudo $USR
+sudo echo 1 > $ZK_ID
+sudo cat ./zoo.conf > $ZK_CONF
 
 sudo service zookeeper stop
 sudo service zookeeper start
