@@ -2,12 +2,11 @@
 # This scrip installs Apache Zookeeper and Kazoo python library (zookeeper client API for Python). 
 # Tested on Ubuntu 16.04 LTS
 
-sudo su
-
 # $KAZOO_CLONE is a local path where kazoo is cloned (git clone https://github.com/2600hz/kazoo.git  ).
 sudo apt-get install mc --yes
  
 KAZOO_CLONE=~/projects/kazoo 
+WEBDASH_CLONE=~/projects/webdash 
 ZK_CONF=/etc/zookeeper/conf/zoo.cfg 
 ZK_ID=/etc/zookeeper/conf/myid
 
@@ -28,12 +27,16 @@ sudo apt-get install zookeeperd --yes
 
 # set up conf file and node id
 # need root access to write in /etc
-sudo echo 1 > $ZK_ID
-sudo cat ./zoo.conf > $ZK_CONF
+cd $WEBDASH_CLONE
+sudo chmod go+rw $ZK_ID
+sudo echo 10 > $ZK_ID
+sudo chmod go+rw $ZK_CONF
+sudo cat $WEBDASH_CLONE/Dash2/distributed_github/zoo.conf > $ZK_CONF
 
 echo "restarting zookeeper server ..."
 sudo service zookeeper stop
 sudo service zookeeper start
 
+echo "Zookeeper installation completed"
 
 
