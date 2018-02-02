@@ -29,7 +29,7 @@ sudo apt-get install zookeeperd --yes
 # need root access to write in /etc
 cd $WEBDASH_CLONE
 sudo chmod go+rw $ZK_ID
-sudo echo 10 > $ZK_ID
+sudo uname -n | sed 's/[^0-9]*//g' > $ZK_ID
 sudo chmod go+rw $ZK_CONF
 sudo cat $WEBDASH_CLONE/Dash2/distributed_github/zoo.conf > $ZK_CONF
 
