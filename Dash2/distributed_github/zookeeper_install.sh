@@ -2,7 +2,8 @@
 # This scrip installs Apache Zookeeper and Kazoo python library (zookeeper client API for Python). 
 # Tested on Ubuntu 16.04 LTS
 
-# NUMBER_OF_NODES - number of nodes in cluster
+# NUMBER_OF_NODES - number of nodes in cluster. All nodes must have an id in the name. 
+# For example, node1.kazoo-experiment.dash.isi.deterlab.net 
 NUMBER_OF_NODES=7
 
 # KAZOO_CLONE is a local path where kazoo is cloned (git clone https://github.com/2600hz/kazoo.git  ).
@@ -44,6 +45,7 @@ while [  $ID -le $NUMBER_OF_NODES ]; do
 	echo server.$ID=node$ID:2888:3888 >> $ZK_CONF
 	let ID=ID+1 
 done
+echo " " >> $ZK_CONF
 
 echo "restarting zookeeper server ..."
 sudo service zookeeper stop
