@@ -13,7 +13,7 @@ class ZkRepoHub(WorldHub):
     A class that handles client requests and modifies the desired repositories
     """
 
-    def __init__(self, repo_hub_id, **kwargs):
+    def __init__(self, repo_hub_id, zk, **kwargs):
 
         WorldHub.__init__(self, kwargs.get('port', None))
         self.users = set()  # User ids
