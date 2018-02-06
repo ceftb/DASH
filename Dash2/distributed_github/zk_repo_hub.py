@@ -1,13 +1,11 @@
-import sys;
-
-sys.path.extend(['../../'])
+import sys; sys.path.extend(['../../'])
 from Dash2.core.world_hub import WorldHub
 from Dash2.github.git_repo import GitRepo
 from time import time
 import pickle
 
 
-# Zookeeper repository repo hub (old - TBD)
+# Zookeeper repository hub
 class ZkRepoHub(WorldHub):
     """
     A class that handles client requests and modifies the desired repositories
