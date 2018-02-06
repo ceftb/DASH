@@ -566,4 +566,4 @@ def load_object(filename):
 if __name__ == '__main__':
     """
     """
-    GitRepoHub(0, port=6000).run()
+    ZkRepoHub(0, port=6000).run()
