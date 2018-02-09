@@ -24,7 +24,7 @@ class DashWorker(object):
 
     def run(self):
         # allowed values for "/experiment_assemble_status" are "active" and "terminated"
-        self.zk.ensure_path("/experiment_assemble_status", acl=None)
+        self.zk.ensure_path("/experiment_assemble_status")
         self.status, stat = self.zk.get("/experiment_assemble_status")
 
         if self.status is None or self.status == '':
@@ -35,14 +35,15 @@ class DashWorker(object):
             self.zk.stop()
             return
         elif self.status == "active":
-            self.zk.ensure_path("/tasks/node" + str(self.host_id), acl=None)
-            @self.zk.ChildrenWatch("/tasks/node" + str(self.host_id))
+            self.zk.ensure_path("/tasks/nodes/" + str(self.host_id))
+
+            @self.zk.ChildrenWatch("/tasks/nodes/" + str(self.host_id))
             def watch_tasks(tasks):
                 self.process_tasks(tasks)
                 return True
 
             @self.zk.DataWatch("/experiment_assemble_status")
-            def my_func(data, stat_):
+            def watch_assemble_status(data, stat_):
                 print("New status is %s" % data)
                 if data == "terminated":
                     print "Node was terminated by experiment assemble status change"
@@ -61,8 +62,24 @@ class DashWorker(object):
     def process_tasks(self, tasks):
         print "tasks received: "
         print(tasks)  # prints tasks
+        # TBD work in progress
         # while node has assigned tasks handle each task
         # each task is exp id, trial id, is_complete, agent id or create agent
+
+    # register a new agent in Zookeeper and return its id
+    def register_agent(self, agent):
+        lock = self.zk.Lock(self.curr_trial_path + "/agent_id_counter")
+        with lock:  # blocks waiting for lock acquisition
+            agent.id = self.agent_id_generator.value
+            self.agent_id_generator += 1
+        # print "next id " + str(self.agent_id_generator.value)
+        self.zk.ensure_path("/experiments/" + str(self.exp_id) + "/trials/" + str(self.trial_id) + "/agents/"
+                            + str(agent.id) + "/")
+
+        # TBD init other agent attributes if needed
+        # assign agent to a worker node
+
+
 
 
 # 1st argument is a comma separated list of hosts.

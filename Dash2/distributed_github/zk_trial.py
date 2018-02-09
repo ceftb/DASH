@@ -22,50 +22,57 @@ class ZkTrial(Trial):
 
     measures = [Measure('num_agents'), Measure('num_repos'), Measure('total_agent_activity')]
 
-    def __init__(self, zk, data={}, max_iterations=-1):
-        super(ZkTrial, self).__init__(data, max_iterations)
+    def __init__(self, zk, hosts, exp_id, trial_id, data={}, max_iterations=-1):
+        Trial.__init__(self, data, max_iterations)
         self.zk = zk
+        self.exp_id = exp_id
+        self.trial_id = trial_id
+        self.curr_trial_path = "/experiments/" + str(self.exp_id) + "/trials/" + str(self.trial_id)
+        self.zk.ensure_path(self.curr_trial_path)
+        self.hosts = hosts
+
+    def initialize(self):
+        self.agent_id_generator = self.zk.Counter(self.curr_trial_path + "/agent_id_counter", 0)
         self.hub = ZkRepoHub(repo_hub_id=1, zk=self.zk)
+        self.zk.ensure_path(self.curr_trial_path + "/status")
+        self.zk.set(self.curr_trial_path + "/status", "in progress")
 
-    # Override the default (which runs each agent once) to decide whether to create a new agent
-    def run_one_iteration(self):
-        if not self.agents or random.random() < self.prob_create_new_agent:  # Have to create an agent in the first step
-            a = GitUserAgent(useInternalHub=True, hub=self.hub, trace_client=False)
-            a.trace_client = False  # cut chatter when connecting and disconnecting
-            a.traceLoop = False  # cut chatter when agent runs steps
-            a.trace_github = False  # cut chatter when acting in github world
-            print 'created agent', a
-            self.agents.append(a)
-        else:
-            a = random.choice(self.agents)
-        a.agentLoop(max_iterations=1, disconnect_at_end=False)  # don't disconnect since will run again
+    def run(self):
+        self.initialize()
 
-    # These are defined above as measures
+        @self.zk.DataWatch(self.curr_trial_path + "/status")
+        def watch_assemble_status(data, stat_):
+            print("New status is %s" % data)
+            if data == "completed":
+                print "Trial " + self.trial_id + " is complete"
+                self.status = data
+                return False
+            return True
+
+        number_of_hosts = len(self.hosts.split(","))
+        task_id = 0
+        # create a task for each node in experiment assemble
+        for node_id in range(1, number_of_hosts + 1):
+            task_path = "/tasks/nodes/" + str(node_id) + "/" + str(self.exp_id) + "/" + str(self.trial_id) + "/" + str(task_id)
+            self.zk.ensure_path(task_path + "/" + "task_type")
+            self.zk.ensure_path(task_path + "/" + "prob_create_new_agent")
+            self.zk.ensure_path(task_path + "/" + "max_iterations")
+            self.zk.set(task_path + "/" + "task_type", "create_new_or_iterate")
+            self.zk.set(task_path + "/" + "prob_create_new_agent", str(self.prob_create_new_agent))
+            self.zk.set(task_path + "/" + "max_iterations", str(self.max_iterations))
+            task_id += 1
+
+    # Measures #
     def num_agents(self):
-        return len(self.agents)
+        return -1 #len(self.zk.get_children("/experiments/" + str(self.exp_id) + "/trials/" + str(self.trial_id) + "/agents"))
 
-    # Measures should probably query the hub or use a de facto trace soon
     def num_repos(self):
-        return sum([len(a.owned_repos) for a in self.agents])
+        # agents_ids = self.zk.get_children("/experiments/" + str(self.exp_id) + "/trials/" + str(self.trial_id) + "/agents")
+        # for agent_id in agents_ids:
+        #    pass # TBD: count summ of repos
+        return -1
 
     def total_agent_activity(self):
-        return sum([a.total_activity for a in self.agents])
+        # TBD need to define in KZ repository
+        return -1
 
-    def create_agents(self, host_ids, number_of_agents):
-        agents_map = defaultdict(list)
-        for i in range(number_of_agents):
-            a = GitUserAgent(useInternalHub=True, hub=self.hub, trace_client=False)
-            a.trace_client = False
-            a.traceLoop = False
-            a.trace_github = False
-            self.agents.append(a)  # legacy
-            batch = (number_of_agents + number_of_agents % len(host_ids)) / len(host_ids)
-            host_index = i / batch + 1
-            agents_map[host_index].append(a)
-        return agents_map
-
-    def load_agents(self, host_ids, number_of_agents):
-        self.agents_map = defaultdict(list)
-
-    def save_agents_to_zk(self, agents_map):
-        pass

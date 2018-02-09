@@ -5,19 +5,24 @@ from zk_trial import ZkTrial
 
 
 class ZkExperiment(object):
-    def __init__(self, trial_class=ZkTrial, id=0,
+    def __init__(self, trial_class=ZkTrial, exp_id=None, hosts='127.0.0.1:2181',
                  independent=None, dependent=None, exp_data={}, num_trials=3):
         self.trial_class = trial_class
         self.independent = independent
         self.dependent = dependent
         self.exp_data = exp_data
         self.num_trials = num_trials
-        self.id = id
+        self.exp_id = exp_id
+        self.hosts = hosts
 
     # this method is taken from Experiment
     def run(self, zk, run_data={}):
-        zk.ensure_path("/experiments/" + str(self.id) + "/status")
-        zk.set("/experiments/" + str(self.id) + "/status", "in progress")
+        if self.exp_id is None:
+            # TBD register new experiment in Zookeeper and update experiment id
+            self.exp_id = 0
+
+        zk.ensure_path("/experiments/" + str(self.exp_id) + "/status")
+        zk.set("/experiments/" + str(self.exp_id) + "/status", "in progress")
 
         self.trial_outputs = {}
         # Build up trial data from experiment data and run data
@@ -47,7 +52,7 @@ class ZkExperiment(object):
             for trial_number in range(self.num_trials):
                 print "Trial", trial_number, "with", None if self.independent is None else self.independent[0], "=", \
                     independent_val
-                trial = self.trial_class(zk=zk, data=trial_data)
+                trial = self.trial_class(zk=zk, hosts=self.hosts, exp_id=self.exp_id, trial_id=trial_number, data=trial_data)
                 trial.run()
                 trial_dependent = self.dependent(trial) if callable(self.dependent) else getattr(trial, self.dependent)
                 print "Dependent", self.dependent, "evaluated to", trial_dependent

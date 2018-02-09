@@ -24,16 +24,16 @@ class ExperimentController:
 
     def run(self, experiment, run_data={}):
         print "ExperimentController: setting up the experiment ..."
-        self.zk.ensure_path("/experiments/" + str(experiment.id) + "/status")
-        self.zk.set("/experiments/" + str(experiment.id) + "/status", "queued")
+        self.zk.ensure_path("/experiments/" + str(experiment.exp_id) + "/status")
+        self.zk.set("/experiments/" + str(experiment.exp_id) + "/status", "queued")
 
-        @self.zk.DataWatch("/experiments/" + str(experiment.id) + "/status")
+        @self.zk.DataWatch("/experiments/" + str(experiment.exp_id) + "/status")
         def watch_status_change(data, stat):
             if data == "completed":
-                print "Experiment " + str(experiment.id) + " is complete"
+                print "Experiment " + str(experiment.exp_id) + " is complete"
                 return False
             else:
-                print "Experiment " + str(experiment.id) + " status: " + data
+                print "Experiment " + str(experiment.exp_id) + " status: " + data
                 return True
 
         experiment.run(self.zk, run_data=run_data)
@@ -43,13 +43,16 @@ class ExperimentController:
                             "and exit experiment controller, s to see experiment status\n")
             if cmd == "q":
                 print("Exiting experiment controller")
+                self.zk.stop()
                 return
-            if cmd == "t":
+            elif cmd == "t":
                 self.zk.ensure_path("/experiment_assemble_status")
                 self.zk.set("/experiment_assemble_status", "terminated")
                 print("Exiting experiment controller")
+                self.zk.stop()
                 return
-            if cmd == "s":
-                status, stat = self.zk.get("/experiments/" + str(experiment.id) + "/status")
+            elif cmd == "s":
+                status, stat = self.zk.get("/experiments/" + str(experiment.exp_id) + "/status")
                 print status
-                continue
+            else:
+                print "Unrecognized command " + cmd
