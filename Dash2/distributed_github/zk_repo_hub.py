@@ -1,26 +1,20 @@
 import sys; sys.path.extend(['../../'])
 from Dash2.core.world_hub import WorldHub
 from Dash2.github.git_repo import GitRepo
+from Dash2.github.git_repo_hub import GitRepoHub
 from time import time
 import pickle
 
 
 # Zookeeper repository hub
-class ZkRepoHub(WorldHub):
+class ZkRepoHub(GitRepoHub):
     """
     A class that handles client requests and modifies the desired repositories
     """
 
     def __init__(self, repo_hub_id, zk, **kwargs):
-
-        WorldHub.__init__(self, kwargs.get('port', None))
+        GitRepoHub.__init__(self, repo_hub_id, kwargs=kwargs)
         self.zk = zk
-        self.users = set()  # User ids
-        self.repo_hub_id = repo_hub_id
-        self.lowest_unassigned_repo_id = 0
-        # Each log item stores a dictionary with keys 'userID', 'repoID', 'eventType', 'subeventtype', 'time'
-        self.local_event_log = []
-        self.trace_handler = False
 
     def log_event(self, user_id, repo_id, event_type, subevent_type, time):
         """

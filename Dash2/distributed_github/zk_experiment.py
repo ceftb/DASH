@@ -5,16 +5,20 @@ from zk_trial import ZkTrial
 
 
 class ZkExperiment(object):
-    def __init__(self, trial_class=ZkTrial,
+    def __init__(self, trial_class=ZkTrial, id=0,
                  independent=None, dependent=None, exp_data={}, num_trials=3):
         self.trial_class = trial_class
         self.independent = independent
         self.dependent = dependent
         self.exp_data = exp_data
         self.num_trials = num_trials
+        self.id = id
 
     # this method is taken from Experiment
     def run(self, zk, run_data={}):
+        zk.ensure_path("/experiments/" + str(self.id) + "/status")
+        zk.set("/experiments/" + str(self.id) + "/status", "in progress")
+
         self.trial_outputs = {}
         # Build up trial data from experiment data and run data
         trial_data_for_all_values = self.exp_data.copy()

@@ -37,8 +37,8 @@ class DashWorker(object):
         elif self.status == "active":
             self.zk.ensure_path("/tasks/node" + str(self.host_id), acl=None)
             @self.zk.ChildrenWatch("/tasks/node" + str(self.host_id))
-            def watch_tasks(children):
-                self.process_tasks(children)
+            def watch_tasks(tasks):
+                self.process_tasks(tasks)
                 return True
 
             @self.zk.DataWatch("/experiment_assemble_status")

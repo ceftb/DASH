@@ -24,7 +24,32 @@ class ExperimentController:
 
     def run(self, experiment, run_data={}):
         print "ExperimentController: setting up the experiment ..."
+        self.zk.ensure_path("/experiments/" + str(experiment.id) + "/status")
+        self.zk.set("/experiments/" + str(experiment.id) + "/status", "queued")
+
+        @self.zk.DataWatch("/experiments/" + str(experiment.id) + "/status")
+        def watch_status_change(data, stat):
+            if data == "completed":
+                print "Experiment " + str(experiment.id) + " is complete"
+                return False
+            else:
+                print "Experiment " + str(experiment.id) + " status: " + data
+                return True
+
         experiment.run(self.zk, run_data=run_data)
         print "ExperimentController: experiment in progress"
-        name = raw_input("Type q to exit\n")
-        print("Experiment completed")
+        while True:
+            cmd = raw_input("Type q to exit experiment controller, t to terminate all worker nodes "
+                            "and exit experiment controller, s to see experiment status\n")
+            if cmd == "q":
+                print("Exiting experiment controller")
+                return
+            if cmd == "t":
+                self.zk.ensure_path("/experiment_assemble_status")
+                self.zk.set("/experiment_assemble_status", "terminated")
+                print("Exiting experiment controller")
+                return
+            if cmd == "s":
+                status, stat = self.zk.get("/experiments/" + str(experiment.id) + "/status")
+                print status
+                continue

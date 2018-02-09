@@ -23,6 +23,9 @@ if __name__ == "__main__":
 
     controller = ExperimentController(zk_host_id=1, zk_hosts='127.0.0.1:2181', host_id=1, hosts='127.0.0.1:2181')
     exp = ZkExperiment(trial_class=ZkTrial,
-                       independent=independent, dependent=dependent, exp_data=exp_data, num_trials=num_trials)
+                       independent=independent,
+                       dependent=dependent,
+                       exp_data=exp_data,
+                       num_trials=num_trials)
     controller.run(exp)
 
