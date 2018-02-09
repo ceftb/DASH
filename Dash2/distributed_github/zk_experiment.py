@@ -1,125 +1,65 @@
 import sys; sys.path.extend(['../../'])
-from zk_repo_hub import ZkRepoHub
-from Dash2.core.trial import Trial
+import numpy
 from Dash2.core.parameter import Range, Parameter, Uniform, TruncNorm
-from Dash2.github.git_user_agent import GitUserAgent
-from Dash2.core.experiment import Experiment
-from Dash2.core.parameter import Parameter
-from Dash2.core.measure import Measure
-from kazoo.client import KazooClient
-from collections import defaultdict
-
-# Trial of an experiment. ZkTrial uses Zookeeper to distribute agents across hosts.
-class ZkTrial(Trial):
-    # class level information to configure zookeeper connection
-    # zookeeper connection is a process lelev shared object, all threads use it
-
-    zk = None
-    # Comma-separated list of hosts of zookeeper to connect to
-    zk_hosts = '127.0.0.1:2181'  # default value is current machine (for local installation of Zookeeper)
-    number_of_zk_hosts = 1
-    zk_host_id = 1  # default value is 1 which is a leader's id
-
-    # Comma-separated list of hosts avialable for each trial
-    # By default it is assumed that it is the same set of hosts as in zookeeper assemble
-    hosts = zk_hosts
-    number_of_hosts = number_of_zk_hosts
-    host_id = 1  # default value is 1 which is a leader's id
-
-    # Class-level information about parameter ranges and distributions.
-    # Note that the second probability is passed to each agent but defined here on the population
-    parameters = [Parameter('prob_agent_creates_new_repo', distribution=Uniform(0, 1), default=0.5)]
-
-    measures = [Measure('num_agents'), Measure('num_repos'), Measure('total_agent_activity')]
-
-    def __init__(self, data={}, max_iterations=-1):
-        super(ZkTrial, self).__init__(data, max_iterations)
-        self.agents_map = {}
-        self.hub = None
-
-    # The initialize function sets up the agent list
-    def initialize(self):
-        if ZkTrial.zk is None:
-            self.init_zookeeper(ZkTrial.zk_hosts)
-        if self.hub is None:
-            self.hub = ZkRepoHub(ZkTrial.host_id, ZkTrial.zk)
-
-        list_of_hosts_ids = range(1, len(ZkTrial.hosts.split(",")) + 1)  # assume that host ids are 1 ... total_number_of_hosts
-        if ZkTrial.host_id == 1:  # host is a leader
-            self.create_agents(list_of_hosts_ids, 1000)
-
-    # Connects to zookeeper server
-    @classmethod
-    def init_zookeeper(cls, hosts):
-        ZkTrial.zk = KazooClient(hosts)
-        ZkTrial.zk.start()
-
-    # Gracefully stop zookeeper session and release resources.
-    @classmethod
-    def stop_zookeeper(cls, hosts):
-        ZkTrial.zk.stop()
-
-    def create_agents(self, host_ids, number_of_agents):
-        self.agents_map = defaultdict(list)
-        for i in range(number_of_agents):
-            a = GitUserAgent(useInternalHub=True, hub=self.hub, trace_client=False)
-            a.trace_client = False
-            a.traceLoop = False
-            a.trace_github = False
-            self.agents.append(a)
-            batch = (number_of_agents + number_of_agents % len(host_ids)) / len(host_ids)
-            host_index = i / batch + 1
-            self.agents_map[host_index].append(a)
-
-    def run_one_iteration(self):
-        for a in self.agents_map[self.host_id]: # only iterate over agents of the current host
-            a.agentLoop(max_iterations=1, disconnect_at_end=False)
-
-    # These are defined above as measures
-    def num_agents(self):
-        return len(self.agents)
-
-    def num_repos(self):
-        return sum([len(a.owned_repos) for a in self.agents])
-
-    def total_agent_activity(self):
-        return sum([a.total_activity for a in self.agents])
+from zk_trial import ZkTrial
 
 
-# hosts - comma separated list of hosts
-# number of hosts in hosts list must be odd for zookeeper
-# by default hosts in zookeeper assemble are the same as experiment hosts
-def run_exp(max_iterations=20, host_id=1, hosts='127.0.0.1:2181', dependent='num_agents', num_trials=1):
-    # Zookeeper hosts in assemble
-    ZkTrial.zk_host_id = host_id
-    ZkTrial.zk_hosts = hosts
-    ZkTrial.number_of_zk_hosts = count_hosts(hosts)
-    # Hosts in experiment
-    ZkTrial.host_id = host_id
-    ZkTrial.hosts = hosts
-    ZkTrial.number_of_hosts = count_hosts(hosts)
+class ZkExperiment(object):
+    def __init__(self, trial_class=ZkTrial,
+                 independent=None, dependent=None, exp_data={}, num_trials=3):
+        self.trial_class = trial_class
+        self.independent = independent
+        self.dependent = dependent
+        self.exp_data = exp_data
+        self.num_trials = num_trials
 
-    e = Experiment(trial_class=ZkTrial,
-                     exp_data={'max_iterations': max_iterations},
-                     num_trials=num_trials,
-                     dependent=dependent)
-    return e, e.run()
+    # this method is taken from Experiment
+    def run(self, zk, run_data={}):
+        self.trial_outputs = {}
+        # Build up trial data from experiment data and run data
+        trial_data_for_all_values = self.exp_data.copy()
+        for key in run_data:
+            trial_data_for_all_values[key] = run_data[key]
+        # Append different data for the independent variable in each iteration
+        independent_vals = self.compute_independent_vals()
+        # Dependent might be a method or a string representing a function or a member variable
+        # If it's a string representing a function it's changed to the function. We don't pass this to another host.
+        if isinstance(self.dependent, str):
+            if hasattr(self.trial_class, self.dependent) and callable(getattr(self.trial_class, self.dependent)):
+                print "Dependent is callable on the trial, so switching to the method"
+                self.dependent = getattr(self.trial_class, self.dependent)
+            elif not hasattr(self.trial_class, self.dependent):
+                print "Dependent is not a callable method, but is a variable on the trial"
+            else:
+                print "Dependent is a string"
+        else:
+            print "dependent is not a string:", self.dependent
 
+        for independent_val in independent_vals:
+            trial_data = trial_data_for_all_values.copy()
+            if self.independent is not None:
+                trial_data[self.independent[0]] = independent_val
+            self.trial_outputs[independent_val] = []
+            for trial_number in range(self.num_trials):
+                print "Trial", trial_number, "with", None if self.independent is None else self.independent[0], "=", \
+                    independent_val
+                trial = self.trial_class(zk=zk, data=trial_data)
+                trial.run()
+                trial_dependent = self.dependent(trial) if callable(self.dependent) else getattr(trial, self.dependent)
+                print "Dependent", self.dependent, "evaluated to", trial_dependent
+                self.trial_outputs[independent_val].append(trial_dependent)
 
-def count_hosts(hosts):
-    addresses = hosts.split(",")
-    return len(addresses)
+        return self.trial_outputs
 
-
-# First argument is a comma separated list of hosts.
-# The first host in the list should be a local machine for better performance
-# Second argument is the current host's id (number between 1-255)
-if __name__ == "__main__":
-    print "running experiment ..."
-    if len(sys.argv) == 3:
-        print 'argv is', sys.argv
-        hosts_list = sys.argv[1]
-        curr_host_id = int(sys.argv[2])
-        run_exp(host_id=curr_host_id, hosts=hosts_list)
-    else:
-        run_exp()
+    def compute_independent_vals(self):
+        independent_vals = [None]
+        # The representation for independent variables isn't fixed yet. For now, a two-element list with
+        # the name of the variable and a range object.
+        if self.independent is not None and isinstance(self.independent[1], Range):
+            #independent_vals = range(self.independent[1].min, self.independent[1].max, self.independent[1].step)
+            # Need something that handles floats. Leaving the old code above in case this causes trouble
+            independent_vals = numpy.arange(self.independent[1].min, self.independent[1].max, self.independent[1].step)
+            print 'expanded range to', independent_vals
+        elif self.independent is not None and isinstance(self.independent[1], (list, tuple)):  # allow a direct list
+            independent_vals = self.independent[1]
+        return independent_vals
