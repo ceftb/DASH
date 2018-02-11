@@ -54,10 +54,14 @@ class ZkTrial(Trial):
         # create a task for each node in experiment assemble
         for node_id in range(1, number_of_hosts + 1):
             task_path = "/tasks/nodes/" + str(node_id) + "/" + str(self.exp_id) + "/" + str(self.trial_id) + "/" + str(task_id)
-            self.zk.ensure_path(task_path + "/" + "task_type")
+            # By default use this implementation: "Dash2.distributed_github.work_processor", "WorkProcessor"
+            # can be replaced with custom WorkProcessor
+            self.zk.ensure_path(task_path + "/" + "work_processor_module")
+            self.zk.ensure_path(task_path + "/" + "work_processor_class")
             self.zk.ensure_path(task_path + "/" + "prob_create_new_agent")
             self.zk.ensure_path(task_path + "/" + "max_iterations")
-            self.zk.set(task_path + "/" + "task_type", "create_new_or_iterate")
+            self.zk.set(task_path + "/" + "work_processor_module", "Dash2.distributed_github.work_processor")
+            self.zk.set(task_path + "/" + "work_processor_class", "WorkProcessor")
             self.zk.set(task_path + "/" + "prob_create_new_agent", str(self.prob_create_new_agent))
             self.zk.set(task_path + "/" + "max_iterations", str(self.max_iterations))
             task_id += 1

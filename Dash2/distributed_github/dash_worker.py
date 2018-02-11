@@ -1,8 +1,6 @@
 import sys; sys.path.extend(['../../'])
 import time
 from kazoo.client import KazooClient
-# from work_processor import WorkProcessor
-
 
 class DashWorker(object):
     # zk_hosts - Comma-separated list of hosts of zookeeper to connect to
@@ -43,6 +41,7 @@ class DashWorker(object):
             def watch_tasks(tasks):
                 if tasks is not None:
                     self.process_tasks(tasks, task_path)
+                    print "ts"
                 return True
 
             @self.zk.DataWatch("/experiment_assemble_status")
@@ -70,30 +69,22 @@ class DashWorker(object):
                 tasks = self.zk.get_children(node_prefix + "/" + exp + "/" + trial)
                 for task in tasks:
                     task_path = node_prefix + "/" + exp + "/" + trial + "/" + task
-                    # TBD: read class from type in zk
-                    processor_class = self.retrieve_work_processor_class("Dash2.distributed_github.work_processor", "WorkProcessor")
-                    processor = processor_class()
-                    processor.process_task(self.zk, task_path)
-                    self.zk.delete(task_path, recursive=True)
+                    module_name = str(self.zk.get(task_path + "/" + "work_processor_module")[0])
+                    class_name = str(self.zk.get(task_path + "/" + "work_processor_class")[0])
 
+                    #processor_class = self.retrieve_work_processor_class("Dash2.distributed_github.work_processor", "WorkProcessor")
+                    processor_class = self.retrieve_work_processor_class(module_name, class_name)
+                    processor = processor_class(zk=self.zk, host_id=self.host_id, exp_id=exp, trial_id=trial, task_id=task)
+                    processor.process_task()
+                    print "Task " + str(task_path) + " is complete. Removing task from queue ..."
+                    self.zk.delete(task_path, recursive=True)
+                    print "Task " + str(task_path) + " deleted."
+
+    @staticmethod
     def retrieve_work_processor_class(self, module_name, class_name):
         mod = __import__(module_name, fromlist=[class_name])
         cls = getattr(mod, class_name)
         return cls
-
-    # register a new agent in Zookeeper and return its id
-    def register_agent(self, agent):
-        lock = self.zk.Lock(self.curr_trial_path + "/agent_id_counter")
-        with lock:  # blocks waiting for lock acquisition
-            agent.id = self.agent_id_generator.value
-            self.agent_id_generator += 1
-        # print "next id " + str(self.agent_id_generator.value)
-        self.zk.ensure_path("/experiments/" + str(self.exp_id) + "/trials/" + str(self.trial_id) + "/agents/"
-                            + str(agent.id) + "/")
-
-        # TBD init other agent attributes if needed
-        # assign agent to a worker node
-
 
 
 
