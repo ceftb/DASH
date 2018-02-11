@@ -3,9 +3,11 @@ import sys; sys.path.extend(['../../'])
 from kazoo.client import KazooClient
 
 
+# ExperimentController is a until class that provides command line interface to run the experiment on clusters
+# It allows to stop the experiment, check status of the experiment, check status of the nodes (dash workers)
 class ExperimentController:
     # zk_hosts - Comma-separated list of hosts of zookeeper to connect to
-    # hosts - Comma-separated list of hosts avialable in experiment
+    # hosts - Comma-separated list of hosts available in experiment
     # Default value for host id is 1 which is a leader's id
     def __init__(self, zk_host_id=1, zk_hosts='127.0.0.1:2181', host_id=1, hosts='127.0.0.1:2181'):
         # zookeeper connection is a process level shared object, all threads use it
@@ -20,7 +22,8 @@ class ExperimentController:
         self.number_of_hosts = len(hosts.split(","))
         self.host_id = host_id
 
-        self.list_of_hosts_ids = range(1, len(self.hosts.split(",")) + 1)  # assume that host ids are [1 ... total_number_of_hosts]
+        # assume that host ids are [1 ... total_number_of_hosts]
+        self.list_of_hosts_ids = range(1, len(self.hosts.split(",")) + 1)
 
     def run(self, experiment, run_data={}):
         print "ExperimentController: setting up the experiment ..."
@@ -28,7 +31,7 @@ class ExperimentController:
         self.zk.set("/experiments/" + str(experiment.exp_id) + "/status", "queued")
 
         @self.zk.DataWatch("/experiments/" + str(experiment.exp_id) + "/status")
-        def watch_status_change(data, stat):
+        def watch_status_change(data, _):
             if data == "completed":
                 print "Experiment " + str(experiment.exp_id) + " is complete"
                 return False

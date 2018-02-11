@@ -1,25 +1,20 @@
 import sys; sys.path.extend(['../../'])
 
-from Dash2.core.experiment import Experiment
-from Dash2.core.trial import Trial
-from Dash2.core.parameter import Range, Parameter, Uniform, TruncNorm
-from Dash2.core.measure import Measure
-import random
-import time
-import numpy
-import subprocess
+from Dash2.core.parameter import Range
 from zk_trial import ZkTrial
 from zk_experiment import ZkExperiment
 from experiment_controller import ExperimentController
 
+# This is an example of experiment script
+
 if __name__ == "__main__":
-    # print 'argv is', sys.argv
-    # TBD read parameters from argv
+    # TBD read parameters from argv if it is needed
     max_iterations = 20
     num_trials = 1
     independent = ['prob_create_new_agent', Range(0.5, 0.6, 0.1)]
     exp_data = {'max_iterations': max_iterations}
 
+    # ExperimentController is a until class that provides command line interface to run the experiment on clusters
     controller = ExperimentController(zk_host_id=1, zk_hosts='127.0.0.1:2181', host_id=1, hosts='127.0.0.1:2181')
     exp = ZkExperiment(trial_class=ZkTrial,
                        independent=independent,
