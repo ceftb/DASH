@@ -41,7 +41,6 @@ class DashWorker(object):
             def watch_tasks(tasks):
                 if tasks is not None:
                     self.process_tasks(tasks, task_path)
-                    print "ts"
                 return True
 
             @self.zk.DataWatch("/experiment_assemble_status")

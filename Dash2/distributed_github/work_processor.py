@@ -21,7 +21,6 @@ class WorkProcessor:
 
     def process_task(self):
         if self.zk is not None and self.task_path is not None:
-
             for agent in self.agents:
                 agent.traceLoop = False
             while not self.should_stop():
@@ -31,6 +30,10 @@ class WorkProcessor:
             self.process_after_run()
             for agent in self.agents:
                 agent.disconnect()
+
+            result_path = "/experiments/" + str(self.exp_id) + "/trials/" + str(self.trial_id) + "/nodes/" + str(self.host_id)
+            self.zk.ensure_path(result_path)
+            self.zk.set(result_path, str(self.dependent()))
 
     def should_stop(self):
         if self.max_iterations > 0 and self.iteration >= self.max_iterations:
@@ -58,10 +61,25 @@ class WorkProcessor:
         a.agentLoop(max_iterations=1, disconnect_at_end=False)
 
 
+    def dependent(self):
+        return [self.num_agents(), self.num_repos(), self.total_agent_activity()]
+
+    # Measures #
+    # These are defined above as measures
+    def num_agents(self):
+        return len(self.agents)
+
+    # Measures should probably query the hub or use a de facto trace soon
+    def num_repos(self):
+        return sum([len(a.owned_repos) for a in self.agents])
+
+    def total_agent_activity(self):
+        return sum([a.total_activity for a in self.agents])
 
     # register a new agent in Zookeeper and return its id
     def register_agent(self, agent):
-        lock = self.zk.Lock(self.curr_trial_path + "/agent_id_counter")
+        curr_trial_path = "/tasks/nodes/" + str(self.host_id) + "/" + str(self.exp_id) + "/" + str(self.trial_id)
+        lock = self.zk.Lock(curr_trial_path + "/agent_id_counter")
         with lock:  # blocks waiting for lock acquisition
             agent.id = self.agent_id_generator.value
             self.agent_id_generator += 1

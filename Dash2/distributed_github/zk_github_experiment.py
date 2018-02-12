@@ -21,5 +21,5 @@ if __name__ == "__main__":
                        dependent=lambda t: [t.num_agents(), t.num_repos(), t.total_agent_activity()],
                        exp_data=exp_data,
                        num_trials=num_trials)
-    controller.run(exp)
+    results = controller.run(exp)
 
