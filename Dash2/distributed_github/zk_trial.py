@@ -1,5 +1,6 @@
 import sys; sys.path.extend(['../../'])
 import random
+import json
 from zk_repo_hub import ZkRepoHub
 from Dash2.core.trial import Trial
 from Dash2.core.parameter import Range, Parameter, Uniform, TruncNorm
@@ -30,6 +31,7 @@ class ZkTrial(Trial):
         self.curr_trial_path = "/experiments/" + str(self.exp_id) + "/trials/" + str(self.trial_id)
         self.zk.ensure_path(self.curr_trial_path)
         self.hosts = hosts
+        self.results = []
 
     def initialize(self):
         self.agent_id_generator = self.zk.Counter(self.curr_trial_path + "/agent_id_counter", 0)
@@ -50,21 +52,40 @@ class ZkTrial(Trial):
             return True
 
         number_of_hosts = len(self.hosts.split(","))
-        task_id = 0
+        task_counter = 0
         # create a task for each node in experiment assemble
+
         for node_id in range(1, number_of_hosts + 1):
-            task_path = "/tasks/nodes/" + str(node_id) + "/" + str(self.exp_id) + "/" + str(self.trial_id) + "/" + str(task_id)
-            # By default use this implementation: "Dash2.distributed_github.work_processor", "WorkProcessor"
-            # can be replaced with custom WorkProcessor
-            self.zk.ensure_path(task_path + "/" + "work_processor_module")
-            self.zk.ensure_path(task_path + "/" + "work_processor_class")
-            self.zk.ensure_path(task_path + "/" + "prob_create_new_agent")
-            self.zk.ensure_path(task_path + "/" + "max_iterations")
-            self.zk.set(task_path + "/" + "work_processor_module", "Dash2.distributed_github.work_processor")
-            self.zk.set(task_path + "/" + "work_processor_class", "WorkProcessor")
-            self.zk.set(task_path + "/" + "prob_create_new_agent", str(self.prob_create_new_agent))
-            self.zk.set(task_path + "/" + "max_iterations", str(self.max_iterations))
-            task_id += 1
+            task_id = str(self.exp_id) + "-" + str(self.trial_id) + "-" + str(task_counter)
+            task_path = "/tasks/nodes/" + str(node_id) + "/" + task_id
+            dependent_vars_path = "/experiments/" + str(self.exp_id) + "/trials/" + str(self.trial_id) + "/nodes/" + str(node_id) + "/dependent_variables"
+            self.zk.ensure_path(dependent_vars_path)
+
+            # By default use this implementation: "Dash2.distributed_github.dash_work_processor", "DashWorkProcessor"
+            # can be replaced with a custom WorkProcessor
+            js_data = {}
+            js_data["work_processor_module"] = "Dash2.distributed_github.dash_work_processor"
+            js_data["work_processor_class"] = "DashWorkProcessor"
+            js_data["prob_create_new_agent"] = str(self.prob_create_new_agent)
+            js_data["max_iterations"] = str(self.max_iterations)
+            self.zk.ensure_path(task_path)
+            self.zk.set(task_path, json.dumps(js_data))
+
+            @self.zk.DataWatch(dependent_vars_path)
+            def watch_dependent_vars(data, stat_):
+                if data is not None and data != "":
+                    print "Received data from node \nDATA: "+ str(data)
+                    self.results.append(data)
+                    if len(self.results) == number_of_hosts:
+                        self.aggregate_results()
+                        # TBD delete nodes intermediate results
+                        return False
+                return True
+
+            task_counter += 1
+
+    def aggregate_results(self):
+        print "aggregating results " + str(self.results)
 
     # Measures #
     def num_agents(self):

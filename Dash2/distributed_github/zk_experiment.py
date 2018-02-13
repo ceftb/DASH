@@ -54,6 +54,7 @@ class ZkExperiment(object):
                     independent_val
                 trial = self.trial_class(zk=zk, hosts=self.hosts, exp_id=self.exp_id, trial_id=trial_number, data=trial_data)
                 trial.run()
+                # TBD use aggregated values for dependent
                 trial_dependent = self.dependent(trial) if callable(self.dependent) else getattr(trial, self.dependent)
                 print "Dependent", self.dependent, "evaluated to", trial_dependent
                 self.trial_outputs[independent_val].append(trial_dependent)

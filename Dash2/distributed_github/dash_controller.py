@@ -3,9 +3,11 @@ import sys; sys.path.extend(['../../'])
 from kazoo.client import KazooClient
 
 
+# TBD: This class to be moved into core module when zookeeper version of DASH is stable
+
 # ExperimentController is a until class that provides command line interface to run the experiment on clusters
 # It allows to stop the experiment, check status of the experiment, check status of the nodes (dash workers)
-class ExperimentController:
+class DashController:
     # zk_hosts - Comma-separated list of hosts of zookeeper to connect to
     # hosts - Comma-separated list of hosts available in experiment
     # Default value for host id is 1 which is a leader's id

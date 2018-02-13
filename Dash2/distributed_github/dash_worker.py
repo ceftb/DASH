@@ -1,7 +1,10 @@
 import sys; sys.path.extend(['../../'])
 import time
+import json
 from kazoo.client import KazooClient
 
+
+# TBD: This class to be moved into core module when zookeeper version of DASH is stable
 class DashWorker(object):
     # zk_hosts - Comma-separated list of hosts of zookeeper to connect to
     # hosts - Comma-separated list of hosts avialable in experiment
@@ -34,13 +37,22 @@ class DashWorker(object):
             self.zk.stop()
             return
         elif self.status == "active":
-            task_path = "/tasks/nodes/" + str(self.host_id)
-            self.zk.ensure_path(task_path)
+            node_prefix = "/tasks/nodes/" + str(self.host_id)
+            self.zk.ensure_path(node_prefix)
 
-            @self.zk.ChildrenWatch(task_path)
+            @self.zk.ChildrenWatch(node_prefix)
             def watch_tasks(tasks):
                 if tasks is not None:
-                    self.process_tasks(tasks, task_path)
+                    for task_id in tasks:
+                        @self.zk.DataWatch(node_prefix + "/" + task_id)
+                        def watch_task_update(data, stat_):
+                            if data is not None:
+                                print "New task " + task_id + "\ntask data " + data
+                                self.process_tasks(data, task_id)
+                                self.zk.delete(node_prefix + "/" + task_id)
+                                print "New task " + task_id + " deleted"
+                                return False
+                            return True
                 return True
 
             @self.zk.DataWatch("/experiment_assemble_status")
@@ -60,27 +72,18 @@ class DashWorker(object):
         else:
             raise ValueError('/experiment_assemble_status contains incorrect value')
 
-    def process_tasks(self, experiments, node_prefix):
-        # while node has assigned tasks handle each task
-        for exp in experiments:
-            trials = self.zk.get_children(node_prefix + "/" + exp)
-            for trial in trials:
-                tasks = self.zk.get_children(node_prefix + "/" + exp + "/" + trial)
-                for task in tasks:
-                    task_path = node_prefix + "/" + exp + "/" + trial + "/" + task
-                    module_name = str(self.zk.get(task_path + "/" + "work_processor_module")[0])
-                    class_name = str(self.zk.get(task_path + "/" + "work_processor_class")[0])
-
-                    #processor_class = self.retrieve_work_processor_class("Dash2.distributed_github.work_processor", "WorkProcessor")
-                    processor_class = self.retrieve_work_processor_class(module_name, class_name)
-                    processor = processor_class(zk=self.zk, host_id=self.host_id, exp_id=exp, trial_id=trial, task_id=task)
-                    processor.process_task()
-                    print "Task " + str(task_path) + " is complete. Removing task from queue ..."
-                    self.zk.delete(task_path, recursive=True)
-                    print "Task " + str(task_path) + " deleted."
+    def process_tasks(self, data, task_id):
+        print "Received task " + task_id + " with data " + data
+        args = json.loads(data)
+        module_name = args["work_processor_module"]
+        class_name = args["work_processor_class"]
+        processor_class = self.retrieve_work_processor_class(module_name, class_name)
+        processor = processor_class(zk=self.zk, host_id=self.host_id, task_id=task_id, data=args)
+        processor.process_task()
+        print "Task " + str(task_id) + " is complete."
 
     @staticmethod
-    def retrieve_work_processor_class(self, module_name, class_name):
+    def retrieve_work_processor_class( module_name, class_name):
         mod = __import__(module_name, fromlist=[class_name])
         cls = getattr(mod, class_name)
         return cls

@@ -1,26 +1,27 @@
 import sys; sys.path.extend(['../../'])
 import random
 from kazoo.client import KazooClient
+import json
 from Dash2.github.git_user_agent import GitUserAgent
 from zk_repo_hub import GitRepoHub
 
+# TBD: This class to be moved into core module when zookeeper version of DASH is stable
 # WorkProcessor class is responsible for running experiment trial on a node in cluster
-class WorkProcessor:
-    def __init__(self, zk, host_id, exp_id, trial_id, task_id):
+class DashWorkProcessor:
+    def __init__(self, zk, host_id, task_id, data):
         self.agents = []
         self.zk = zk
         self.host_id = host_id
-        self.exp_id = exp_id
-        self.trial_id = trial_id
+        self.exp_id, self.trial_id, _= task_id.split("-")
         self.task_id = task_id
-        self.task_path = "/tasks/nodes/" + str(host_id) + "/" + str(exp_id) + "/" + str(trial_id) + "/" + str(task_id)
+        self.max_iterations = int(data["max_iterations"])
+        self.prob_create_new_agent = float(data["prob_create_new_agent"])
+
         self.hub = GitRepoHub(1)  # FIXME register in zk
-        self.prob_create_new_agent = float(self.zk.get(self.task_path + "/prob_create_new_agent")[0])
-        self.max_iterations = int(self.zk.get(self.task_path + "/max_iterations")[0])
         self.iteration = 0
 
     def process_task(self):
-        if self.zk is not None and self.task_path is not None:
+        if self.zk is not None and self.task_id is not None:
             for agent in self.agents:
                 agent.traceLoop = False
             while not self.should_stop():
@@ -31,9 +32,11 @@ class WorkProcessor:
             for agent in self.agents:
                 agent.disconnect()
 
-            result_path = "/experiments/" + str(self.exp_id) + "/trials/" + str(self.trial_id) + "/nodes/" + str(self.host_id)
-            self.zk.ensure_path(result_path)
-            self.zk.set(result_path, str(self.dependent()))
+            result_path = "/experiments/" + str(self.exp_id) + "/trials/" + str(self.trial_id) + "/nodes/" + str(self.host_id) + "/dependent_variables/"
+            dep_vars = self.dependent()
+            data = json.dumps(dep_vars)
+            # self.zk.ensure_path(result_path)
+            self.zk.set(result_path, data)
 
     def should_stop(self):
         if self.max_iterations > 0 and self.iteration >= self.max_iterations:
@@ -75,21 +78,6 @@ class WorkProcessor:
 
     def total_agent_activity(self):
         return sum([a.total_activity for a in self.agents])
-
-    # register a new agent in Zookeeper and return its id
-    def register_agent(self, agent):
-        curr_trial_path = "/tasks/nodes/" + str(self.host_id) + "/" + str(self.exp_id) + "/" + str(self.trial_id)
-        lock = self.zk.Lock(curr_trial_path + "/agent_id_counter")
-        with lock:  # blocks waiting for lock acquisition
-            agent.id = self.agent_id_generator.value
-            self.agent_id_generator += 1
-        # print "next id " + str(self.agent_id_generator.value)
-        self.zk.ensure_path("/experiments/" + str(self.exp_id) + "/trials/" + str(self.trial_id) + "/agents/"
-                            + str(agent.id) + "/")
-
-        # TBD init other agent attributes if needed
-        # assign agent to a worker node
-
 
     # Default method for whether an agent should stop. By default, true, so if neither
     # this method nor should_stop are overridden, nothing will happen.
