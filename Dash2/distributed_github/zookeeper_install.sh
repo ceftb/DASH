@@ -2,9 +2,11 @@
 # This scrip installs Apache Zookeeper and Kazoo python library (zookeeper client API for Python). 
 # Tested on Ubuntu 16.04 LTS
 
-# NUMBER_OF_NODES - number of nodes in cluster. All nodes must have an id in the name. 
-# For example, node1.kazoo-experiment.dash.isi.deterlab.net 
-NUMBER_OF_NODES=7
+# NODES is a list of nodes name or IP adresses of hosts in cluster.
+# For example
+# NODES=(server1 server22 host34 node3)
+
+NODES=(localhost)
 
 # KAZOO_CLONE is a local path where kazoo is cloned (git clone https://github.com/2600hz/kazoo.git  ).
 KAZOO_CLONE=~/projects/kazoo 
@@ -37,15 +39,17 @@ sudo chmod go+rw $ZK_ID
 sudo uname -n | sed 's/[^0-9]*//g' > $ZK_ID
 sudo chmod go+rw $ZK_CONF
 sudo cat $WEBDASH_CLONE/Dash2/distributed_github/zoo.conf > $ZK_CONF
-# appending other nodes
 
-ID=1
-while [  $ID -le $NUMBER_OF_NODES ]; do
-	echo "id is " $ID
-	echo server.$ID=node$ID:2888:3888 >> $ZK_CONF
-	let ID=ID+1 
-done
+# appending other nodes to zookeeper config file
+NUMBER_OF_NODES=${#NODES[@]}
+echo 'Total ' $NUMBER_OF_NODES ' hosts in assemble'
+for ID in `seq 1 $NUMBER_OF_NODES`;
+        do
+                echo 'Zookeeper node ' $ID ' -> ' ${NODES[$ID-1]}
+		echo server.$ID=${NODES[$ID-1]}:2888:3888 >> $ZK_CONF
+        done 
 echo " " >> $ZK_CONF
+
 
 echo "restarting zookeeper server ..."
 sudo service zookeeper stop
@@ -55,4 +59,5 @@ echo "Zookeeper installation completed"
 
 # echo "installing mc .."
 # sudo apt-get install mc --yes
+
 
