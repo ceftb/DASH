@@ -52,9 +52,9 @@ class ZkTrial(Trial):
             return True
 
         number_of_hosts = len(self.hosts.split(","))
-        task_counter = 0
-        # create a task for each node in experiment assemble
 
+        # create a task for each node in experiment assemble
+        task_counter = 1
         for node_id in range(1, number_of_hosts + 1):
             task_id = str(self.exp_id) + "-" + str(self.trial_id) + "-" + str(task_counter)
             task_path = "/tasks/nodes/" + str(node_id) + "/" + task_id

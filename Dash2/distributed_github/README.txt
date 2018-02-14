@@ -43,7 +43,7 @@ Both dash_worker.py and dash controller.py accept the following command line arg
 - If no arguments are given, controller and worker are run locally. Controller assumes that there is only one worker node in assemble and allocates all work to it. Both controller and worker assume that Zookeeper also runs locally on default port.
 - If 2 arguments are given, these are comma-separate list of hosts and current host id. For example
 controller.py 127.0.0.1:2181,server1:2181,node5:2233 1
-controller and worker will use provided list of hosts and current host id to connect to zookeeper assemble. Controller assumes that all given hosts have dash_workers running on them; therefore, it distributes work accordingly.
+controller and worker will use provided list of hosts and current host id to connect to zookeeper assemble. Controller assumes that all given hosts have dash_workers running on them; therefore, it distributes work accordingly. Use port 2181 by default.
 
 
 
