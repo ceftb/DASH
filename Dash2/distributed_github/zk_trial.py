@@ -68,6 +68,7 @@ class ZkTrial(Trial):
             js_data["work_processor_class"] = "DashWorkProcessor"
             js_data["prob_create_new_agent"] = str(self.prob_create_new_agent)
             js_data["max_iterations"] = str(self.max_iterations)
+            self.zk.ensure_path(task_path)
             self.zk.set(task_path, json.dumps(js_data))
 
             @self.zk.DataWatch(dependent_vars_path)
