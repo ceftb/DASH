@@ -34,8 +34,8 @@ class DashWorkProcessor:
 
             result_path = "/experiments/" + str(self.exp_id) + "/trials/" + str(self.trial_id) + "/nodes/" + str(self.host_id) + "/dependent_variables/"
             dep_vars = self.dependent()
-            data = json.dumps(dep_vars)
-            # self.zk.ensure_path(result_path)
+            task_result = {"node_id":self.host_id, "dependent":dep_vars}
+            data = json.dumps(task_result)
             self.zk.set(result_path, data)
 
     def should_stop(self):
@@ -62,10 +62,13 @@ class DashWorkProcessor:
         else:
             a = random.choice(self.agents)
         a.agentLoop(max_iterations=1, disconnect_at_end=False)
+        self.zk.ensure_path("/experiments/" + str(self.exp_id) + "/trials/" + str(self.trial_id) + "/nodes/" + str(
+            self.host_id) + "/agents")
+        self.zk.set( "/experiments/" + str(self.exp_id) + "/trials/" + str(self.trial_id) + "/nodes/" + str(self.host_id) + "/agents", str(a.follower_list))
 
 
     def dependent(self):
-        return [self.num_agents(), self.num_repos(), self.total_agent_activity()]
+        return {"num_agents": self.num_agents(), "num_repos": self.num_repos(), "total_agent_activity": self.total_agent_activity()}
 
     # Measures #
     # These are defined above as measures

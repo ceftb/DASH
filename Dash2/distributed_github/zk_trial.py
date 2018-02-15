@@ -12,8 +12,9 @@ from kazoo.client import KazooClient
 from collections import defaultdict
 from zk_repo_hub import ZkRepoHub
 
-
-# Trial of an experiment. ZkTrial uses Zookeeper to distribute agents across hosts.
+# TBD: This class to be merged with Trial class from core module, when zookeeper version of DASH is stable
+# parameters and measures will be moved to domain specific subclass (for a specific experiment)
+# ZkTrial uses Zookeeper to distribute agents across hosts.
 class ZkTrial(Trial):
     # Class-level information about parameter ranges and distributions. Note that the second probability
     # is passed to each agent but defined here on the population
@@ -31,26 +32,17 @@ class ZkTrial(Trial):
         self.curr_trial_path = "/experiments/" + str(self.exp_id) + "/trials/" + str(self.trial_id)
         self.zk.ensure_path(self.curr_trial_path)
         self.hosts = hosts
-        self.results = []
+        self.results = {"num_agents": 0, "num_repos": 0, "total_agent_activity": 0}
+        self.received_tasks_counter = 0
 
     def initialize(self):
         self.agent_id_generator = self.zk.Counter(self.curr_trial_path + "/agent_id_counter", 0)
         self.hub = ZkRepoHub(repo_hub_id=1, zk=self.zk)
         self.zk.ensure_path(self.curr_trial_path + "/status")
-        self.zk.set(self.curr_trial_path + "/status", "in progress")
+        self.zk.set(self.curr_trial_path + "/status", json.dumps({"trial_id": self.trial_id, "status": "in progress", "dependent": ""}))
 
     def run(self):
         self.initialize()
-
-        @self.zk.DataWatch(self.curr_trial_path + "/status")
-        def watch_assemble_status(data, stat_):
-            print("New status is %s" % data)
-            if data == "completed":
-                print "Trial " + self.trial_id + " is complete"
-                self.status = data
-                return False
-            return True
-
         number_of_hosts = len(self.hosts.split(","))
 
         # create a task for each node in experiment assemble
@@ -66,38 +58,45 @@ class ZkTrial(Trial):
             js_data = {}
             js_data["work_processor_module"] = "Dash2.distributed_github.dash_work_processor"
             js_data["work_processor_class"] = "DashWorkProcessor"
-            js_data["prob_create_new_agent"] = str(self.prob_create_new_agent)
-            js_data["max_iterations"] = str(self.max_iterations)
+            self.init_parameters(js_data)
             self.zk.ensure_path(task_path)
             self.zk.set(task_path, json.dumps(js_data))
 
             @self.zk.DataWatch(dependent_vars_path)
             def watch_dependent_vars(data, stat_):
                 if data is not None and data != "":
-                    print "Received data from node \nDATA: "+ str(data)
-                    self.results.append(data)
-                    if len(self.results) == number_of_hosts:
+                    self.received_tasks_counter += 1
+                    self.append_partial_results(data)
+                    if self.received_tasks_counter == number_of_hosts:
                         self.aggregate_results()
-                        # TBD delete nodes intermediate results
+                        self.zk.set(self.curr_trial_path + "/status", json.dumps({"trial_id": self.trial_id, "status": "completed", "dependent": self.results}))
                         return False
                 return True
-
             task_counter += 1
 
+    def init_parameters(self, js_data):
+        js_data["prob_create_new_agent"] = str(self.prob_create_new_agent)
+        js_data["max_iterations"] = str(self.max_iterations)
+
+    def append_partial_results(self, data):
+        task_results = json.loads(data)
+        node_id = task_results["node_id"]
+        dependent_vars_path = "/experiments/" + str(self.exp_id) + "/trials/" + str(self.trial_id) + "/nodes/" + str(node_id) + "/dependent_variables"
+        self.zk.set(dependent_vars_path, "") # clearing data
+        partial_measures = task_results["dependent"]
+        for measure in self.measures:
+            self.results[measure.name] += int(partial_measures[measure.name])
+
     def aggregate_results(self):
-        print "aggregating results " + str(self.results)
+        pass
 
     # Measures #
     def num_agents(self):
-        return -1 #len(self.zk.get_children("/experiments/" + str(self.exp_id) + "/trials/" + str(self.trial_id) + "/agents"))
+        return self.results["num_agents"]
 
     def num_repos(self):
-        # agents_ids = self.zk.get_children("/experiments/" + str(self.exp_id) + "/trials/" + str(self.trial_id) + "/agents")
-        # for agent_id in agents_ids:
-        #    pass # TBD: count summ of repos
-        return -1
+        return self.results["num_repos"]
 
     def total_agent_activity(self):
-        # TBD need to define in KZ repository
-        return -1
+        return self.results["total_agent_activity"]
 

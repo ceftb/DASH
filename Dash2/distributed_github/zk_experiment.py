@@ -1,8 +1,9 @@
 import sys; sys.path.extend(['../../'])
 import numpy
+import json
 from Dash2.core.parameter import Range, Parameter, Uniform, TruncNorm
 from zk_trial import ZkTrial
-
+from kazoo.client import KazooClient
 
 class ZkExperiment(object):
     def __init__(self, trial_class=ZkTrial, exp_id=None, hosts='127.0.0.1:2181',
@@ -50,14 +51,23 @@ class ZkExperiment(object):
                 trial_data[self.independent[0]] = independent_val
             self.trial_outputs[independent_val] = []
             for trial_number in range(self.num_trials):
-                print "Trial", trial_number, "with", None if self.independent is None else self.independent[0], "=", \
-                    independent_val
+                print "Trial ", trial_number, " with ", None if self.independent is None else self.independent[0], "=", independent_val
+                curr_trial_path = "/experiments/" + str(self.exp_id) + "/trials/" + str(trial_number)
+                @zk.DataWatch(curr_trial_path + "/status")
+                def watch_trial_status(data, stat_):
+                    if data is not None and data != "":
+                        data_dict = json.loads(data)
+                        status = data_dict["status"]
+                        if status == "completed":
+                            print "Trial " + str(data_dict["trial_id"]) + " is complete"
+                            trial_dependent = data_dict["dependent"]
+                            print "Dependent evaluated to " + str(trial_dependent)
+                            self.trial_outputs[independent_val].append(trial_dependent)
+                            return False
+                    return True
+
                 trial = self.trial_class(zk=zk, hosts=self.hosts, exp_id=self.exp_id, trial_id=trial_number, data=trial_data)
                 trial.run()
-                # TBD use aggregated values for dependent
-                trial_dependent = self.dependent(trial) if callable(self.dependent) else getattr(trial, self.dependent)
-                # print "Dependent", self.dependent, "evaluated to", trial_dependent
-                self.trial_outputs[independent_val].append(trial_dependent)
 
         return self.trial_outputs
 
