@@ -11,21 +11,15 @@ class DashController:
     # zk_hosts - Comma-separated list of hosts of zookeeper to connect to
     # hosts - Comma-separated list of hosts available in experiment
     # Default value for host id is 1 which is a leader's id
-    def __init__(self, zk_host_id=1, zk_hosts='127.0.0.1:2181', host_id=1, hosts='127.0.0.1:2181'):
+    def __init__(self, zk_hosts='127.0.0.1:2181', number_of_hosts=1):
         # zookeeper connection is a process level shared object, all threads use it
-        self.zk = KazooClient(hosts)
+        self.zk = KazooClient(zk_hosts)
         self.zk.start()
 
         self.zk_hosts = zk_hosts
         self.number_of_zk_hosts = len(zk_hosts.split(","))
-        self.zk_host_id = zk_host_id
 
-        self.hosts = hosts
-        self.number_of_hosts = len(hosts.split(","))
-        self.host_id = host_id
-
-        # assume that host ids are [1 ... total_number_of_hosts]
-        self.list_of_hosts_ids = range(1, len(self.hosts.split(",")) + 1)
+        self.number_of_hosts = number_of_hosts
 
     def run(self, experiment, run_data={}):
         print "ExperimentController: setting up the experiment ..."
@@ -44,7 +38,7 @@ class DashController:
         experiment.run(self.zk, run_data=run_data)
         print "ExperimentController: experiment in progress"
         while True:
-            cmd = raw_input("Type \n\tq to exit experiment controller, \n\tt to terminate all worker nodes,"
+            cmd = raw_input("Press \n\tq to exit experiment controller, \n\tt to terminate all worker nodes,"
                             "\n\ts to see experiment status, \n\tc to remove all data from zookeeper (clean up storage for new experiments)\n")
             if cmd == "q":
                 print("Exiting experiment controller")

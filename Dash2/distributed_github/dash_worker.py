@@ -6,22 +6,11 @@ from kazoo.client import KazooClient
 
 # TBD: This class to be moved into core module when zookeeper version of DASH is stable
 class DashWorker(object):
-    # zk_hosts - Comma-separated list of hosts of zookeeper to connect to
-    # hosts - Comma-separated list of hosts avialable in experiment
-    # Default value for host id is 1 which is a leader's id
-    def __init__(self, zk_host_id=1, zk_hosts='127.0.0.1:2181', host_id=1, hosts='127.0.0.1:2181'):
-        # zookeeper connection is a process level shared object, all threads use it
-        self.zk = KazooClient(hosts)
+    def __init__(self, zk_hosts='127.0.0.1:2181', host_id=1):
+        self.zk = KazooClient(zk_hosts)
         self.zk.start()
-
         self.zk_hosts = zk_hosts
-        self.number_of_zk_hosts = len(zk_hosts.split(","))
-        self.zk_host_id = zk_host_id
-
-        self.hosts = hosts
-        self.number_of_hosts = len(hosts.split(","))
         self.host_id = host_id
-
         self.status = "active"
 
     def run(self):
@@ -89,31 +78,21 @@ class DashWorker(object):
         return cls
 
 
-
-# 1st argument is a comma separated list of hosts.
-# The first host in the list should be a local machine for better performance
-# 2nd argument is the current host's id (number between 1-255)
-# 3d argument is a comma separated list of hosts zookeeper hosts
-# 4th argument is the current zookeeper host's id (number between 1-255)
-# if third and forth arguments are omitted then it is assumed that zookeeper nodes are the same as experiment nodes.
 if __name__ == "__main__":
     print "running experiment ..."
-    if len(sys.argv) == 1:
+    if len(sys.argv) == 1: # no parameters. 127.0.0.1:2181 is a default zookeeper server, 1 - default node id
         node = DashWorker()
         node.run()
-    elif len(sys.argv) == 3:
-        hosts_list = sys.argv[1]
-        curr_host_id = int(sys.argv[2])
+    elif len(sys.argv) == 2:  # If one argument is given, it defines current host id. 127.0.0.1:2181 is a default zookeeper server here.
+        curr_host_id = int(sys.argv[1])
 
-        node = DashWorker(zk_host_id=curr_host_id, zk_hosts=hosts_list, host_id=curr_host_id, hosts=hosts_list)
+        node = DashWorker(host_id=curr_host_id)
         node.run()
-    elif len(sys.argv) == 5:
+    elif len(sys.argv) == 3: # If two arguments were given, 1st argument is a comma separated list of hosts, 2nd argument is the current host's id (number between 1-255)
         hosts_list = sys.argv[1]
         curr_host_id = int(sys.argv[2])
-        zk_hosts_list = sys.argv[3]
-        zk_curr_host_id = int(sys.argv[4])
 
-        node = DashWorker(zk_host_id=zk_curr_host_id, zk_hosts=zk_hosts_list, host_id=curr_host_id, hosts=hosts_list)
+        node = DashWorker(zk_hosts=hosts_list, host_id=curr_host_id)
         node.run()
     else:
         print 'incorrect arguments: ', sys.argv

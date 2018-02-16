@@ -24,14 +24,14 @@ class ZkTrial(Trial):
 
     measures = [Measure('num_agents'), Measure('num_repos'), Measure('total_agent_activity')]
 
-    def __init__(self, zk, hosts, exp_id, trial_id, data={}, max_iterations=-1):
+    def __init__(self, zk, number_of_hosts, exp_id, trial_id, data={}, max_iterations=-1):
         Trial.__init__(self, data, max_iterations)
         self.zk = zk
         self.exp_id = exp_id
         self.trial_id = trial_id
         self.curr_trial_path = "/experiments/" + str(self.exp_id) + "/trials/" + str(self.trial_id)
         self.zk.ensure_path(self.curr_trial_path)
-        self.hosts = hosts
+        self.number_of_hosts = number_of_hosts
         self.results = {"num_agents": 0, "num_repos": 0, "total_agent_activity": 0}
         self.received_tasks_counter = 0
 
@@ -43,11 +43,10 @@ class ZkTrial(Trial):
 
     def run(self):
         self.initialize()
-        number_of_hosts = len(self.hosts.split(","))
 
         # create a task for each node in experiment assemble
         task_counter = 1
-        for node_id in range(1, number_of_hosts + 1):
+        for node_id in range(1, self.number_of_hosts + 1):
             task_id = str(self.exp_id) + "-" + str(self.trial_id) + "-" + str(task_counter)
             task_path = "/tasks/nodes/" + str(node_id) + "/" + task_id
             dependent_vars_path = "/experiments/" + str(self.exp_id) + "/trials/" + str(self.trial_id) + "/nodes/" + str(node_id) + "/dependent_variables"
@@ -67,7 +66,7 @@ class ZkTrial(Trial):
                 if data is not None and data != "":
                     self.received_tasks_counter += 1
                     self.append_partial_results(data)
-                    if self.received_tasks_counter == number_of_hosts:
+                    if self.received_tasks_counter == self.number_of_hosts:
                         self.aggregate_results()
                         self.zk.set(self.curr_trial_path + "/status", json.dumps({"trial_id": self.trial_id, "status": "completed", "dependent": self.results}))
                         return False

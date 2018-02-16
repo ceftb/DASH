@@ -6,7 +6,7 @@ from zk_trial import ZkTrial
 from kazoo.client import KazooClient
 
 class ZkExperiment(object):
-    def __init__(self, trial_class=ZkTrial, exp_id=None, hosts='127.0.0.1:2181',
+    def __init__(self, trial_class=ZkTrial, exp_id=None, number_of_hosts=1,
                  independent=None, dependent=None, exp_data={}, num_trials=3):
         self.trial_class = trial_class
         self.independent = independent
@@ -14,7 +14,7 @@ class ZkExperiment(object):
         self.exp_data = exp_data
         self.num_trials = num_trials
         self.exp_id = exp_id
-        self.hosts = hosts
+        self.number_of_hosts = number_of_hosts
 
     # this method is taken from Experiment
     def run(self, zk, run_data={}):
@@ -65,8 +65,8 @@ class ZkExperiment(object):
                             self.trial_outputs[independent_val].append(trial_dependent)
                             return False
                     return True
-
-                trial = self.trial_class(zk=zk, hosts=self.hosts, exp_id=self.exp_id, trial_id=trial_number, data=trial_data)
+                # TBD may need to add watcher to monitor completion of all trials
+                trial = self.trial_class(zk=zk, number_of_hosts=self.number_of_hosts, exp_id=self.exp_id, trial_id=trial_number, data=trial_data)
                 trial.run()
 
         return self.trial_outputs
