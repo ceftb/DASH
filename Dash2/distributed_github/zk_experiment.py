@@ -15,6 +15,7 @@ class ZkExperiment(object):
         self.num_trials = num_trials
         self.exp_id = exp_id
         self.number_of_hosts = number_of_hosts
+        self.completed_trials_counter = 0
 
     # this method is taken from Experiment
     def run(self, zk, run_data={}):
@@ -63,9 +64,15 @@ class ZkExperiment(object):
                             trial_dependent = data_dict["dependent"]
                             print "Dependent evaluated to " + str(trial_dependent)
                             self.trial_outputs[independent_val].append(trial_dependent)
+                            self.completed_trials_counter += 1
+                            if (self.completed_trials_counter == self.num_trials):
+                                print "All trials completed successfully"
+                                print "Outputs: " + str(self.trial_outputs)
+                                zk.set("/experiments/" + str(self.exp_id) + "/status", "completed")
+                                zk.delete("/experiments/" + str(self.exp_id) + "/trials", recursive = True)
+                                self.completed_trials_counter = 0
                             return False
                     return True
-                # TBD may need to add watcher to monitor completion of all trials
                 trial = self.trial_class(zk=zk, number_of_hosts=self.number_of_hosts, exp_id=self.exp_id, trial_id=trial_number, data=trial_data)
                 trial.run()
 

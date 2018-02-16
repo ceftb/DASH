@@ -38,8 +38,10 @@ class DashController:
         experiment.run(self.zk, run_data=run_data)
         print "ExperimentController: experiment in progress"
         while True:
-            cmd = raw_input("Press \n\tq to exit experiment controller, \n\tt to terminate all worker nodes,"
-                            "\n\ts to see experiment status, \n\tc to remove all data from zookeeper (clean up storage for new experiments)\n")
+            cmd = raw_input("Press \n\tq to exit experiment controller, \n\tt to terminate all worker nodes (/experiment_assemble_status->terminated),"
+                            "\n\ta to change assemble status to active (/experiment_assemble_status->active),\n\ts to see experiment status, "
+                            "\n\tc to remove all data from zookeeper (clean up storage for new experiments)"
+                            "\n\tr to run experiment again.\n")
             if cmd == "q":
                 print("Exiting experiment controller")
                 self.zk.stop()
@@ -47,8 +49,14 @@ class DashController:
             elif cmd == "t":
                 self.zk.ensure_path("/experiment_assemble_status")
                 self.zk.set("/experiment_assemble_status", "terminated")
+            elif cmd == "a":
+                self.zk.ensure_path("/experiment_assemble_status")
+                self.zk.set("/experiment_assemble_status", "active")
             elif cmd == "s":
-                status, stat = self.zk.get("/experiments/" + str(experiment.exp_id) + "/status")
+                if self.zk.exists("/experiments/" + str(experiment.exp_id) + "/status"):
+                    status, stat = self.zk.get("/experiments/" + str(experiment.exp_id) + "/status")
+                else:
+                    status = "no experiments found"
                 print status
             elif cmd == "c":
                 print "Cleaning up zookeeper storage ..."
@@ -60,7 +68,7 @@ class DashController:
                 self.zk.ensure_path("/experiment_assemble_status")
                 self.zk.set("/experiment_assemble_status", "active")
                 print "Previous experiments removed"
-            elif cmd == "r": # TBD: make sure old watchers are removed
+            elif cmd == "r":
                 print "Running experiment again ..."
                 self.zk.ensure_path("/experiments/" + str(experiment.exp_id) + "/status")
                 self.zk.set("/experiments/" + str(experiment.exp_id) + "/status", "queued")

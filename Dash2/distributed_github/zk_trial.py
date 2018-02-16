@@ -24,6 +24,8 @@ class ZkTrial(Trial):
 
     measures = [Measure('num_agents'), Measure('num_repos'), Measure('total_agent_activity')]
 
+    # Note for future refactoring: it is possible to merge this class with Trial.
+    # zk and number_of_hosts  should be added to Trial constructor. trial_id can be passed via parameters[]
     def __init__(self, zk, number_of_hosts, exp_id, trial_id, data={}, max_iterations=-1):
         Trial.__init__(self, data, max_iterations)
         self.zk = zk
