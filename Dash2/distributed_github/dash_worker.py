@@ -36,10 +36,7 @@ class DashWorker(object):
                         @self.zk.DataWatch(node_prefix + "/" + task_id)
                         def watch_task_update(data, stat_):
                             if data is not None:
-                                print "New task " + task_id + "\ntask data " + data
-                                self.process_tasks(data, task_id)
-                                self.zk.delete(node_prefix + "/" + task_id)
-                                print "New task " + task_id + " deleted"
+                                self.process_tasks(data)
                                 return False
                             return True
                 return True
@@ -61,15 +58,19 @@ class DashWorker(object):
         else:
             raise ValueError('/experiment_assemble_status contains incorrect value')
 
-    def process_tasks(self, data, task_id):
-        print "Received task " + task_id + " with data " + data
+    def process_tasks(self, data):
         args = json.loads(data)
         module_name = args["work_processor_module"]
         class_name = args["work_processor_class"]
+        task_full_id  = args["task_full_id"]
         processor_class = self.retrieve_work_processor_class(module_name, class_name)
-        processor = processor_class(zk=self.zk, host_id=self.host_id, task_id=task_id, data=args)
+
+        print "Received task " + task_full_id + " with data " + data
+        processor = processor_class(zk=self.zk, host_id=self.host_id, task_full_id=task_full_id, data=args)
         processor.process_task()
-        print "Task " + str(task_id) + " is complete."
+        node_prefix = "/tasks/nodes/" + str(self.host_id)
+        self.zk.delete(node_prefix + "/" + task_full_id)
+        print "Task " + str(task_full_id) + " is complete."
 
     @staticmethod
     def retrieve_work_processor_class( module_name, class_name):

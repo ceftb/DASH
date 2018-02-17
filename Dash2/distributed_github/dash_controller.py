@@ -23,6 +23,10 @@ class DashController:
 
     def run(self, experiment, run_data={}):
         print "ExperimentController: setting up the experiment ..."
+
+        self.zk.ensure_path("/experiment_assemble_status")
+        self.zk.set("/experiment_assemble_status", "active")
+
         self.zk.ensure_path("/experiments/" + str(experiment.exp_id) + "/status")
         self.zk.set("/experiments/" + str(experiment.exp_id) + "/status", "queued")
 
@@ -47,10 +51,8 @@ class DashController:
                 self.zk.stop()
                 return
             elif cmd == "t":
-                self.zk.ensure_path("/experiment_assemble_status")
                 self.zk.set("/experiment_assemble_status", "terminated")
             elif cmd == "a":
-                self.zk.ensure_path("/experiment_assemble_status")
                 self.zk.set("/experiment_assemble_status", "active")
             elif cmd == "s":
                 if self.zk.exists("/experiments/" + str(experiment.exp_id) + "/status"):
@@ -60,13 +62,17 @@ class DashController:
                 print status
             elif cmd == "c":
                 print "Cleaning up zookeeper storage ..."
-                self.zk.delete("/experiments", recursive=True)
+                if self.zk.exists("/experiments"):
+                    self.zk.delete("/experiments", recursive=True)
                 for node_id in range(1, self.number_of_hosts + 1):
                     tasks = self.zk.get_children("/tasks/nodes/" + str(node_id))
                     for task in tasks:
                         self.zk.delete("/tasks/nodes/" + str(node_id) + "/" + str(task), recursive=True)
                 self.zk.ensure_path("/experiment_assemble_status")
                 self.zk.set("/experiment_assemble_status", "active")
+
+                next_id = self.zk.Counter("/nex_experiment_id_counter")
+                next_id -= next_id.value
                 print "Previous experiments removed"
             elif cmd == "r":
                 print "Running experiment again ..."

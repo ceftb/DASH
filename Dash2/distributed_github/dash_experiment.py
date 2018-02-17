@@ -2,11 +2,12 @@ import sys; sys.path.extend(['../../'])
 import numpy
 import json
 from Dash2.core.parameter import Range, Parameter, Uniform, TruncNorm
-from zk_trial import ZkTrial
+from dash_trial import DashTrial
 from kazoo.client import KazooClient
+from Dash2.distributed_github.dash_work_processor import DashWorkProcessor
 
-class ZkExperiment(object):
-    def __init__(self, trial_class=ZkTrial, exp_id=None, number_of_hosts=1,
+class DashExperiment(object):
+    def __init__(self, trial_class=DashTrial, work_processor_class=DashWorkProcessor, exp_id=None, number_of_hosts=1,
                  independent=None, dependent=None, exp_data={}, num_trials=3):
         self.trial_class = trial_class
         self.independent = independent
@@ -16,12 +17,15 @@ class ZkExperiment(object):
         self.exp_id = exp_id
         self.number_of_hosts = number_of_hosts
         self.completed_trials_counter = 0
+        self.work_processor_class = work_processor_class
 
-    # this method is taken from Experiment
+    # This is asynchronous method. When called it returns experiment id.
+    # Result will be processed by watcher (watch_trial_status).
     def run(self, zk, run_data={}):
         if self.exp_id is None:
-            # TBD register new experiment in Zookeeper and update experiment id
-            self.exp_id = 0
+            next_id = zk.Counter("/nex_experiment_id_counter")
+            self.exp_id = next_id.value
+            next_id +=1
 
         zk.ensure_path("/experiments/" + str(self.exp_id) + "/status")
         zk.set("/experiments/" + str(self.exp_id) + "/status", "in progress")
@@ -73,10 +77,10 @@ class ZkExperiment(object):
                                 self.completed_trials_counter = 0
                             return False
                     return True
-                trial = self.trial_class(zk=zk, number_of_hosts=self.number_of_hosts, exp_id=self.exp_id, trial_id=trial_number, data=trial_data)
+                trial = self.trial_class(zk=zk, work_processor_class = self.work_processor_class, number_of_hosts=self.number_of_hosts, exp_id=self.exp_id, trial_id=trial_number, data=trial_data)
                 trial.run()
 
-        return self.trial_outputs
+        return self.exp_id
 
     def compute_independent_vals(self):
         independent_vals = [None]

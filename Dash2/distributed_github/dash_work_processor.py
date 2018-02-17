@@ -3,21 +3,23 @@ import random
 from kazoo.client import KazooClient
 import json
 from Dash2.github.git_user_agent import GitUserAgent
-from zk_repo_hub import GitRepoHub
+from zk_repo_hub import ZkRepoHub
 
 # TBD: This class to be moved into core module when zookeeper version of DASH is stable
 # WorkProcessor class is responsible for running experiment trial on a node in cluster
 class DashWorkProcessor:
-    def __init__(self, zk, host_id, task_id, data):
+    def __init__(self, zk, host_id, task_full_id, data):
         self.agents = []
         self.zk = zk
         self.host_id = host_id
-        self.exp_id, self.trial_id, _= task_id.split("-")
-        self.task_id = task_id
+        self.exp_id, self.trial_id, self.task_num = task_full_id.split("-") # self.task_num by default is the same as node id
+        self.task_id = task_full_id
+
+        # move to subclass
         self.max_iterations = int(data["max_iterations"])
         self.prob_create_new_agent = float(data["prob_create_new_agent"])
 
-        self.hub = GitRepoHub(1)  # FIXME register in zk
+        self.hub = ZkRepoHub(zk, task_full_id)  # FIXME register in zk
         self.iteration = 0
 
     def process_task(self):

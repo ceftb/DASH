@@ -12,9 +12,15 @@ class ZkRepoHub(GitRepoHub):
     A class that handles client requests and modifies the desired repositories
     """
 
-    def __init__(self, repo_hub_id, zk, **kwargs):
-        GitRepoHub.__init__(self, repo_hub_id, kwargs=kwargs)
-        self.zk = zk
+    def __init__(self, zk, full_task_id):
+        WorldHub.__init__(self, None)
+        self.full_task_id = full_task_id
+        self.users = set()  # User ids
+        self.local_repos = {}  # keyed by repo id, valued by repo object
+        self.repo_hub_id = 1
+        self.local_event_log = []  # Each log item stores a dictionary with keys 'userID', 'repoID', 'eventType', 'subeventtype', 'time'
+        self.trace_handler = False
+        self.local_repo_id_counter = 0
 
     def log_event(self, user_id, repo_id, event_type, subevent_type, time):
         """
@@ -57,8 +63,7 @@ class ZkRepoHub(GitRepoHub):
         return ["success", agent_id, creation_time]
 
     def terminateWork(self):
-        self.dump_event_log(self.repo_hub_id);
-
+        self.dump_event_log(self.repo_hub_id)
     def synch_repo_hub(self, host, port):
         """
         Synchronizes repository hub with other hubs
@@ -79,8 +84,8 @@ class ZkRepoHub(GitRepoHub):
         the provided repository information
         """
 
-        repo_id = self.lowest_unassigned_repo_id
-        self.lowest_unassigned_repo_id += 1
+        repo_id = self.full_task_id + str(self.local_repo_id_counter)
+        self.local_repo_id_counter += 1
         # print('Request to create repo from', agent_id, 'for', repo_info)
         repo_creation_date = time()
         repo_info['created_at'] = repo_creation_date
@@ -550,9 +555,3 @@ def load_object(filename):
 
     save_file = open(filename, 'rb')
     return pickle.load(save_file)
-
-
-if __name__ == '__main__':
-    """
-    """
-    ZkRepoHub(0, port=6000).run()

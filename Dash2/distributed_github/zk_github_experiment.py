@@ -1,8 +1,8 @@
 import sys; sys.path.extend(['../../'])
 
 from Dash2.core.parameter import Range
-from zk_trial import ZkTrial
-from zk_experiment import ZkExperiment
+from dash_trial import DashTrial
+from dash_experiment import DashExperiment
 from dash_controller import DashController
 
 # This is an example of experiment script
@@ -28,12 +28,11 @@ if __name__ == "__main__":
 
     # ExperimentController is a until class that provides command line interface to run the experiment on clusters
     controller = DashController(zk_hosts=zk_hosts, number_of_hosts=number_of_hosts)
-    exp = ZkExperiment(trial_class=ZkTrial,
-                       exp_id=101,
-                       number_of_hosts=number_of_hosts,
-                       independent=independent,
-                       dependent=lambda t: [t.num_agents(), t.num_repos(), t.total_agent_activity()],
-                       exp_data=exp_data,
-                       num_trials=num_trials)
+    exp = DashExperiment(trial_class=DashTrial,
+                         number_of_hosts=number_of_hosts,
+                         independent=independent,
+                         dependent=lambda t: [t.num_agents(), t.num_repos(), t.total_agent_activity()],
+                         exp_data=exp_data,
+                         num_trials=num_trials)
     results = controller.run(exp)
 
