@@ -1,28 +1,17 @@
 import sys; sys.path.extend(['../../'])
 import random
 import json
-from zk_repo_hub import ZkRepoHub
 from Dash2.core.trial import Trial
-from Dash2.core.parameter import Range, Parameter, Uniform, TruncNorm
-from Dash2.github.git_user_agent import GitUserAgent
-from Dash2.core.experiment import Experiment
-from Dash2.core.parameter import Parameter
-from Dash2.core.measure import Measure
-from kazoo.client import KazooClient
-from collections import defaultdict
-from zk_repo_hub import ZkRepoHub
 from Dash2.distributed_github.dash_work_processor import DashWorkProcessor
 
 # TBD: This class to be merged with Trial class from core module, when zookeeper version of DASH is stable
 # parameters and measures will be moved to domain specific subclass (for a specific experiment)
-# ZkTrial uses Zookeeper to distribute agents across hosts.
+# DashTrial uses Zookeeper to distribute agents across hosts.
 class DashTrial(Trial):
     # Class-level information about parameter ranges and distributions. Note that the second probability
     # is passed to each agent but defined here on the population
-    parameters = [Parameter('prob_create_new_agent', distribution=Uniform(0,1), default=0.5),
-                  Parameter('prob_agent_creates_new_repo', distribution=Uniform(0,1), default=0.5)]
-
-    measures = [Measure('num_agents'), Measure('num_repos'), Measure('total_agent_activity')]
+    parameters = []
+    measures = []
 
     # Note for future refactoring: it is possible to merge this class with Trial.
     # zk and number_of_hosts  should be added to Trial constructor. trial_id can be passed via parameters[]
@@ -36,17 +25,15 @@ class DashTrial(Trial):
         self.number_of_hosts = number_of_hosts
         self.received_tasks_counter = 0
         self.work_processor_class = work_processor_class
-        # TBD move to subclass
-        self.results = {"num_agents": 0, "num_repos": 0, "total_agent_activity": 0}
 
-    def initialize(self):
-        self.agent_id_generator = self.zk.Counter(self.curr_trial_path + "/agent_id_counter", 0)
         self.zk.ensure_path(self.curr_trial_path + "/status")
         self.zk.set(self.curr_trial_path + "/status", json.dumps({"trial_id": self.trial_id, "status": "in progress", "dependent": ""}))
 
+    def initialize(self):
+        pass
+
     def run(self):
         self.initialize()
-
         # create a task for each node in experiment assemble
         task_number = 1 # task_number by default is the same as node id,
         # because by default each task in trial is assigned to exactly one node, but it might be different
@@ -57,12 +44,14 @@ class DashTrial(Trial):
             dependent_vars_path = "/experiments/" + str(self.exp_id) + "/trials/" + str(self.trial_id) + "/nodes/" + str(node_id) + "/dependent_variables"
             self.zk.ensure_path(dependent_vars_path)
 
-            task_data = {"work_processor_module": self.work_processor_class.__module__,
-                       "work_processor_class": self.work_processor_class.__name__,
-                       "max_iterations": self.max_iterations,
-                       "task_full_id": task_full_id}
+            task_data = {"work_processor_module": self.work_processor_class.module_name,
+                         "work_processor_class": self.work_processor_class.__name__,
+                         "max_iterations": self.max_iterations,
+                         "task_full_id": task_full_id,
+                         "parameters": []}
             for par in self.__class__.parameters:
                 task_data[par.name] = getattr(self, par.name)
+                task_data["parameters"].append(par.name) # work processor needs to know list of parameters (names)
             self.zk.ensure_path(task_path)
             self.zk.set(task_path, json.dumps(task_data))
 
@@ -70,7 +59,13 @@ class DashTrial(Trial):
             def watch_dependent_vars(data, stat_):
                 if data is not None and data != "":
                     self.received_tasks_counter += 1
-                    self.append_partial_results(data)
+                    # append partial results/dependent vars
+                    task_results = json.loads(data)
+                    node_id = task_results["node_id"]
+                    dependent_vars_path = "/experiments/" + str(self.exp_id) + "/trials/" + str(self.trial_id) + "/nodes/" + str(node_id) + "/dependent_variables"
+                    self.zk.set(dependent_vars_path, "")  # clearing data
+                    partial_dependent = task_results["dependent"]
+                    self.append_partial_results(partial_dependent)
                     if self.received_tasks_counter == self.number_of_hosts:
                         self.aggregate_results()
                         self.zk.set(self.curr_trial_path + "/status", json.dumps({"trial_id": self.trial_id, "status": "completed", "dependent": self.results}))
@@ -78,28 +73,9 @@ class DashTrial(Trial):
                 return True
             task_number += 1
 
-    # must be defined in subclass
-    def append_partial_results(self, data):
-        # move to subclass (replace with 'pass' here)
-        task_results = json.loads(data)
-        node_id = task_results["node_id"]
-        dependent_vars_path = "/experiments/" + str(self.exp_id) + "/trials/" + str(self.trial_id) + "/nodes/" + str(node_id) + "/dependent_variables"
-        self.zk.set(dependent_vars_path, "") # clearing data
-        partial_measures = task_results["dependent"]
-        for measure in self.measures:
-            self.results[measure.name] += int(partial_measures[measure.name])
+    # partial_dependent is a dictionary of dependent vars
+    def append_partial_results(self, partial_dependent):
+       pass
 
     def aggregate_results(self):
         pass
-
-    # move to subclass
-    # Measures #
-    def num_agents(self):
-        return self.results["num_agents"]
-
-    def num_repos(self):
-        return self.results["num_repos"]
-
-    def total_agent_activity(self):
-        return self.results["total_agent_activity"]
-

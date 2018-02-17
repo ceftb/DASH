@@ -6,6 +6,10 @@ from kazoo.client import KazooClient
 
 # TBD: This class to be moved into core module when zookeeper version of DASH is stable
 class DashWorker(object):
+
+    # class level insformation
+    module_name = "Dash2.distributed_github.dash_worker"
+
     def __init__(self, zk_hosts='127.0.0.1:2181', host_id=1):
         self.zk = KazooClient(zk_hosts)
         self.zk.start()

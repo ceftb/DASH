@@ -1,25 +1,21 @@
 import sys; sys.path.extend(['../../'])
-import random
-from kazoo.client import KazooClient
 import json
-from Dash2.github.git_user_agent import GitUserAgent
-from zk_repo_hub import ZkRepoHub
+from Dash2.github.git_repo_hub import GitRepoHub
 
 # TBD: This class to be moved into core module when zookeeper version of DASH is stable
 # WorkProcessor class is responsible for running experiment trial on a node in cluster
 class DashWorkProcessor:
-    def __init__(self, zk, host_id, task_full_id, data):
+    def __init__(self, zk, host_id, task_full_id, data, hub = None):
         self.agents = []
         self.zk = zk
         self.host_id = host_id
         self.exp_id, self.trial_id, self.task_num = task_full_id.split("-") # self.task_num by default is the same as node id
         self.task_id = task_full_id
-
-        # move to subclass
         self.max_iterations = int(data["max_iterations"])
-        self.prob_create_new_agent = float(data["prob_create_new_agent"])
-
-        self.hub = ZkRepoHub(zk, task_full_id)  # FIXME register in zk
+        for param in data["parameters"] :
+            setattr(self, param, float(data[param])) # TBD need to add support of other types
+        # hube must be overriden in subclasses
+        self.hub = GitRepoHub if hub is None else hub
         self.iteration = 0
 
     def process_task(self):
@@ -54,35 +50,14 @@ class DashWorkProcessor:
             return True
 
     def run_one_iteration(self):
-        if not self.agents or random.random() < self.prob_create_new_agent:  # Have to create an agent in the first step
-            a = GitUserAgent(useInternalHub=True, hub=self.hub, trace_client=False)
-            a.trace_client = False  # cut chatter when connecting and disconnecting
-            a.traceLoop = False  # cut chatter when agent runs steps
-            a.trace_github = False  # cut chatter when acting in github world
-            # print 'created agent', a
-            self.agents.append(a)
-        else:
-            a = random.choice(self.agents)
-        a.agentLoop(max_iterations=1, disconnect_at_end=False)
-        self.zk.ensure_path("/experiments/" + str(self.exp_id) + "/trials/" + str(self.trial_id) + "/nodes/" + str(
-            self.host_id) + "/agents")
-        self.zk.set( "/experiments/" + str(self.exp_id) + "/trials/" + str(self.trial_id) + "/nodes/" + str(self.host_id) + "/agents", str(a.follower_list))
-
+        # dummy implementation, override in subclass
+        for agent in self.agents:
+            if not self.agent_should_stop(agent):
+                next_action = agent.agentLoop(max_iterations=1, disconnect_at_end=False)  # don't disconnect since will run again
+                self.process_after_agent_action(agent, next_action)
 
     def dependent(self):
-        return {"num_agents": self.num_agents(), "num_repos": self.num_repos(), "total_agent_activity": self.total_agent_activity()}
-
-    # Measures #
-    # These are defined above as measures
-    def num_agents(self):
-        return len(self.agents)
-
-    # Measures should probably query the hub or use a de facto trace soon
-    def num_repos(self):
-        return sum([len(a.owned_repos) for a in self.agents])
-
-    def total_agent_activity(self):
-        return sum([a.total_activity for a in self.agents])
+        pass
 
     # Default method for whether an agent should stop. By default, true, so if neither
     # this method nor should_stop are overridden, nothing will happen.
