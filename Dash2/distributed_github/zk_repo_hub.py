@@ -12,9 +12,12 @@ class ZkRepoHub(GitRepoHub):
     A class that handles client requests and modifies the desired repositories
     """
 
-    def __init__(self, zk, full_task_id):
+    def __init__(self, zk, task_full_id):
         WorldHub.__init__(self, None)
-        self.full_task_id = full_task_id
+        self.zk = zk
+        self.task_full_id = task_full_id
+        self.exp_id, self.trial_id, self.task_num = task_full_id.split("-")  # self.task_num by default is the same as node id
+
         self.users = set()  # User ids
         self.local_repos = {}  # keyed by repo id, valued by repo object
         self.repo_hub_id = 1
@@ -84,13 +87,17 @@ class ZkRepoHub(GitRepoHub):
         the provided repository information
         """
 
-        repo_id = self.full_task_id + str(self.local_repo_id_counter)
+        repo_id = self.task_full_id + str(self.local_repo_id_counter)
         self.local_repo_id_counter += 1
         # print('Request to create repo from', agent_id, 'for', repo_info)
         repo_creation_date = time()
         repo_info['created_at'] = repo_creation_date
         self.local_repos[repo_id] = GitRepo(repo_id, **repo_info)
         self.log_event(agent_id, repo_id, 'CreateEvent', 'Repository', repo_creation_date)
+
+        repo_path = "/experiments/" + str(self.exp_id) + "/trials/" + str(self.trial_id) + "/repos/" + repo_id
+        self.zk.ensure_path(repo_path)
+        self.zk.set(repo_path, '{"agent_id":}' + str(agent_id))
 
         return 'success', repo_id
 

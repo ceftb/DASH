@@ -1,6 +1,8 @@
-import sys; sys.path.extend(['../../'])
+import sys;
+
+
+sys.path.extend(['../../'])
 import random
-import json
 from Dash2.core.parameter import Range
 from Dash2.core.measure import Measure
 from Dash2.core.parameter import Uniform
@@ -16,6 +18,8 @@ from zk_repo_hub import ZkRepoHub
 
 class ZkGithubWorkProcessor(DashWorkProcessor):
 
+    # this is path to current package
+    # I cannot use reflection in super class here because, it would return path to superclass, therefore need to define it explicitly in subclasses
     module_name = "Dash2.distributed_github.zk_github_experiment"
 
     def __init__(self, zk, host_id, task_full_id, data):
@@ -32,11 +36,6 @@ class ZkGithubWorkProcessor(DashWorkProcessor):
         else:
             a = random.choice(self.agents)
         a.agentLoop(max_iterations=1, disconnect_at_end=False)  # don't disconnect since will run again
-
-        # FIXME: this will be removed.
-        self.zk.ensure_path("/experiments/" + str(self.exp_id) + "/trials/" + str(self.trial_id) + "/nodes/" + str(
-            self.host_id) + "/agents")
-        self.zk.set("/experiments/" + str(self.exp_id) + "/trials/" + str(self.trial_id) + "/nodes/" + str(self.host_id) + "/agents", str(a.follower_list))
 
     def dependent(self):
         return {"num_agents": self.num_agents(), "num_repos": self.num_repos(), "total_agent_activity": self.total_agent_activity()}
