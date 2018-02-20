@@ -83,7 +83,7 @@ if __name__ == "__main__":
 
     if len(sys.argv) == 1:
         pass
-    elif len(sys.argv) == 1:
+    elif len(sys.argv) == 2:
         number_of_hosts = int(sys.argv[1])
     elif len(sys.argv) == 3:
         zk_hosts = sys.argv[1]
