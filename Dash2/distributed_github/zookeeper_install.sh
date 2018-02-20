@@ -22,6 +22,7 @@ cd $KAZOO_CLONE
 echo "installing kazoo ..."
 sudo apt-get install python-setuptools --yes
 yes | sudo python setup.py install
+yes | sudo apt-get install python-numpy python-scipy
 
 # install zookeeper 
 echo "installing zookeeper base ..."
