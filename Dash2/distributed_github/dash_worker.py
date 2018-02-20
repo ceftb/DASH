@@ -24,7 +24,7 @@ class DashWorker(object):
 
         if self.status is None or self.status == '':
             self.zk.set("/experiment_assemble_status", "active")
-            status = "active"
+            self.status = "active"
 
         if self.status == "terminated":
             self.zk.stop()
