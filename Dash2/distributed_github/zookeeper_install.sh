@@ -56,6 +56,6 @@ sudo apt-get install python-numpy python-scipy --yes
 
 
 echo $1 >> ~/projects/kazoo_report.txt
-pip freez | grep kazoo >> ~/projects/kazoo_report.txt
+pip freeze | grep kazoo >> ~/projects/kazoo_report.txt
 
 
