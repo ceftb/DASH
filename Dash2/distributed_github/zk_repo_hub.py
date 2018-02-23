@@ -3,6 +3,7 @@ from Dash2.core.world_hub import WorldHub
 from Dash2.github.git_repo import GitRepo
 from Dash2.github.git_repo_hub import GitRepoHub
 from time import time
+import json
 import pickle
 
 
@@ -41,22 +42,23 @@ class ZkRepoHub(GitRepoHub):
             self.dump_event_log(user_id)
             del self.local_event_log[:]
 
-    def dump_event_log(self, agent_id):
+    def dump_event_log(sttelf, agent_id):
         """
         prompts the hub to dump it's log to file
         """
-
+        return "Success"
+        """
         try:
             save_object(self.local_event_log, str(self.repo_hub_id) + "_hub_log_list.pyobj")
             return "Success"
         except:
             return "Failed to pickle and save log list."
+        """
 
     def return_event_log(self, agent_id):
         """
         Prompts the hub to return its local event log
         """
-
         return "Success", self.local_event_log
 
     def processRegisterRequest(self, agent_id, aux_data):
@@ -67,6 +69,7 @@ class ZkRepoHub(GitRepoHub):
 
     def terminateWork(self):
         self.dump_event_log(self.repo_hub_id)
+
     def synch_repo_hub(self, host, port):
         """
         Synchronizes repository hub with other hubs
@@ -95,9 +98,17 @@ class ZkRepoHub(GitRepoHub):
         self.local_repos[repo_id] = GitRepo(repo_id, **repo_info)
         self.log_event(agent_id, repo_id, 'CreateEvent', 'Repository', repo_creation_date)
 
-        repo_path = "/experiments/" + str(self.exp_id) + "/trials/" + str(self.trial_id) + "/repos/" + repo_id
+        repo_path = "/experiments/" + str(self.exp_id) + "/trials/" + str(self.trial_id) + "/repos"
         self.zk.ensure_path(repo_path)
-        self.zk.set(repo_path, '{"agent_id":}' + str(agent_id))
+        raw_data, _ = self.zk.get(repo_path)
+        data = None
+        if raw_data is not None and raw_data != "":
+            data = json.loads(raw_data)
+        else:
+            data = {"number_of_repos": 0}
+        data["number_of_repos"] = int(data["number_of_repos"]) + 1
+        data["last_repo_id"] = repo_id
+        self.zk.set(repo_path, json.dumps(data))
 
         return 'success', repo_id
 

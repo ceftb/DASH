@@ -26,6 +26,8 @@ class DashWorkProcessor:
                 self.run_one_iteration()
                 self.process_after_iteration()
                 self.iteration += 1
+                if self.iteration % 1000 == 0 :
+                    print "Interation " + str(self.iteration)
             self.process_after_run()
             for agent in self.agents:
                 agent.disconnect()

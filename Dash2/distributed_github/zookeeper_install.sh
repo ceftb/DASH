@@ -2,17 +2,7 @@
 # This scrip installs Apache Zookeeper and Kazoo python library (zookeeper client API for Python). 
 # Tested on Ubuntu 16.04 LTS
 
-# NODES is a list of nodes name or IP adresses of hosts in cluster.
-# For example
-# NODES=(server1 server22 host34 node3)
-
-NODES=(localhost)
-
-# KAZOO_CLONE is a local path where kazoo is cloned (git clone https://github.com/2600hz/kazoo.git  ).
-KAZOO_CLONE=~/projects/kazoo 
-
-# WEBDASH_CLONE is a local path where webdash is cloned (git clone https://github.com/cuts/webdash.git  ).
-WEBDASH_CLONE=~/projects/webdash 
+source ./deter.conf
 
 ZK_CONF=/etc/zookeeper/conf/zoo.cfg 
 ZK_ID=/etc/zookeeper/conf/myid
@@ -22,7 +12,6 @@ cd $KAZOO_CLONE
 echo "installing kazoo ..."
 sudo apt-get install python-setuptools --yes
 yes | sudo python setup.py install
-yes | sudo apt-get install python-numpy python-scipy
 
 # install zookeeper 
 echo "installing zookeeper base ..."
@@ -58,7 +47,15 @@ sudo service zookeeper start
 
 echo "Zookeeper installation completed"
 
-# echo "installing mc .."
-# sudo apt-get install mc --yes
+echo "installing mc ..."
+sudo apt-get install mc --yes
+echo "installing pip ..."
+sudo apt-get install python-pip --yes
+echo "installing python-numpy python-scipy ..."
+sudo apt-get install python-numpy python-scipy --yes
+
+
+echo $1 >> ~/projects/kazoo_report.txt
+pip freez | grep kazoo >> ~/projects/kazoo_report.txt
 
 

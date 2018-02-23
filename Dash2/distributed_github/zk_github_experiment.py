@@ -91,7 +91,7 @@ if __name__ == "__main__":
     else:
         print 'incorrect arguments: ', sys.argv
 
-    max_iterations = 2000
+    max_iterations = 1000
     num_trials = 1
     independent = ['prob_create_new_agent', Range(0.5, 0.6, 0.1)]
     exp_data = {'max_iterations': max_iterations}
