@@ -25,8 +25,8 @@ function install_zookeeper {
 	ZK_CONF=/etc/zookeeper/conf/zoo.cfg 
 	ZK_ID=/etc/zookeeper/conf/myid
 
-	cd $KAZOO_CLONE
 	cp -R $KAZOO_CLONE $KAZOO_CLONE/../kazoo_clone_$CURR_NODE_ID
+	cd $KAZOO_CLONE/../kazoo_clone_$CURR_NODE_ID
 	# install kazoo 
 	echo "installing kazoo ..."
 	sudo apt-get install python-setuptools --yes
