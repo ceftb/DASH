@@ -26,10 +26,12 @@ function install_zookeeper {
 	ZK_ID=/etc/zookeeper/conf/myid
 
 	cd $KAZOO_CLONE
+	cp -R $KAZOO_CLONE $KAZOO_CLONE/../kazoo_clone_$CURR_NODE_ID
 	# install kazoo 
 	echo "installing kazoo ..."
 	sudo apt-get install python-setuptools --yes
-	yes | sudo python setup.py install
+	sudo python setup.py install  >> ~/projects/kazoo_report_$CURR_NODE_ID.txt
+	rm -Rf $KAZOO_CLONE/../kazoo_clone_$CURR_NODE_ID
 
 	# install zookeeper 
 	echo "installing zookeeper base ..."
@@ -72,7 +74,7 @@ function install_zookeeper {
 	echo "installing python-numpy python-scipy ..."
 	sudo apt-get install python-numpy python-scipy --yes
 
-	pip freeze | grep kazoo >> ~/projects/kazoo_report_$1.txt
+	pip freeze | grep kazoo >> ~/projects/kazoo_report_$CURR_NODE_ID.txt
 }
 
 if [ -z "$1" ]
