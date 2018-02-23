@@ -2,13 +2,15 @@
 #### INSTALLATION WITH zookeeper_install.sh ###
 ###############################################
 
-To install Zookeeper call zookeeper_install.sh on each host in cluster.
-Make sure that the following variables are properly specified in zookeeper_install.sh
+To install Zookeeper call zookeeper_install.sh on master node in cluster.
+Make sure that the following variables are properly specified in deter.sh
 NODES=(server1 host2 node10) # default value NODES=(localhost) 
 KAZOO_CLONE=~/projects/kazoo 
 WEBDASH_CLONE=~/projects/webdash 
 
-To run the the experiment on DETER execute start_experiment.sh or python zk_experiment.py
+To run the the experiment on DETER
+1. start workers on each node by executing start_all_workers.sh on master node in cluster.
+2. python zk_experiment.py <total_number_of_nodes>
 
 #############################
 #### MANUAL INSTALLATION  ###
