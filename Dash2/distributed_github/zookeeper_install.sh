@@ -72,9 +72,7 @@ function install_zookeeper {
 	echo "installing python-numpy python-scipy ..."
 	sudo apt-get install python-numpy python-scipy --yes
 
-
-	echo $1 >> ~/projects/kazoo_report.txt
-	pip freeze | grep kazoo >> ~/projects/kazoo_report.txt
+	pip freeze | grep kazoo >> ~/projects/kazoo_report_$1.txt
 }
 
 if [ -z "$1" ]
