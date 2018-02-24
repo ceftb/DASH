@@ -155,7 +155,7 @@ class Experiment(object):
     # run_data may be a function of the independent variable or a constant.
     def run_this_host(self, run_data={}):
         # Make sure there is a hub if needed
-        hub_thread = self.start_hub_if_needed()
+        hub_thread =  self.start_hub_if_needed()
         self.trial_outputs = {}
         # Build up trial data from experiment data and run data
         trial_data_for_all_values = self.exp_data.copy()
