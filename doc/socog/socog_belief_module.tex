@@ -1,0 +1,72 @@
+\documentclass[11pt, a4paper]{article}
+\usepackage[margin=1.0in]{geometry}
+\usepackage{graphicx}
+\usepackage{amssymb,amsfonts,amsmath}
+\usepackage{xcolor}
+\usepackage{wrapfig}
+\usepackage{euscript}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage[section]{placeins}
+
+\begin{document}
+
+\title{Documentation: DASH socog belief module}
+\author{Nathaniel Rodriguez}
+\date{}
+\maketitle
+
+\section{Model}
+
+The original opinion model in~\cite{cogsocial} defined two networks: (1) a social network, and (2) a belief network. The social network is defined by agents who are nodes and undirected, unweighted relationships between nodes, which could denote exposure or friendship ties. In the belief network, nodes are concepts and edges are undirected, weighted relationships between concepts. These relationships represent a valence or association between concepts that can be positive or negative. A pair of concepts and the corresponding link between them constitute a \emph{belief}. A triple of concepts and their corresponding links constitute a \emph{triad}. In our model, beliefs are transmitted between agents along social network ties. Beliefs are accepted or rejected based upon a set of rules that factor in the \emph{coherence} of the whole belief network and the social influences of neighbors. There are two energy terms, one for internal beliefs and one for social pressures. The sum of these two become the total energy. An agent accepts a belief if their total energy decreases upon its acceptance, else the belief is accepted with a probability inversely proportional to the energy difference between the agents current state and the candidate state.
+
+The internal energy is derived from the total stability of \emph{triads} in the belief network in a fashion akin to social balance theory:
+
+\begin{eqnarray}\label{eq:indive}
+E_n^{(i)} = -\frac{1}{\binom{M}{3}} \sum_{j,k,l} a_{jk} a_{kl} a_{jl}, 
+\end{eqnarray}
+
+where $M$ is the number of nodes in the belief network and $a_{jk}$ is the association connecting nodes $j$ and $k$, which can be positive or negative.  
+The sum is taken over all triads in the belief network and normalized by the total number of triads.
+
+We represent the society as a social network, $\EuScript{N}$, where $N=|\EuScript{N}|$, and 
+whose nodes are individuals and edges represent social
+relationships through which ideas are communicated.  We define the social energy term to be the degree of alignment between connected individuals. The local social energy that an individual $n\in \EuScript{N}$ feels can be defined by:
+
+\begin{eqnarray}\label{eq:social}
+E_n^{(s)}=-\frac{1}{k_{\textup{max}}\binom{M}{2}}\sum_{q \in \Gamma(n)}^{} \vec{S}_n \cdot \vec{S}_q,
+\end{eqnarray}
+
+where the sum is taken over the set of $n$'s neighbors in $\EuScript{N}$, denoted by $\Gamma(n)$.
+$\vec{S}$ is a belief state vector where each element corresponds to an edge in
+the belief network, so $|\vec{S}|=\binom{M}{2}$. $k_{\textup{max}}$ is a normalization constant that bounds the
+strength of peer-influence and is equal to the maximum degree of $\EuScript{N}$.
+
+
+The original formulation of the model in~\cite{cogsocial} was made for a synchronous environment with perfect information. An agent has complete knowledge of its own belief system as well as its neighbors. The network was also explicitly defined so each agent also knew who its neighbors were. However, in the DASH framework, the simulation is asynchronous, information can be imperfect, an agent may not have an explicitly formed social network, the social network maybe a multigraph with many different types of edges, the neighbors and their beliefs maybe expensive to access, or the neighbors and their beliefs maybe unrealistic to access from a behavioral standpoint. Additionally, the agent may not get all its information from its neighbors, but may observe features in its environment that contribute to its beliefs.
+
+In order to take these issues into account I have created an adaptation of the original cognitive-social belief model. In equation~\ref{eq:social}, a dot product is taken over the agent's belief vector and its neighbors. A sum of these products was taken to get a value for how far the agent's beliefs were from its neighbors. We can move the dot product out of the sum, and let the sum represent a new vector that I will call the \emph{perceived belief vector}:
+
+\begin{eqnarray}
+E_n^{(s)}=-\frac{1}{k_{\textup{max}}\binom{M}{2}} \vec{S}_n \cdot \vec{S}^{(p)}
+\end{eqnarray}
+
+The perceived belief vector is an agglomeration of all the incoming beliefs that the agent receives. While we explicitly abandon the network structure from the equation, in practice, the perceived belief vector can represent an approximation to the agent's neighborhood. In order for this to be the case, we need an update equation for the perceived belief vector so that new information about beliefs can be incorporated into the agent's perception:
+
+\begin{eqnarray}
+S_i^{(p)}\leftarrow S_i^{(p)} + \frac{1}{\tau}\left ( S_i -  S_i^{(p)} \right)
+\end{eqnarray}
+
+At each update step, when the agent receives a new belief $S_i$, it will be added to the current perceived belief vector. Perceptions are only updated when new belief information is acquired. Older information about beliefs will eventually get crowded out as new belief information overwrites it. The time-constant $\tau$ controls how fast this happens. Time is omitted because the update only occurs when a new belief is received. An agent that is isolated from the environment will retain a memory of what people's beliefs were before. Only active agents will be able to keep up-to-date with other's beliefs through interaction with the environment. The belief update does not depend upon the source. This equation drives the agent's perceived beliefs toward the incoming belief.\footnote{Alternative update equation. Is a shunting equation, drives beliefs to the extreme of whatever direction they point. Would result in perceived beliefs representing a more extreme perception of actual neighbor beliefs.
+
+\begin{eqnarray}
+S_i^{(p)}\leftarrow S_i^{(p)} + \frac{1}{\tau}\left [ \frac{\textup{max}\left( S_i,0 \right )}{V} \left( V - \textup{max}\left( S_i^{(p)},0\right ) \right ) + \frac{\textup{min}\left( S_i,0 \right )}{V} \left( V + \textup{min}\left( S_i^{(p)},0\right ) \right )\right ]
+\end{eqnarray}
+
+The valence is the bound between $[-V,V]$ and $\tau$ is a time-constant that adjusts the strength of the contribution of a new belief. This is a double bounded shunting equation which keeps the valences of $S_i^{(p)}$ within $[-V,V]$.}
+
+\begin{thebibliography}{1}
+\bibitem{cogsocial} Rodriguez N, Bollen J, Ahn Y-Y (2016) Collective Dynamics of Belief Evolution under Cognitive Coherence and Social Conformity. PLoS ONE 11(11): e0165910. https://doi.org/10.1371/journal.pone.0165910
+\end{thebibliography}
+
+\end{document}
