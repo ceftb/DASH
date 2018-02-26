@@ -10,7 +10,7 @@ function install_on_all_nodes {
 	for ID in `seq 1 $NUMBER_OF_NODES`;
 		do
 			echo 'Installing Zookeeper on node ' ${NODES[$ID-1]}
-			ssh ${NODES[$ID-1]} "tmux new-session -d bash $WEBDASH_CLONE/Dash2/distributed_github/zookeeper_install.sh $ID $WEBDASH_CLONE $WEBDASH_CLONE"
+			ssh ${NODES[$ID-1]} "tmux new-session -d bash $WEBDASH_CLONE/Dash2/distributed_github/zookeeper_install.sh $ID $WEBDASH_CLONE $KAZOO_CLONE"
 		done
 	
 	echo "Zookeeper installation completed on all nodes"
@@ -19,14 +19,15 @@ function install_on_all_nodes {
 function install_zookeeper {
 	CURR_NODE_ID=$1
 	WEBDASH_CLONE=$2
+	source $WEBDASH_CLONE/Dash2/distributed_github/deter.conf # defines $NODES , redifines $WEBDASH_CLONE and $KAZOO_CLONE
 	KAZOO_CLONE=$3
-	source $WEBDASH_CLONE/Dash2/distributed_github/deter.conf # defines $NODES
+	WEBDASH_CLONE=$2
 
 	ZK_CONF=/etc/zookeeper/conf/zoo.cfg 
 	ZK_ID=/etc/zookeeper/conf/myid
 
-	cp -R $KAZOO_CLONE $KAZOO_CLONE/../kazoo_clone_$CURR_NODE_ID
-	cd $KAZOO_CLONE/../kazoo_clone_$CURR_NODE_ID
+	cp -R $KAZOO_CLONE $WEBDASH_CLONE/../kazoo_clone_$CURR_NODE_ID
+	cd $WEBDASH_CLONE/../kazoo_clone_$CURR_NODE_ID
 	# install kazoo 
 	echo "installing kazoo ..."
 	sudo apt-get install python-setuptools --yes
