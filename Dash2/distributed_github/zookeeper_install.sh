@@ -32,7 +32,7 @@ function install_zookeeper {
 	echo "installing kazoo ..."
 	sudo apt-get install python-setuptools --yes
 	sudo python setup.py install  >> ~/projects/kazoo_report_$CURR_NODE_ID.txt
-	rm -Rf $KAZOO_CLONE/../kazoo_clone_$CURR_NODE_ID
+	rm -Rf $WEBDASH_CLONE/../kazoo_clone_$CURR_NODE_ID
 
 	# install zookeeper 
 	echo "installing zookeeper base ..."
