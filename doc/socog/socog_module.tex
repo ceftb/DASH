@@ -65,6 +65,38 @@ S_i^{(p)}\leftarrow S_i^{(p)} + \frac{1}{\tau}\left [ \frac{\textup{max}\left( S
 
 The valence is the bound between $[-V,V]$ and $\tau$ is a time-constant that adjusts the strength of the contribution of a new belief. This is a double bounded shunting equation which keeps the valences of $S_i^{(p)}$ within $[-V,V]$.}
 
+In order to address variable size belief systems and unknown neighbor information, the normalization constants are removed from the energy equations so that:
+
+\begin{eqnarray}
+E_n^{(i)} = -\sum_{j,k,l} a_{jk} a_{kl} a_{jl}, 
+\end{eqnarray}
+
+and 
+
+\begin{eqnarray}
+E_n^{(s)}=-\vec{S}_n \cdot \vec{S}^{(p)}
+\end{eqnarray}
+
+The total energy is still a weighted sum of the individual energies:
+
+\begin{equation}\label{eq:ham}
+%\begin{split}
+%
+H = \left[ J E_n^{(i)} + I E_n^{(s)} \right] %\\
+%&= -J \sum_{n \in \EuScript{N}} \left[ \frac{1}{M_{\Delta}} \sum_{j,k,l} a_{jk} a_{kl}
+%a_{jl} \right] - I \sum_{n,q \in \EuScript{N}, n \neq q} \vec{S}_n \cdot \vec{S}_q, 
+%
+%\end{split}
+\end{equation}
+
+And the belief is still accepted if the change in energy passes a check determined by:
+
+\begin{eqnarray}
+P(\textup{accept})=e^{\frac{-\Delta H}{T}}
+\end{eqnarray}
+
+where $T$ acts like a temperature for beliefs.
+
 \section{Socog Module}
 
 Documentation for the socog module and tutorials (taken from doc strings, can use \texttt{help(ClassName)} for more information:
