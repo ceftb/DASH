@@ -5,12 +5,12 @@
 function install_on_all_nodes {
 	source ./deter.conf
 
-	NUMBER_OF_NODES=${#NODES[@]}
+	NUMBER_OF_NODES=${#ZK_NODES[@]}
 	echo 'Total ' $NUMBER_OF_NODES ' workers in assemble'
 	for ID in `seq 1 $NUMBER_OF_NODES`;
 		do
-			echo 'Installing Zookeeper on node ' ${NODES[$ID-1]}
-			ssh ${NODES[$ID-1]} "tmux new-session -d bash $WEBDASH_CLONE/Dash2/distributed_github/zookeeper_install.sh $ID $WEBDASH_CLONE $KAZOO_CLONE"
+			echo 'Installing Zookeeper on node ' ${ZK_NODES[$ID-1]}
+			ssh ${ZK_NODES[$ID-1]} "tmux new-session -d bash $WEBDASH_CLONE/Dash2/distributed_github/zookeeper_install.sh $ID $WEBDASH_CLONE $KAZOO_CLONE"
 		done
 	
 	echo "Zookeeper installation completed on all nodes"
@@ -19,7 +19,7 @@ function install_on_all_nodes {
 function install_zookeeper {
 	CURR_NODE_ID=$1
 	WEBDASH_CLONE=$2
-	source $WEBDASH_CLONE/Dash2/distributed_github/deter.conf # defines $NODES , redifines $WEBDASH_CLONE and $KAZOO_CLONE
+	source $WEBDASH_CLONE/Dash2/distributed_github/deter.conf # defines $ZK_NODES , redifines $WEBDASH_CLONE and $KAZOO_CLONE
 	KAZOO_CLONE=$3
 	WEBDASH_CLONE=$2
 
@@ -47,17 +47,17 @@ function install_zookeeper {
 	# need root access to write in /etc
 	cd $WEBDASH_CLONE
 	sudo chmod go+rw $ZK_ID
-	sudo uname -n | sed 's/[^0-9]*//g' > $ZK_ID
+	sudo echo $CURR_NODE_ID > $ZK_ID
 	sudo chmod go+rw $ZK_CONF
 	sudo cat $WEBDASH_CLONE/Dash2/distributed_github/zoo.conf > $ZK_CONF
 
 	# appending other nodes to zookeeper config file
-	NUMBER_OF_NODES=${#NODES[@]}
+	NUMBER_OF_NODES=${#ZK_NODES[@]}
 	echo 'Total ' $NUMBER_OF_NODES ' hosts in assemble'
 	for ID in `seq 1 $NUMBER_OF_NODES`;
 		do
-		        echo 'Zookeeper node ' $ID ' -> ' ${NODES[$ID-1]}
-			echo server.$ID=${NODES[$ID-1]}:2888:3888 >> $ZK_CONF
+		        echo 'Zookeeper node ' $ID ' -> ' ${ZK_NODES[$ID-1]}
+			echo server.$ID=${ZK_NODES[$ID-1]}:2888:3888 >> $ZK_CONF
 		done 
 	echo " " >> $ZK_CONF
 
