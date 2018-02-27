@@ -8,7 +8,7 @@ function start_single_worker {
 	source ./deter.conf
 	CURR_NODE_ID=$1
 	WEBDASH_CLONE=$2
-	python dash_worker.py ${DASH_NODES[0} $CURR_NODE_ID
+	python dash_worker.py ${ZK_NODES[0]} $CURR_NODE_ID
 }
 
 function start_all {
