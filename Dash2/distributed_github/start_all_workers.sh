@@ -5,9 +5,10 @@ function start_single_worker {
 	CURR_NODE_ID=$1
 	WEBDASH_CLONE=$2
 	cd $WEBDASH_CLONE/Dash2/distributed_github/
-	python dash_worker.py 127.0.0.1:2181 $CURR_NODE_ID
-	# ps x | grep 'python dash_worker.py' > ~/projects/node_$CURR_NODE_ID.txt
-	# echo node $1 started
+	source ./deter.conf
+	CURR_NODE_ID=$1
+	WEBDASH_CLONE=$2
+	python dash_worker.py ${DASH_NODES[0} $CURR_NODE_ID
 }
 
 function start_all {
