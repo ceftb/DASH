@@ -10,6 +10,8 @@
 *.sublime*
 
 *.pyobj
+*.log
+*.aux
 
 # Mac related files
 .DS_Store
