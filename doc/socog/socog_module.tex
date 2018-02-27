@@ -65,6 +65,81 @@ S_i^{(p)}\leftarrow S_i^{(p)} + \frac{1}{\tau}\left [ \frac{\textup{max}\left( S
 
 The valence is the bound between $[-V,V]$ and $\tau$ is a time-constant that adjusts the strength of the contribution of a new belief. This is a double bounded shunting equation which keeps the valences of $S_i^{(p)}$ within $[-V,V]$.}
 
+\section{Socog Module}
+
+Documentation for the socog module and tutorials (taken from doc strings, can use \texttt{help(ClassName)} for more information:
+
+\subsection{Concept}
+An immutable object representing a concept with \texttt{name} and \texttt{id}. name and id are not actually used here in the module. Any object that is hashable, immutable, and has \texttt{\_\_eq\_\_}, can be used as a concept.
+
+\subsection{ConceptPair}
+An immutable object representing a pair of concepts. Concepts can be any hashable or immutable type with \texttt{\_\_eq\_\_} defined. Elements can be independently accessed but is still hashable and order doesn't matter: 
+
+E.g. \texttt{ConceptPair(concept1,concept2) == ConceptPair(concept2,concept1)}
+
+ConceptPairs are used as keys for Beliefs.
+
+\subsection{ConceptTriad}
+An immutable object that represents a triangle, of three concepts. Concepts can be any hashable or immutable type with \texttt{\_\_eq\_\_} defined. Internally it is represented as 3 ConceptPairs. Elements can be independently accessed but are still hashable and order doesn't matter: 
+
+E.g. \texttt{ConceptTriad(concept1,concept2,concept3)} 
+
+\texttt{== ConceptTriad(concept2,concept3,concept1)}
+
+ConceptTriads are a convenient way to store concept-pair and concept information for calculating the internal energy, checking for triangles, or looking-up specific Beliefs.
+
+\subsection{Beliefs}
+
+An object that represents a set of beliefs. It also doubles as a vector. Currently implements dot product. If needed, add support for other math operations.
+
+There are no 'scalar' beliefs, so a single belief is represented as a single element vector.
+
+\texttt{Beliefs} subclasses \texttt{dict}, so it has access to all the functions \texttt{dict} provides and can be instantiated in the same fashion.
+
+\subsection{BeliefNetwork}
+Nodes represent concepts in the belief network and edges represent a valenced relationship between those concepts. The valence can be positive or negative. No connection means no relationship. Triads of beliefs are checked for stability:
+\texttt{+++} is stable,
+\texttt{-++} is unstable,
+\texttt{--+} is stable,
+\texttt{---} is unstable.
+Edges can be weighted (e.g. valence). The product of the weights specifies triad stability. Given a set triad with valences $a_i$, $a_j$, and $a_k$, the energy is given by: triad energy = $- a_i  a_j  a_k$
+
+Lower energy corresponds to higher coherence of beliefs.
+
+A BeliefNetwork can be modified in-place via addition with another belief networks or Beliefs through the \texttt{+=} or \texttt{-=} operators. Scalar values can also be add/subtracted from the valences of the entire vector. Dot product is also supported with \texttt{*}. However, \texttt{*} used with a scalar carries out normal multiplication. Add additional operators if needed.
+
+The energy of the belief network is the internal energy, not to be confused with the social energy.
+
+\subsection{BeliefModule}
+Represents a cognitive module for assessing the coherence of an agents belief system. It handles receiving (\texttt{listen}) and sending (\texttt{talk}) beliefs, updating the belief network of the agent, and determining whether to  accept or reject new beliefs.
+
+Shallow copy access to the underlying beliefs of both the beliefs and perceived beliefs is given via the \texttt{beliefs} and \texttt{perceived\_beliefs} properties. Alternatively, direct access to those items can be achieved via \texttt{obj.belief\_network.beliefs} or \texttt{obj.perceived\_belief\_network.beliefs}
+
+\subsection{Tutorial}
+See tutorial director in Dash2:
+
+This is a short tutorial module that can be run with \texttt{reddit\_hub}.
+\texttt{reddit\_hub} contains a set of default comments on a soccer thread that
+the user agent will parse and convert to beliefs, which it will then
+assess. This uses only System2 functions with the \texttt{socog\_module}, however,
+because the \texttt{socog\_module} has a ``has a" relationship with the DASH agents,
+there is no need for inheritance and it can operate independently of the
+function of System1 or System2. Rather, a System1/System2 configuration
+can use the belief module, calling the \texttt{talk}/\texttt{listen} methods for modifying or
+transmitting beliefs. Or they can use the \texttt{beliefs} or \texttt{perceived\_beliefs}
+properties to access agent beliefs to implement actions.
+
+The user is instantiated with a sparse belief system where it believes that
+Henry and the GreyTeam are the best. Initial forum posts validate this and
+provide addition connections to the agent which reinforce its beliefs.
+
+However, later comments suggest that Henry is Corrupt. After repeated
+exposure the agent adopts beliefs the reject Henry and GreyTeams Best status
+and adopt the beliefs that Henry and the GreyTeam are both Corrupt.
+
+Verbosity is turned on by default so you can see how the beliefs change
+following each interaction with the forum comments.
+
 \begin{thebibliography}{1}
 \bibitem{cogsocial} Rodriguez N, Bollen J, Ahn Y-Y (2016) Collective Dynamics of Belief Evolution under Cognitive Coherence and Social Conformity. PLoS ONE 11(11): e0165910. https://doi.org/10.1371/journal.pone.0165910
 \end{thebibliography}

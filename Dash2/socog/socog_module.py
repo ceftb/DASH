@@ -4,18 +4,31 @@ from copy import copy
 from random import Random
 from math import exp
 
-# An immutable object representing a concept w/ name and id
-Concept = namedtuple('Concept', ['name', 'id'])
+
+Concept_ = namedtuple('Concept', ['name', 'id'])
+
+
+class Concept(Concept_):
+    """
+    An immutable object representing a concept w/ name and id.
+    name and id are not actually used here in the module.
+    Any object that is hashable, immutable, and has __eq__, can be used as a
+    concept.
+    """
+    __slots__ = ()
 
 
 class ConceptPair(tuple):
     """
-    An immutable object representing a pair of concepts
+    An immutable object representing a pair of concepts.
+    Concepts can be any hashable/immutable type with __eq__ defined.
     Elements can be independently accessed but is still hashable and 
     order doesn't matter: 
     E.g. ConceptPair(concept1,concept2) == ConceptPair(concept2,concept1)
+
+    ConceptPairs are used as keys for Beliefs.
     """
-    __slots__ = []
+    __slots__ = ()
     def __new__(cls, concept1, concept2):
         return tuple.__new__(cls, (concept1, concept2))
 
@@ -50,13 +63,19 @@ class ConceptPair(tuple):
 
 class ConceptTriad(tuple):
     """
-    An immutable object that represents a triangle, of three concepts. 
+    An immutable object that represents a triangle, of three concepts.
+    Concepts can be any hashable/immutable type with __eq__ defined.
     Internally it is represented as 3 ConceptPairs.
     Elements can be independently accessed but are 
     still hashable and order doesn't matter: 
-    E.g. ConceptTriad(concept1,concept2,concept3) == ConceptTriad(concept2,concept3,concept1)
+    E.g. ConceptTriad(concept1,concept2,concept3) ==
+         ConceptTriad(concept2,concept3,concept1)
+
+    ConceptTriads are a convenient way to store concept-pair and concept
+    information for calculating the internal energy, checking for triangles,
+    or looking-up specific Beliefs.
     """
-    __slots__ = []
+    __slots__ = ()
     def __new__(cls, concept1, concept2, concept3):
         return tuple.__new__(cls, (ConceptPair(concept1, concept2), 
                                    ConceptPair(concept2, concept3), 
@@ -96,7 +115,15 @@ class ConceptTriad(tuple):
 
 class Beliefs(dict):
     """
-    An object that represents a set of beliefs
+    An object that represents a set of beliefs. It also doubles as a vector.
+    Currently implements dot product. If needed, add support for other
+    math operations.
+
+    There are no 'scalar' beliefs, so a single belief is represented as a
+    single element vector.
+
+    Beliefs subclasses dict, so it has access to all the functions dict provides
+    and can be instantiated in the same fashion.
     """
 
     def __init__(self, *args):
@@ -106,7 +133,23 @@ class Beliefs(dict):
         """
         dict.__init__(self, *args)
 
+    def __str__(self):
+        """
+        A more nicely formatted version of the dict string. One belief per line
+        :return: string
+        """
+
+        out_str = ""
+        for concept_pair, valence in self.items():
+            out_str += "\t" + str(concept_pair) + "\t" + str(valence) + "\n"
+        return out_str
+
     def add_belief(self, concept_pair, valence):
+        """
+        Adds a belief to the
+        :param concept_pair: A ConceptPair like object
+        :param valence: A numeric value
+        """
         dict.__setitem__(self, concept_pair, valence)
 
     def __mul__(self, other):
@@ -147,26 +190,33 @@ class BeliefNetwork(object):
     """
     Nodes represent concepts in the belief network and edges represent a
     valenced relationship between those concepts. The valence can be positive or
-    negative or a value between -1 and 1. No connection means no relationship.
-    Triads of beliefs are checked for stability:
+    negative. No connection means no relationship. Triads of beliefs are
+    checked for stability:
         +++ is stable
         -++ is unstable
         --+ is stable
         --- is unstable
-    Edges can be weighted. The product of the weights specifies triad stability,
-    with a positive value being stable and negative being unstable.
+    Edges can be weighted (e.g. valence). The product of the weights specifies
+    triad stability. Given a set triad with valences a_i, a_j, and a_k, the
+    energy is given by:
+
+        triad energy = - a_i * a_j * a_k
+
+    Lower energy corresponds to higher coherence of beliefs.
 
     A BeliefNetwork can be modified in-place via addition with another
-    beliefnetwork or a belief through the += or -= operators. However,
-    generaly support for +/- is not provided.
+    belief networks or Beliefs through the += or -= operators. Scalar values
+    can also be add/subtracted from the valences of the entire vector. Dot
+    product is also supported with *. However, * used with a scalar carries
+    out normal multiplication. Add additional operators if needed.
 
-    The energy of the beliefnetwork is the internal energy, not to be confused
+    The energy of the belief network is the internal energy, not to be confused
     with the social energy.
     """
 
     def __init__(self, beliefs=None):
         """
-        beliefs - A Beliefs type
+        beliefs - A Beliefs type (0 or more beliefs) [no copy is made]
         """
 
         if beliefs is None:
@@ -185,7 +235,7 @@ class BeliefNetwork(object):
 
     def __iadd__(self, other):
         """
-        In place addition. If adding a beliefnetwork or beliefs, then
+        In place addition. If adding a belief network or beliefs, then
         valences are added to the respective pairs. If a pair doesn't
         exist, then it is initialized to 0 and the addition continues. 
         If adding a scalar, then scalar is added to valences of all pairs.
@@ -196,9 +246,8 @@ class BeliefNetwork(object):
                 if concept_pair in self.beliefs:
                     self.beliefs[concept_pair] += valence
                 else:
-                    self.beliefs[concept_pair] = valence
-                    self._update_containers(concept_pair)
-                    
+                    self.add_belief(Beliefs({concept_pair: valence}), False)
+
             self.update_energy()
             return self
 
@@ -207,9 +256,8 @@ class BeliefNetwork(object):
                 if concept_pair in self.beliefs:
                     self.beliefs[concept_pair] += valence
                 else:
-                    self.beliefs[concept_pair] = valence
-                    self._update_containers(concept_pair)
-                    
+                    self.add_belief(Beliefs({concept_pair: valence}), False)
+
             self.update_energy()
             return self
 
@@ -223,7 +271,7 @@ class BeliefNetwork(object):
 
     def __isub__(self, other):
         """
-        In place substraction. If adding a beliefnetwork or beliefs, then
+        In place subtraction. If adding a belief network or beliefs, then
         valences are subtracted from the respective pairs. If a pair doesn't
         exist, then it is initialized to 0 and the subtraction continues. 
         If adding a scalar, then scalar is subtracted from valences of all pairs.
@@ -234,7 +282,7 @@ class BeliefNetwork(object):
                     self.beliefs[concept_pair] -= valence
                 else:
                     self.beliefs[concept_pair] = -valence
-                    self._update_containers(concept_pair)
+                    self.add_belief(Beliefs({concept_pair: -valence}), False)
 
             self.update_energy()
             return self
@@ -244,9 +292,8 @@ class BeliefNetwork(object):
                 if concept_pair in self.beliefs:
                     self.beliefs[concept_pair] -= valence
                 else:
-                    self.beliefs[concept_pair] = -valence
-                    self._update_containers(concept_pair)
-                    
+                    self.add_belief(Beliefs({concept_pair : -valence}), False)
+
             self.update_energy()
             return self
 
@@ -288,7 +335,7 @@ class BeliefNetwork(object):
                 self.beliefs[belief] *= other
             return self
 
-    # Ensure commutivity of dot product
+    # Ensure commutativity of dot product
     __rmul__ = __mul__
 
     def _find_all_concepts(self, beliefs):
@@ -298,12 +345,17 @@ class BeliefNetwork(object):
         return set([concept for concept_pair in beliefs
                     for concept in list(concept_pair)])
 
-    def _find_all_triangles(self, beliefs, belief_set, concept_set):
+    def _find_all_triangles(self, concept_pairs, belief_set, concept_set):
         """
         Generates a set of triangles in the network
+        :param concept_pairs: A sequence/set of pairs (keys of belief_set)
+        :param belief_set: a Beliefs type object that represents the network you
+            want to search over
+        :param concept_set: set/sequence of concepts
+        :return a set of all triads found in network, as ConceptTriad
         """
         triangle_set = set()
-        for concept_pair in beliefs:
+        for concept_pair in concept_pairs:
             new_triangles = self._find_triangles_with_concept_pair(concept_pair,
                                 triangle_set, belief_set, concept_set)
             triangle_set.update(new_triangles)
@@ -311,9 +363,14 @@ class BeliefNetwork(object):
         return triangle_set
 
     def _find_triangles_with_concept_pair(self, concept_pair, triangle_set, 
-        belief_set, concept_set):
+                                          belief_set, concept_set):
         """
         finds triangles that have the concept pair as a link
+        :param concept_pair: a ConceptPair like object
+        :param triangle_set: a set of triads to check against redundancy
+        :param belief_set: a hash of pairs to check for triad
+        :param concept_set: set/sequence of concepts
+        :return A set of new triads
         """
         new_triangles = set()
         for concept in concept_set:
@@ -327,7 +384,11 @@ class BeliefNetwork(object):
         return new_triangles
 
     def _calc_energy(self, triad_sequence, beliefs):
-
+        """
+        :param triad_sequence: A sequence of triad like objects
+        :param beliefs: beliefs like object
+        :return: energy contribution of all triads in the sequence
+        """
         energy = 0.0
         for triad in triad_sequence:
             energy += self._triad_energy_contribution(triad, beliefs)
@@ -335,46 +396,63 @@ class BeliefNetwork(object):
         return energy
 
     def _triad_energy_contribution(self, triad, beliefs):
-
+        """
+        :param triad: A triad like object
+        :param beliefs: A beliefs like object
+        :return: energy of the specific triad
+        """
         return -beliefs[triad.pair1] \
                 * beliefs[triad.pair2] \
                 * beliefs[triad.pair3]
 
     def _add_concepts(self, concept_pair):
-
+        """
+        Checks and adds concepts to the necessary containers.
+        :param concept_pair:
+        :return: None
+        """
         if concept_pair.concept1 not in self.concept_set:
             self.concept_set.add(concept_pair.concept1)
         if concept_pair.concept2 not in self.concept_set:
             self.concept_set.add(concept_pair.concept2)
 
-    def add_belief(self, belief):
+    def add_belief(self, belief, update_energy=True):
         """
-        add belief to the network and update the internal energy
+        add belief to network, overwriting current belief.
+        Updates the internal energy by default
+        :param belief: A single element Beliefs
+        :param update_energy: True/False
+        :return None
         """
 
         concept_pair, valence = next(belief.iteritems())
         if concept_pair in self.beliefs:
             if self.beliefs[concept_pair] != valence:
                 self.beliefs[concept_pair] = valence
-                self.energy = self._calc_energy(self.triangle_set, self.beliefs)
+                if update_energy:
+                    self.energy = self._calc_energy(self.triangle_set,
+                                                    self.beliefs)
         else:
             self.beliefs[concept_pair] = valence
             new_triangles = self._find_triangles_with_concept_pair(concept_pair,
                 self.triangle_set, self.beliefs, self.concept_set)
             self._add_concepts(concept_pair)
-            self.energy += self._calc_energy(new_triangles, self.beliefs)
             self.triangle_set.update(new_triangles)
+            if update_energy:
+                self.energy += self._calc_energy(new_triangles, self.beliefs)
 
-    def _update_containers(self, concept_pair):
+    def add_concept_pair(self, concept_pair, update_energy=True):
         """
-        updates triangle_set, concepts, and beliefs
+        Adds a pair of concepts to the beliefs.
+        If the pair doesn't exist already, the valence is initialized to 0.
+        Updates the internal energy.
+        Does nothing but update energy if the pair already exists.
+        :param concept_pair: a ConceptPair type
+        :param update_energy: True/False
+        :return: None
         """
         if concept_pair not in self.beliefs:
-            self.beliefs[concept_pair] = 0
-
-        self._add_concepts(concept_pair)
-        self.triangle_set.update(self._find_triangles_with_concept_pair(
-            concept_pair, self.triangle_set, self.beliefs, self.concept_set))
+            self.add_belief(Beliefs({concept_pair : 0.0}), update_energy)
 
     def update_energy(self):
         """
@@ -386,7 +464,7 @@ class BeliefNetwork(object):
     def __copy__(self):
         """
         Make a fast copy that by-passes the expensive __init__ function of
-        the beliefnetwork. Uses an empty_copy function that carries out this
+        the belief network. Uses an empty_copy function that carries out this
         __init__ by-pass
         """
         newcopy = empty_copy(self)
@@ -415,29 +493,35 @@ class BeliefModule(object):
     belief system. It handles receiving (listen) and sending (talk) beliefs,
     updating the belief network of the agent, and determining whether to 
     accept or reject new beliefs.
+
+    Shallow copy access to the underlying beliefs of both the beliefs
+    and perceived beliefs is given via the beliefs and perceived_beliefs
+    properties. Alternatively, direct access to those items can be achieved
+    via .belief_network.beliefs or .perceived_belief_network.beliefs
     """
     def __init__(self, **kwargs):
         """
-        belief_net: a BeliefNetwork type object. default=BeliefNetwork()
-        perceived_net: a BeliefNetwork type object representing the agent's
+        :param belief_net: a BeliefNetwork type object. default=BeliefNetwork()
+        :param perceived_net: a BeliefNetwork type object representing the agent's
             perception of other's beliefs. default=BeliefNetwork()
-        seed: seed number for rng. default=1
-        max_memory: how many steps back the agent remembers incoming beliefs.
+        :param seed: seed number for rng. default=1
+        :param max_memory: how many steps back the agent remembers incoming beliefs.
             This can be used in methods for outputing popular/recent beliefs.
             default=1
-        T: Higher T will increase the likelihood of accepting beliefs that would
+        :param T: Higher T will increase the likelihood of accepting beliefs that would
             increase the agents energy. default=1.0
-        J: coherentism, controls contribution of internal belief system energy to
+        :param J: coherentism, controls contribution of internal belief system energy to
             total energy. default=1.0
-        I: peer-influence, controls contribution of social energy to the total
+        :param I: peer-influence, controls contribution of social energy to the total
             energy. default=1.0
-        tau: float between [1,inf]. Higher values prefer older beliefs
+        :param tau: float between [1,inf]. Higher values prefer older beliefs
             and reduce the contribution of newer beliefs to perceived beliefs.
             default=1.0
-        recent_belief_chance: [0,1], the probability of choosing a belief to
+        :param recent_belief_chance: [0,1], the probability of choosing a belief to
             emit from short-term memory. If a recent belief isn't chosen, then
             a belief is chosen uniformly at random from the belief network.
             default=0.0
+        :param verbose: prints talking/decision information
         """
         self.belief_network = kwargs.get("belief_net", BeliefNetwork())
         self.perceived_belief_network = kwargs.get("perceived_net", BeliefNetwork())
@@ -450,10 +534,61 @@ class BeliefModule(object):
         self.J = kwargs.get("J", 1.0)
         self.I = kwargs.get("I", 1.0)
         self.tau = kwargs.get("tau", 1.0)
+        self.verbose = kwargs.get("verbose", False)
+
+    @property
+    def beliefs(self):
+        """
+        :return: shallow copy of own Beliefs
+        Original can be accessed via belief_network.beliefs
+        """
+
+        return copy(self.belief_network.beliefs)
+
+    @beliefs.setter
+    def beliefs(self, value):
+        raise AssertionError("Not allowed to set beliefs")
+
+    @property
+    def perceived_beliefs(self):
+        """
+        :return: shallow copy of perceived Beliefs
+        Original can be accessed via perceived_belief_network.beliefs
+        """
+
+        return copy(self.perceived_belief_network.beliefs)
+
+    @perceived_beliefs.setter
+    def perceived_beliefs(self, value):
+        raise AssertionError("Not allowed to set perceived beliefs")
+
+    def __str__(self):
+        """
+        Converts attributes/beliefs/memory/energy into str
+        :return: string
+        """
+        out_str = "BeliefModule attributes:\n"
+        out_str += "\tT: " + str(self.T) + "\n"
+        out_str += "\tJ: " + str(self.J) + "\n"
+        out_str += "\tI: " + str(self.I) + "\n"
+        out_str += "\ttau: " + str(self.tau) + "\n"
+        out_str += "\tmax mem: " + str(self._max_memory) + "\n"
+        out_str += "\trecent_belief_chance: " \
+                   + str(self.recent_belief_chance) + "\n\n"
+        out_str += "Memory:\n"
+        out_str += "\t" + str(self._memory) + "\n"
+        out_str += "\nOwn Beliefs: energy = " \
+                   + str(self.belief_network.energy) + "\n"
+        out_str += str(self.belief_network)
+        out_str += "\nPerceived Beliefs: energy = " \
+                   + str(self.perceived_belief_network.energy) + "\n"
+        out_str += str(self.perceived_belief_network)
+        return out_str
 
     def seed(self, integer):
         """
         re-seeds rng
+        :param integer: an integer value for the seed
         """
         self._rng.seed(integer)
         self._seed = integer
@@ -467,22 +602,46 @@ class BeliefModule(object):
         is accepted with some probability.
         """
 
-        current_social_energy = -(self.belief_network * self.perceived_belief_network)
-        current_total_energy = self.J * self.belief_network.energy + self.I * current_social_energy
+        current_social_energy = -(self.belief_network *
+                                  self.perceived_belief_network)
+        current_total_energy = self.J * self.belief_network.energy + \
+                               self.I * current_social_energy
 
         candidate_belief_net = copy(self.belief_network)
         candidate_belief_net.add_belief(belief)
-        candidate_social_energy = -(candidate_belief_net * self.perceived_belief_network)
+        candidate_social_energy = -(candidate_belief_net *
+                                    self.perceived_belief_network)
 
-        candidate_total_energy = self.J * candidate_belief_net.energy + self.I * candidate_social_energy
+        candidate_total_energy = self.J * candidate_belief_net.energy + \
+                                 self.I * candidate_social_energy
 
-        if candidate_total_energy < current_total_energy:
+        if candidate_total_energy <= current_total_energy:
+            if self.verbose:
+                print("candidate_energy: ", candidate_total_energy,
+                      "current_energy", current_total_energy,
+                      'DECISION: Accept')
             return True
+
         else:
-            if (exp((current_total_energy - candidate_total_energy) / self.T) ) > self._rng.random():
+            rng_roll = self._rng.random()
+            accept_prob = exp((current_total_energy - candidate_total_energy) / self.T)
+            if accept_prob > rng_roll:
+                if self.verbose:
+                    print("candidate_energy: ", candidate_total_energy,
+                          "current_energy", current_total_energy,
+                          "accept prob", accept_prob,
+                          "roll", rng_roll,
+                          'DECISION: Accept')
                 return True
 
-        return False
+            else:
+                if self.verbose:
+                    print("candidate_energy: ", candidate_total_energy,
+                          "current_energy", current_total_energy,
+                          "accept prob", accept_prob,
+                          "roll", rng_roll,
+                          'DECISION: Reject')
+                return False
 
     def _add_belief_to_memory(self, belief):
         """
@@ -500,9 +659,13 @@ class BeliefModule(object):
     def _update_perceived_beliefs(self, belief):
         """
         See documentation for explanation of update equation
+        summary: belief valences of perceived beliefs move closer to the
+        input belief
         """
 
         concept_pair, valence = next(belief.iteritems())
+        # Adding the pair sets up a 0 initialized valence belief
+        self.perceived_belief_network.add_concept_pair(concept_pair)
         current_valence = self.perceived_belief_network.beliefs[concept_pair]
         self.perceived_belief_network.beliefs[concept_pair] += 1. / self.tau * (
             valence - current_valence)
@@ -511,11 +674,17 @@ class BeliefModule(object):
         """
         chooses and emits a belief from belief network from memory or from
         their belief network
+        :return A single element Beliefs object
         """
 
-        if (self._rng.random() < self.recent_belief_chance) and (len(self._memory) != 0):
+        if (self._rng.random() < self.recent_belief_chance) \
+                and (len(self._memory) != 0):
+            if self.verbose:
+                print("Drawing from memory")
             return self._rng.choice(self._memory)
         else:
+            if self.verbose:
+                print("Drawing from beliefs")
             return Beliefs((self._rng.choice(self.belief_network.beliefs.items()),))
 
     def listen(self, belief):
@@ -523,6 +692,9 @@ class BeliefModule(object):
         evaluates veracity of incoming belief
         if the agent likes and accepts it, it will also be added to their
         short term memory
+        :param belief: A single incoming belief as Beliefs object
+        :return True if accepted, False if not. Can be used externally to
+            calculate acceptance rates for calibrating parameters
         """
 
         self._update_perceived_beliefs(belief)
@@ -530,3 +702,6 @@ class BeliefModule(object):
         if self._is_belief_acceptable(belief):
             self._add_belief_to_memory(belief)
             self.belief_network.add_belief(belief)
+            return True
+
+        return False
