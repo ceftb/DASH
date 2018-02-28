@@ -1,5 +1,7 @@
 import sys; sys.path.extend(['../../'])
 
+import time
+import json
 from kazoo.client import KazooClient
 
 
@@ -21,11 +23,15 @@ class DashController:
 
         self.number_of_hosts = number_of_hosts
 
-    def run(self, experiment, run_data={}):
+    def run(self, experiment, run_data={}, silent_mode=True):
         print "ExperimentController: setting up the experiment ..."
 
         self.zk.ensure_path("/experiment_assemble_status")
         self.zk.set("/experiment_assemble_status", "active")
+
+        # exp id
+        self.zk.ensure_path("/experiments")
+        experiment.exp_id = len(self.zk.get_children("/experiments"))
 
         self.zk.ensure_path("/experiments/" + str(experiment.exp_id) + "/status")
         self.zk.set("/experiments/" + str(experiment.exp_id) + "/status", "queued")
@@ -33,12 +39,17 @@ class DashController:
         @self.zk.DataWatch("/experiments/" + str(experiment.exp_id) + "/status")
         def watch_status_change(data, _):
             if data == "completed":
-                print "Experiment " + str(experiment.exp_id) + " is complete"
+                self.end_time = time.time()
+                self.time = self.end_time - self.start_time
+                self.zk.ensure_path("/experiments/" + str(experiment.exp_id) + "/time")
+                self.zk.set("/experiments/" + str(experiment.exp_id) + "/time", json.dumps({"start":self.start_time, "end":self.end_time, "time":self.time} ))
+                print "Experiment " + str(experiment.exp_id) + " is complete. Time " + str(self.time)
                 return False
             else:
                 print "Experiment " + str(experiment.exp_id) + " status: " + data
                 return True
 
+        self.start_time = time.time()
         experiment.run(self.zk, run_data=run_data)
         print "ExperimentController: experiment in progress"
         while True:
@@ -76,6 +87,8 @@ class DashController:
                 print "Previous experiments removed"
             elif cmd == "r":
                 print "Running experiment again ..."
+                self.zk.ensure_path("/experiments")
+                experiment.exp_id = len(self.zk.get_children("/experiments"))
                 self.zk.ensure_path("/experiments/" + str(experiment.exp_id) + "/status")
                 self.zk.set("/experiments/" + str(experiment.exp_id) + "/status", "queued")
                 experiment.run(self.zk, run_data=run_data)
