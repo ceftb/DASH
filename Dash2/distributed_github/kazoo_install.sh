@@ -45,8 +45,7 @@ function install_zookeeper {
 	pip freeze | grep kazoo >> ~/projects/kazoo_report_$CURR_NODE_ID.txt
 }
 
-if [ -z "$1" ]
-then.
+if [ -z "$1" ]; then
 	install_on_all_nodes
 else
 	install_zookeeper $1 $2 $3
