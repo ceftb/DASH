@@ -18,7 +18,7 @@ class MailHub(WorldHub):
     # Initialize does nothing if the email address is already in the mail dictionary
     def initialize_email(self, sender_id, recipient):
         if sender_id not in self.emailAddress:
-            print "sender", sender_id, "not in email addresses: ", self.emailAddress, "not sending"
+            print("sender", sender_id, "not in email addresses: ", self.emailAddress, "not sending")
             return
         if recipient not in self.mail:
             self.mail[recipient] = []
@@ -27,7 +27,7 @@ class MailHub(WorldHub):
         if agent_id in self.emailAddress:
             address = self.emailAddress[agent_id]
             mail = self.mail[address]
-            #print 'mail for ' + address + ' is ' + str(mail)
+            #print('mail for ' + address + ' is ' + str(mail))
             self.mail[address] = []
             return 'success', mail
         else:
@@ -41,7 +41,7 @@ class MailHub(WorldHub):
                 if 'from' not in message:
                     message['from'] = self.emailAddress[agent_id]
                 if 'to' not in message:
-                    print 'no \'to\' field in message, not sending:', message
+                    print(('no \'to\' field in message, not sending:', message))
                 elif isinstance(message['to'], str):
                     self.initialize_email(agent_id, message['to'])
                     self.mail[message['to']].append(message)
@@ -51,8 +51,8 @@ class MailHub(WorldHub):
                         self.mail[recipient].append(message)
             return 'success', []
         except Exception as e:
-            print "problem sending mail:", e
-            print 'mail is', self.mail
+            print("problem sending mail:", e)
+            print('mail is', self.mail)
             return 'fail', []
 
     def processRegisterRequest(self, agent_id, aux_data):
