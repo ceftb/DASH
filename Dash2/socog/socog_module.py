@@ -420,26 +420,26 @@ class BeliefNetwork(object):
         """
         add belief to network, overwriting current belief.
         Updates the internal energy by default
-        :param belief: A single element Beliefs
+        :param belief: A Beliefs (one or more)
         :param update_energy: True/False
         :return None
         """
 
-        concept_pair, valence = next(belief.iteritems())
-        if concept_pair in self.beliefs:
-            if self.beliefs[concept_pair] != valence:
+        for concept_pair, valence in belief.iteritems():
+            if concept_pair in self.beliefs:
+                if self.beliefs[concept_pair] != valence:
+                    self.beliefs[concept_pair] = valence
+                    if update_energy:
+                        self.energy = self._calc_energy(self.triangle_set,
+                                                        self.beliefs)
+            else:
                 self.beliefs[concept_pair] = valence
+                new_triangles = self._find_triangles_with_concept_pair(concept_pair,
+                    self.triangle_set, self.beliefs, self.concept_set)
+                self._add_concepts(concept_pair)
+                self.triangle_set.update(new_triangles)
                 if update_energy:
-                    self.energy = self._calc_energy(self.triangle_set,
-                                                    self.beliefs)
-        else:
-            self.beliefs[concept_pair] = valence
-            new_triangles = self._find_triangles_with_concept_pair(concept_pair,
-                self.triangle_set, self.beliefs, self.concept_set)
-            self._add_concepts(concept_pair)
-            self.triangle_set.update(new_triangles)
-            if update_energy:
-                self.energy += self._calc_energy(new_triangles, self.beliefs)
+                    self.energy += self._calc_energy(new_triangles, self.beliefs)
 
     def add_concept_pair(self, concept_pair, update_energy=True):
         """
@@ -595,10 +595,10 @@ class BeliefModule(object):
 
     def _is_belief_acceptable(self, belief):
         """
-        Given a belief will return True if acceptable else False.
-        Creates a shallow copy of the belief network and adds the new belief
-        to calculate the internal and social energy of a candidate belief.
-        If the belief would lower the total energy it is accepted, else it
+        Given a belief(s) will return True if acceptable else False.
+        Creates a shallow copy of the belief network and adds the new belief(s)
+        to calculate the internal and social energy of a candidate belief(s).
+        If the belief(s) would lower the total energy it is accepted, else it
         is accepted with some probability.
         """
 
@@ -645,7 +645,7 @@ class BeliefModule(object):
 
     def _add_belief_to_memory(self, belief):
         """
-        Adds an accepted belief to memory
+        Adds an accepted belief(s) to memory
         If memory would exceed its maximum capacity the oldest memory
         is dropped from the deque
         """
@@ -663,12 +663,12 @@ class BeliefModule(object):
         input belief
         """
 
-        concept_pair, valence = next(belief.iteritems())
-        # Adding the pair sets up a 0 initialized valence belief
-        self.perceived_belief_network.add_concept_pair(concept_pair)
-        current_valence = self.perceived_belief_network.beliefs[concept_pair]
-        self.perceived_belief_network.beliefs[concept_pair] += 1. / self.tau * (
-            valence - current_valence)
+        for concept_pair, valence in belief.iteritems():
+            # Adding the pair sets up a 0 initialized valence belief
+            self.perceived_belief_network.add_concept_pair(concept_pair)
+            current_valence = self.perceived_belief_network.beliefs[concept_pair]
+            self.perceived_belief_network.beliefs[concept_pair] += 1. / self.tau * (
+                valence - current_valence)
 
     def talk(self):
         """
@@ -689,10 +689,10 @@ class BeliefModule(object):
 
     def listen(self, belief):
         """
-        evaluates veracity of incoming belief
+        evaluates veracity of incoming belief(s)
         if the agent likes and accepts it, it will also be added to their
         short term memory
-        :param belief: A single incoming belief as Beliefs object
+        :param belief: Incoming belief(s) as Beliefs object
         :return True if accepted, False if not. Can be used externally to
             calculate acceptance rates for calibrating parameters
         """
