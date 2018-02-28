@@ -68,9 +68,13 @@ class DashController:
             elif cmd == "s":
                 if self.zk.exists("/experiments/" + str(experiment.exp_id) + "/status"):
                     status, stat = self.zk.get("/experiments/" + str(experiment.exp_id) + "/status")
+                    for node_id in range(1, self.number_of_hosts + 1):
+                        tasks = self.zk.get_children("/tasks/nodes/" + str(node_id))
+                        print "Node " + str(node_id) + " tasks: " + str(tasks)
+                    print status
                 else:
                     status = "no experiments found"
-                print status
+                    print status
             elif cmd == "c":
                 print "Cleaning up zookeeper storage ..."
                 if self.zk.exists("/experiments"):
