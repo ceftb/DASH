@@ -23,35 +23,12 @@ class DashController:
 
         self.number_of_hosts = number_of_hosts
 
-    def run(self, experiment, run_data={}, silent_mode=True):
-        print "ExperimentController: setting up the experiment ..."
+    def run(self, experiment, run_data={}, start_right_away=True):
+        if start_right_away:
+            print "ExperimentController: setting up the experiment ..."
+            self.start_experiment(experiment, run_data)
+            print "ExperimentController: experiment in progress"
 
-        self.zk.ensure_path("/experiment_assemble_status")
-        self.zk.set("/experiment_assemble_status", "active")
-
-        # exp id
-        self.zk.ensure_path("/experiments")
-        experiment.exp_id = len(self.zk.get_children("/experiments"))
-
-        self.zk.ensure_path("/experiments/" + str(experiment.exp_id) + "/status")
-        self.zk.set("/experiments/" + str(experiment.exp_id) + "/status", "queued")
-
-        @self.zk.DataWatch("/experiments/" + str(experiment.exp_id) + "/status")
-        def watch_status_change(data, _):
-            if data == "completed":
-                self.end_time = time.time()
-                self.time = self.end_time - self.start_time
-                self.zk.ensure_path("/experiments/" + str(experiment.exp_id) + "/time")
-                self.zk.set("/experiments/" + str(experiment.exp_id) + "/time", json.dumps({"start":self.start_time, "end":self.end_time, "time":self.time} ))
-                print "Experiment " + str(experiment.exp_id) + " is complete. Time " + str(self.time)
-                return False
-            else:
-                print "Experiment " + str(experiment.exp_id) + " status: " + data
-                return True
-
-        self.start_time = time.time()
-        experiment.run(self.zk, run_data=run_data)
-        print "ExperimentController: experiment in progress"
         while True:
             cmd = raw_input("Press \n\tq to exit experiment controller, \n\tt to terminate all worker nodes (/experiment_assemble_status->terminated),"
                             "\n\ta to change assemble status to active (/experiment_assemble_status->active),\n\ts to see experiment status, "
@@ -66,35 +43,81 @@ class DashController:
             elif cmd == "a":
                 self.zk.set("/experiment_assemble_status", "active")
             elif cmd == "s":
-                if self.zk.exists("/experiments/" + str(experiment.exp_id) + "/status"):
-                    status, stat = self.zk.get("/experiments/" + str(experiment.exp_id) + "/status")
-                    for node_id in range(1, self.number_of_hosts + 1):
-                        tasks = self.zk.get_children("/tasks/nodes/" + str(node_id))
-                        print "Node " + str(node_id) + " tasks: " + str(tasks)
-                    print status
-                else:
-                    status = "no experiments found"
-                    print status
+               self.show_status()
             elif cmd == "c":
-                print "Cleaning up zookeeper storage ..."
-                if self.zk.exists("/experiments"):
-                    self.zk.delete("/experiments", recursive=True)
-                for node_id in range(1, self.number_of_hosts + 1):
-                    tasks = self.zk.get_children("/tasks/nodes/" + str(node_id))
-                    for task in tasks:
-                        self.zk.delete("/tasks/nodes/" + str(node_id) + "/" + str(task), recursive=True)
-                self.zk.ensure_path("/experiment_assemble_status")
-                self.zk.set("/experiment_assemble_status", "active")
-
-                next_id = self.zk.Counter("/nex_experiment_id_counter")
-                next_id -= next_id.value
-                print "Previous experiments removed"
+                self.clean_storage()
             elif cmd == "r":
-                print "Running experiment again ..."
-                self.zk.ensure_path("/experiments")
-                experiment.exp_id = len(self.zk.get_children("/experiments"))
-                self.zk.ensure_path("/experiments/" + str(experiment.exp_id) + "/status")
-                self.zk.set("/experiments/" + str(experiment.exp_id) + "/status", "queued")
-                experiment.run(self.zk, run_data=run_data)
+                if experiment is not None:
+                    print "Running experiment again ..."
+                    self.start_experiment(experiment, run_data)
+                else:
+                    print "Experiment object not defined."
             else:
                 print "Unrecognized command " + cmd + "\n"
+
+    def set_experiment_completion_watcher(self, exp_id):
+        @self.zk.DataWatch("/experiments/" + str(exp_id) + "/status")
+        def watch_status_change(data, _):
+            if data == "completed":
+                self.end_time = time.time()
+                self.time = self.end_time - self.start_time
+                self.zk.ensure_path("/experiments/" + str(exp_id) + "/time")
+                self.zk.set("/experiments/" + str(exp_id) + "/time", json.dumps({"start": self.start_time, "end": self.end_time, "time": self.time}))
+                print "Experiment " + str(exp_id) + " is complete. Time " + str(self.time) + " s."
+                return False
+            else:
+                print "Experiment " + str(exp_id) + " status: " + data
+                return True
+
+    def start_experiment(self, experiment, run_data):
+        self.zk.ensure_path("/experiments")
+        experiment.exp_id = len(self.zk.get_children("/experiments"))
+
+        self.zk.ensure_path("/experiments/" + str(experiment.exp_id) + "/status")
+        self.zk.set("/experiments/" + str(experiment.exp_id) + "/status", "queued")
+
+        self.set_experiment_completion_watcher(experiment.exp_id)
+        self.start_time = time.time()
+
+        experiment.run(self.zk, run_data=run_data)
+        print "ExperimentController: experiment in progress"
+
+    def clean_storage(self):
+        print "Cleaning up zookeeper storage ..."
+        if self.zk.exists("/experiments"):
+            self.zk.delete("/experiments", recursive=True)
+        for node_id in range(1, self.number_of_hosts + 1):
+            tasks = self.zk.get_children("/tasks/nodes/" + str(node_id))
+            for task in tasks:
+                self.zk.delete("/tasks/nodes/" + str(node_id) + "/" + str(task), recursive=True)
+        self.zk.ensure_path("/experiments")
+        self.zk.ensure_path("/experiment_assemble_status")
+        self.zk.set("/experiment_assemble_status", "active")
+
+        next_id = self.zk.Counter("/nex_experiment_id_counter")
+        next_id -= next_id.value
+        print "Previous experiments removed"
+
+    def show_status(self):
+        all_exps = self.zk.get_children("/experiments")
+        if len(all_exps) == 0:
+            print "no experiments found"
+        else:
+            # experiments status
+            for exp in all_exps:
+                if self.zk.exists("/experiments/" + str(exp) + "/status"):
+                    status, stat = self.zk.get("/experiments/" + str(exp) + "/status")
+                    self.zk.ensure_path("/experiments/" + str(exp) + "/time")
+                    raw_time, _ = self.zk.get("/experiments/" + str(exp) + "/time")
+                    print "Experiment " + str(exp) + " status: " + str(status) + ". Time " + str(raw_time) + " (sec)."
+        # nodes status
+        for node_id in range(1, self.number_of_hosts + 1):
+            tasks = self.zk.get_children("/tasks/nodes/" + str(node_id))
+            for task in tasks:
+                try:
+                    raw_status, _ = self.zk.get("/tasks/nodes/" + str(node_id) + "/" + str(task) + "/status")
+                    st = json.loads(raw_status)
+                    print "Node " + str(node_id) + " tasks: " + str(tasks) + " - iteration: " + str(st["iteration"]) \
+                          + ", last update: " + str(time.strftime("%b %d %Y %H:%M:%S", time.gmtime(float(st["update time"]))))
+                except Exception as err:
+                    print str(err)

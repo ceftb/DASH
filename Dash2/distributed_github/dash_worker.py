@@ -71,8 +71,13 @@ class DashWorker(object):
 
         print "Received task " + task_full_id + " with data " + data
         processor = processor_class(zk=self.zk, host_id=self.host_id, task_full_id=task_full_id, data=args)
-        processor.process_task()
         node_prefix = "/tasks/nodes/" + str(self.host_id)
+        self.zk.ensure_path(node_prefix + "/" + task_full_id + "/status")
+        self.zk.set(node_prefix + "/" + task_full_id + "/status", json.dumps({"status":"in progress", "iteration":0, "update time":0}))
+
+        processor.process_task()
+
+        self.zk.delete(node_prefix + "/" + task_full_id + "/status")
         self.zk.delete(node_prefix + "/" + task_full_id)
         print "Task " + str(task_full_id) + " is complete."
 

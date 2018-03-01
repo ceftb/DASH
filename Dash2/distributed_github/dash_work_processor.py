@@ -1,5 +1,6 @@
 import sys; sys.path.extend(['../../'])
 import json
+import time
 from Dash2.github.git_repo_hub import GitRepoHub
 
 # TBD: This class to be moved into core module when zookeeper version of DASH is stable
@@ -27,7 +28,12 @@ class DashWorkProcessor:
                 self.process_after_iteration()
                 self.iteration += 1
                 if self.iteration % 1000 == 0 :
-                    print "Interation " + str(self.iteration)
+                    node_path = "/tasks/nodes/" + str(self.host_id) + "/" + self.task_id
+                    self.zk.ensure_path(node_path + "/status")
+                    self.zk.set(node_path + "/status", json.dumps({"status": "in progress", "iteration": self.iteration, "update time": time.time()}))
+                    print "Interation " + str(self.iteration) + " " \
+                          + str({"status": "in progress", "iteration": self.iteration, "update time": time.strftime("%b %d %Y %H:%M:%S", time.gmtime(time.time()))})
+
             self.process_after_run()
             for agent in self.agents:
                 agent.disconnect()

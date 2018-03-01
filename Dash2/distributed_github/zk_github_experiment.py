@@ -91,7 +91,7 @@ if __name__ == "__main__":
     else:
         print 'incorrect arguments: ', sys.argv
 
-    max_iterations = 1000
+    max_iterations = 5000
     num_trials = 1
     independent = ['prob_create_new_agent', Range(0.5, 0.6, 0.1)]
     exp_data = {'max_iterations': max_iterations}
@@ -105,5 +105,5 @@ if __name__ == "__main__":
                          dependent=lambda t: [t.num_agents(), t.num_repos(), t.total_agent_activity()],
                          exp_data=exp_data,
                          num_trials=num_trials)
-    results = controller.run(exp)
+    results = controller.run(experiment=exp, run_data={}, start_right_away=True)
 
