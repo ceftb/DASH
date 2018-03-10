@@ -16,7 +16,7 @@ function install_on_all_nodes {
 	echo "Zookeeper installation completed on all nodes"
 }
 
-function install_zookeeper {
+function install_single_zookeeper_instance {
 	CURR_NODE_ID=$1
 	WEBDASH_CLONE=$2
 	source $WEBDASH_CLONE/Dash2/distributed_github/deter.conf # defines $ZK_NODES , redifines $WEBDASH_CLONE and $KAZOO_CLONE
@@ -26,19 +26,10 @@ function install_zookeeper {
 	ZK_CONF=/etc/zookeeper/conf/zoo.cfg 
 	ZK_ID=/etc/zookeeper/conf/myid
 
-	cp -R $KAZOO_CLONE $WEBDASH_CLONE/../kazoo_clone_$CURR_NODE_ID
-	cd $WEBDASH_CLONE/../kazoo_clone_$CURR_NODE_ID
-	# install kazoo 
-	echo "installing kazoo ..."
-	sudo apt-get install python-setuptools --yes
-	sudo python setup.py install  >> ~/projects/kazoo_report_$CURR_NODE_ID.txt
-	rm -Rf $WEBDASH_CLONE/../kazoo_clone_$CURR_NODE_ID
-
 	# install zookeeper 
 	echo "installing zookeeper base ..."
 	sudo apt-get install zookeeper --yes
 
-	# TBD: replace this part with standalone package of zookeeper
 	# install zookeeper server
 	echo "installing zookeeper server ..."
 	sudo apt-get install zookeeperd --yes
@@ -74,15 +65,13 @@ function install_zookeeper {
 	sudo apt-get install python-pip --yes
 	echo "installing python-numpy python-scipy ..."
 	sudo apt-get install python-numpy python-scipy --yes
-
-	pip freeze | grep kazoo >> ~/projects/kazoo_report_$CURR_NODE_ID.txt
 }
 
 if [ -z "$1" ]
 then 
 	install_on_all_nodes
 else
-	install_zookeeper $1 $2 $3
+	install_single_zookeeper_instance  $1 $2 $3
 fi
 
 

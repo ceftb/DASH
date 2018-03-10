@@ -36,6 +36,7 @@ class DashWorker(object):
             @self.zk.ChildrenWatch(node_prefix)
             def watch_tasks(tasks):
                 if tasks is not None:
+                    # TBD need to check and skip tasks that are already in progress
                     for task_id in tasks:
                         @self.zk.DataWatch(node_prefix + "/" + task_id)
                         def watch_task_update(data, stat_):

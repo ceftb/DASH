@@ -18,6 +18,8 @@ class DashWorkProcessor:
         # hube must be overriden in subclasses
         self.hub = GitRepoHub if hub is None else hub
         self.iteration = 0
+        # init agents and their relationships with repos
+
 
     def process_task(self):
         if self.zk is not None and self.task_id is not None:
@@ -43,6 +45,8 @@ class DashWorkProcessor:
             task_result = {"node_id":self.host_id, "dependent":dep_vars}
             data = json.dumps(task_result)
             self.zk.set(result_path, data)
+        else:
+            raise Exception("Zookeeper is not initialized.")
 
     def should_stop(self):
         if self.max_iterations > 0 and self.iteration >= self.max_iterations:

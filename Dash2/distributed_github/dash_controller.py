@@ -86,11 +86,13 @@ class DashController:
         print "Cleaning up zookeeper storage ..."
         if self.zk.exists("/experiments"):
             self.zk.delete("/experiments", recursive=True)
-        for node_id in range(1, self.number_of_hosts + 1):
-            tasks = self.zk.get_children("/tasks/nodes/" + str(node_id))
-            for task in tasks:
-                self.zk.delete("/tasks/nodes/" + str(node_id) + "/" + str(task), recursive=True)
         self.zk.ensure_path("/experiments")
+        if self.zk.exists("/tasks/nodes/"):
+            for node_id in range(1, self.number_of_hosts + 1):
+                if self.zk.exists("/tasks/nodes/" + str(node_id)):
+                    tasks = self.zk.get_children("/tasks/nodes/" + str(node_id))
+                    for task in tasks:
+                        self.zk.delete("/tasks/nodes/" + str(node_id) + "/" + str(task), recursive=True)
         self.zk.ensure_path("/experiment_assemble_status")
         self.zk.set("/experiment_assemble_status", "active")
 

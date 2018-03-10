@@ -1,7 +1,4 @@
-import sys;
-
-
-sys.path.extend(['../../'])
+import sys; sys.path.extend(['../../'])
 import random
 from Dash2.core.parameter import Range
 from Dash2.core.measure import Measure
@@ -60,6 +57,10 @@ class ZkGithubTrial(DashTrial):
 
     def initialize(self):
         self.results = {"num_agents": 0, "num_repos": 0, "total_agent_activity": 0}
+        # read agents
+        self.agents = []
+        self.agents.append(GitUserAgent(useInternalHub=True, hub=self.hub, trace_client=False))
+        # load from file TBD
 
     # partial_dependent is a dictionary of dependent vars
     def append_partial_results(self, partial_dependent):
@@ -91,8 +92,8 @@ if __name__ == "__main__":
     else:
         print 'incorrect arguments: ', sys.argv
 
-    max_iterations = 5000
-    num_trials = 1
+    max_iterations = 10000
+    num_trials = 3
     independent = ['prob_create_new_agent', Range(0.5, 0.6, 0.1)]
     exp_data = {'max_iterations': max_iterations}
 
@@ -105,5 +106,5 @@ if __name__ == "__main__":
                          dependent=lambda t: [t.num_agents(), t.num_repos(), t.total_agent_activity()],
                          exp_data=exp_data,
                          num_trials=num_trials)
-    results = controller.run(experiment=exp, run_data={}, start_right_away=True)
+    results = controller.run(experiment=exp, run_data={}, start_right_away=False)
 
