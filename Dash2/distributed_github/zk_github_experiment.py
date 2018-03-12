@@ -59,7 +59,7 @@ class ZkGithubTrial(DashTrial):
         self.results = {"num_agents": 0, "num_repos": 0, "total_agent_activity": 0}
         # read agents
         self.agents = []
-        self.agents.append(GitUserAgent(useInternalHub=True, hub=self.hub, trace_client=False))
+        # self.agents.append(GitUserAgent(useInternalHub=True, hub=self.hub, trace_client=False))
         # load from file TBD
 
     # partial_dependent is a dictionary of dependent vars
@@ -92,7 +92,7 @@ if __name__ == "__main__":
     else:
         print 'incorrect arguments: ', sys.argv
 
-    max_iterations = 10000
+    max_iterations = 3000
     num_trials = 3
     independent = ['prob_create_new_agent', Range(0.5, 0.6, 0.1)]
     exp_data = {'max_iterations': max_iterations}

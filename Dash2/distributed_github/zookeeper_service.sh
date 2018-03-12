@@ -71,6 +71,14 @@ function perfom_action_on_single_node {
 	elif [ $ACTION == 'start' ]
 	then
 		sudo service zookeeper start
+	elif [ $ACTION == 'clean' ]
+	then
+	    sudo service zookeeper stop
+		sudo rm -f /var/lib/zookeeper/version-2/log.*
+		sudo rm -f /var/lib/zookeeper/version-2/snapshot.*
+		sudo service zookeeper start
+	else
+	    echo
 	fi
 }
 
@@ -92,7 +100,10 @@ then
 	elif [ $1 == 'start' ]
 	then 
 		echo 'Starting Zookeeper (Zookeeper nodes are definded in' $CONFIG_FILE_PATH') ...'
-	else 
+	elif [ $1 == 'clean' ]
+	then
+		echo 'Cleanin Zookeeper log (Zookeeper nodes are definded in' $CONFIG_FILE_PATH') ...'
+	else
 		echo 'Unrecognized action ' $1
 		exit
 	fi
