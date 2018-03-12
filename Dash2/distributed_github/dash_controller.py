@@ -87,12 +87,14 @@ class DashController:
         if self.zk.exists("/experiments"):
             self.zk.delete("/experiments", recursive=True)
         self.zk.ensure_path("/experiments")
-        if self.zk.exists("/tasks/nodes/"):
-            for node_id in range(1, self.number_of_hosts + 1):
+        if self.zk.exists("/tasks/nodes"):
+            nodes = self.zk.get_children("/tasks/nodes")
+            for node_id in nodes:
                 if self.zk.exists("/tasks/nodes/" + str(node_id)):
                     tasks = self.zk.get_children("/tasks/nodes/" + str(node_id))
                     for task in tasks:
                         self.zk.delete("/tasks/nodes/" + str(node_id) + "/" + str(task), recursive=True)
+        self.zk.ensure_path("/tasks/nodes")
         self.zk.ensure_path("/experiment_assemble_status")
         self.zk.set("/experiment_assemble_status", "active")
 
@@ -113,7 +115,9 @@ class DashController:
                     raw_time, _ = self.zk.get("/experiments/" + str(exp) + "/time")
                     print "Experiment " + str(exp) + " status: " + str(status) + ". Time " + str(raw_time) + " (sec)."
         # nodes status
-        for node_id in range(1, self.number_of_hosts + 1):
+        self.zk.ensure_path("/tasks/nodes")
+        nodes = self.zk.get_children("/tasks/nodes")
+        for node_id in nodes:
             tasks = self.zk.get_children("/tasks/nodes/" + str(node_id))
             for task in tasks:
                 try:
@@ -122,4 +126,4 @@ class DashController:
                     print "Node " + str(node_id) + " tasks: " + str(tasks) + " - iteration: " + str(st["iteration"]) \
                           + ", last update: " + str(time.strftime("%b %d %Y %H:%M:%S", time.gmtime(float(st["update time"]))))
                 except Exception as err:
-                    print str(err)
+                    print "Error " + str(err)

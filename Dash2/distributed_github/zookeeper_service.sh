@@ -13,7 +13,7 @@ function perform_action_on_all_nodes {
 	echo 'Total ' $NUMBER_OF_NODES ' workers in assemble'
 	for ID in `seq 1 $NUMBER_OF_NODES`;
 		do
-			echo 'Installing Zookeeper on node ' ${ZK_NODES[$ID-1]}
+			echo $ACTION'ing Zookeeper on node ' ${ZK_NODES[$ID-1]}
 			ssh ${ZK_NODES[$ID-1]} "tmux new-session -d bash $WEBDASH_CLONE/Dash2/distributed_github/$SCRIPT_NAME $ID $WEBDASH_CLONE $ACTION"
 		done
 	
@@ -102,7 +102,7 @@ then
 		echo 'Starting Zookeeper (Zookeeper nodes are definded in' $CONFIG_FILE_PATH') ...'
 	elif [ $1 == 'clean' ]
 	then
-		echo 'Cleanin Zookeeper log (Zookeeper nodes are definded in' $CONFIG_FILE_PATH') ...'
+		echo 'Cleaning Zookeeper log (Zookeeper nodes are definded in' $CONFIG_FILE_PATH') ...'
 	else
 		echo 'Unrecognized action ' $1
 		exit
