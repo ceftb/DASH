@@ -5,6 +5,7 @@
 CONFIG_FILE_PATH=./deter.conf # path is relative to $WEBDASH_CLONE/Dash2/distributed_github/
 
 function perform_action_on_all_nodes {
+	SCRIPT_NAME=$0
 	ACTION=$1
 	source $CONFIG_FILE_PATH
 
@@ -13,7 +14,7 @@ function perform_action_on_all_nodes {
 	for ID in `seq 1 $NUMBER_OF_NODES`;
 		do
 			echo 'Installing Zookeeper on node ' ${ZK_NODES[$ID-1]}
-			ssh ${ZK_NODES[$ID-1]} "tmux new-session -d bash $WEBDASH_CLONE/Dash2/distributed_github/zookeeper_install.sh $ID $WEBDASH_CLONE $ACTION"
+			ssh ${ZK_NODES[$ID-1]} "tmux new-session -d bash $WEBDASH_CLONE/Dash2/distributed_github/$SCRIPT_NAME $ID $WEBDASH_CLONE $ACTION"
 		done
 	
 	echo "Zookeeper action ($ACTION) completed on all nodes"
