@@ -18,12 +18,14 @@ function perform_action_on_all_nodes {
 		done
 	
 	echo "Zookeeper action ($ACTION) completed on all nodes"
-}
+}mc
 
 function perfom_action_on_single_node {
 	CURR_NODE_ID=$1
 	WEBDASH_CLONE=$2
 	ACTION=$3
+
+	cd $WEBDASH_CLONE/Dash2/distributed_github/
 	source $CONFIG_FILE_PATH # defines $ZK_NODES
 
 	ZK_CONF=/etc/zookeeper/conf/zoo.cfg 

@@ -78,8 +78,8 @@ class DashWorker(object):
 
         processor.process_task()
 
-        self.zk.delete(node_prefix + "/" + task_full_id + "/status")
-        self.zk.delete(node_prefix + "/" + task_full_id)
+        self.zk.delete(node_prefix + "/" + task_full_id + "/status", recursive=True)
+        self.zk.delete(node_prefix + "/" + task_full_id, recursive=True)
         print "Task " + str(task_full_id) + " is complete."
 
     @staticmethod

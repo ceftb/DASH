@@ -103,27 +103,34 @@ class DashController:
         print "Previous experiments removed"
 
     def show_status(self):
-        all_exps = self.zk.get_children("/experiments")
-        if len(all_exps) == 0:
-            print "no experiments found"
+        if self.zk.exists("/experiments"):
+            all_exps = self.zk.get_children("/experiments")
+            if len(all_exps) == 0:
+                print "no experiments found"
+            else:
+                # experiments status
+                for exp in all_exps:
+                    if self.zk.exists("/experiments/" + str(exp) + "/status"):
+                        status, stat = self.zk.get("/experiments/" + str(exp) + "/status")
+                        self.zk.ensure_path("/experiments/" + str(exp) + "/time")
+                        raw_time, _ = self.zk.get("/experiments/" + str(exp) + "/time")
+                        print "Experiment " + str(exp) + " status: " + str(status) + ". Time " + str(raw_time) + " (sec)."
         else:
-            # experiments status
-            for exp in all_exps:
-                if self.zk.exists("/experiments/" + str(exp) + "/status"):
-                    status, stat = self.zk.get("/experiments/" + str(exp) + "/status")
-                    self.zk.ensure_path("/experiments/" + str(exp) + "/time")
-                    raw_time, _ = self.zk.get("/experiments/" + str(exp) + "/time")
-                    print "Experiment " + str(exp) + " status: " + str(status) + ". Time " + str(raw_time) + " (sec)."
+            print "no experiments found"
         # nodes status
-        self.zk.ensure_path("/tasks/nodes")
-        nodes = self.zk.get_children("/tasks/nodes")
-        for node_id in nodes:
-            tasks = self.zk.get_children("/tasks/nodes/" + str(node_id))
-            for task in tasks:
-                try:
-                    raw_status, _ = self.zk.get("/tasks/nodes/" + str(node_id) + "/" + str(task) + "/status")
-                    st = json.loads(raw_status)
-                    print "Node " + str(node_id) + " tasks: " + str(tasks) + " - iteration: " + str(st["iteration"]) \
-                          + ", last update: " + str(time.strftime("%b %d %Y %H:%M:%S", time.gmtime(float(st["update time"]))))
-                except Exception as err:
-                    print "Error " + str(err)
+        if self.zk.exists("/tasks/nodes"):
+            nodes = self.zk.get_children("/tasks/nodes")
+            for node_id in nodes:
+                tasks = self.zk.get_children("/tasks/nodes/" + str(node_id))
+                for task in tasks:
+                    try:
+                        task_status = "/tasks/nodes/" + str(node_id) + "/" + str(task) + "/status"
+                        if self.zk.exists(task_status):
+                            raw_status, _ = self.zk.get(task_status)
+                            st = json.loads(raw_status)
+                            print "Node " + str(node_id) + " tasks: " + str(tasks) + " - iteration: " + str(st["iteration"]) \
+                                  + ", last update: " + str(time.strftime("%b %d %Y %H:%M:%S", time.gmtime(float(st["update time"]))))
+                        else:
+                            print "No status for " + str(task_status) + ". Task was not accepted by worker."
+                    except Exception as err:
+                        print "Error " + str(err)

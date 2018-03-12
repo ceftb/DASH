@@ -13,7 +13,7 @@ function perfom_action_on_single_node {
 	if [ $ACTION == 'stop' ]
 	then
 		echo 'Stopping Dash worker ...'
-        kill $(ps x | grep  "dash_worker.py $CURR_NODE_ID" | grep -v grep | awk '{print $1}')
+        kill $(ps x | grep  "dash_worker.py $ZK_NODE_ID $CURR_NODE_ID" | grep -v grep | awk '{print $1}')
 	elif [ $ACTION == 'start' ]
 	then
 		echo 'Starting Dash worker ...'
