@@ -99,9 +99,9 @@ if __name__ == "__main__":
 
         node = DashWorker(host_id=curr_host_id)
         node.run()
-    elif len(sys.argv) == 3: # If two arguments were given, 1st argument is a comma separated list of hosts, 2nd argument is the current host's id (number between 1-255)
-        hosts_list = sys.argv[1]
-        curr_host_id = int(sys.argv[2])
+    elif len(sys.argv) == 3: # If two arguments were given, 2nd argument is a comma separated list of hosts, 1st argument is the current host's id (number between 1-1024)
+        curr_host_id = int(sys.argv[1])
+        hosts_list = sys.argv[2]
 
         node = DashWorker(zk_hosts=hosts_list, host_id=curr_host_id)
         node.run()
