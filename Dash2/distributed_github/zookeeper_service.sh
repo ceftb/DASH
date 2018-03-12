@@ -18,7 +18,7 @@ function perform_action_on_all_nodes {
 		done
 	
 	echo "Zookeeper action ($ACTION) completed on all nodes"
-}mc
+}
 
 function perfom_action_on_single_node {
 	CURR_NODE_ID=$1
@@ -80,7 +80,7 @@ function perfom_action_on_single_node {
 		sudo rm -f /var/lib/zookeeper/version-2/snapshot.*
 		sudo service zookeeper start
 	else
-	    echo
+	    echo 'unrecognized action' $ACTION
 	fi
 }
 
