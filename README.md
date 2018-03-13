@@ -1,52 +1,8 @@
-WebDash
-=======
+# Dash agent-based modeling framework
 
-* Tested on Firefox 20.0.1
-* Make sure you have installed swipl with MacPort installer
+## Packages
 
-### Download Maven:
-```
-http://maven.apache.org/download.cgi
-```
-### Set environment variable 
+1. `dash-java` folder contains the legacy Java package. 
+2. `Dash2` folder contains the new dash library written in Python. 
 
-* in ~/.bash_profile add:
 
-```
-export DYLD_LIBRARY_PATH=path_to_jpl
-```
-
-* Example:
-
-```
-export DYLD_LIBRARY_PATH=/opt/local/lib/swipl-6.2.2/lib/i386-darwin11.3.0
-```
-
-* If needed, update the env.sh version to your OS and version of prolog. 
-
-### Compile
-```
-mvn compile
-```
-
-### Start Jetty Server
-```
-mvn jetty:run
-```
-
-### Start Wizard
-
-* In Browser go to:
-```
-localhost:8080/wizard.html
-```
-
-### Import as Eclipse Project
-
-* In Eclipse go to: File -> Import -> Maven -> Existing Maven Projects (if you do not find Maven as an option, go to "Install Maven for Eclipse")
-* Browse to "webdash" project location and Import
-
-### Install Maven for Eclipse
-
-* Go to Help -> Eclipse Marketplace and look for m2e. 
-* Click "Maven Integration for Eclipse", then on Install 
