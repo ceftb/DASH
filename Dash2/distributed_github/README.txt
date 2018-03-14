@@ -16,7 +16,7 @@ Make sure that ZK_NODES, DASH_NODES and ZK_MAP are properly specified in deter.s
 
 To run the the experiment on DETER
 1. start workers on nodes by executing dash_workers_service.sh on any node in the cluster.
-2. python zk_experiment.py <total_number_of_dash_workers>
+2. python zk_github_experiment.py <total_number_of_dash_workers>
 3. <total_number_of_dash_workers>=NUMBER_OF_WORKERS_PER_NODE x DASH_NODES
 
 Other important variables and their default values in deter.conf:
@@ -69,4 +69,34 @@ controller.py 1 127.0.0.1:2181,server1:2181,node5:2233
 controller and worker will use provided list of hosts and current host id to connect to zookeeper assemble. Controller assumes that all given hosts have dash_workers running on them; therefore, it distributes work accordingly. Use port 2181 by default.
 
 
+##############################
+#### RUNNING AN EXPERIMENT ###
+##############################
+Step 0 - check if zookeeper and kazoo are installed and install them if need by calling:
+kazoo_install.sh
+zookeeper_service.sh install
+You may need to reinstall them if experiment on Deter was swapped out.
+
+Step 1 - preparation of the cluster nodes
+1.1 Terminate all dash and zookeeper nodes left from previous experiments by calling from any node:
+zookeeper_service.sh stop
+dash_workers_service.sh stop
+These scripts only act on zookeeper nodes and dash nodes are defined in deter.conf.
+1.2 If necessary update deter.conf to change dash and zookeeper nodes configuration and routing, then start zookeeper and then dash nodes by calling from any node:
+zookeeper_service.sh reconfigure
+dash_workers_service.sh start
+
+Step 2. starting an experiment
+2.1 Update desirable experiment parameters in the experiment file (e.g. in zk_github_experiment.py you can change probabilities and max number of iterations)
+2.2 Start the dash controller by calling from any node:
+python zk_github_experiment.py <total_number_of_dash_workers>
+where <total_number_of_dash_workers> - is the maximum number of dash workers experiment can use, it should be <= NUMBER_OF_WORKERS_PER_NODE x len(DASH_NODES)
+NOTE: if experiment is run with flag start_right_away=False, then you have to type 'r' to start the experiment.
+TIP: to make the interactive command line interface of the dash controller independent from current ssh session, it is recommended to use tmux:
+tmux new-session -d 'python zk_github_experiment.py 126'
+
+Quick tmux guide:
+tmux list-session -shows list of all running tmux session
+tmux attach -t <session_id> -switched to the selected session
+<ctrl>+b  +  d -detaches opened tmux session
 
