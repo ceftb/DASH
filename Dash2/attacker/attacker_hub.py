@@ -30,23 +30,25 @@ class AttackerHub(WorldHub):
         }
 
     # Scan for computers connected to the current computer
-    def host_scanner(self, agent_id, (executable, host)):
+    def host_scanner(self, agent_id, executable_host):
         # It's up to the agent to ensure it can actually run a scan from the host machine
+        (executable, host) = executable_host
         if host[1:] in self.network:
             return 'success', self.network[host[1:]].reachable
         else:
             return 'fail'
 
-    def port_scanner(self, agent_id, (executable, host, target)):
+    def port_scanner(self, agent_id, executable_host_target):
         # For now ignore the executable and host, assume it works and that target is a constant,
         # and return the services for the matching target machine
+        (executable, host, target) = executable_host_target
         if target[1:] in self.network:
             return 'success', self.network[target[1:]].services
         else:
             return 'fail', 'no such host:', target, 'or target is not reachable from', host
 
     def check_sql_vulnerability(self, agent_id, action):
-        print 'checking sql vulnerability with arguments', action
+        print('checking sql vulnerability with arguments', action)
         return 'success'
 
     def sql_injection_read_file(self, agent_id, action):
