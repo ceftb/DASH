@@ -37,7 +37,7 @@ class DASHAgent(Client, System2Agent, System1Agent, HumanTraits):
         iteration = 0
         while next_action is not None and (max_iterations < 0 or iteration < max_iterations):
             if self.traceAction:
-                print self.id, "next action is", next_action
+                print(self.id, "next action is", next_action)
             result = self.performAction(next_action)
             self.update_beliefs(result, next_action)
             self.spreading_activation()
@@ -45,9 +45,9 @@ class DASHAgent(Client, System2Agent, System1Agent, HumanTraits):
             self.system1_decay()
             iteration += 1
         if self.traceLoop and next_action is None:
-            print "Exiting simulation: no action chosen"
+            print("Exiting simulation: no action chosen")
         elif self.traceLoop and 0 <= max_iterations <= iteration:
-            print "Exiting simulation: finished finite agent cycles:", iteration, "of max", max_iterations
+            print("Exiting simulation: finished finite agent cycles:", iteration, "of max", max_iterations)
         if disconnect_at_end:
             self.disconnect()
         # return the action chosen so the caller can tell if there is more for the agent to do
@@ -63,7 +63,7 @@ class DASHAgent(Client, System2Agent, System1Agent, HumanTraits):
 
     # If system1 proposes some actions, should the agent just go with them or opt to employ deliberative reasoning?
     def reject_reasoning(self, system1_action_nodes):
-        print 'considering system1 suggested actions ', [n.fact[1:] for n in system1_action_nodes]
+        print('considering system1 suggested actions ', [n.fact[1:] for n in system1_action_nodes])
         return True  # try system 1 if it's available
 
     def primitiveActions(self, l):
@@ -93,12 +93,12 @@ class DASHAgent(Client, System2Agent, System1Agent, HumanTraits):
 
     def update_beliefs(self, result, action):
         if self.traceUpdate:
-            print "Updating beliefs based on action", action, "with result", result
+            print("Updating beliefs based on action", action, "with result", result)
         if result == 'TryAgain':
             return  # in some cases, want the side effects to happen and then re-try the same goal.
         elif not result and not self.isTransient(action):
             if self.traceUpdate:
-                print "Adding known false", action
+                print("Adding known false", action)
             self.knownFalseTuple(action)
             self.add_activation(action, 0.3)  # smaller bump for a failed action
         if isinstance(result, list):
@@ -106,7 +106,7 @@ class DASHAgent(Client, System2Agent, System1Agent, HumanTraits):
                 concrete_result = substitute(action, bindings)
                 if not self.isTransient(concrete_result):
                     if self.traceUpdate:
-                        print "Adding known true and performed", concrete_result
+                        print("Adding known true and performed", concrete_result)
                     self.knownTuple(concrete_result)   # Mark action as performed/known
                     self.knownTuple(('performed', concrete_result))   # Adding both lets both idioms be used in the agent code.
                 self.add_activation(concrete_result, 0.8)
@@ -127,7 +127,7 @@ class DASHAgent(Client, System2Agent, System1Agent, HumanTraits):
 
     # A null action that always succeeds, useful for dummy steps
     def succeed(self, action):
-        print "Primitive action", action, "trivially succeeds"
+        print("Primitive action", action, "trivially succeeds")
         return [{'performed': action}]
 
 
