@@ -50,8 +50,9 @@ class DashTrial(Trial):
                          "task_full_id": task_full_id,
                          "parameters": []}
             for par in self.__class__.parameters:
-                task_data[par.name] = getattr(self, par.name)
+                task_data[par.name] = getattr(self, par.name) # parameter values are stored in task_data json object
                 task_data["parameters"].append(par.name) # work processor needs to know list of parameters (names)
+            self.init_task_params(task_full_id, task_data)
             self.zk.ensure_path(task_path)
             self.zk.set(task_path, json.dumps(task_data))
 
@@ -72,6 +73,9 @@ class DashTrial(Trial):
                         return False
                 return True
             task_number += 1
+
+    def init_task_params(self, task_full_id, data):
+        pass
 
     # partial_dependent is a dictionary of dependent vars
     def append_partial_results(self, partial_dependent):
