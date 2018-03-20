@@ -131,6 +131,6 @@ class DashController:
                             print "Node " + str(node_id) + " tasks: " + str(tasks) + " - iteration: " + str(st["iteration"]) \
                                   + ", last update: " + str(time.strftime("%b %d %Y %H:%M:%S", time.gmtime(float(st["update time"]))))
                         else:
-                            print "No status for " + str(task_status) + ". Task was not accepted by worker."
+                            print "No status for " + str(task_status) + ". Task has not been accepted by worker yet."
                     except Exception as err:
                         print "Error " + str(err)
