@@ -86,15 +86,17 @@ known haveControl(_localhost)  # attack can launch scans etc from these hosts
     # there can only be one argument. Will fix.
 
     # This is simplified right now to get the big picture
-    def gain_control(self, (predicate, host)):
+    def gain_control(self, predicate_host):
+        predicate, host = predicate_host
         return [{}]
 
-    def host_scanner(self, (predicate, source, executable, target)):
-        print "Running host scan on", source, "with", executable  # Assume target is a variable
+    def host_scanner(self, params):
+        (predicate, source, executable, target) = params
+        print("Running host scan on {} with {}".format(source, executable))  # Assume target is a variable
         if not self.realAttack:
             if self.connected:  # simulate the attack via the hub
                 status, result = self.sendAction("host_scanner", (executable, source))
-                print "**host_scanner result is", status, result
+                print("**host_scanner result is", status, result)
                 if status == 'success':
                     return [{target: x} for x in result]
                 else:
@@ -105,29 +107,30 @@ known haveControl(_localhost)  # attack can launch scans etc from these hosts
             return []
 
     # 'action' is a term, e.g. ('portScanner', '_server1', _80, 'protocol')
-    def port_scanner(self, (goal, host, executable, target, portVar, protocolVar)):
+    def port_scanner(self, params):
         # Will expand to a call to nmap here
-        print "called portScanner on", host, target, portVar, protocolVar
+        (goal, host, executable, target, portVar, protocolVar) = params
+        print("called portScanner on", host, target, portVar, protocolVar)
         # Target needs to be bound
         if not isConstant(target):
-            print "Host needs to be bound on calling portScanner:", target
+            print("Host needs to be bound on calling portScanner:", target)
             return False
         if not self.realAttack:
             if self.connected:
                 status, scan_results = self.sendAction("port_scanner", (executable, host, target))
-                print 'scan_results:', scan_results
+                print('scan_results:', scan_results)
                 if status == 'success':
                     return [{portVar: "_" + str(port), protocolVar: "_" + scan_results[port]} for port in scan_results]
                 else:
                     return []
             else:
-                print "**Simulating port scan with", executable[1:], "returning http on port 80"
+                print("**Simulating port scan with", executable[1:], "returning http on port 80")
                 return [{portVar: "_80", protocolVar: '_http'}]  # simulate a web server
         proc = None
         try:
             proc = subprocess.check_output([executable[1:], target[1:]]).split('\n') # runs nmap if it's in the path
         except BaseException as e:
-            print "Unable to run", executable[1:], e
+            print("Unable to run", executable[1:], e)
             return []
         bindings_list = []
         reading_ports = False
@@ -152,18 +155,19 @@ known haveControl(_localhost)  # attack can launch scans etc from these hosts
                     bindings_list.append({portVar: port})
                 elif portVar == port and protocolVar == protocol:
                     bindings_list.append({})   # constants all match, record success
-        print "port scanner", executable, ":", bindings_list
+        print("port scanner", executable, ":", bindings_list)
         return bindings_list
 
     # Check out a page to find a likely SQL vulnerability. Right now faked here. Expect
     # target and port to be bound, supply base_url and parameter if it works.
     # They will be passed to something like check_sql_vulnerability below.
-    def likely_vuln_check_page(self, (predicate, target, port, base_url, parameter)):
-        print "Looking for potential sql injection vulnerability on", target, port
+    def likely_vuln_check_page(self, params):
+        (predicate, target, port, base_url, parameter) = params
+        print("Looking for potential sql injection vulnerability on", target, port)
         return [{base_url: 'cards.php', parameter: '_select'}]
 
     def check_sql_vulnerability(self, action):
-        print "Checking sql vulnerability with action", action
+        print("Checking sql vulnerability with action", action)
         # Expect everything to be bound and use sqlmap to check there is a vulnerability there
         # Remove the prefix underscores
         [host, port, base, parameter] = [arg[1:] for arg in action[1:]]
@@ -172,14 +176,14 @@ known haveControl(_localhost)  # attack can launch scans etc from these hosts
                 status = self.sendAction("check_sql_vulnerability", (host, port, base, parameter))
                 return [{}] if status == 'success' else []
             else:
-                print "** Simulating sql map finding a vulnerability on", host
+                print("** Simulating sql map finding a vulnerability on", host)
                 return [{}]    # no bindings, just report finding a vulnerability
         proc = None
         call = ["python", self.SQLMapHome + "/sqlmap.py", "-u", "http://" + host + ":" + port + "/" + base + "?" + parameter + "=1"]
         try:
             proc = subprocess.Popen(call, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
         except BaseException as e:
-            print "Unable to run sqlmap:", e
+            print("Unable to run sqlmap:", e)
             return []
         result = []
         printing = False
@@ -197,36 +201,36 @@ known haveControl(_localhost)  # attack can launch scans etc from these hosts
                 result = [{}]    # This would signify success without adding new bindings
                 printing = True
             if printing:
-                print("SQLMap: " + line)
+                print(("SQLMap: " + line))
                 if "---" in line:
                     seen_dashes += 1
                     if seen_dashes == 2:
                         printing = False
             if "o you want to" in line:  # I suspect these lines are actually sent to stderr - they don't seem
                 # to show up here.
-                print "SQLMap (answering):", line
+                print("SQLMap (answering):", line)
                 proc.stdin.write('\n')    # take the default option
             if "starting" or "shutting down" in line:
-                print "SQLMap:", line
+                print("SQLMap:", line)
             if "shutting down" in line:
                 line = ""
             line = proc.stdout.readline()
-        print "Finished sqlmap"
-        print proc.communicate()
+        print("Finished sqlmap")
+        print(proc.communicate())
         return result
 
     def SQLInjectionReadFile(self, args):
-        print "Performing sql injection attack to read a file with args", args
+        print("Performing sql injection attack to read a file with args", args)
         [source, target, targetFile, port, baseUrl, parameter] = [arg[1:] for arg in args[1:]]  # assume constants, remove _
         # Call is very similar to sqlMap above with an extra --file-read argument
         if not self.realAttack:
             if self.connected:
                 status, file_contents = self.sendAction("sql_injection_read_file",
                                                         (target, targetFile, port, baseUrl, parameter))
-                print 'status:', status, file_contents
+                print('status:', status, file_contents)
                 return [{}] if status == 'success' else []
             else:
-                print "** simulating sql injection attack success for ", target, targetFile, port, baseUrl, parameter
+                print("** simulating sql injection attack success for ", target, targetFile, port, baseUrl, parameter)
                 return [{}]  # simulate success in reading the file (it is stored locally by sqlmap in the real attack)
         result = []
         try:
@@ -243,15 +247,15 @@ known haveControl(_localhost)  # attack can launch scans etc from these hosts
             line = proc.stdout.readline()
             while line != "":
                 line = line.translate(None, control)
-                print "SQLMap read:", line
+                print("SQLMap read:", line)
                 if 'o you want to' in line:
-                    print "Sending default answer:", line
+                    print("Sending default answer:", line)
                     proc.stdin.write('\n')
                 if "the local file" in line:
                     result = [{}]  # Remote file was stored to a local file. Mark success of the action.
                 line = proc.stdout.readline()
         except BaseException as e:
-            print "Unable to run sqlmap to read file:", e
+            print("Unable to run sqlmap to read file:", e)
         return result
 
 
