@@ -38,7 +38,7 @@ goalRequirements MakeRepo
         self.server_host = kwargs.get("host", "localhost")
         self.server_port = kwargs.get("port", 5678)
         self.trace_client = kwargs.get("trace_client", True)
-        registration = self.register()
+        registration = self.register({"id": kwargs.get("id", None), "freqs": kwargs.get("freqs", {})})
 
         # Setup information
         self.use_model_assignment = kwargs.get("use_model", True)
@@ -83,6 +83,11 @@ goalRequirements MakeRepo
         self.following_list = {} # ght_id_h: {full_name_h, following_date, following_dow}
         self.watching_list = {} # ght_id_h: {full_name_h, watching_date, watching_dow}
         self.owned_repos = {} # {ght_id_h : name_h}
+        if kwargs.get("freqs") is not None:
+            self.repo_id_to_freq = kwargs.get("freqs").copy()
+        else:
+            self.repo_id_to_freq = {}  # {ght_id_h : frequency of use/communication} Contains all repos agent interacted with
+
         self.name_to_repo_id = {} # {name_h : ght_id_h} Contains all repos known by the agent
         self.name_to_user_id = {} # {login_h : ght_id_h} Contains all users known by the agent
         self.known_issue_comments = {} # key: (repo_name) value: [(issue #)]
