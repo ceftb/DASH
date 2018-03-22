@@ -91,6 +91,17 @@ class GithubStateLoader(object):
         return profiles
 
     @staticmethod
+    def loadIterativelyProfilesFile(filename, profile_handler):
+        profile = Profile(None, None, None)
+        with open(filename, 'r') as f:
+            records = ijson.items(f, 'item')
+            for rec in records:
+                profile.id = int(rec["id"])
+                profile.freqs = rec["f"]
+                profile_handler(profile)
+            f.close()
+
+    @staticmethod
     def partitionProfilesFile(filename, number_of_partitions):
         number_of_records_in_file = 0
         with open(filename, 'r') as f:

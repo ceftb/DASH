@@ -62,10 +62,23 @@ class ZkRepoHub(GitRepoHub):
         return "Success", self.local_event_log
 
     def processRegisterRequest(self, agent_id, aux_data):
+        if (agent_id == None):
+            agent_id = aux_data["id"]
         creation_time = time()
         self.log_event(agent_id, None, "CreateUser", "None", creation_time)
-        self.users.add(agent_id)
-        return ["success", agent_id, creation_time]
+
+        agent_path = "/experiments/" + str(self.exp_id) + "/trials/" + str(self.trial_id) + "/users/" + str(agent_id)
+        self.zk.ensure_path(agent_path)
+        raw_data, _ = self.zk.get(agent_path)
+        data = None
+        if raw_data is not None and raw_data != "":
+            data = json.loads(raw_data)
+        else:
+            data = {"freqs": {}}
+        data["freqs"] = aux_data["freqs"]
+        self.zk.set(agent_path, json.dumps(data))
+
+        return ["success", aux_data["id"], creation_time]
 
     def terminateWork(self):
         self.dump_event_log(self.repo_hub_id)

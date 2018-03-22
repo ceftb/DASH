@@ -22,18 +22,22 @@ class ZkGithubStateWorkProcessor(DashWorkProcessor):
 
     def __init__(self, zk, host_id, task_full_id, data):
         DashWorkProcessor.__init__(self, zk, host_id, task_full_id, data, ZkRepoHub(zk, task_full_id))
-        users_profiles = GithubStateLoader.loadProfilesFile(self.users_file)
-        for user in users_profiles:
-            a = GitUserAgent(useInternalHub=True, hub=self.hub, trace_client=False)
-            a.trace_client = False  # cut chatter when connecting and disconnecting
-            a.traceLoop = False  # cut chatter when agent runs steps
-            a.trace_github = False  # cut chatter when acting in github world
-            self.agents.append(a)
+        GithubStateLoader.loadIterativelyProfilesFile(self.users_file, self.populate_agents_collection)
+
+    def populate_agents_collection(self, profile):
+        a = GitUserAgent(useInternalHub=True, hub=self.hub, id=profile.id, freqs=profile.freqs,
+                         trace_client=False, traceLoop=False, trace_github=False)
+        a.trace_client = False
+        a.traceLoop = False  # cut chatter when agent runs steps
+        a.trace_github = False  # cut chatter when acting in github world
+
+        for repo_id, freq in profile.freqs.iteritems():
+            a.repo_id_to_freq[repo_id] = freq
+        self.agents.append(a)
 
     def run_one_iteration(self):
-        if not self.agents or random.random() < self.prob_create_new_agent:  # Have to create an agent in the first step
+        if not self.agents or random.random() < self.prob_create_new_agent:
             a = GitUserAgent(useInternalHub=True, hub=self.hub, trace_client=False)
-            a.trace_client = False  # cut chatter when connecting and disconnecting
             a.traceLoop = False  # cut chatter when agent runs steps
             a.trace_github = False  # cut chatter when acting in github world
             # print 'created agent', a
@@ -106,7 +110,7 @@ if __name__ == "__main__":
         print 'incorrect arguments: ', sys.argv
 
     max_iterations = 3000
-    num_trials = 3
+    num_trials = 1
     independent = ['prob_create_new_agent', Range(0.0, 0.1, 0.1)]
     exp_data = {'max_iterations': max_iterations}
 
