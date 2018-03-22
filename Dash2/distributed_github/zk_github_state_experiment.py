@@ -22,8 +22,8 @@ class ZkGithubStateWorkProcessor(DashWorkProcessor):
 
     def __init__(self, zk, host_id, task_full_id, data):
         DashWorkProcessor.__init__(self, zk, host_id, task_full_id, data, ZkRepoHub(zk, task_full_id))
-        users_profiles = GithubStateLoader.loadProfiles(self.users_file)
-        for u in users_profiles:
+        users_profiles = GithubStateLoader.loadProfilesFile(self.users_file)
+        for user in users_profiles:
             a = GitUserAgent(useInternalHub=True, hub=self.hub, trace_client=False)
             a.trace_client = False  # cut chatter when connecting and disconnecting
             a.traceLoop = False  # cut chatter when agent runs steps
@@ -65,16 +65,15 @@ class ZkGithubStateTrial(DashTrial):
 
     def initialize(self):
         self.results = {"num_agents": 0, "num_repos": 0, "total_agent_activity": 0}
-
+        self.users_file_name = "./data/sample_head_100.csv_users.json"
         # prepare task files for individual dash workers
-        GithubStateLoader.partitionProfilesFile("./data/users_full.json", self.number_of_hosts)
-        GithubStateLoader.partitionProfilesFile("./data/repos_full.json", self.number_of_hosts)
+        GithubStateLoader.partitionProfilesFile(self.users_file_name, self.number_of_hosts)
 
     # method defines parameters for individual tasks (as a json data object ) that will be sent to dash workers
     def init_task_params(self, task_full_id, data):
         self.exp_id, self.trial_id, self.task_num = task_full_id.split("-") # self.task_num by default is the same as node id
-        data["users_file"] = "./data/users_full_" + str(task_full_id)
-        data["hubs_file"] = "./data/repos_full_" + str(task_full_id)
+        data["users_file"] = self.users_file_name + "_"+ str(int(self.task_num) - 1)
+        data["parameters"].append("users_file")
 
     # partial_dependent is a dictionary of dependent vars
     def append_partial_results(self, partial_dependent):
@@ -108,7 +107,7 @@ if __name__ == "__main__":
 
     max_iterations = 3000
     num_trials = 3
-    independent = ['prob_create_new_agent', Range(0.5, 0.6, 0.1)]
+    independent = ['prob_create_new_agent', Range(0.0, 0.1, 0.1)]
     exp_data = {'max_iterations': max_iterations}
 
     # ExperimentController is a until class that provides command line interface to run the experiment on clusters
