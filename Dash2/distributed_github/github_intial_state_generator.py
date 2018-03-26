@@ -168,22 +168,25 @@ class GithubStateLoader(object):
                     print "repos: ", len(repo_hash_to_profile_map)
             print counter
 
-        '''
+        #'''
         # to user this counter need to change user_profile.update_freqs(repo_profile.int_id) to user_profile.update_freqs(hash(repo_profile.id))
         counter = 0
+        counter2 = 0
         for repo_hash, repo_profile in repo_hash_to_profile_map.iteritems():
             if len(repo_profile.freqs) == 1:
+                counter2 += 1
                 for user_hash, fr in repo_profile.freqs.iteritems():
                     if len(user_hash_to_profile_map[user_hash].freqs) == 1:
                         counter += 1
         print "Number of users with only one repo (visa versa) ", counter
+        print "Number of repos with only one user ", counter2
 
         counter = 0
         for u_hash, user_profile in user_hash_to_profile_map.iteritems():
             if len(user_profile.freqs) == 1:
                 counter += 1
         print "Number of users with only one repo ", counter
-        '''
+        #'''
 
         GithubStateLoader.print_to_file(user_hash_to_profile_map, users_file)
         GithubStateLoader.print_to_file(repo_hash_to_profile_map, repos_file)
@@ -205,8 +208,8 @@ class GithubStateLoader(object):
             user_profile = GithubStateLoader.get_profile_and_update_map_if_new(user_map, user_id, hash(user_id))
             repo_profile = GithubStateLoader.get_profile_and_update_map_if_new(repo_map, repo_id, hash(repo_id))
 
-            user_profile.update_freqs(repo_profile.int_id)
-            repo_profile.update_freqs(user_profile.int_id)
+            user_profile.update_freqs(hash(repo_profile.id))
+            repo_profile.update_freqs(hash(user_profile.id))
 
     @staticmethod
     def get_profile_and_update_map_if_new(map, id, id_hash):
@@ -251,7 +254,7 @@ class Profile:
         return hash(self.id)
 
 if __name__ == "__main__":
-    if len(sys.argv) == 2:
+    if len(sys.argv) == 2 or len(sys.argv) == 3:
         filename = sys.argv[1]
         while True:
             cmd = raw_input(
@@ -274,7 +277,7 @@ if __name__ == "__main__":
                 print "users: ", len(users)
             elif cmd == "p":
                 print "Partitioning file ..."
-                GithubStateLoader.partitionProfilesFile(filename, 1)
+                GithubStateLoader.partitionProfilesFile(filename, int(sys.argv[2]))
                 print "partitioned"
             else:
                 print "Unrecognized command " + cmd + "\n"
