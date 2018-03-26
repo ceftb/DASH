@@ -24,6 +24,7 @@ class ZkGithubStateWorkProcessor(DashWorkProcessor):
         DashWorkProcessor.__init__(self, zk, host_id, task_full_id, data, ZkRepoHub(zk, task_full_id))
         GithubStateLoader.loadIterativelyProfilesFile(self.users_file, self.populate_agents_collection)
 
+    # function takes user profile and creates an agent, new agent is added to the pool of agents.
     def populate_agents_collection(self, profile):
         a = GitUserAgent(useInternalHub=True, hub=self.hub, id=profile.id, freqs=profile.freqs,
                          trace_client=False, traceLoop=False, trace_github=False)
@@ -34,6 +35,9 @@ class ZkGithubStateWorkProcessor(DashWorkProcessor):
         for repo_id, freq in profile.freqs.iteritems():
             a.repo_id_to_freq[repo_id] = freq
         self.agents.append(a)
+
+    def populate_repo_collection(self, profile):
+        pass
 
     def run_one_iteration(self):
         if not self.agents or random.random() < self.prob_create_new_agent:
@@ -69,9 +73,9 @@ class ZkGithubStateTrial(DashTrial):
 
     def initialize(self):
         self.results = {"num_agents": 0, "num_repos": 0, "total_agent_activity": 0}
-        self.users_file_name = "./data/sample_head_100.csv_users.json"
+        self.users_file_name = "./data/users_full.json"
         # prepare task files for individual dash workers
-        GithubStateLoader.partitionProfilesFile(self.users_file_name, self.number_of_hosts)
+        #GithubStateLoader.partitionProfilesFile(self.users_file_name, self.number_of_hosts)
 
     # method defines parameters for individual tasks (as a json data object ) that will be sent to dash workers
     def init_task_params(self, task_full_id, data):
