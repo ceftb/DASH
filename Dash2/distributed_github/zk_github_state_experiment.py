@@ -22,18 +22,22 @@ class ZkGithubStateWorkProcessor(DashWorkProcessor):
 
     def __init__(self, zk, host_id, task_full_id, data):
         DashWorkProcessor.__init__(self, zk, host_id, task_full_id, data, ZkRepoHub(zk, task_full_id))
-        GithubStateLoader.loadIterativelyProfilesFile(self.users_file, self.populate_agents_collection)
+        GithubStateLoader.load_profiles_from_file(self.users_file, self.populate_agents_collection)
+        print "Agents: ", len(self.agents)
 
     # function takes user profile and creates an agent, new agent is added to the pool of agents.
     def populate_agents_collection(self, profile):
-        a = GitUserAgent(useInternalHub=True, hub=self.hub, id=profile.id, freqs=profile.freqs,
+        a = GitUserAgent(useInternalHub=True, hub=self.hub, id=profile["id"],
                          trace_client=False, traceLoop=False, trace_github=False)
         a.trace_client = False
         a.traceLoop = False  # cut chatter when agent runs steps
         a.trace_github = False  # cut chatter when acting in github world
 
-        for repo_id, freq in profile.freqs.iteritems():
-            a.repo_id_to_freq[repo_id] = freq
+        # associated repos:
+        for repo_id, freq in profile.iteritems():
+            if repo_id != "id":
+                a.repo_id_to_freq[int(repo_id)] = int(freq["f"])
+
         self.agents.append(a)
 
     def populate_repo_collection(self, profile):
@@ -73,7 +77,7 @@ class ZkGithubStateTrial(DashTrial):
 
     def initialize(self):
         self.results = {"num_agents": 0, "num_repos": 0, "total_agent_activity": 0}
-        self.users_file_name = "./data/users_full.json"
+        self.users_file_name = "./data/data.csv_users.json"
         # prepare task files for individual dash workers
         #GithubStateLoader.partitionProfilesFile(self.users_file_name, self.number_of_hosts)
 
