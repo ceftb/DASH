@@ -26,6 +26,9 @@ class ZkRepoHub(GitRepoHub):
         self.trace_handler = False
         self.local_repo_id_counter = 0
 
+    def init_repo(self, zk, repo_id, user_id):
+        pass
+
     def log_event(self, user_id, repo_id, event_type, subevent_type, time):
         """
         Logs the event in the hubs local log list
