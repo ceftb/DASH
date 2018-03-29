@@ -26,6 +26,9 @@ class ZkRepoHub(GitRepoHub):
         self.trace_handler = False
         self.local_repo_id_counter = 0
 
+    def init_repo(self, zk, repo_id, user_id):
+        pass
+
     def log_event(self, user_id, repo_id, event_type, subevent_type, time):
         """
         Logs the event in the hubs local log list
@@ -62,10 +65,41 @@ class ZkRepoHub(GitRepoHub):
         return "Success", self.local_event_log
 
     def processRegisterRequest(self, agent_id, aux_data):
+        if (agent_id == None):
+            agent_id = int(aux_data["id"])
         creation_time = time()
         self.log_event(agent_id, None, "CreateUser", "None", creation_time)
-        self.users.add(agent_id)
-        return ["success", agent_id, creation_time]
+
+        sub_tree_1 = agent_id % 10
+
+        agent_path = "/experiments/" + str(self.exp_id) + "/trials/" + str(self.trial_id) + "/users/" + str(agent_id % 100) + "/" + str(agent_id)
+        self.zk.ensure_path(agent_path)
+        raw_data, _ = self.zk.get(agent_path)
+        data = None
+        if raw_data is not None and raw_data != "":
+            data = json.loads(raw_data)
+        else:
+            data = {"freqs": {}}
+        data["freqs"] = aux_data["freqs"]
+        self.zk.set(agent_path, json.dumps(data))
+
+        return ["success", aux_data["id"], creation_time]
+
+    def get_agent_shared_state(self, agent_id):
+        pass
+
+    def update_agent_shared_state(self, agent_id, data_delta):
+        pass
+
+    def get_entity_path(self, entity_id):
+        path = "/"
+        id = int(entity_id)
+        for i in range(6, 0, -1):
+            path = path + str(id / pow(10, i)) + "/"
+            id = id % pow(10, i)
+        path = path + str(id)
+        # print path
+        return path
 
     def terminateWork(self):
         self.dump_event_log(self.repo_hub_id)
@@ -97,7 +131,7 @@ class ZkRepoHub(GitRepoHub):
         repo_info['created_at'] = repo_creation_date
         self.local_repos[repo_id] = GitRepo(repo_id, **repo_info)
         self.log_event(agent_id, repo_id, 'CreateEvent', 'Repository', repo_creation_date)
-
+        '''
         repo_path = "/experiments/" + str(self.exp_id) + "/trials/" + str(self.trial_id) + "/repos"
         self.zk.ensure_path(repo_path)
         raw_data, _ = self.zk.get(repo_path)
@@ -109,6 +143,7 @@ class ZkRepoHub(GitRepoHub):
         data["number_of_repos"] = int(data["number_of_repos"]) + 1
         data["last_repo_id"] = repo_id
         self.zk.set(repo_path, json.dumps(data))
+        '''
 
         return 'success', repo_id
 

@@ -105,7 +105,10 @@ class Client(object):
         """
 
         if self.useInternalHub:
-            response = [self.hub, self.id, None]
+            if len(aux_data) != 0:
+                response = self.hub.processRegisterRequest(self.id, aux_data)
+            else:
+                response = [self.hub, self.id, None]
         else:
             try:
                 if self.trace_client:

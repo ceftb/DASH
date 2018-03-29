@@ -14,7 +14,11 @@ class DashWorkProcessor:
         self.task_id = task_full_id
         self.max_iterations = int(data["max_iterations"])
         for param in data["parameters"] :
-            setattr(self, param, float(data[param])) # TBD need to add support of other types
+            if is_number(data[param]):
+                setattr(self, param, float(data[param]))
+            else:
+                setattr(self, param, str(data[param]))
+
         # hube must be overriden in subclasses
         self.hub = GitRepoHub if hub is None else hub
         self.iteration = 0
@@ -84,3 +88,11 @@ class DashWorkProcessor:
 
     def process_after_run(self):  # do any book-keeping needed after the trial ends and before agents are disconnected
         pass
+
+
+def is_number(s):
+    try:
+        float(s)
+        return True
+    except ValueError:
+        return False
