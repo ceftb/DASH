@@ -10,6 +10,15 @@
 *.sublime*
 
 *.pyobj
+*.log
+*.aux
+
+build/
+dist/
+*egg-info/
 
 # Mac related files
 .DS_Store
+
+# backup files
+*~
