@@ -23,6 +23,7 @@ class ZkGithubStateWorkProcessor(DashWorkProcessor):
     def __init__(self, zk, host_id, task_full_id, data):
         DashWorkProcessor.__init__(self, zk, host_id, task_full_id, data, ZkRepoHub(zk, task_full_id))
         GithubStateLoader.load_profiles_from_file(self.users_file, self.populate_agents_collection)
+        self.agent_id_to_total_events = {}
         print "Agents: ", len(self.agents)
 
     # function takes user profile and creates an agent, new agent is added to the pool of agents.
@@ -33,11 +34,15 @@ class ZkGithubStateWorkProcessor(DashWorkProcessor):
         a.traceLoop = False  # cut chatter when agent runs steps
         a.trace_github = False  # cut chatter when acting in github world
 
-        # associated repos:
+        # frequency of use of associated repos:
+        total_even_counter = 0
         for repo_id, freq in profile.iteritems():
             if repo_id != "id":
-                a.repo_id_to_freq[int(repo_id)] = int(freq["f"])
-
+                int_repo_id = int(repo_id)
+                a.repo_id_to_freq[int_repo_id ] = int(freq["f"])
+                total_even_counter += a.repo_id_to_freq[int_repo_id]
+                self.hub.init_repo(self.zk, int_repo_id, a.id)
+        self.agent_id_to_total_events[a.id] = total_even_counter
         self.agents.append(a)
 
     def populate_repo_collection(self, profile):
