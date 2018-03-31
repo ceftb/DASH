@@ -1,6 +1,4 @@
 import sys; sys.path.extend(['../../'])
-from Dash2.github.git_repo import GitRepo
-
 
 class ZkGitRepo():
     """
@@ -8,11 +6,12 @@ class ZkGitRepo():
     Object is memory efficient and designed for large scale simulations
     """
 
-    def __init__(self, id, **kwargs):
+    def __init__(self, id, curr_time, **kwargs):
         self.id = int(id)
         # zookeeper synchronization:
         self.unsynchronized_events_counter = 0 # number of events/actions with the repo since last synchronization
-        self.last_time_synchronized = 0
+        self.last_time_synchronized = curr_time
+        self.last_time_updated = curr_time
         self.is_node_shared = False # repo is shared if it is used on multiple dash workers
 
         # model of the repo, statistic
@@ -36,113 +35,141 @@ class ZkGitRepo():
     ############################################################################
 
     def issue_opened_event(self, updated_at):
-        pass
+        self.last_time_updated = updated_at
+        self.unsynchronized_events_counter += 1
         return 111
 
     def issue_reopened_event(self, issue_id, updated_at):
-        pass
+        self.last_time_updated = updated_at
+        self.unsynchronized_events_counter += 1
         return True
 
     def issue_closed_event(self, issue_id, updated_at):
-        pass
+        self.last_time_updated = updated_at
+        self.unsynchronized_events_counter += 1
         return True
 
     def issue_assigned_event(self, issue_id, updated_at, user_id):
-        pass
+        self.last_time_updated = updated_at
+        self.unsynchronized_events_counter += 1
         return True
 
     def issue_unassigned_event(self, issue_id, updated_at):
-        pass
+        self.last_time_updated = updated_at
+        self.unsynchronized_events_counter += 1
         return True
 
     def issue_labeled_event(self, issue_id, updated_at):
-        pass
+        self.last_time_updated = updated_at
+        self.unsynchronized_events_counter += 1
         return True
 
     def issue_unlabeled_event(self, issue_id, updated_at):
-        pass
+        self.last_time_updated = updated_at
+        self.unsynchronized_events_counter += 1
         return True
 
     def issue_milestoned_event(self, issue_id, updated_at):
-        pass
+        self.last_time_updated = updated_at
+        self.unsynchronized_events_counter += 1
         return True
 
     def issue_demilestoned_event(self, issue_id, updated_at):
-        pass
+        self.last_time_updated = updated_at
+        self.unsynchronized_events_counter += 1
         return True
 
     def create_comment_event(self, comment_info):
         pass
+        self.unsynchronized_events_counter += 1
         return 111
 
     def edit_comment_event(self, comment_id, comment):
         pass
+        self.unsynchronized_events_counter += 1
         return True
 
     def delete_comment_event(self, comment_id):
         pass
+        self.unsynchronized_events_counter += 1
         return True
 
     def commit_comment_event(self, agent_id, commit_info):
         pass
+        self.unsynchronized_events_counter += 1
         return True
 
     def create_tag_event(self, tag_name, tag_creation_date):
         pass
+        self.unsynchronized_events_counter += 1
         return True
 
     def create_branch_event(self, branch_name, branch_creation_date):
         pass
+        self.unsynchronized_events_counter += 1
         return True
 
 
     def delete_tag_event(self, tag_name):
         pass
+        self.unsynchronized_events_counter += 1
         return True
 
 
     def delete_branch_event(self, branch_name):
         pass
+        self.unsynchronized_events_counter += 1
         return True
 
     def member_event(self, agent_id, target_agent, action, permissions=None):
+        self.unsynchronized_events_counter += 1
         return "Successfully removed collaborator"
 
-    def push_event(self, agent_id, commit_to_push):
-
+    def push_event(self, agent_id, commit_to_push, updated_at):
+        self.last_time_updated = updated_at
+        self.unsynchronized_events_counter += 1
         return "Successfully pushed"
 
     def submit_pull_request_event(self, head_id, updated_at):
-        pass
+        self.last_time_updated = updated_at
+        self.unsynchronized_events_counter += 1
         return 111
 
     def close_pull_request_event(self, request_id, updated_at):
-        pass
+        self.last_time_updated = updated_at
+        self.unsynchronized_events_counter += 1
         return True
 
     def reopened_pull_request_event(self, request_id, updated_at):
-        pass
+        self.last_time_updated = updated_at
+        self.unsynchronized_events_counter += 1
         return True
 
     def label_pull_request_event(self, request_id, updated_at):
-        pass
+        self.last_time_updated = updated_at
+        self.unsynchronized_events_counter += 1
         return True
 
     def review_pull_request_event(self, request_id, updated_at):
-        pass
+        self.last_time_updated = updated_at
+        self.unsynchronized_events_counter += 1
         return True
 
     def remove_review_pull_request_event(self, request_id, updated_at):
-        pass
+        self.last_time_updated = updated_at
+        self.unsynchronized_events_counter += 1
         return True
 
     def watch_event(self, user_info):
+        self.unsynchronized_events_counter += 1
         return "Success"
 
+
     def public_event(self, agent_id):
+        self.unsynchronized_events_counter += 1
         return "Success"
 
     def fork_event(self, agent_id, fork_info):
-        pass
+        self.unsynchronized_events_counter += 1
         return True
 
