@@ -1,4 +1,4 @@
-Discreteys; sys.path.extend(['../../'])
+import sys; sys.path.extend(['../../'])
 from kazoo.client import KazooClient
 import time
 import json
