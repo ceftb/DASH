@@ -30,6 +30,7 @@ goalRequirements MakeRepo
   unlabel_pull_request_event(Request)
   review_pull_request_event(Request)
   remove_review_pull_request_event(Request)
+  forget([submit_pull_request_event(RepoName, RepoName), pick_random_pull_request(Request), close_pull_request_event(Request), reopened_pull_request_event(Request), label_pull_request_event(Request)])
             """)
 
         # Registration
