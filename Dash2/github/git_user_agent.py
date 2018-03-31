@@ -509,12 +509,12 @@ goalRequirements MakeRepo
                 print 'Agent does not know the id of the repo with name', base_name, 'cannot pull'
             return []
 
-        status = self.sendAction("reopened_request_event", 
+        status = self.sendAction("reopened_pull_request_event",
                                 (self.name_to_repo_id[base_name], request_id))
         self.outgoing_requests[(head_name, base_name, request_id)] = 'open'
         self.total_activity += 1
         if self.trace_github:
-            print status, 'reopened_request_event', head_name, base_name, request_id
+            print status, 'reopened_pull_request_event', head_name, base_name, request_id
         return [{}]
 
     def assign_pull_request_event(self):
