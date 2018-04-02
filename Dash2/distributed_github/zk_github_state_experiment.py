@@ -18,11 +18,10 @@ from github_intial_state_generator import GithubStateLoader
 class ZkGithubStateWorkProcessor(DashWorkProcessor):
 
     # this is path to current package
-    # I cannot use reflection in super class here because, it would return path to superclass, therefore need to define it explicitly in subclasses
     module_name = "Dash2.distributed_github.zk_github_state_experiment"
 
     def __init__(self, zk, host_id, task_full_id, data):
-        self.log_file = open('event_log_file.txt', 'w')
+        self.log_file = open(task_full_id + '_event_log_file.txt', 'w')
         DashWorkProcessor.__init__(self, zk, host_id, task_full_id, data, ZkRepoHub(zk=zk, task_full_id=task_full_id, start_time=0, log_file=self.log_file))
         self.agent_id_to_total_events = {}
         self.events_heap = []
@@ -32,25 +31,21 @@ class ZkGithubStateWorkProcessor(DashWorkProcessor):
 
     # function takes user profile and creates an agent, new agent is added to the pool of agents.
     def populate_agents_collection(self, profile):
-        a = GitUserAgent(useInternalHub=True, hub=self.hub, id=profile["id"],
+        agent_id = profile.pop("id", None)
+        a = GitUserAgent(useInternalHub=True, hub=self.hub, id=agent_id,
                          trace_client=False, traceLoop=False, trace_github=False)
         # frequency of use of associated repos:
         total_even_counter = 0
         for repo_id, freq in profile.iteritems():
-            if repo_id != "id":
-                int_repo_id = int(repo_id)
-                a.repo_id_to_freq[int_repo_id ] = int(freq["f"])
-                total_even_counter += a.repo_id_to_freq[int_repo_id]
-                if int(freq["c"]) > 1:
-                    self.hub.init_repo(repo_id=int_repo_id, user_id=a.id, curr_time=0, is_node_shared=True)
-                else:
-                    self.hub.init_repo(repo_id=int_repo_id, user_id=a.id, curr_time=0, is_node_shared=False)
+            int_repo_id = int(repo_id)
+            a.repo_id_to_freq[int_repo_id] = int(freq["f"])
+            a.name_to_repo_id[int_repo_id] = int_repo_id
+            total_even_counter += a.repo_id_to_freq[int_repo_id]
+            is_node_shared = True if int(freq["c"]) > 1 else False
+            self.hub.init_repo(repo_id=int_repo_id, user_id=a.id, curr_time=0, is_node_shared=is_node_shared)
         self.agent_id_to_total_events[a.id] = total_even_counter
         heappush(self.events_heap, (a.next_event_time(0, self.max_time), a.id))
         self.agents[a.id] = a
-
-    def populate_repo_collection(self, profile):
-        pass
 
     def run_one_iteration(self):
         event_time, agent_id = heappop(self.events_heap)
@@ -80,11 +75,15 @@ class ZkGithubStateTrial(DashTrial):
 
     measures = [Measure('num_agents'), Measure('num_repos'), Measure('total_agent_activity')]
 
+    is_partitioning_needed = False
+
     def initialize(self):
         self.results = {"num_agents": 0, "num_repos": 0, "total_agent_activity": 0}
-        self.users_file_name = "./data/data.csv_users.json"
+        self.users_file_name = "./data/small.csv_users.json"
         # prepare task files for individual dash workers
-        #GithubStateLoader.partitionProfilesFile(self.users_file_name, self.number_of_hosts)
+        if ZkGithubStateTrial.is_partitioning_needed:
+            # TBD load the total number of agents and pass the number of users to petitioner below
+            GithubStateLoader.partition_profiles_file(self.users_file_name, self.number_of_hosts)
 
     # method defines parameters for individual tasks (as a json data object ) that will be sent to dash workers
     def init_task_params(self, task_full_id, data):

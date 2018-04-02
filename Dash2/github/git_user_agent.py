@@ -2,6 +2,7 @@ import sys; sys.path.extend(['../../'])
 from Dash2.core.dash import DASHAgent
 from Dash2.core.system2 import isVar
 import random
+import numpy
 
 
 class GitUserAgent(DASHAgent):
@@ -99,6 +100,7 @@ goalRequirements UpdateOwnRepo
                 self.name_to_repo_id[r_id] = r_id
         else:
             self.repo_id_to_freq = {}  # {ght_id_h : frequency of use/communication} Contains all repos agent interacted with
+        self.probabilities = None
 
         self.name_to_user_id = {} # {login_h : ght_id_h} Contains all users known by the agent
         self.known_issue_comments = {} # key: (repo_name) value: [(issue #)]
@@ -213,6 +215,14 @@ goalRequirements UpdateOwnRepo
         """
         self.total_activity += 1
 
+        if (self.probabilities is None):
+            self.probabilities = []
+            sum = 0.0
+            for fr in self.repo_id_to_freq.itervalues():
+                sum += fr
+            for fr in self.repo_id_to_freq.itervalues():
+                self.probabilities.append(fr / sum)
+        selected_repo = numpy.random.choice(numpy.arange(1, len(self.repo_id_to_freq)+1), p=self.probabilities)
         return [{repo_name_variable : random.choice(self.repo_id_to_freq.keys()) }]
 
     def pick_random_issue_comment(self, (goal, issue_comment)):
