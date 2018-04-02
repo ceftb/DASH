@@ -27,8 +27,6 @@ class DashWorkProcessor:
 
     def process_task(self):
         if self.zk is not None and self.task_id is not None:
-            for agent in self.agents:
-                agent.traceLoop = False
             while not self.should_stop():
                 self.run_one_iteration()
                 self.process_after_iteration()
@@ -41,8 +39,6 @@ class DashWorkProcessor:
                           + str({"status": "in progress", "iteration": self.iteration, "update time": time.strftime("%b %d %Y %H:%M:%S", time.gmtime(time.time()))})
 
             self.process_after_run()
-            for agent in self.agents:
-                agent.disconnect()
 
             result_path = "/experiments/" + str(self.exp_id) + "/trials/" + str(self.trial_id) + "/nodes/" + str(self.host_id) + "/dependent_variables/"
             dep_vars = self.dependent()
