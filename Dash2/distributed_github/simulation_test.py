@@ -8,46 +8,41 @@ from Dash2.distributed_github.zk_git_repo import ZkGitRepo
 from Dash2.github.git_user_agent import GitUserAgent
 from zk_repo_hub import ZkRepoHub
 
-class TestAgent(GitUserAgent):
-    def __init__(self, id, hub):
-        GitUserAgent.__init__(self, id=int(id), useInternalHub=True, hub=hub, trace_client=False, traceLoop=False, trace_github=False)
-        self.traceLoop = False
-        self.trace_github = False
-
-    def next_event_time(self, curr_time, max_time):
-        return random.uniform(curr_time + 0.5, max_time)
-
 def create_repos(number_of_repos):
     start_time = time.time()
     print "Creating repos ... "
     repos = []
     for i in range(0, number_of_repos):
-        repos.append(ZkGitRepo(id=i))
+        repos.append(ZkGitRepo(i, 0))
     end_time = time.time()
     print "Repos created. Time: ", end_time - start_time
     return repos
 
 if __name__ == "__main__":
     number_of_repos = 2
-    number_of_agents = 50000
-    number_of_events_to_simulate = 500000
-    max_time = 1000000.0
+    number_of_agents = 1000
+    number_of_events_to_simulate = 1000000
+    max_time = 5184000.0 # 60 days = 5184000.0 seconds
     start_sim_time = 0.0
 
-    # memory test for repo objects
-    #repos = create_repos(number_of_repos)
+    # populate repo frequencies
+    repos = {101: 10, 102: 20, 103: 30}
+    #repos = create_repos(number_of_repos) # memory test
 
     # zk hub and log file
     log_file = open('event_log_file.txt', 'w')
     github = ZkRepoHub(None, "1-1-1", start_sim_time, log_file)
+    github.all_repos = {101: ZkGitRepo(id=101, curr_time=0, is_node_shared=True),
+                        102: ZkGitRepo(id=102, curr_time=0, is_node_shared=True),
+                        103: ZkGitRepo(id=103, curr_time=0, is_node_shared=True)}
 
-    # memory test for user/agent objects
+    # populate users/agents
     start_time = time.time()
     print "Creating agents ... "
     events_heap = []
     agents = list()
     for id in range(0, number_of_agents):
-        agent = TestAgent(id, github)
+        agent = GitUserAgent(id=int(id), useInternalHub=True, hub=github, trace_client=False, traceLoop=False, trace_github=False, freqs=repos)
         agents.append(agent)
         heappush(events_heap, (agent.next_event_time(0.0, max_time), agent.id))
     end_time = time.time()
@@ -67,7 +62,8 @@ if __name__ == "__main__":
             print "iteration: ", event_counter, "time per 10K: ", rate_stop_time - rate_start_time
             rate_start_time = time.time()
     end_time = time.time()
-    print "Simulation of simulation is completed. Time: ", end_time - start_time, " Number repos created: ", len(github.all_repos)
+    print "Simulation of simulation is completed. Time: ", end_time - start_time, \
+        " Number repos created: ", len(github.all_repos), " Number sync events: ", github.sync_event_counter
 
     log_file.close()
     cmd = raw_input("Press any key to exit")

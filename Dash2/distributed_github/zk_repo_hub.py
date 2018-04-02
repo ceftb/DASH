@@ -13,9 +13,12 @@ class ZkRepoHub(GitRepoHub):
     A class that handles client requests and modifies the desired repositories
     """
 
+    sync_event_counter = 0
+
     def __init__(self, zk, task_full_id, start_time, log_file):
         WorldHub.__init__(self, None)
         self.trace_handler = False
+        ZkGitRepo.sync_event_callback = self.event_counter_callback
 
         self.zk = zk
         self.task_full_id = task_full_id
@@ -28,8 +31,8 @@ class ZkRepoHub(GitRepoHub):
         self.time = start_time
 
 
-    def init_repo(self, zk, repo_id, user_id):
-        pass
+    def init_repo(self, zk, repo_id, user_id, curr_time, is_node_shared):
+        self.all_repos[repo_id] = ZkGitRepo(id=repo_id, curr_time=curr_time, is_node_shared=is_node_shared, hub = self)
 
     # global event clock
     def set_curr_time(self, curr_time):
@@ -69,6 +72,16 @@ class ZkRepoHub(GitRepoHub):
         creation_time = self.time
         return ["success", aux_data["id"], creation_time]
 
+    def create_new_repo_id(self, ):
+        new_id = self.repo_id_counter
+        self.repo_id_counter += 1
+        return new_id
+
+    def event_counter_callback (self, repo_id, curr_time):
+        ZkRepoHub.sync_event_counter += 1
+        if ZkRepoHub.sync_event_counter % 1000 == 0 and ZkRepoHub.sync_event_counter > 0:
+            print "Sync event: ", ZkRepoHub.sync_event_counter
+
     ############################################################################
     # Create/Delete Events (Tag/branch/repo)
     ############################################################################
@@ -78,9 +91,7 @@ class ZkRepoHub(GitRepoHub):
         Requests that a git_repo_hub create and start a new repo given
         the provided repository information
         """
-
-        repo_id = self.repo_id_counter
-        self.repo_id_counter += 1
+        repo_id = self.create_new_repo_id()
         self.all_repos[repo_id] = ZkGitRepo(repo_id, self.time)
         self.log_event(agent_id, repo_id, 'CreateEvent', 'Repository', self.time)
         '''
@@ -99,12 +110,12 @@ class ZkRepoHub(GitRepoHub):
         return 'success', repo_id
 
     def create_tag_event(self, agent_id, (repo_id, tag_name)):
-        self.all_repos[repo_id].create_tag_event(tag_name, self.time)
+        self.all_repos[repo_id].create_tag_event(tag_name, self.zk, self.time)
         self.log_event(agent_id, repo_id, 'CreateEvent', 'Tag', self.time)
         return 'success'
 
     def create_branch_event(self, agent_id, (repo_id, branch_name)):
-        self.all_repos[repo_id].create_branch_event(branch_name, self.time)
+        self.all_repos[repo_id].create_branch_event(branch_name, self.zk, self.time)
         self.log_event(agent_id, repo_id, 'CreateEvent', 'Branch', self.time)
         return 'success'
 
@@ -146,48 +157,48 @@ class ZkRepoHub(GitRepoHub):
     ############################################################################
     def issue_opened_event(self, agent_id, (repo_id)):
         updated_at = self.time
-        issue_id = self.all_repos[repo_id].issue_opened_event(updated_at)
+        issue_id = self.all_repos[repo_id].issue_opened_event(self.zk, updated_at)
         self.log_event(agent_id, repo_id, 'IssuesEvent', 'opened', updated_at)
         return 'success', issue_id
 
     def issue_reopened_event(self, agent_id, (repo_id, issue_id)):
         updated_at = self.time
-        if self.all_repos[repo_id].issue_reopened_event(issue_id, updated_at):
+        if self.all_repos[repo_id].issue_reopened_event(issue_id, self.zk, updated_at):
             self.log_event(agent_id, repo_id, 'IssuesEvent', 'reopened', updated_at)
             return 'success'
         return 'failed, event alread open'
 
     def issue_closed_event(self, agent_id, (repo_id, issue_id)):
         updated_at = self.time
-        if self.all_repos[repo_id].issue_closed_event(issue_id, updated_at):
+        if self.all_repos[repo_id].issue_closed_event(issue_id, self.zk, updated_at):
             self.log_event(agent_id, repo_id, 'IssuesEvent', 'closed', updated_at)
             return 'success'
         return 'failed, event alread closed'
 
     def issue_assigned_event(self, agent_id, (repo_id, issue_id, user_id)):
         updated_at = self.time
-        if self.all_repos[repo_id].issue_assigned_event(issue_id, updated_at, user_id):
+        if self.all_repos[repo_id].issue_assigned_event(issue_id, self.zk, updated_at, user_id):
             self.log_event(agent_id, repo_id, 'IssuesEvent', 'assigned', updated_at)
             return 'success'
         return 'failed, to assign user to issue'
 
     def issue_unassigned_event(self, agent_id, (repo_id, issue_id)):
         updated_at = self.time
-        if self.all_repos[repo_id].issue_assigned_event(issue_id, updated_at):
+        if self.all_repos[repo_id].issue_assigned_event(issue_id, self.zk, updated_at):
             self.log_event(agent_id, repo_id, 'IssuesEvent', 'unassigned', updated_at)
             return 'success'
         return 'failed, to unassign user'
 
     def issue_labeled_event(self, agent_id, (repo_id, issue_id)):
         updated_at = self.time
-        if self.all_repos[repo_id].issue_labeled_event(issue_id, updated_at):
+        if self.all_repos[repo_id].issue_labeled_event(issue_id, self.zk, updated_at):
             self.log_event(agent_id, repo_id, 'IssuesEvent', 'labeled', updated_at)
             return 'success'
         return 'failed, issue already labeled'
 
     def issue_unlabeled_event(self, agent_id, (repo_id, issue_id)):
         updated_at = self.time
-        if self.all_repos[repo_id].issue_unlabeled_event(issue_id, updated_at):
+        if self.all_repos[repo_id].issue_unlabeled_event(issue_id, self.zk, updated_at):
             self.log_event(agent_id, repo_id, 'IssuesEvent', 'unlabeled', updated_at)
             return 'success'
         return 'failed, issue already unlabeled'
@@ -212,43 +223,43 @@ class ZkRepoHub(GitRepoHub):
 
     def submit_pull_request_event(self, agent_id, (head_id, base_id)):
         updated_at = self.time
-        request_id = self.all_repos[base_id].submit_pull_request_event(head_id, updated_at)
+        request_id = self.all_repos[base_id].submit_pull_request_event(head_id, self.zk, updated_at)
         self.log_event(agent_id, base_id, 'PullRequestEvent', 'submit', updated_at)
         return 'success', request_id
 
     def close_pull_request_event(self, agent_id, (base_id, request_id)):
         updated_at = self.time
-        self.all_repos[base_id].close_pull_request_event(request_id, updated_at)
+        self.all_repos[base_id].close_pull_request_event(request_id, self.zk, updated_at)
         self.log_event(agent_id, base_id, 'PullRequestEvent', 'close', updated_at)
         return 'success'
 
     def reopened_pull_request_event(self, agent_id, (base_id, request_id)):
         updated_at = self.time
-        self.all_repos[base_id].reopened_pull_request_event(request_id, updated_at)
+        self.all_repos[base_id].reopened_pull_request_event(request_id, self.zk, updated_at)
         self.log_event(agent_id, base_id, 'PullRequestEvent', 'reopen', updated_at)
         return 'success'
 
     def label_pull_request_event(self, agent_id, (base_id, request_id)):
         updated_at = self.time
-        self.all_repos[base_id].label_pull_request_event(request_id, updated_at)
+        self.all_repos[base_id].label_pull_request_event(request_id, self.zk, updated_at)
         self.log_event(agent_id, base_id, 'PullRequestEvent', 'label', updated_at)
         return 'success'
 
     def unlabel_pull_request_event(self, agent_id, (base_id, request_id)):
         updated_at = self.time
-        self.all_repos[base_id].label_pull_request_event(request_id, updated_at)
+        self.all_repos[base_id].label_pull_request_event(request_id, self.zk, updated_at)
         self.log_event(agent_id, base_id, 'PullRequestEvent', 'unlabel', updated_at)
         return 'success'
 
     def review_pull_request_event(self, agent_id, (base_id, request_id)):
         updated_at = self.time
-        self.all_repos[base_id].review_pull_request_event(request_id, updated_at)
+        self.all_repos[base_id].review_pull_request_event(request_id, self.zk, updated_at)
         self.log_event(agent_id, base_id, 'PullRequestEvent', 'review', updated_at)
         return 'success'
 
     def remove_review_pull_request_event(self, agent_id, (base_id, request_id)):
         updated_at = self.time
-        self.all_repos[base_id].remove_review_pull_request_event(request_id, updated_at)
+        self.all_repos[base_id].remove_review_pull_request_event(request_id, self.zk, updated_at)
         self.log_event(agent_id, base_id, 'PullRequestEvent', 'unreview', updated_at)
         return 'success'
 
@@ -262,7 +273,7 @@ class ZkRepoHub(GitRepoHub):
         return 'success'
 
     def push_event(self, agent_id, (repo_id, commit_to_push)):
-        self.all_repos[repo_id].push_event(agent_id, commit_to_push, self.time)
+        self.all_repos[repo_id].push_event(agent_id, commit_to_push, self.zk, self.time)
         self.log_event(agent_id, repo_id, 'PushEvent', 'None', self.time)
         # print 'agent ', agent_id, 'Pushed to repo id ', repo_id
         return 'success'
