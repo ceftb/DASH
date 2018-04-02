@@ -31,8 +31,11 @@ class ZkRepoHub(GitRepoHub):
         self.time = start_time
 
 
-    def init_repo(self, zk, repo_id, user_id, curr_time, is_node_shared):
-        self.all_repos[repo_id] = ZkGitRepo(id=repo_id, curr_time=curr_time, is_node_shared=is_node_shared, hub = self)
+    def init_repo(self, repo_id, user_id, curr_time, is_node_shared):
+        self.all_repos[repo_id] = ZkGitRepo(id=repo_id, curr_time=curr_time, is_node_shared=is_node_shared, hub=self)
+        repo_path = "/experiments/" + str(self.exp_id) + "/trials/" + str(self.trial_id) + "/repos/" + str(repo_id)
+        self.zk.ensure_path(repo_path)
+
 
     # global event clock
     def set_curr_time(self, curr_time):
@@ -92,21 +95,11 @@ class ZkRepoHub(GitRepoHub):
         the provided repository information
         """
         repo_id = self.create_new_repo_id()
-        self.all_repos[repo_id] = ZkGitRepo(repo_id, self.time)
-        self.log_event(agent_id, repo_id, 'CreateEvent', 'Repository', self.time)
-        '''
-        repo_path = "/experiments/" + str(self.exp_id) + "/trials/" + str(self.trial_id) + "/repos"
+        self.all_repos[repo_id] = ZkGitRepo(id=repo_id, curr_time=self.time, is_node_shared=False, hub=self)
+        repo_path = "/experiments/" + str(self.exp_id) + "/trials/" + str(self.trial_id) + "/repos/" + str(repo_id)
         self.zk.ensure_path(repo_path)
-        raw_data, _ = self.zk.get(repo_path)
-        data = None
-        if raw_data is not None and raw_data != "":
-            data = json.loads(raw_data)
-        else:
-            data = {"number_of_repos": 0}
-        data["number_of_repos"] = int(data["number_of_repos"]) + 1
-        data["last_repo_id"] = repo_id
-        self.zk.set(repo_path, json.dumps(data))
-        '''
+        self.log_event(agent_id, repo_id, 'CreateEvent', 'Repository', self.time)
+
         return 'success', repo_id
 
     def create_tag_event(self, agent_id, (repo_id, tag_name)):

@@ -26,18 +26,16 @@ class ZkGitRepo():
         if self.is_sync_needed(curr_time):
             # sync
             repo_path = "/experiments/" + str(self.hub.exp_id) + "/trials/" + str(self.hub.trial_id) + "/repos/" + str(self.id)
-
             lock = zk.Lock(repo_path)
             lock.acquire()
-            raw_data, _ = self.zk.get(repo_path)
+            raw_data, _ = zk.get(repo_path)
             data = None
             if raw_data is not None and raw_data != "":
                 data = json.loads(raw_data)
             else:
-                data = {"number_of_repos": 0}
-            data["number_of_repos"] = int(data["number_of_repos"]) + 1
-            data["last_repo_id"] = self.id
-            self.zk.set(repo_path, json.dumps(data))
+                data = {"repo_activity": 0}
+            data["repo_activity"] = int(data["repo_activity"]) + 1
+            zk.set(repo_path, json.dumps(data))
             lock.release()
 
             self.unsynchronized_events_counter = 0

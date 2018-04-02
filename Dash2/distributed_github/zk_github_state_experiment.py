@@ -42,9 +42,9 @@ class ZkGithubStateWorkProcessor(DashWorkProcessor):
                 a.repo_id_to_freq[int_repo_id ] = int(freq["f"])
                 total_even_counter += a.repo_id_to_freq[int_repo_id]
                 if int(freq["c"]) > 1:
-                    self.hub.init_repo(zk=self.zk, repo_id=int_repo_id, user_id=a.id, curr_time=0, is_node_shared=True)
+                    self.hub.init_repo(repo_id=int_repo_id, user_id=a.id, curr_time=0, is_node_shared=True)
                 else:
-                    self.hub.init_repo(zk=self.zk, repo_id=int_repo_id, user_id=a.id, curr_time=0, is_node_shared=False)
+                    self.hub.init_repo(repo_id=int_repo_id, user_id=a.id, curr_time=0, is_node_shared=False)
         self.agent_id_to_total_events[a.id] = total_even_counter
         heappush(self.events_heap, (a.next_event_time(0, self.max_time), a.id))
         self.agents[a.id] = a
