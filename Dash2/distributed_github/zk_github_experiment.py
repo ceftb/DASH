@@ -20,7 +20,7 @@ class ZkGithubWorkProcessor(DashWorkProcessor):
     module_name = "Dash2.distributed_github.zk_github_experiment"
 
     def __init__(self, zk, host_id, task_full_id, data):
-        DashWorkProcessor.__init__(self, zk, host_id, task_full_id, data, ZkRepoHub(zk, task_full_id))
+        DashWorkProcessor.__init__(self, zk, host_id, task_full_id, data)
 
     def run_one_iteration(self):
         if not self.agents or random.random() < self.prob_create_new_agent:  # Have to create an agent in the first step
@@ -103,7 +103,6 @@ if __name__ == "__main__":
                          work_processor_class=ZkGithubWorkProcessor,
                          number_of_hosts=number_of_hosts,
                          independent=independent,
-                         dependent=lambda t: [t.num_agents(), t.num_repos(), t.total_agent_activity()],
                          exp_data=exp_data,
                          num_trials=num_trials)
     results = controller.run(experiment=exp, run_data={}, start_right_away=False)

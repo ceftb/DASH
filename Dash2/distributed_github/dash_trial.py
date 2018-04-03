@@ -28,6 +28,17 @@ class DashTrial(Trial):
 
         self.zk.ensure_path(self.curr_trial_path + "/status")
         self.zk.set(self.curr_trial_path + "/status", json.dumps({"trial_id": self.trial_id, "status": "in progress", "dependent": ""}))
+        # set up max repo id
+        self.set_max_repo_id(0)
+
+        # results dictionary will accumulate values of dependents variables.
+        self.results = {}
+
+    def set_max_repo_id(self, max_id):
+        max_repo_id_path = "/experiments/" + str(self.exp_id) + "/" + str(self.trial_id) + "/" + str(
+            self.trial_id) + "/max_repo_id"
+        self.zk.ensure_path(max_repo_id_path)
+        self.zk.set(max_repo_id_path, str(max_id))
 
     def initialize(self):
         pass

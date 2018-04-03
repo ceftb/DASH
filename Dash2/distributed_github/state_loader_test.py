@@ -62,8 +62,8 @@ if __name__ == "__main__":
                 print "partitioned"
             elif cmd == "s":
                 print "Reading state file ..."
-                n_users, n_repos = GithubStateLoader.read_state_file(filename)
-                print "users: ", n_users, ", repos: ", n_repos
+                meta = GithubStateLoader.read_state_file(filename)
+                print "users: ", meta["number_of_users"], ", repos: ", meta["number_of_repos"]
             else:
                 print "Unrecognized command " + cmd + "\n"
     else:

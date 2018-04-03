@@ -37,19 +37,6 @@ class DashExperiment(object):
             trial_data_for_all_values[key] = run_data[key]
         # Append different data for the independent variable in each iteration
         independent_vals = self.compute_independent_vals()
-        # Dependent might be a method or a string representing a function or a member variable
-        # If it's a string representing a function it's changed to the function. We don't pass this to another host.
-        if isinstance(self.dependent, str):
-            if hasattr(self.trial_class, self.dependent) and callable(getattr(self.trial_class, self.dependent)):
-                print "Dependent is callable on the trial, so switching to the method"
-                self.dependent = getattr(self.trial_class, self.dependent)
-            elif not hasattr(self.trial_class, self.dependent):
-                print "Dependent is not a callable method, but is a variable on the trial"
-            else:
-                print "Dependent is a string"
-        else:
-            print "dependent is not a string:", self.dependent
-
         for independent_val in independent_vals:
             trial_data = trial_data_for_all_values.copy()
             if self.independent is not None:
@@ -73,6 +60,8 @@ class DashExperiment(object):
                                 print "All trials completed successfully"
                                 print "Outputs: " + str(self.trial_outputs)
                                 zk.set("/experiments/" + str(self.exp_id) + "/status", "completed")
+                                zk.ensure_path("/experiments/" + str(self.exp_id) + "/dependent")
+                                zk.set("/experiments/" + str(self.exp_id) + "/dependent", json.dumps(self.trial_outputs))
                                 zk.delete("/experiments/" + str(self.exp_id) + "/trials", recursive = True)
                                 self.completed_trials_counter = 0
                             return False

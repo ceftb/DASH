@@ -30,12 +30,9 @@ class ZkRepoHub(GitRepoHub):
         # global event clock
         self.time = start_time
 
-
+    # call this method only for pre-existing repos
     def init_repo(self, repo_id, user_id, curr_time, is_node_shared):
         self.all_repos[repo_id] = ZkGitRepo(id=repo_id, curr_time=curr_time, is_node_shared=is_node_shared, hub=self)
-        repo_path = "/experiments/" + str(self.exp_id) + "/trials/" + str(self.trial_id) + "/repos/" + str(repo_id)
-        self.zk.ensure_path(repo_path)
-
 
     # global event clock
     def set_curr_time(self, curr_time):
@@ -54,31 +51,19 @@ class ZkRepoHub(GitRepoHub):
         self.log_file.write("\n")
 
     def processRegisterRequest(self, agent_id, aux_data):
-        '''
-        if (agent_id == None):
-            agent_id = int(aux_data["id"])
-        self.log_event(agent_id, None, "CreateUser", "None", creation_time)
-
-        sub_tree_1 = agent_id % 10
-
-        agent_path = "/experiments/" + str(self.exp_id) + "/trials/" + str(self.trial_id) + "/users/" + str(agent_id % 100) + "/" + str(agent_id)
-        self.zk.ensure_path(agent_path)
-        raw_data, _ = self.zk.get(agent_path)
-        data = None
-        if raw_data is not None and raw_data != "":
-            data = json.loads(raw_data)
-        else:
-            data = {"freqs": {}}
-        data["freqs"] = aux_data["freqs"]
-        self.zk.set(agent_path, json.dumps(data))
-        '''
         creation_time = self.time
         return ["success", aux_data["id"], creation_time]
 
-    def create_new_repo_id(self, ):
-        new_id = self.repo_id_counter
-        self.repo_id_counter += 1
-        return new_id
+    def create_new_repo_id(self):
+        max_repo_id_path = "/experiments/" + str(self.exp_id) + "/" + str(self.trial_id) + "/" + str(self.trial_id) + "/max_repo_id"
+        lock = self.zk.Lock(max_repo_id_path)
+        lock.acquire()
+        raw_data, _ = self.zk.get(max_repo_id_path)
+        max_repo_id = int(raw_data)
+        max_repo_id += 1
+        self.zk.set(max_repo_id_path, str(max_repo_id))
+        lock.release()
+        return max_repo_id
 
     def event_counter_callback (self, repo_id, curr_time):
         ZkRepoHub.sync_event_counter += 1
@@ -96,8 +81,6 @@ class ZkRepoHub(GitRepoHub):
         """
         repo_id = self.create_new_repo_id()
         self.all_repos[repo_id] = ZkGitRepo(id=repo_id, curr_time=self.time, is_node_shared=False, hub=self)
-        repo_path = "/experiments/" + str(self.exp_id) + "/trials/" + str(self.trial_id) + "/repos/" + str(repo_id)
-        self.zk.ensure_path(repo_path)
         self.log_event(agent_id, repo_id, 'CreateEvent', 'Repository', self.time)
 
         return 'success', repo_id
