@@ -1,7 +1,7 @@
 import sys; sys.path.extend(['../../'])
 import json
 import time
-from Dash2.github.git_repo_hub import GitRepoHub
+from Dash2.distributed_github.zk_repo_hub import ZkRepoHub
 
 # TBD: This class to be moved into core module when zookeeper version of DASH is stable
 # WorkProcessor class is responsible for running experiment trial on a node in cluster
@@ -19,13 +19,16 @@ class DashWorkProcessor:
             else:
                 setattr(self, param, str(data[param]))
 
-        # hube must be overriden in subclasses
-        self.hub = GitRepoHub if hub is None else hub
+        self.log_file = open(task_full_id + '_event_log_file.txt', 'w')
+        self.hub = ZkRepoHub(zk, task_full_id, 0, log_file=self.log_file) if hub is None else hub
         self.iteration = 0
         # init agents and their relationships with repos
 
+    def initialize(self):
+        pass
 
     def process_task(self):
+        self.initialize()
         if self.zk is not None and self.task_id is not None:
             while not self.should_stop():
                 self.run_one_iteration()
@@ -47,6 +50,7 @@ class DashWorkProcessor:
             self.zk.set(result_path, data)
         else:
             raise Exception("Zookeeper is not initialized.")
+        self.log_file.close()
 
     def should_stop(self):
         if self.max_iterations > 0 and self.iteration >= self.max_iterations:

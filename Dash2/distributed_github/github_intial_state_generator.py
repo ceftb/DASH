@@ -15,7 +15,8 @@ class GithubStateLoader(object):
     {
             "meta":  {
                         "number_of_users": 10,
-                        "number_of_repos": 20
+                        "number_of_repos": 20,
+                        "users_file": "users.json"
                         }
     }
 
@@ -33,7 +34,7 @@ class GithubStateLoader(object):
     @staticmethod
     def read_state_file(filename):
         raw_data = json.load(open(filename))
-        return raw_data["meta"]["number_of_users"], raw_data["meta"]["number_of_repos"]
+        return raw_data["meta"]
 
 
     @staticmethod

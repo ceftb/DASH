@@ -114,7 +114,12 @@ class DashController:
                         status, stat = self.zk.get("/experiments/" + str(exp) + "/status")
                         self.zk.ensure_path("/experiments/" + str(exp) + "/time")
                         raw_time, _ = self.zk.get("/experiments/" + str(exp) + "/time")
-                        print "Experiment " + str(exp) + " status: " + str(status) + ". Time " + str(raw_time) + " (sec)."
+                        if self.zk.exists("/experiments/" + str(exp) + "/dependent") is None:
+                            dependent = ""
+                        else:
+                            dependent, _ = self.zk.get("/experiments/" + str(exp) + "/dependent")
+                        print "Experiment " + str(exp) + " status: " + str(status) + ". Time " + str(raw_time) + " (sec). \n  Dependent: " + str(dependent)
+
         else:
             print "no experiments found"
         # nodes status
