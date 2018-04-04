@@ -34,19 +34,8 @@ class ZkGithubWorkProcessor(DashWorkProcessor):
             a = random.choice(self.agents)
         a.agentLoop(max_iterations=1, disconnect_at_end=False)  # don't disconnect since will run again
 
-    def dependent(self):
-        return {"num_agents": self.num_agents(), "num_repos": self.num_repos(), "total_agent_activity": self.total_agent_activity()}
-
-    # Measures #
-    def num_agents(self):
-        return len(self.agents)
-
-    # Measures should probably query the hub or use a de facto trace soon
-    def num_repos(self):
-        return sum([len(a.owned_repos) for a in self.agents])
-
-    def total_agent_activity(self):
-        return sum([a.total_activity for a in self.agents])
+    def get_dependent_vars(self):
+        return {"num_agents": len(self.agents), "num_repos": sum([len(a.name_to_repo_id) for a in self.agents]), "total_agent_activity": sum([a.total_activity for a in self.agents])}
 
 
 class ZkGithubTrial(DashTrial):
@@ -56,26 +45,15 @@ class ZkGithubTrial(DashTrial):
     measures = [Measure('num_agents'), Measure('num_repos'), Measure('total_agent_activity')]
 
     def initialize(self):
-        self.results = {"num_agents": 0, "num_repos": 0, "total_agent_activity": 0}
-        # read agents
+        # init agents
         self.agents = []
-        # self.agents.append(GitUserAgent(useInternalHub=True, hub=self.hub, trace_client=False))
-        # load from file TBD
 
-    # partial_dependent is a dictionary of dependent vars
+    # partial_dependent is a dictionary of dependent vars values from dash worker
     def append_partial_results(self, partial_dependent):
         for measure in self.measures:
+            if not (measure.name in self.results):
+                self.results[measure.name] = 0
             self.results[measure.name] += int(partial_dependent[measure.name])
-
-    # Measures #
-    def num_agents(self):
-        return self.results["num_agents"]
-
-    def num_repos(self):
-        return self.results["num_repos"]
-
-    def total_agent_activity(self):
-        return self.results["total_agent_activity"]
 
 
 if __name__ == "__main__":

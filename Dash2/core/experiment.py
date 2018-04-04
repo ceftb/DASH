@@ -129,7 +129,7 @@ class Experiment(object):
                         ', num_trials=' + str(self.num_trials) +
                         ', exp_data=' + str(self.experiment.exp_data) +
                         ', independent=[\'' + str(self.experiment.independent[0]) + '\', ' + str(self.vals) + ']' +
-                        ', dependent=\'' + str(self.experiment.dependent) + '\')\n')
+                        ', dependent=\'' + str(self.experiment.get_dependent_vars) + '\')\n')
             start = time.time()
             try:
                 process = subprocess.Popen(call, stdin=subprocess.PIPE, stdout=subprocess.PIPE)

@@ -2,7 +2,8 @@ import sys; sys.path.extend(['../../'])
 import time
 import json
 from kazoo.client import KazooClient
-
+import logging
+logging.basicConfig()
 
 # TBD: This class to be moved into core module when zookeeper version of DASH is stable
 class DashWorker(object):

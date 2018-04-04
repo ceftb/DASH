@@ -31,8 +31,12 @@ class ZkRepoHub(GitRepoHub):
         self.time = start_time
 
     # call this method only for pre-existing repos
-    def init_repo(self, repo_id, user_id, curr_time, is_node_shared):
-        self.all_repos[repo_id] = ZkGitRepo(id=repo_id, curr_time=curr_time, is_node_shared=is_node_shared, hub=self)
+    def init_repo(self, repo_id, user_id=None, curr_time=0, is_node_shared=False, **kwargs):
+        if not (repo_id in self.all_repos):
+            self.all_repos[repo_id] = ZkGitRepo(id=repo_id, curr_time=curr_time, is_node_shared=is_node_shared, hub=self)
+        else:
+             pass # update repo properties here if needed
+
 
     # global event clock
     def set_curr_time(self, curr_time):

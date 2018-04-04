@@ -74,10 +74,10 @@ class DashTrial(Trial):
                     # append partial results/dependent vars
                     task_results = json.loads(data)
                     node_id = task_results["node_id"]
-                    dependent_vars_path = "/experiments/" + str(self.exp_id) + "/trials/" + str(self.trial_id) + "/nodes/" + str(node_id) + "/dependent_variables"
-                    self.zk.set(dependent_vars_path, "")  # clearing data
                     partial_dependent = task_results["dependent"]
                     self.append_partial_results(partial_dependent)
+                    dependent_vars_path = "/experiments/" + str(self.exp_id) + "/trials/" + str(self.trial_id) + "/nodes/" + str(node_id) + "/dependent_variables"
+                    self.zk.set(dependent_vars_path, "")  # clearing data
                     if self.received_tasks_counter == self.number_of_hosts:
                         self.aggregate_results()
                         self.zk.set(self.curr_trial_path + "/status", json.dumps({"trial_id": self.trial_id, "status": "completed", "dependent": self.results}))
@@ -87,6 +87,10 @@ class DashTrial(Trial):
 
     def init_task_params(self, task_full_id, data):
         pass
+
+    def init_task_param(self, param_name, value, data):
+        data[param_name] = value
+        data["parameters"].append(param_name)
 
     # partial_dependent is a dictionary of dependent vars
     def append_partial_results(self, partial_dependent):

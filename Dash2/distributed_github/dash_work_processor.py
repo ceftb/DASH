@@ -44,7 +44,7 @@ class DashWorkProcessor:
             self.process_after_run()
 
             result_path = "/experiments/" + str(self.exp_id) + "/trials/" + str(self.trial_id) + "/nodes/" + str(self.host_id) + "/dependent_variables/"
-            dep_vars = self.dependent()
+            dep_vars = self.get_dependent_vars()
             task_result = {"node_id":self.host_id, "dependent":dep_vars}
             data = json.dumps(task_result)
             self.zk.set(result_path, data)
@@ -72,8 +72,9 @@ class DashWorkProcessor:
                 next_action = agent.agentLoop(max_iterations=1, disconnect_at_end=False)  # don't disconnect since will run again
                 self.process_after_agent_action(agent, next_action)
 
-    def dependent(self):
-        pass
+    def get_dependent_vars(self):
+        pass # override this method to populate values of dependent variables
+        return {}
 
     # Default method for whether an agent should stop. By default, true, so if neither
     # this method nor should_stop are overridden, nothing will happen.
