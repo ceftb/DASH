@@ -40,19 +40,17 @@ After Deter experiment was swapped out kazoo must be reinstalled by calling kazo
 # To install kazoo run:
 pip install kazoo
 
+# ZooKeeper installation
 # Ubuntu
-# To install zookeeper base run
 sudo apt-get install zookeeper
-# To install zookeeper server run
 sudo apt-get install zookeeperd
-
-# Mac OS run:
+# Mac OS
 ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)" < /dev/null 2> /dev/null
 brew install zookeeper
 
-############################################
-#### RUNNING EXPERIMENT ON LOCAL MACHINE ###
-############################################
+#############################################
+#### RUNNING EXPERIMENTS ON LOCAL MACHINE ###
+#############################################
 Step 0 - check if zookeeper and kazoo are installed. All following commands called from webdash/Dash2/github
 
 Step 1 - start a worker process by calling
@@ -61,9 +59,9 @@ python ../core/dash_worker.py
 Step 2. in another terminal start an experiment:
 python zk_github_state_experiment.py
 
-######################################
-#### RUNNING EXPERIMENT ON CLUSTER ###
-######################################
+#######################################
+#### RUNNING EXPERIMENTS ON CLUSTER ###
+#######################################
 Step 0 - check if zookeeper and kazoo are installed and install them if need by calling:
 kazoo_install.sh
 zookeeper_service.sh install
@@ -109,4 +107,3 @@ Both dash_worker.py and dash controller.py accept the following command line arg
 - If 2 arguments are given, these are current host id and comma-separate list of hosts. For example:
 controller.py 1 127.0.0.1:2181,server1:2181,node5:2233
 controller and worker will use provided list of hosts and current host id to connect to zookeeper assemble. Controller assumes that all given hosts have dash_workers running on them; therefore, it distributes work accordingly. Use port 2181 by default.
-
