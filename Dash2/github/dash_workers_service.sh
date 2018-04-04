@@ -1,6 +1,6 @@
 #!/bin/bash
 
-CONFIG_FILE_PATH=./deter.conf # path is relative to $WEBDASH_CLONE/Dash2/distributed_github/
+CONFIG_FILE_PATH=./deter.conf # path is relative to $WEBDASH_CLONE/Dash2/github/
 
 function perfom_action_on_single_node {
 	CURR_NODE_ID=$1
@@ -8,7 +8,7 @@ function perfom_action_on_single_node {
 	WEBDASH_CLONE=$3
 	ACTION=$4
 
-	cd $WEBDASH_CLONE/Dash2/distributed_github/
+	cd $WEBDASH_CLONE/Dash2/github/
 
 	if [ $ACTION == 'stop' ]
 	then
@@ -17,7 +17,7 @@ function perfom_action_on_single_node {
 	elif [ $ACTION == 'start' ]
 	then
 		echo 'Starting Dash worker ...'
-	    python dash_worker.py $CURR_NODE_ID $ZK_NODE_ID
+	    python ../core/dash_worker.py $CURR_NODE_ID $ZK_NODE_ID
 	else
 		echo 'Unrecognized action ' $ACTION
 		exit
@@ -40,7 +40,7 @@ function perform_action_on_all_nodes {
         do
             let WORKER_ID=$ID+$PROC_ID*$NUMBER_OF_NODES
             echo $ACTION'ing worker '  $WORKER_ID ' mapped to zookeeper on ' ${ZK_MAP[${DASH_NODES[$ID-1]}]}
-            ssh ${DASH_NODES[$ID-1]} "tmux new-session -d bash $WEBDASH_CLONE/Dash2/distributed_github/$SCRIPT_NAME $WORKER_ID ${ZK_MAP[${DASH_NODES[$ID-1]}]}:2181 $WEBDASH_CLONE $ACTION"
+            ssh ${DASH_NODES[$ID-1]} "tmux new-session -d bash $WEBDASH_CLONE/Dash2/github/$SCRIPT_NAME $WORKER_ID ${ZK_MAP[${DASH_NODES[$ID-1]}]}:2181 $WEBDASH_CLONE $ACTION"
         done
 
 	done

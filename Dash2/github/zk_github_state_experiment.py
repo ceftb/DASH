@@ -1,26 +1,24 @@
 import sys; sys.path.extend(['../../'])
 import os.path
-import random
 from heapq import heappush, heappop
 from Dash2.core.parameter import Range
 from Dash2.core.measure import Measure
 from Dash2.core.parameter import Uniform
 from Dash2.core.parameter import Parameter
-from dash_trial import DashTrial
-from Dash2.distributed_github.dash_work_processor import DashWorkProcessor
+from Dash2.core.trial import Trial
+from Dash2.core.experiment import Experiment
+from Dash2.core.dash_controller import DashController
+from Dash2.core.work_processor import WorkProcessor
 from Dash2.github.git_user_agent import GitUserAgent
-from dash_experiment import DashExperiment
-from dash_controller import DashController
-from zk_repo_hub import ZkRepoHub
-from github_intial_state_generator import GithubStateLoader
+from intial_state_loader import GithubStateLoader
 
 # This is an example of experiment script
 
 # Work processor performs simulation as individual process (it is a DashWorker)
-class ZkGithubStateWorkProcessor(DashWorkProcessor):
+class ZkGithubStateWorkProcessor(WorkProcessor):
 
     # this is path to current package
-    module_name = "Dash2.distributed_github.zk_github_state_experiment"
+    module_name = "Dash2.github.zk_github_state_experiment"
 
     def initialize(self):
         # Optionally can choose a different hub. Default hub definde in _init_()
@@ -78,7 +76,7 @@ class ZkGithubStateWorkProcessor(DashWorkProcessor):
 
 
 # Dash Trial decomposes trial into tasks and allocates them to DashWorkers
-class ZkGithubStateTrial(DashTrial):
+class ZkGithubStateTrial(Trial):
     parameters = [Parameter('prob_create_new_agent', distribution=Uniform(0,1), default=0.5),
                   Parameter('prob_agent_creates_new_repo', distribution=Uniform(0,1), default=0.5),
                   Parameter('max_time', distribution=Uniform(5184000, 5184001), default=5184000)]
@@ -140,7 +138,7 @@ if __name__ == "__main__":
 
     # ExperimentController is a until class that provides command line interface to run the experiment on clusters
     controller = DashController(zk_hosts=zk_hosts, number_of_hosts=number_of_hosts)
-    exp = DashExperiment(trial_class=ZkGithubStateTrial,
+    exp = Experiment(trial_class=ZkGithubStateTrial,
                          work_processor_class=ZkGithubStateWorkProcessor,
                          number_of_hosts=number_of_hosts,
                          independent=independent,

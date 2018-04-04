@@ -53,10 +53,10 @@ brew install zookeeper
 ############################################
 #### RUNNING EXPERIMENT ON LOCAL MACHINE ###
 ############################################
-Step 0 - check if zookeeper and kazoo are installed. All following commands called from webdash/Dash2/distributed_github
+Step 0 - check if zookeeper and kazoo are installed. All following commands called from webdash/Dash2/github
 
 Step 1 - start a worker process by calling
-python dash_worker.py
+python ../core/dash_worker.py
 
 Step 2. in another terminal start an experiment:
 python zk_github_state_experiment.py
@@ -100,7 +100,7 @@ Step 1. Run dash_worker.py on every host (provide arguments, see below).
 Step 2. Run zk_github_experiment.py on any host that you want to be a controller (provide arguments, see below).
 
 Explanation:
-dash_worker.py is a server that listens for tasks.
+../core/dash_worker.py is a server that listens for tasks.
 dash_controller.py or any descendant of this class (e.g. zk_github_experiment.py) run are used to create and run experiment object. Tasks are distributed by dash_controller.py process. Currently you should only run zk_github_experiment.py
 
 Arguments:

@@ -1,11 +1,10 @@
 import sys; sys.path.extend(['../../'])
 import json
 import time
-from Dash2.distributed_github.zk_repo_hub import ZkRepoHub
+from Dash2.github.zk_repo_hub import ZkRepoHub
 
-# TBD: This class to be moved into core module when zookeeper version of DASH is stable
-# WorkProcessor class is responsible for running experiment trial on a node in cluster
-class DashWorkProcessor:
+# WorkProcessor class is responsible for running experiment trial on a node in cluster (distributed/parallel trial)
+class WorkProcessor:
     def __init__(self, zk, host_id, task_full_id, data, hub = None):
         self.agents = []
         self.zk = zk

@@ -4,23 +4,22 @@ from Dash2.core.parameter import Range
 from Dash2.core.measure import Measure
 from Dash2.core.parameter import Uniform
 from Dash2.core.parameter import Parameter
-from dash_trial import DashTrial
-from Dash2.distributed_github.dash_work_processor import DashWorkProcessor
+from Dash2.core.trial import Trial
+from Dash2.core.experiment import Experiment
+from Dash2.core.work_processor import WorkProcessor
+from Dash2.core.dash_controller import DashController
 from Dash2.github.git_user_agent import GitUserAgent
-from dash_experiment import DashExperiment
-from dash_controller import DashController
-from zk_repo_hub import ZkRepoHub
 
 # This is an example of experiment script
 
-class ZkGithubWorkProcessor(DashWorkProcessor):
+class ZkGithubWorkProcessor(WorkProcessor):
 
     # this is path to current package
     # I cannot use reflection in super class here because, it would return path to superclass, therefore need to define it explicitly in subclasses
-    module_name = "Dash2.distributed_github.zk_github_experiment"
+    module_name = "Dash2.github.zk_github_experiment"
 
     def __init__(self, zk, host_id, task_full_id, data):
-        DashWorkProcessor.__init__(self, zk, host_id, task_full_id, data)
+        WorkProcessor.__init__(self, zk, host_id, task_full_id, data)
 
     def run_one_iteration(self):
         if not self.agents or random.random() < self.prob_create_new_agent:  # Have to create an agent in the first step
@@ -38,7 +37,7 @@ class ZkGithubWorkProcessor(DashWorkProcessor):
         return {"num_agents": len(self.agents), "num_repos": sum([len(a.name_to_repo_id) for a in self.agents]), "total_agent_activity": sum([a.total_activity for a in self.agents])}
 
 
-class ZkGithubTrial(DashTrial):
+class ZkGithubTrial(Trial):
     parameters = [Parameter('prob_create_new_agent', distribution=Uniform(0,1), default=0.5),
                   Parameter('prob_agent_creates_new_repo', distribution=Uniform(0,1), default=0.5)]
 
@@ -77,7 +76,7 @@ if __name__ == "__main__":
 
     # ExperimentController is a until class that provides command line interface to run the experiment on clusters
     controller = DashController(zk_hosts=zk_hosts, number_of_hosts=number_of_hosts)
-    exp = DashExperiment(trial_class=ZkGithubTrial,
+    exp = Experiment(trial_class=ZkGithubTrial,
                          work_processor_class=ZkGithubWorkProcessor,
                          number_of_hosts=number_of_hosts,
                          independent=independent,

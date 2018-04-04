@@ -1,10 +1,7 @@
 import sys; sys.path.extend(['../../'])
-from kazoo.client import KazooClient
 import time
-import json
-import random
 from heapq import heappush, heappop
-from Dash2.distributed_github.zk_git_repo import ZkGitRepo
+from Dash2.github.zk_repo import ZkRepo
 from Dash2.github.git_user_agent import GitUserAgent
 from zk_repo_hub import ZkRepoHub
 
@@ -13,7 +10,7 @@ def create_repos(number_of_repos):
     print "Creating repos ... "
     repos = []
     for i in range(0, number_of_repos):
-        repos.append(ZkGitRepo(i, 0))
+        repos.append(ZkRepo(i, 0))
     end_time = time.time()
     print "Repos created. Time: ", end_time - start_time
     return repos
@@ -32,9 +29,9 @@ if __name__ == "__main__":
     # zk hub and log file
     log_file = open('event_log_file.txt', 'w')
     github = ZkRepoHub(None, "1-1-1", start_sim_time, log_file)
-    github.all_repos = {101: ZkGitRepo(id=101, curr_time=0, is_node_shared=True),
-                        102: ZkGitRepo(id=102, curr_time=0, is_node_shared=True),
-                        103: ZkGitRepo(id=103, curr_time=0, is_node_shared=True)}
+    github.all_repos = {101: ZkRepo(id=101, curr_time=0, is_node_shared=True),
+                        102: ZkRepo(id=102, curr_time=0, is_node_shared=True),
+                        103: ZkRepo(id=103, curr_time=0, is_node_shared=True)}
 
     # populate users/agents
     start_time = time.time()

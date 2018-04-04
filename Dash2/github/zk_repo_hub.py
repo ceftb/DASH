@@ -1,10 +1,7 @@
 import sys; sys.path.extend(['../../'])
 from Dash2.core.world_hub import WorldHub
-from Dash2.distributed_github.zk_git_repo import ZkGitRepo
+from Dash2.github.zk_repo import ZkRepo
 from Dash2.github.git_repo_hub import GitRepoHub
-from time import time
-import json
-import pickle
 
 
 # Zookeeper repository hub
@@ -18,7 +15,7 @@ class ZkRepoHub(GitRepoHub):
     def __init__(self, zk, task_full_id, start_time, log_file):
         WorldHub.__init__(self, None)
         self.trace_handler = False
-        ZkGitRepo.sync_event_callback = self.event_counter_callback
+        ZkRepo.sync_event_callback = self.event_counter_callback
 
         self.zk = zk
         self.task_full_id = task_full_id
@@ -33,7 +30,7 @@ class ZkRepoHub(GitRepoHub):
     # call this method only for pre-existing repos
     def init_repo(self, repo_id, user_id=None, curr_time=0, is_node_shared=False, **kwargs):
         if not (repo_id in self.all_repos):
-            self.all_repos[repo_id] = ZkGitRepo(id=repo_id, curr_time=curr_time, is_node_shared=is_node_shared, hub=self)
+            self.all_repos[repo_id] = ZkRepo(id=repo_id, curr_time=curr_time, is_node_shared=is_node_shared, hub=self)
         else:
              pass # update repo properties here if needed
 
@@ -84,7 +81,7 @@ class ZkRepoHub(GitRepoHub):
         the provided repository information
         """
         repo_id = self.create_new_repo_id()
-        self.all_repos[repo_id] = ZkGitRepo(id=repo_id, curr_time=self.time, is_node_shared=False, hub=self)
+        self.all_repos[repo_id] = ZkRepo(id=repo_id, curr_time=self.time, is_node_shared=False, hub=self)
         self.log_event(agent_id, repo_id, 'CreateEvent', 'Repository', self.time)
 
         return 'success', repo_id
