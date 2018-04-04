@@ -50,28 +50,20 @@ sudo apt-get install zookeeperd
 ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)" < /dev/null 2> /dev/null
 brew install zookeeper
 
+############################################
+#### RUNNING EXPERIMENT ON LOCAL MACHINE ###
+############################################
+Step 0 - check if zookeeper and kazoo are installed. All following commands called from webdash/Dash2/distributed_github
 
-############################
-#### EXPERIMENT START UP ###
-############################
-Step 1. Run dash_worker.py on every host (provide arguments, see below). 
-Step 2. Run zk_github_experiment.py on any host that you want to be a controller (provide arguments, see below).
+Step 1 - start a worker process by calling
+python dash_worker.py
 
-Explanation:
-dash_worker.py is a server that listens for tasks. 
-dash_controller.py or any descendant of this class (e.g. zk_github_experiment.py) run are used to create and run experiment object. Tasks are distributed by dash_controller.py process. Currently you should only run zk_github_experiment.py 
+Step 2. in another terminal start an experiment:
+python zk_github_state_experiment.py
 
-Arguments:
-Both dash_worker.py and dash controller.py accept the following command line arguments:
-- If no arguments are given, controller and worker are run locally. Controller assumes that there is only one worker node in assemble and allocates all work to it. Both controller and worker assume that Zookeeper also runs locally on default port.
-- If 2 arguments are given, these are current host id and comma-separate list of hosts. For example:
-controller.py 1 127.0.0.1:2181,server1:2181,node5:2233
-controller and worker will use provided list of hosts and current host id to connect to zookeeper assemble. Controller assumes that all given hosts have dash_workers running on them; therefore, it distributes work accordingly. Use port 2181 by default.
-
-
-##############################
-#### RUNNING AN EXPERIMENT ###
-##############################
+######################################
+#### RUNNING EXPERIMENT ON CLUSTER ###
+######################################
 Step 0 - check if zookeeper and kazoo are installed and install them if need by calling:
 kazoo_install.sh
 zookeeper_service.sh install
@@ -99,4 +91,22 @@ Quick tmux guide:
 tmux list-session -shows list of all running tmux session
 tmux attach -t <session_id> -switched to the selected session
 <ctrl>+b  +  d -detaches opened tmux session
+
+
+######################################
+#### EXPERIMENT START UP (GENERAL) ###
+######################################
+Step 1. Run dash_worker.py on every host (provide arguments, see below).
+Step 2. Run zk_github_experiment.py on any host that you want to be a controller (provide arguments, see below).
+
+Explanation:
+dash_worker.py is a server that listens for tasks.
+dash_controller.py or any descendant of this class (e.g. zk_github_experiment.py) run are used to create and run experiment object. Tasks are distributed by dash_controller.py process. Currently you should only run zk_github_experiment.py
+
+Arguments:
+Both dash_worker.py and dash controller.py accept the following command line arguments:
+- If no arguments are given, controller and worker are run locally. Controller assumes that there is only one worker node in assemble and allocates all work to it. Both controller and worker assume that Zookeeper also runs locally on default port.
+- If 2 arguments are given, these are current host id and comma-separate list of hosts. For example:
+controller.py 1 127.0.0.1:2181,server1:2181,node5:2233
+controller and worker will use provided list of hosts and current host id to connect to zookeeper assemble. Controller assumes that all given hosts have dash_workers running on them; therefore, it distributes work accordingly. Use port 2181 by default.
 
