@@ -2,9 +2,9 @@ import sys; sys.path.extend(['../../'])
 import time
 import json
 from kazoo.client import KazooClient
+import logging
+logging.basicConfig()
 
-
-# TBD: This class to be moved into core module when zookeeper version of DASH is stable
 class DashWorker(object):
 
     # class level insformation
@@ -40,7 +40,7 @@ class DashWorker(object):
                     for task_id in tasks:
                         @self.zk.DataWatch(node_prefix + "/" + task_id)
                         def watch_task_update(data, stat_):
-                            if data is not None:
+                            if data is not None and data != "":
                                 self.process_tasks(data)
                                 return False
                             return True

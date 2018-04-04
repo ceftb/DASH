@@ -3,11 +3,10 @@ import sys; sys.path.extend(['../../'])
 import time
 import json
 from kazoo.client import KazooClient
+import logging
+logging.basicConfig()
 
-
-# TBD: This class to be moved into core module when zookeeper version of DASH is stable
-
-# ExperimentController is a until class that provides command line interface to run the experiment on clusters
+# DashController is a until class that provides command line interface to run the experiment on clusters
 # It allows to stop the experiment, check status of the experiment, check status of the nodes (dash workers)
 class DashController:
     # zk_hosts - Comma-separated list of hosts of zookeeper to connect to
@@ -79,7 +78,7 @@ class DashController:
         self.set_experiment_completion_watcher(experiment.exp_id)
         self.start_time = time.time()
 
-        experiment.run(self.zk, run_data=run_data)
+        experiment.run(zk=self.zk, run_data=run_data)
         print "ExperimentController: experiment in progress"
 
     def clean_storage(self):

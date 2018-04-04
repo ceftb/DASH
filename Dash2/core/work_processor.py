@@ -1,11 +1,10 @@
 import sys; sys.path.extend(['../../'])
 import json
 import time
-from Dash2.distributed_github.zk_repo_hub import ZkRepoHub
+from Dash2.github.zk_repo_hub import ZkRepoHub
 
-# TBD: This class to be moved into core module when zookeeper version of DASH is stable
-# WorkProcessor class is responsible for running experiment trial on a node in cluster
-class DashWorkProcessor:
+# WorkProcessor class is responsible for running experiment trial on a node in cluster (distributed/parallel trial)
+class WorkProcessor:
     def __init__(self, zk, host_id, task_full_id, data, hub = None):
         self.agents = []
         self.zk = zk
@@ -44,7 +43,7 @@ class DashWorkProcessor:
             self.process_after_run()
 
             result_path = "/experiments/" + str(self.exp_id) + "/trials/" + str(self.trial_id) + "/nodes/" + str(self.host_id) + "/dependent_variables/"
-            dep_vars = self.dependent()
+            dep_vars = self.get_dependent_vars()
             task_result = {"node_id":self.host_id, "dependent":dep_vars}
             data = json.dumps(task_result)
             self.zk.set(result_path, data)
@@ -72,8 +71,9 @@ class DashWorkProcessor:
                 next_action = agent.agentLoop(max_iterations=1, disconnect_at_end=False)  # don't disconnect since will run again
                 self.process_after_agent_action(agent, next_action)
 
-    def dependent(self):
-        pass
+    def get_dependent_vars(self):
+        pass # override this method to populate values of dependent variables
+        return {}
 
     # Default method for whether an agent should stop. By default, true, so if neither
     # this method nor should_stop are overridden, nothing will happen.

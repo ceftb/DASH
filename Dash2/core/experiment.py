@@ -4,16 +4,20 @@ import numbers
 import math
 import numpy
 import time
+import json
 from Dash2.core.trial import Trial
 from Dash2.core.parameter import Range
 from Dash2.core.dash import DASHAgent
+from Dash2.core.work_processor import WorkProcessor
+
 
 # An experiment consists of a varying condition and for each condition a number of trials.
 # trial.py shows how the trials can be customized, and phish_experiment.py gives an example of the experiment harness.
 
 
 class Experiment(object):
-    def __init__(self, trial_class=Trial, independent=None, dependent=None, exp_data={}, num_trials=3,
+    def __init__(self, trial_class=Trial, work_processor_class=WorkProcessor, exp_id=None, number_of_hosts=1,
+                 independent=None, dependent=None, exp_data={}, num_trials=3,
                  file_output=None, hosts=None,
                  #experiment_file="/users/blythe/webdash/Dash2/pass_experiment.py",
                  dash_home="/users/blythe/webdash",
@@ -40,16 +44,76 @@ class Experiment(object):
         self.user = user
         #self.experiment_file = experiment_file
         self.start_hub = start_hub  # If not None, specifies a path to a hub that will be started if needed on each host
+        # for distributed trials:
+        self.exp_id = exp_id
+        self.number_of_hosts = number_of_hosts
+        self.completed_trials_counter = 0
+        self.work_processor_class = work_processor_class
+
+
 
 
     # Run the experiment. If several hosts are named, parcel out the trials and independent variables
     # to each one and call them up. If none are named, we are running all of this here (perhaps
     # as part of a multi-host solution).
-    def run(self, run_data={}):
-        if self.hosts is None or not self.hosts:
-            return self.run_this_host(run_data)
+    def run(self, run_data={}, zk=None):
+        if zk is not None: # run distributed trials
+            self.run_distributed_trials(zk, run_data)
         else:
-            return self.scatter_gather(run_data)
+            if self.hosts is None or not self.hosts:
+                return self.run_this_host(run_data)
+            else:
+                return self.scatter_gather(run_data) # run parallel trial (each trial is sequential)
+
+    def run_distributed_trials(self, zk, run_data):
+        if self.exp_id is None:
+            next_id = zk.Counter("/nex_experiment_id_counter")
+            self.exp_id = next_id.value
+            next_id +=1
+
+        zk.ensure_path("/experiments/" + str(self.exp_id) + "/status")
+        zk.set("/experiments/" + str(self.exp_id) + "/status", "in progress")
+
+        self.trial_outputs = {}
+        # Build up trial data from experiment data and run data
+        trial_data_for_all_values = self.exp_data.copy()
+        for key in run_data:
+            trial_data_for_all_values[key] = run_data[key]
+        # Append different data for the independent variable in each iteration
+        independent_vals = self.compute_independent_vals()
+        for independent_val in independent_vals:
+            trial_data = trial_data_for_all_values.copy()
+            if self.independent is not None:
+                trial_data[self.independent[0]] = independent_val
+            self.trial_outputs[independent_val] = []
+            for trial_number in range(self.num_trials):
+                print "Trial ", trial_number, " with ", None if self.independent is None else self.independent[0], "=", independent_val
+                curr_trial_path = "/experiments/" + str(self.exp_id) + "/trials/" + str(trial_number)
+                @zk.DataWatch(curr_trial_path + "/status")
+                def watch_trial_status(data, stat_):
+                    if data is not None and data != "":
+                        data_dict = json.loads(data)
+                        status = data_dict["status"]
+                        if status == "completed":
+                            print "Trial " + str(data_dict["trial_id"]) + " is complete"
+                            trial_dependent = data_dict["dependent"]
+                            print "Dependent evaluated to " + str(trial_dependent)
+                            self.trial_outputs[independent_val].append(trial_dependent)
+                            self.completed_trials_counter += 1
+                            if (self.completed_trials_counter == self.num_trials):
+                                print "All trials completed successfully"
+                                print "Outputs: " + str(self.trial_outputs)
+                                zk.set("/experiments/" + str(self.exp_id) + "/status", "completed")
+                                zk.ensure_path("/experiments/" + str(self.exp_id) + "/dependent")
+                                zk.set("/experiments/" + str(self.exp_id) + "/dependent", json.dumps(self.trial_outputs))
+                                zk.delete("/experiments/" + str(self.exp_id) + "/trials", recursive = True)
+                                self.completed_trials_counter = 0
+                            return False
+                    return True
+                trial = self.trial_class(zk=zk, work_processor_class = self.work_processor_class, number_of_hosts=self.number_of_hosts, exp_id=self.exp_id, trial_id=trial_number, data=trial_data)
+                trial.run()
+
+        return self.exp_id
 
     # For now, create ssh calls in subprocesses for the other hosts.
     def scatter_gather(self, run_data={}):
@@ -129,7 +193,7 @@ class Experiment(object):
                         ', num_trials=' + str(self.num_trials) +
                         ', exp_data=' + str(self.experiment.exp_data) +
                         ', independent=[\'' + str(self.experiment.independent[0]) + '\', ' + str(self.vals) + ']' +
-                        ', dependent=\'' + str(self.experiment.dependent) + '\')\n')
+                        ', dependent=\'' + str(self.experiment.get_dependent_vars) + '\')\n')
             start = time.time()
             try:
                 process = subprocess.Popen(call, stdin=subprocess.PIPE, stdout=subprocess.PIPE)

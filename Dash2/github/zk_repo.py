@@ -1,7 +1,7 @@
 import sys; sys.path.extend(['../../'])
 import json
 
-class ZkGitRepo():
+class ZkRepo():
     """
     An object representing a Github repository synchronized via ZooKeeper.
     Object is memory efficient and designed for large scale simulations
@@ -45,8 +45,8 @@ class ZkGitRepo():
             self.unsynchronized_events_counter = 0
             self.last_time_synchronized = curr_time
             # callback
-            if ZkGitRepo.sync_event_callback is not None:
-                ZkGitRepo.sync_event_callback(self.id, curr_time)
+            if ZkRepo.sync_event_callback is not None:
+                ZkRepo.sync_event_callback(self.id, curr_time)
 
     def is_sync_needed(self, curr_time, max_number_unsynced_events=10, max_time_delta=3600):
         if self.is_node_shared is False:

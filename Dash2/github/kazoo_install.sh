@@ -3,14 +3,14 @@
 # Tested on Ubuntu 16.04 LTS
 
 function install_on_all_nodes {
-	source ./deter.conf
+	source deter.conf
 
 	NUMBER_OF_NODES=${#DASH_NODES[@]}
 	echo 'Total ' $NUMBER_OF_NODES ' workers in assemble'
 	for ID in `seq 1 $NUMBER_OF_NODES`;
 		do
 			echo 'Installing Zookeeper on node ' ${DASH_NODES[$ID-1]}
-			ssh ${DASH_NODES[$ID-1]} "tmux new-session -d bash $WEBDASH_CLONE/Dash2/distributed_github/kazoo_install.sh $ID $KAZOO_CLONE $TMP_DIR"
+			ssh ${DASH_NODES[$ID-1]} "tmux new-session -d bash $WEBDASH_CLONE/Dash2/github/kazoo_install.sh $ID $KAZOO_CLONE $TMP_DIR"
 		done
 	
 	echo "Kazoo installation completed on all DASH nodes"

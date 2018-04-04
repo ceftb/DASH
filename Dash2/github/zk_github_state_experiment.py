@@ -1,34 +1,43 @@
 import sys; sys.path.extend(['../../'])
-import random
+import os.path
 from heapq import heappush, heappop
 from Dash2.core.parameter import Range
 from Dash2.core.measure import Measure
 from Dash2.core.parameter import Uniform
 from Dash2.core.parameter import Parameter
-from dash_trial import DashTrial
-from Dash2.distributed_github.dash_work_processor import DashWorkProcessor
+from Dash2.core.trial import Trial
+from Dash2.core.experiment import Experiment
+from Dash2.core.dash_controller import DashController
+from Dash2.core.work_processor import WorkProcessor
 from Dash2.github.git_user_agent import GitUserAgent
-from dash_experiment import DashExperiment
-from dash_controller import DashController
-from zk_repo_hub import ZkRepoHub
-from github_intial_state_generator import GithubStateLoader
+from intial_state_loader import GithubStateLoader
 
 # This is an example of experiment script
 
 # Work processor performs simulation as individual process (it is a DashWorker)
-class ZkGithubStateWorkProcessor(DashWorkProcessor):
+class ZkGithubStateWorkProcessor(WorkProcessor):
 
     # this is path to current package
-    module_name = "Dash2.distributed_github.zk_github_state_experiment"
+    module_name = "Dash2.github.zk_github_state_experiment"
 
     def initialize(self):
+        # Optionally can choose a different hub. Default hub definde in _init_()
+        #self.hub = ZkRepoHub(zk, task_full_id, 0, log_file=self.log_file)
         self.agents = {} # in this experiment agents are stored as a dictionary (fyi: by default it was a list)
         self.events_heap = []
-        # optionally can choose a different hub. Default hub definde in _init_()
-        GithubStateLoader.load_profiles_from_file(self.users_file, self.populate_agents_collection)
+
+        if not (self.state_file is None and self.state_file != "") and os.path.isfile(self.state_file):
+            meta_data = GithubStateLoader.read_state_file(ZkGithubStateTrial.state_file)
+            pass
+        if not (self.users_file is None and self.users_file != "") and os.path.isfile(self.users_file): # it is important to load users first, since this will instantiate list of
+            # repos used by agents in this dash worker
+            GithubStateLoader.load_profiles_from_file(self.users_file, self.populate_agents_collection)
+        if not (self.repos_file is None and self.repos_file != "") and os.path.isfile(self.repos_file):
+            GithubStateLoader.load_profiles_from_file(self.repos_file, self.populate_repos_collection)
+
         print "Agents instantiated: ", len(self.agents)
 
-    # function takes user profile and creates an agent, new agent is added to the pool of agents.
+    # Function takes a user profile and creates an agent.
     def populate_agents_collection(self, profile):
         agent_id = profile.pop("id", None)
         a = GitUserAgent(useInternalHub=True, hub=self.hub, id=agent_id,
@@ -46,6 +55,14 @@ class ZkGithubStateWorkProcessor(DashWorkProcessor):
         heappush(self.events_heap, (a.next_event_time(0, self.max_time), a.id))
         self.agents[a.id] = a
 
+    # Function takes a repo profile and populates repo object in self.hub
+    def populate_repos_collection(self, profile):
+        int_repo_id = int(profile.pop("id", None))
+        if int_repo_id in self.hub.all_repos:
+            # self.hub.init_repo(repo_id=int_repo_id, profile=profile)
+            repo = self.hub.all_repos[int_repo_id]
+            # update repo properties here
+
     def run_one_iteration(self):
         event_time, agent_id = heappop(self.events_heap)
         a = self.agents[int(agent_id)]
@@ -53,21 +70,13 @@ class ZkGithubStateWorkProcessor(DashWorkProcessor):
         a.agentLoop(max_iterations=1, disconnect_at_end=False)
         heappush(self.events_heap, (a.next_event_time(event_time, self.max_time), agent_id))
 
-    def dependent(self):
-        return {"num_agents": self.num_agents(), "num_repos": self.num_repos(), "total_agent_activity": self.total_agent_activity()}
+    def get_dependent_vars(self):
+        return {"num_agents": len(self.agents), "num_repos": sum([len(a.name_to_repo_id) for a in self.agents.viewvalues()]),
+                "total_agent_activity": sum([a.total_activity for a in self.agents.viewvalues()])}
 
-    # Measures #
-    def num_agents(self):
-        return len(self.agents)
-
-    def num_repos(self):
-        return len(self.hub.all_repos)
-
-    def total_agent_activity(self):
-        return sum([a.total_activity for a in self.agents.itervalues()])
 
 # Dash Trial decomposes trial into tasks and allocates them to DashWorkers
-class ZkGithubStateTrial(DashTrial):
+class ZkGithubStateTrial(Trial):
     parameters = [Parameter('prob_create_new_agent', distribution=Uniform(0,1), default=0.5),
                   Parameter('prob_agent_creates_new_repo', distribution=Uniform(0,1), default=0.5),
                   Parameter('max_time', distribution=Uniform(5184000, 5184001), default=5184000)]
@@ -75,29 +84,30 @@ class ZkGithubStateTrial(DashTrial):
     # all measures are considered depended vars, values are aggregated in self.results
     measures = [Measure('num_agents'), Measure('num_repos'), Measure('total_agent_activity')]
 
-    state_file_name = "./data/state_file.json"
+    state_file = "./data/state_file.json"
 
     def initialize(self):
-        meta_data = GithubStateLoader.read_state_file(ZkGithubStateTrial.state_file_name)
+        meta_data = GithubStateLoader.read_state_file(ZkGithubStateTrial.state_file)
         number_of_users = meta_data["number_of_users"]
         number_of_repos = meta_data["number_of_repos"]
-        self.users_file_name = meta_data["users_file"]
+        self.users_file = meta_data["users_file"]
+        self.repos_file = meta_data["repos_file"]
         is_partitioning_needed = meta_data["is_partitioning_needed"]
 
-        # prepare task files for individual dash workers
+        # generate task files for individual dash workers
         if is_partitioning_needed == "True": # partitioning breaks input simulation state file into series of task files for DashWokers.
             # Generated task file can be reused across experiments with the same number of dash workers, which speeds up overall time.
-            GithubStateLoader.partition_profiles_file(self.users_file_name, self.number_of_hosts, number_of_users)
+            GithubStateLoader.partition_profiles_file(self.users_file, self.number_of_hosts, number_of_users)
 
         # set up max repo id
         self.set_max_repo_id(number_of_repos)
 
-    # method defines parameters for individual tasks (as a json data object ) that will be sent to dash workers
+    # this method defines parameters of individual tasks (as a json data object - 'data') that will be sent to dash workers
     def init_task_params(self, task_full_id, data):
         _, _, task_num = task_full_id.split("-") # self.task_num by default is the same as node id
-        # users_file
-        data["users_file"] = self.users_file_name + "_" + str(int(task_num) - 1)
-        data["parameters"].append("users_file")
+        self.init_task_param("state_file", self.state_file + "_" + str(int(task_num) - 1), data)
+        self.init_task_param("users_file", self.users_file + "_" + str(int(task_num) - 1), data)
+        self.init_task_param("repos_file", self.repos_file + "_" + str(int(task_num) - 1), data)
 
     # partial_dependent is a dictionary of dependent vars
     def append_partial_results(self, partial_dependent):
@@ -128,7 +138,7 @@ if __name__ == "__main__":
 
     # ExperimentController is a until class that provides command line interface to run the experiment on clusters
     controller = DashController(zk_hosts=zk_hosts, number_of_hosts=number_of_hosts)
-    exp = DashExperiment(trial_class=ZkGithubStateTrial,
+    exp = Experiment(trial_class=ZkGithubStateTrial,
                          work_processor_class=ZkGithubStateWorkProcessor,
                          number_of_hosts=number_of_hosts,
                          independent=independent,
