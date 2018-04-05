@@ -5,7 +5,6 @@ import csv
 import struct
 from kazoo.client import KazooClient
 from Dash2.github.git_user_agent import GitUserAgent
-from dateutil.parser import parse
 import ijson
 import datetime
 
