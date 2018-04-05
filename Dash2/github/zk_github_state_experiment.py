@@ -23,6 +23,8 @@ class ZkGithubStateWorkProcessor(WorkProcessor):
     def initialize(self):
         # Optionally can choose a different hub. Default hub definde in _init_()
         #self.hub = ZkRepoHub(zk, task_full_id, 0, log_file=self.log_file)
+        self.hub.log_file.close() # close default file
+        self.hub.log_file = open(self.task_id + '_event_log_file.txt', 'w')
         self.agents = {} # in this experiment agents are stored as a dictionary (fyi: by default it was a list)
         self.events_heap = []
 
@@ -115,6 +117,16 @@ class ZkGithubStateTrial(Trial):
             if not (measure.name in self.results):
                 self.results[measure.name] = 0
             self.results[measure.name] += int(partial_dependent[measure.name])
+
+    def process_after_run(self):  # merge log files from all workers
+        file_names = []
+        number_of_files = self.number_of_hosts
+        for task_index in range(0, number_of_files, 1):
+            log_file_name = str(self.exp_id) + "-" + str(self.trial_id) + "-" + str(task_index + 1) + "_event_log_file.txt"
+            file_names.append(log_file_name)
+        GithubStateLoader.merge_log_file(file_names , "output.csv", "timestamp, event, user_id, repo_id")
+        for log_file_name in file_names:
+            os.remove(log_file_name)
 
 
 if __name__ == "__main__":

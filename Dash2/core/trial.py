@@ -2,13 +2,14 @@
 # an iterative period where the agents are dovetailed until some stopping criterion is met,
 # and an objective function that defines what gets saved from each trial and processed in the Experiment class.
 import json
+from work_processor import WorkProcessor
 
 class Trial(object):
     # Class-level information about parameter ranges and distributions.
     parameters = []
     measures = []
 
-    def __init__(self, data={}, max_iterations=-1, zk=None, number_of_hosts=1, exp_id=None, trial_id=None, work_processor_class=None):
+    def __init__(self, data={}, max_iterations=-1, zk=None, number_of_hosts=1, exp_id=None, trial_id=None, work_processor_class=WorkProcessor):
         self.agents = []
         self.data = data  # This passes parameter data to be used in the trial. The names are available as attributes
         # Initialize from parameter list first, then any passed data
@@ -83,6 +84,7 @@ class Trial(object):
         self.initialize()
         if self.zk is not None: # distributed trial version (uses zookeeper)
             self.run_distributed_trial()
+            self.process_after_run()
         else: # overridden in each subclass to do something useful
             for agent in self.agents:
                 agent.traceLoop = False

@@ -42,13 +42,13 @@ class ZkRepoHub(GitRepoHub):
     def log_event(self, user_id, repo_id, event_type, subevent_type, time):
         self.log_file.write(str(time))
         self.log_file.write(",")
+        #self.log_file.write(event_type)
+        #self.log_file.write(",")
+        self.log_file.write(subevent_type)
+        self.log_file.write(",")
         self.log_file.write(str(user_id))
         self.log_file.write(",")
         self.log_file.write(str(repo_id))
-        self.log_file.write(",")
-        self.log_file.write(event_type)
-        self.log_file.write(",")
-        self.log_file.write(subevent_type)
         self.log_file.write("\n")
 
     def processRegisterRequest(self, agent_id, aux_data):

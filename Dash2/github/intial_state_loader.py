@@ -31,6 +31,25 @@ class GithubStateLoader(object):
     # "h" - id hash, not used in profiles file.
     '''
 
+
+    @staticmethod
+    def merge_log_file(file_names, output_file_name, header_line=None, sort_chronologically=False):
+        if sort_chronologically:
+            print "Under development, work in progress ..."
+        else:
+            output_file = open(output_file_name, 'w')
+            if header_line is not  None:
+                output_file.write(header_line)
+                output_file.write("\n")
+
+            for filename in file_names:
+                input_log = open(filename, "r")
+                datareader = input_log.readlines()
+                for line in datareader:
+                    output_file.write(line)
+                input_log.close()
+            output_file.close()
+
     @staticmethod
     def read_state_file(filename):
         raw_data = json.load(open(filename))
