@@ -7,6 +7,7 @@ from kazoo.client import KazooClient
 from Dash2.github.git_user_agent import GitUserAgent
 from dateutil.parser import parse
 import ijson
+import datetime
 
 class GithubStateLoader(object):
 
@@ -114,8 +115,8 @@ class GithubStateLoader(object):
         user_hash_to_profile_map = {}
         repo_hash_to_profile_map = {}
 
-        max_time_limit = parse("2017-01-31T23:59:55Z")
-        min_time_limit = parse("2014-01-31T23:59:55Z")
+        max_time_limit = datetime.datetime.strptime( "2017-01-31T23:59:55Z", "%Y-%m-%dT%H:%M:%SZ" )
+        min_time_limit = datetime.datetime.strptime( "2014-01-31T23:59:55Z", "%Y-%m-%dT%H:%M:%SZ" )
 
         with open(filename, "rb") as csvfile:
             datareader = csv.reader(csvfile)
@@ -144,7 +145,7 @@ class GithubStateLoader(object):
     ####################################
     @staticmethod
     def read_src_line(row, user_map, repo_map, min_time, max_time):
-        event_time = max_time #parse(row[0])
+        event_time = max_time # datetime.datetime.strptime( row[0], "%Y-%m-%dT%H:%M:%SZ" )
         if event_time <= max_time and event_time >= min_time:
             event_type = row[1]
             user_id = row[2]
