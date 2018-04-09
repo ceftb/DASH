@@ -185,7 +185,6 @@ class Beliefs(dict):
     # Ensure commutivity of dot product
     __rmul__ = __mul__
 
-
 class BeliefNetwork(object):
     """
     Nodes represent concepts in the belief network and edges represent a
@@ -225,8 +224,8 @@ class BeliefNetwork(object):
         self.beliefs = beliefs
         self.concept_set = self._find_all_concepts(self.beliefs.keys())
         self.triangle_set = self._find_all_triangles(self.beliefs.keys(), 
-                                            self.beliefs, 
-                                            self.concept_set)
+                                                     self.beliefs,
+                                                     self.concept_set)
         self.energy = self._calc_energy(self.triangle_set, self.beliefs)
 
     def __str__(self):
@@ -474,6 +473,31 @@ class BeliefNetwork(object):
         newcopy.energy = self.energy
         return newcopy
 
+    def __contains__(self, item):
+        """
+        Implemented for use with 'in' operator
+        :param item: either a Beliefs or a ConceptPair. If Beliefs, it will
+            iterate over each Belief and check that the ConceptPair and
+            valence match what is in the network. If it is a ConceptPair, then
+            it just checks if the concept is in the network.
+        :return: True/False
+        """
+
+        if isinstance(item, Beliefs):
+
+            for pair, valence in item.iteritems():
+                if pair not in self.beliefs:
+                    return False
+                elif self.beliefs[pair] == valence:
+                    return False
+
+            return True
+
+        elif isinstance(item, ConceptPair):
+            return item in self.beliefs
+
+        else:
+            raise NotImplementedError
 
 def empty_copy(obj):
     """
