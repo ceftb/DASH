@@ -343,7 +343,7 @@ class GitRepoHub(WorldHub):
             return 'fail'
 
         updated_at = time()
-        self.local_repos[base_id].reopened_request_event(request_id, updated_at)
+        self.local_repos[base_id].reopened_pull_request_event(request_id, updated_at)
         self.log_event(agent_id, base_id, 'PullRequestEvent', 'reopen', updated_at)
         return 'success'
 

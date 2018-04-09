@@ -52,13 +52,13 @@ class WorldHub:
         if hasattr(self, underscore_action) and callable(getattr(self, underscore_action)):
             return getattr(self, underscore_action)(agent_id, data)
         # fallthrough code
-        print 'Calling base class processSendActionRequest since neither', action, "nor", underscore_action, \
-            "were found as methods"
+        print('Calling base class processSendActionRequest since neither', action, 
+              "nor", underscore_action, "were found as methods")
         aux_response = self.updateState(agent_id, action, data) + self.getUpdates(agent_id, data)
         return ['success', aux_response]
 
     def processDisconnectRequest(self, id, aux_data):
-        print "Client %d has disconnected from the world hub." % id
+        print("Client {} has disconnected from the world hub.".format(id))
         return "this is ignored"
 
     def updateState(self, id, action, aux_data):
@@ -72,7 +72,7 @@ class WorldHub:
     ####################################################################
 
     def __init__(self, port=None):
-        print "initializing world hub..."
+        print("initializing world hub...")
         self.host = 'localhost'
         if port is None:
             self.port = 5678
@@ -87,7 +87,7 @@ class WorldHub:
 
     def run(self):
         # attempt to open a socket with initialized values.
-        print "opening socket..."
+        print("opening socket...")
         try:
             self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.server.bind((self.host, self.port))
@@ -95,12 +95,12 @@ class WorldHub:
         except socket.error, (value, message):
             if self.server:
                 self.server.close()
-            print "could not open. socket. following error occurred: " + message
+            print("could not open. socket. following error occurred: {}".format(message))
             sys.exit(1)
         
         # listen for new connections.
-        print "successfully opened socket. listening for new connections..."
-        print "if you wish to quit the server program, enter q"
+        print("successfully opened socket. listening for new connections...")
+        print("if you wish to quit the server program, enter q")
         input = [self.server, sys.stdin]
         self.listening = True  # An instance variable so that we can break this loop from outside if necessary
         while self.listening:
@@ -119,10 +119,10 @@ class WorldHub:
                     if user_input == "q\n":
                         self.listening = False
                     else:
-                        print "if you wish to quit, enter q."
+                        print("if you wish to quit, enter q.")
         
         # quit
-        print "quitting program as requested by user..."
+        print("quitting program as requested by user...")
         self.server.close()
         for c in self.threads:
             c.join()
@@ -161,9 +161,9 @@ class ServeClientThread(threading.Thread):
                 [message_type, message] = self.getClientRequest()
 
                 if self.trace_handler:
-                    print "received following information in client request:"
-                    print "message type: %s" % message_type
-                    print "message: %s" % message
+                    print("received following information in client request:")
+                    print("message type: %s" % message_type)
+                    print("message: %s" % message)
                 
                 # do something with the message....
                 # types of messages to consider: register id, process action, update state 
@@ -172,16 +172,16 @@ class ServeClientThread(threading.Thread):
             print 'Client disconnected'
 
         except BaseException as e:
-            print "closing socket...", e
+            print("closing socket...", e)
             traceback.print_exc()
             self.client.close()
-            print "exiting client thread"
+            print("exiting client thread")
 
     # read message and return a list of form [client_id, message_type, message_contents]
     def getClientRequest(self):
         # read first 4 bytes for message len
         if self.trace_handler:
-            print "getting message type and message length..."
+            print("getting message type and message length...")
         bytes_read = 0
         bytes_expected = 8
         message_header = ""
@@ -196,12 +196,12 @@ class ServeClientThread(threading.Thread):
         message_type, message_len = struct.unpack("!II", message_header)
 
         if self.trace_handler:
-            print "message type: %d" % message_type
-            print "message len: %d" % message_len
+            print("message type: %d" % message_type)
+            print("message len: %d" % message_len)
 
         # read payload
         if self.trace_handler:
-            print "getting payload..."
+            print("getting payload...")
         bytes_read = 0
         bytes_expected = message_len
         message = ""
@@ -215,7 +215,7 @@ class ServeClientThread(threading.Thread):
         message_payload = pickle.loads(message)
 
         if self.trace_handler:
-            print "successfully retrieved payload %s ... returning." % message_payload
+            print("successfully retrieved payload %s ... returning." % message_payload)
 
         return [message_type, message_payload]
 
@@ -240,7 +240,7 @@ class ServeClientThread(threading.Thread):
             #sys.exit(0)  # don't necessarily want to exit the hub when one agent disconnects
             self.running = False  # This will end the listen loop in the 'run' method
         else:
-            print "uhoh!"
+            print("uhoh!")
 
         if self.running:
             self.sendMessage(response)
@@ -257,13 +257,13 @@ class ServeClientThread(threading.Thread):
     
     def handleRegisterRequest(self, message):
         if self.trace_handler:
-            print 'handling registration request...'
+            print('handling registration request...')
         aux_data = message[0]
         return self.processRegisterRequestWrapper(aux_data)
 
     def handleSendActionRequest(self, message):
         if self.trace_handler:
-            print 'handling send action request for', self, '...'
+            print('handling send action request for', self, '...')
         id = message[0]
         action = message[1]
         aux_data = message[2]
@@ -271,14 +271,14 @@ class ServeClientThread(threading.Thread):
 
     def handleGetUpdatesRequest(self, message):
         if self.trace_handler:
-            print 'handling get updates request...'
+            print('handling get updates request...')
         id = message[0]
         aux_data = message[1]
         return self.processGetUpdatesRequest(id, aux_data)
 
     def handleDisconnectRequest(self, message):
         if self.trace_handler:
-            print 'handling disconnect request...'
+            print('handling disconnect request...')
         id = message[0]
         aux_data = message[1]
         return self.processDisconnectRequest(id, aux_data)

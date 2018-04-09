@@ -47,14 +47,14 @@ goalRequirements doWork
     # 'action' is a term, e.g. ('portScanner', '_server1', _80, 'protocol')
     def portScanner(self, action):
         # Will expand to a call to nmap here
-        print "called portScanner with", action
+        print("called portScanner with", action)
         # Host needs to be bound
         [host, portVar, protocolVar] = action[1:]
         if not isConstant(host):
-            print "Host needs to be bound on calling portScanner:", host
+            print("Host needs to be bound on calling portScanner:", host)
             return False
         if not self.realAttack:
-            print "**Simulating port scan returning http on port 80"
+            print("**Simulating port scan returning http on port 80")
             return [{portVar: "_80", protocolVar: '_http'}] # simulate a web server
         bindingsList = []
         readingPorts = False
@@ -62,7 +62,7 @@ goalRequirements doWork
         try:
             proc = subprocess.check_output(["nmap", host[1:]]).split('\n') # runs nmap if it's in the path
         except:
-            print "Unable to run nmap"
+            print("Unable to run nmap")
             return {}
         for line in proc:
             words = line.split()
@@ -85,31 +85,31 @@ goalRequirements doWork
                     bindingsList.append({portVar: port})
                 elif portVar == port and protocolVar == protocol:
                     bindingsList.append({})   # constants all match, record success
-        print "portscanner:", bindingsList
+        print("portscanner:", bindingsList)
         return bindingsList
 
     def bruteForce(self, action):
         users = {'user1':'pass1', 'user2':'pass2'}
         for user in users:
-            print users[user]
+            print(users[user])
         result = self.sendAction('bruteForce');
 
 
 
     def sqlMap(self, action):
-        print "Called sql map with action", action
+        print("Called sql map with action", action)
         # Expect everything to be bound and use sqlmap to check there is a vulnerability there
         # Remove the prefix exclamation marks
         [host, port, base, parameter] = [arg[1:] for arg in action[1:]]
         if not self.realAttack:
-            print "** Simulating sql map finding a vulnerability on", host
+            print("** Simulating sql map finding a vulnerability on", host)
             return [{}]    # no bindings, just report finding a vulnerability
         proc = None
         call = ["python", self.SQLMapHome + "/sqlmap.py", "-u", "http://" + host + ":" + port + "/" + base + "?" + parameter + "=1"]
         try:
             proc = subprocess.Popen(call,stdin=subprocess.PIPE,stdout=subprocess.PIPE)
         except BaseException as e:
-            print "Unable to run sqlmap:", e
+            print("Unable to run sqlmap:", e)
             return []
         result = []
         printing = False
@@ -127,30 +127,30 @@ goalRequirements doWork
                 result = [{}]    # This would signify success without adding new bindings
                 printing = True
             if printing:
-                print("SQLMap: " + line)
+                print(("SQLMap: " + line))
                 if "---" in line:
                     seenDashes += 1
                     if seenDashes == 2:
                         printing = False
             if "o you want to" in line:  # I suspect these lines are actually sent to stderr - they don't seem
                 # to show up here.
-                print "SQLMap (answering):", line
+                print("SQLMap (answering):", line)
                 proc.stdin.write('\n')    # take the default option
             if "starting" or "shutting down" in line:
-                print "SQLMap:", line
+                print("SQLMap:", line)
             if "shutting down" in line:
                 line = ""
             line = proc.stdout.readline()
-        print "Finished sqlmap"
-        print proc.communicate()
+        print("Finished sqlmap")
+        print(proc.communicate())
         return result
 
     def SQLInjectionReadFile(self, args):
-        print "Performing sql injection attack to read a file with args", args
+        print("Performing sql injection attack to read a file with args", args)
         [source, target, targetFile, port, baseUrl, parameter] = [arg[1:] for arg in args[1:]]  # assume constants, remove _
         # Call is very similar to sqlMap above with an extra --file-read argument
         if not self.realAttack:
-            print "** simulating sql injection attack success for ", target, targetFile, port, baseUrl, parameter
+            print("** simulating sql injection attack success for ", target, targetFile, port, baseUrl, parameter)
             return [{}]  # simulate success in reading the file (it is stored locally by sqlmap in the real attack)
         result = []
         try:
@@ -167,15 +167,15 @@ goalRequirements doWork
             line = proc.stdout.readline()
             while line != "":
                 line = line.translate(None, control)
-                print "SQLMap read:", line
+                print("SQLMap read:", line)
                 if 'o you want to' in line:
-                    print "Sending default answer:", line
+                    print("Sending default answer:", line)
                     proc.stdin.write('\n')
                 if "the local file" in line:
                     result = [{}]
                 line = proc.stdout.readline()
         except BaseException as e:
-            print "Unable to run sqlmap to read file:", e
+            print("Unable to run sqlmap to read file:", e)
         return result
 
 

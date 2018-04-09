@@ -13,5 +13,14 @@
 *.log
 *.aux
 
+build/
+dist/
+*egg-info/
+
+.cache/*
+
 # Mac related files
 .DS_Store
+
+# backup files
+*~

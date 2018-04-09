@@ -2,6 +2,7 @@ import sys; sys.path.extend(['../../'])
 from Dash2.core.dash import DASHAgent
 from Dash2.core.system2 import isVar
 import random
+import numpy
 
 
 class GitUserAgent(DASHAgent):
@@ -15,10 +16,11 @@ class GitUserAgent(DASHAgent):
         self.isSharedSocketEnabled = True  # if it is True, then common socket for all agents is used.
         # The first agent to use the socket, gets to set up the connection. All other agents with
         # isSharedSocketEnabled = True will reuse it.
-
         self.readAgent(
             """
-goalWeight MakeRepo 1
+goalWeight MakeRepo 2
+
+goalWeight UpdateOwnRepo 1
 
 goalRequirements MakeRepo
   create_repo_event(RepoName)
@@ -30,7 +32,14 @@ goalRequirements MakeRepo
   unlabel_pull_request_event(Request)
   review_pull_request_event(Request)
   remove_review_pull_request_event(Request)
+  forget([submit_pull_request_event(RepoName, RepoName), pick_random_pull_request(Request), close_pull_request_event(Request), reopened_pull_request_event(Request), label_pull_request_event(Request)])
+
+goalRequirements UpdateOwnRepo
+  pick_repo_using_frequencies(RepoName)
+  push_event(RepoName)
+  forget([pick_repo_using_frequencies(RepoName), push_event(RepoName)])
             """)
+
 
         # Registration
         self.useInternalHub = kwargs.get("useInternalHub")
@@ -38,7 +47,7 @@ goalRequirements MakeRepo
         self.server_host = kwargs.get("host", "localhost")
         self.server_port = kwargs.get("port", 5678)
         self.trace_client = kwargs.get("trace_client", True)
-        registration = self.register()
+        registration = self.register({"id": kwargs.get("id", None), "freqs": kwargs.get("freqs", {})})
 
         # Setup information
         self.use_model_assignment = kwargs.get("use_model", True)
@@ -73,10 +82,11 @@ goalRequirements MakeRepo
         # Assigned information
         self.id = registration[1] if registration is not None else None
         if self.use_model_assignment:
-            self.ght_id_h = self.id 
+            self.ght_id_h = self.id
             self.created_at = registration[2] if registration is not None else None
 
-        self.trace_github = True  # Will print far less to the screen if this is False
+        self.trace_github = kwargs.get("trace_github", True)  # Will print far less to the screen if this is False
+        self.traceLoop = kwargs.get("traceLoop", True)
 
         # Other Non-Schema information
         self.total_activity = 0
@@ -84,6 +94,14 @@ goalRequirements MakeRepo
         self.watching_list = {} # ght_id_h: {full_name_h, watching_date, watching_dow}
         self.owned_repos = {} # {ght_id_h : name_h}
         self.name_to_repo_id = {} # {name_h : ght_id_h} Contains all repos known by the agent
+        if kwargs.get("freqs") is not None:
+            self.repo_id_to_freq = kwargs.get("freqs").copy()
+            for r_id in self.repo_id_to_freq:
+                self.name_to_repo_id[r_id] = r_id
+        else:
+            self.repo_id_to_freq = {}  # {ght_id_h : frequency of use/communication} Contains all repos agent interacted with
+        self.probabilities = None
+
         self.name_to_user_id = {} # {login_h : ght_id_h} Contains all users known by the agent
         self.known_issue_comments = {} # key: (repo_name) value: [(issue #)]
         self.known_issues = {} # key: (repo_name) value: [(issue #)]
@@ -93,6 +111,7 @@ goalRequirements MakeRepo
         self.primitiveActions([
             ('generate_random_name', self.generate_random_name),
             ('pick_random_repo', self.pick_random_repo),
+            ('pick_repo_using_frequencies', self.pick_repo_using_frequencies),
             ('pick_random_issue_comment', self.pick_random_issue_comment),
             ('pick_random_issue', self.pick_random_issue),
             ('create_repo_event', self.create_repo_event),
@@ -190,6 +209,22 @@ goalRequirements MakeRepo
         self.total_activity += 1
         return [{repo_name_variable : random.choice(self.name_to_repo_id.keys()) }]
 
+    def pick_repo_using_frequencies(self, (goal, repo_name_variable)):
+        """
+        Function that will pick a repository and return the id
+        """
+        self.total_activity += 1
+
+        if (self.probabilities is None):
+            self.probabilities = []
+            sum = 0.0
+            for fr in self.repo_id_to_freq.itervalues():
+                sum += fr
+            for fr in self.repo_id_to_freq.itervalues():
+                self.probabilities.append(fr / sum)
+        selected_repo = numpy.random.choice(numpy.arange(1, len(self.repo_id_to_freq)+1), p=self.probabilities)
+        return [{repo_name_variable : random.choice(self.repo_id_to_freq.keys()) }]
+
     def pick_random_issue_comment(self, (goal, issue_comment)):
         self.total_activity += 1
         # Picks a repo and then an id
@@ -202,6 +237,10 @@ goalRequirements MakeRepo
         repo_name = random.choice(self.known_issues.keys())
         issue_id = random.choice(self.known_issues[repo_name])
         return [{issue : (repo_name, issue_id)}]
+
+
+    def next_event_time(self, curr_time, max_time):
+        return random.uniform(curr_time + 0.1, max_time)
 
     ############################################################################
     # CreateEvents (Tag/branch/repo)
@@ -504,12 +543,12 @@ goalRequirements MakeRepo
                 print 'Agent does not know the id of the repo with name', base_name, 'cannot pull'
             return []
 
-        status = self.sendAction("reopened_request_event", 
+        status = self.sendAction("reopened_pull_request_event",
                                 (self.name_to_repo_id[base_name], request_id))
         self.outgoing_requests[(head_name, base_name, request_id)] = 'open'
         self.total_activity += 1
         if self.trace_github:
-            print status, 'reopened_request_event', head_name, base_name, request_id
+            print status, 'reopened_pull_request_event', head_name, base_name, request_id
         return [{}]
 
     def assign_pull_request_event(self):

@@ -1,10 +1,8 @@
-
-
-
-from Dash2.core.dash import DASHAgent
 import random
 import operator
 import sys
+from six import iteritems
+from Dash2.core.dash import DASHAgent
 
 class SimilarityAgent(DASHAgent):
 
@@ -18,7 +16,7 @@ class SimilarityAgent(DASHAgent):
 
         response = self.register()
         if response[0] != "success":
-            print "Error: world hub not reachable - exiting "
+            print("Error: world hub not reachable - exiting ")
             sys.exit()
         self.id = response[1]
 
@@ -95,14 +93,14 @@ goalRequirements doWork
         if bool(self.knownUsernames):
             username = random.choice(self.knownUsernames)
         else:
-            username = random.choice(self.username_list.keys())
+            username = random.choice(list(self.username_list.keys()))
 
         ### choose Password
-        desired_pass = random.choice(self.password_list.keys())
+        desired_pass = random.choice(list(self.password_list.keys()))
         # if there are requirements verify that the password complies them
         if requirements is not None:
             while not requirements.verify(username, desired_pass):
-                desired_pass = random.choice(self.password_list.keys())
+                desired_pass = random.choice(list(self.password_list.keys()))
 
 
         if (self.password_list[desired_pass] + self.cognitiveBurden) < self.cogThreshold:
@@ -111,7 +109,7 @@ goalRequirements doWork
             self.knownPasswords[desired_pass] = self.password_list[desired_pass]
             del self.password_list[desired_pass]
         elif distPicker(self.memoBias, random.random()) == 'same':
-            password = max(stats.iteritems(), key=operator.itemgetter(1))[0]
+            password = max(iteritems(stats), key=operator.itemgetter(1))[0]
         else:
             password = desired_pass + "00"
             self.knownPasswords.append(password)
@@ -119,10 +117,10 @@ goalRequirements doWork
 
         result = self.sendAction('createAccount', [service, username, password])
         if result[0] == 'success':
-            print 'Success: Account Created'
-            print 'Password: ' + password
+            print('Success: Account Created')
+            print('Password: ' + password)
         elif result[0] == 'failed:user':
-			print 'Failed: username already exists (should not happen yet)'
+			print('Failed: username already exists (should not happen yet)')
         elif result[0] == 'failed:reqs':
 			setupAccount(self, service_type, service, result[1])
 

@@ -271,11 +271,6 @@ class GitRepo(object):
         self.pull_requests[request_id]['labeled'] = True
         self.pull_requests[request_id]['updated_at'] = updated_at
 
-    def label_pull_request_event(self, request_id, updated_at):
-
-        self.pull_requests[request_id]['labeled'] = False
-        self.pull_requests[request_id]['updated_at'] = updated_at
-
     def review_pull_request_event(self, request_id, updated_at):
 
         self.pull_requests[request_id]['review'] = True
