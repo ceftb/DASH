@@ -22,7 +22,6 @@ Verbosity is turned on by default so you can see how the beliefs change
 following each interaction with the forum comments.
 """
 
-import sys; sys.path.extend(['../../'])
 from Dash2.core.dash import DASHAgent
 from Dash2.socog.socog_module import *
 
