@@ -84,7 +84,7 @@ class Trial(object):
         self.initialize()
         if self.zk is not None: # distributed trial version (uses zookeeper)
             self.run_distributed_trial()
-            self.process_after_run()
+            # self.process_after_run() - this method is called asynchronously via ZK watcher
         else: # overridden in each subclass to do something useful
             for agent in self.agents:
                 agent.traceLoop = False
@@ -132,10 +132,11 @@ class Trial(object):
                     dependent_vars_path = "/experiments/" + str(self.exp_id) + "/trials/" + str(
                         self.trial_id) + "/nodes/" + str(node_id) + "/dependent_variables"
                     self.zk.set(dependent_vars_path, "")  # clearing data
-                    if self.received_tasks_counter == self.number_of_hosts:
+                    if self.received_tasks_counter == self.number_of_hosts: # all subtasks are completed.
                         self.aggregate_results()
                         self.zk.set(self.curr_trial_path + "/status", json.dumps(
                             {"trial_id": self.trial_id, "status": "completed", "dependent": self.results}))
+                        self.process_after_run()
                         return False
                 return True
 
