@@ -110,6 +110,10 @@ class GithubStateLoader(object):
     def convert_csv_to_json_profiles(filename):
         users_file = open(filename + "_users.json", "w")
         repos_file = open(filename + "_repos.json", "w")
+        users_id_dict = open(filename + "_users_id_dict.csv", "w")
+        users_id_dict.write("src_id, sim_id\n")
+        repos_id_dict = open(filename + "_repos_id_dict.csv", "w")
+        repos_id_dict.write("src_id, sim_id\n")
 
         user_hash_to_profile_map = {}
         repo_hash_to_profile_map = {}
@@ -122,7 +126,8 @@ class GithubStateLoader(object):
             counter = 0
             for row in datareader:
                 if counter != 0:
-                    GithubStateLoader.read_src_line(row, user_hash_to_profile_map, repo_hash_to_profile_map, min_time_limit, max_time_limit)
+                    GithubStateLoader.read_csv_line(row, user_hash_to_profile_map, users_id_dict, repos_id_dict,
+                                                    repo_hash_to_profile_map, min_time_limit, max_time_limit)
                 counter += 1
                 if counter % 1000000 == 0:
                     print "line: " + str(counter)
@@ -136,6 +141,8 @@ class GithubStateLoader(object):
         csvfile.close()
         users_file.close()
         repos_file.close()
+        users_id_dict.close()
+        repos_id_dict.close()
 
         return user_hash_to_profile_map, repo_hash_to_profile_map
 
@@ -143,22 +150,27 @@ class GithubStateLoader(object):
     # util methods below
     ####################################
     @staticmethod
-    def read_src_line(row, user_map, repo_map, min_time, max_time):
+    def read_csv_line(row, user_map, users_id_dict, repos_id_dict, repo_map, min_time, max_time):
         event_time = max_time # datetime.datetime.strptime( row[0], "%Y-%m-%dT%H:%M:%SZ" )
         if event_time <= max_time and event_time >= min_time:
             event_type = row[1]
             user_id = row[2]
             repo_id = row[17]
 
-            user_profile = GithubStateLoader.get_profile_and_update_map_if_new(user_map, hash(user_id))
-            repo_profile = GithubStateLoader.get_profile_and_update_map_if_new(repo_map, hash(repo_id))
+            user_profile = GithubStateLoader.get_profile_and_update_map_if_new(user_map, user_id, users_id_dict)
+            repo_profile = GithubStateLoader.get_profile_and_update_map_if_new(repo_map, repo_id, repos_id_dict)
 
             GithubStateLoader.update_freqs(user_profile, repo_profile, user_id, repo_id)
 
     @staticmethod
-    def get_profile_and_update_map_if_new(map, id_hash):
+    def get_profile_and_update_map_if_new(map, id, id_dict):
+        id_hash = hash(id)
         if not map.has_key(id_hash): # new entry
             map[id_hash] = {"id":len(map)} #Profile(int_id=len(map), freqs={})
+            id_dict.write(str(id))
+            id_dict.write(",")
+            id_dict.write(str(map[id_hash]["id"]))
+            id_dict.write("\n")
         return map[id_hash]
 
     @staticmethod

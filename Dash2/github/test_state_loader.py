@@ -30,7 +30,7 @@ if __name__ == "__main__":
             cmd = raw_input(
                 "Press q to exit loader\n\tr to parse source data file and create user and repo profiles\n\t"
                 "l to load objects from profiles file and load them into memory\n\tp to partition profiles file (not loaded in memory)\n\t"
-                "s to load state file\n\tc to merge output log files")
+                "s to load state file\n\tc to merge output log files\n")
             if cmd == "q":
                 print("Exiting ...")
                 break

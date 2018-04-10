@@ -16,22 +16,22 @@ def create_repos(number_of_repos):
     return repos
 
 if __name__ == "__main__":
-    number_of_repos = 2
-    number_of_agents = 1000
+    number_of_repos = 3100000
+    number_of_agents = 10
     number_of_events_to_simulate = 1000000
     max_time = 5184000.0 # 60 days = 5184000.0 seconds
     start_sim_time = 0.0
 
     # populate repo frequencies
+    repos = create_repos(number_of_repos) # memory test
     repos = {101: 10, 102: 20, 103: 30}
-    #repos = create_repos(number_of_repos) # memory test
 
     # zk hub and log file
     log_file = open('event_log_file.txt', 'w')
     github = ZkRepoHub(None, "1-1-1", start_sim_time, log_file)
-    github.all_repos = {101: ZkRepo(id=101, curr_time=0, is_node_shared=True),
-                        102: ZkRepo(id=102, curr_time=0, is_node_shared=True),
-                        103: ZkRepo(id=103, curr_time=0, is_node_shared=True)}
+    github.all_repos = {101: ZkRepo(id=101, curr_time=0, is_node_shared=False),
+                        102: ZkRepo(id=102, curr_time=0, is_node_shared=False),
+                        103: ZkRepo(id=103, curr_time=0, is_node_shared=False)}
 
     # populate users/agents
     start_time = time.time()
@@ -56,7 +56,7 @@ if __name__ == "__main__":
         heappush(events_heap, (agents[int(agent_id)].next_event_time(event_time, max_time), agent_id))
         if event_counter % 100000 == 0 and event_counter > 0:
             rate_stop_time = time.time()
-            print "iteration: ", event_counter, "time per 10K: ", rate_stop_time - rate_start_time
+            print "iteration: ", event_counter, "time per 100K: ", rate_stop_time - rate_start_time
             rate_start_time = time.time()
     end_time = time.time()
     print "Simulation of simulation is completed. Time: ", end_time - start_time, \

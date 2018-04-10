@@ -1,0 +1,13 @@
+{"meta": 
+	{ 
+	"input_events_log": "data_sample.csv",
+	"number_of_users": 2, 
+	"number_of_repos": 4,
+	"users_file": "./data_sample/data_sample.csv_users.json",
+	"repos_file": "./data_sample/data_sample.csv_repos.json",
+	"users_ids": "./data_sample/data_sample.csv_users_id_dict.csv",
+	"repos_ids": "./data_sample/data_sample.csv_repos_id_dict.csv",
+	"is_input_event_log_parse_needed": "True",
+	"is_partitioning_needed": "True"
+	}
+}
