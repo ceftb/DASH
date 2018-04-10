@@ -1,5 +1,5 @@
 from Dash2.core.dash import DASHAgent
-from socog_system1 import SocogSystem1Agent
+from Dash2.socog.socog_system1 import SocogSystem1Agent
 
 
 class SocogDASHAgent(SocogSystem1Agent, DASHAgent):

@@ -1,22 +1,25 @@
-from socog_module import BeliefModule
-from socog_module import ConceptPair
+from Dash2.socog.socog_module import BeliefModule
+from Dash2.socog.socog_module import ConceptPair
+
+
+class Index(object):
+    """
+    Implements a wrapper around an integer to allow a mutable int-like interface
+    """
+    def __init__(self, pos=0):
+        self.pos = pos
+
+    def increment(self):
+        self.pos += 1
+
+    def decrement(self):
+        self.pos -= 1
 
 
 class SocogSystem1Agent(object):
     """
 
     """
-
-    tokens = {
-        'and' : self._and,
-        'or' : self._or,
-        'not' : self._not,
-        '(' : '(',
-        ')' : ')',
-        'True' : True,
-        'False' : False
-    }
-
     def __init__(self, belief_module=None):
         """
 
@@ -32,34 +35,6 @@ class SocogSystem1Agent(object):
         # sequence of actions.
         self.rule_list = []
         self.belief_token_map = {}
-
-    def _and(self, a, b):
-        """
-        evaluates: a and b
-        :param a: a boolean
-        :param b: a boolean
-        :return: boolean
-        """
-
-        return a and b
-
-    def _or(self, a, b):
-        """
-        evaluates: a or b
-        :param a: a boolean
-        :param b: a boolean
-        :return: boolean
-        """
-
-        return a or b
-
-    def _not(self, a):
-        """
-        evaluates: not a
-        :param a: a boolean
-        :return: boolean
-        """
-        return not a
 
     def read_system_rules(self, rule_string):
         """
@@ -81,9 +56,13 @@ class SocogSystem1Agent(object):
 
             Note: setting valence to 0.0 is ambiguous and will return True if
                 the agent has the belief.
+
             Note: The 'True' word can be used to designate conditions that will
                 always return true, e.g.:
-                    if True then talk(belief) call(belief)
+                    if [True] then talk(belief) call(belief)
+                    if [false] or not [TRUE] then talk(belief) call(belief)
+
+            Note: precedence is from left to right or determined by parenthesis
 
         :return: None
         """
@@ -93,13 +72,18 @@ class SocogSystem1Agent(object):
 
         self.belief_token_map.update(self._construct_belief_token_map(self.rule_list))
 
-    def _is_belief_token(self, token):
+    def _swap_token_variables(self, split_belief_token):
+        """
+        Swaps variable location and builds a new string with concept locations
+        swapped.
+        :param split_belief_token: a belief token that has been split into its
+            elements
+        :return: a string representing the same token but with variable locations
+            swapped.
+        """
 
-        if ((token != ')') and (token != '(') and (token != 'and') and
-                (token != 'not') and (token != 'True') and (token != 'False')):
-            return True
-
-        return False
+        return split_belief_token[1] + "," + split_belief_token[0] \
+               + "," + split_belief_token[2]
 
     def _construct_belief_token_map(self, rule_list):
         """
@@ -111,13 +95,27 @@ class SocogSystem1Agent(object):
 
         belief_token_map = {}
         for rule in rule_list:
-            for token in rule:
-                if self._is_belief_token(token):
-                    split_token = token.split(",")
-                    belief_token_map[token] = (ConceptPair(
-                        split_token[0], split_token[1]), float(split_token[2]))
+            for token in rule[0]:
+                self._add_token_to_map(token, belief_token_map)
 
         return belief_token_map
+
+    def _add_token_to_map(self, token, token_map):
+        """
+        Checks if token is valid, and if so, adds it to the map in-place
+        :param token: a condition token
+        :return: same reference to map
+        """
+        if SocogSystem1Agent.is_belief_token(token):
+            split_token = token.split(",")
+            concept_pair = ConceptPair(split_token[0], split_token[1])
+            token_map[token] = (concept_pair, float(split_token[2]))
+            # To keep variable order invariant have to swap variables
+            doppelganger_token = self._swap_token_variables(split_token)
+            token_map[doppelganger_token] = (concept_pair,
+                                             float(split_token[2]))
+
+        return token_map
 
     def _split_condition_string_into_tokens(self, condition_string):
         """
@@ -131,12 +129,13 @@ class SocogSystem1Agent(object):
             .replace('(', ' ( ')\
             .replace(')', ' ) ')\
             .replace('andnot', ' and not ')\
+            .replace('ornot', ' or not ')\
             .replace('[', ' [')\
             .replace(']', '] ')\
             .replace('[', '')\
             .replace(']', '')
 
-        return condition_string.split(" ")
+        return condition_string.split()
 
     def _split_rule_into_action_and_condition(self, rule):
         """
@@ -154,26 +153,29 @@ class SocogSystem1Agent(object):
 
         return self._split_condition_string_into_tokens(condition), action
 
-    # def _check_condition(self, condition):
-    #     """
-    #     Parses the condition strings and evaluates whether they are satisfied
-    #     or not.
-    #     :param condition: a condition string
-    #     :param pos: position of pointer
-    #     :return: boolean
-    #     """
-    #
-    #     current_element =
-    #
-    #     if
-
     def _is_belief_token_satisfied(self, belief_token):
         """
         :param belief_token: string representing a belief
         :return: True/False
         """
 
-        return self._is_belief_condition_satisfied(*self.belief_token_map[belief_token])
+        if belief_token in self.belief_token_map:
+            return self._is_belief_condition_satisfied(
+                *self.belief_token_map[belief_token])
+
+        elif belief_token == 'True':
+            return True
+
+        elif belief_token == 'False':
+            return False
+
+        elif SocogSystem1Agent.is_belief_token(belief_token):
+            self._add_token_to_map(belief_token, self.belief_token_map)
+            return self._is_belief_token_satisfied(belief_token)
+
+        else:
+            raise ValueError("Error: Invalid token input <" +
+                             belief_token + "> does not have a truth value")
 
     def _is_belief_condition_satisfied(self, concept_pair, valence):
         """
@@ -189,6 +191,142 @@ class SocogSystem1Agent(object):
                 return True
 
         return False
+
+    boolean_non_operands = {'and', 'or', 'not', '(', ')'}
+
+    binary_operators = {'and', 'or'}
+
+    @staticmethod
+    def is_operand_token(token):
+        """
+        :param token: a tokenized string
+        :return: boolean
+        """
+
+        return token.lower() not in SocogSystem1Agent.boolean_non_operands
+
+    @staticmethod
+    def is_binary_operator_token(token):
+        """
+        :param token: a tokenized string
+        :return: boolean
+        """
+
+        return token.lower() in SocogSystem1Agent.binary_operators
+
+    @staticmethod
+    def is_belief_token(token):
+        """
+        :param token: a tokenized string
+        :return: boolean
+        """
+
+        return SocogSystem1Agent.is_operand_token(token) \
+            and (token.lower() != 'true') \
+            and (token.lower() != 'false')
+
+    @staticmethod
+    def valid_operator_token(tokens, index):
+        """
+        Returns True if the token at index.pos exists and is an operator
+        :param tokens: a list of tokens
+        :param index: Index object
+        :return: boolean
+        """
+
+        if index.pos >= len(tokens):
+            return False
+
+        return SocogSystem1Agent.is_binary_operator_token(tokens[index.pos])
+
+    def parse_expression(self, tokens, index=None):
+        """
+        A boolean logic parser that is implemented as a recursive decent parser.
+        :param tokens: list of tokens
+        :param index: index location in tokens (default 0)
+        :return: boolean value
+        """
+
+        if index is None:
+            index = Index()
+
+        while index.pos < len(tokens):
+            is_negated = False
+            if tokens[index.pos].lower() == 'not':
+                is_negated = True
+                index.increment()
+
+            evaluation = self.parse_subexpression(tokens, index)
+            if is_negated:
+                evaluation = not evaluation
+
+            while SocogSystem1Agent.valid_operator_token(tokens, index):
+                operator = tokens[index.pos].lower()
+                index.increment()
+                if index.pos >= len(tokens):
+                    raise IndexError("Error: Missing expression after operator: "
+                                     + str(tokens[index.pos - 1]) + " at "
+                                     + str(index.pos))
+
+                next_evaluation = self.parse_subexpression(tokens, index)
+                if operator == 'and':
+                    evaluation = evaluation and next_evaluation
+                elif operator == 'or':
+                    evaluation = evaluation or next_evaluation
+                else:
+                    raise AssertionError("Error: Unknown operator")
+
+            return evaluation
+
+        raise IndexError("Empty expression")
+
+    def parse_subexpression(self, tokens, index=None):
+        """
+        Parses subexpressions. Is a part of the parse_expression function.
+        :param tokens: list of tokens
+        :param index: index location in tokens (default 0)
+        :return: boolean value
+        """
+        if index is None:
+            index = Index()
+
+        if SocogSystem1Agent.is_belief_token(tokens[index.pos]):
+            token_evaluation = self._is_belief_token_satisfied(tokens[index.pos])
+            index.increment()
+            return token_evaluation
+
+        elif tokens[index.pos].lower() == 'true':
+            index.increment()
+            return True
+
+        elif tokens[index.pos].lower() == 'false':
+            index.increment()
+            return False
+
+        elif tokens[index.pos] == '(':
+            index.increment()
+            expression_eval = self.parse_expression(tokens, index)
+            if tokens[index.pos] != ')':
+                raise IndexError("Error: Expected closed parenthesis")
+
+            index.increment()
+            return expression_eval
+
+        elif tokens[index.pos] == ')':
+            raise IndexError("Error: Unexpected closed parenthesis")
+
+        else:
+            return self.parse_expression(tokens, index)
+
+    def _is_condition_satisfied(self, condition):
+        """
+        Parses the condition tokens and evaluates whether they are satisfied
+        or not.
+        :param condition: a tokenized list from the rule_list
+        :return: boolean
+        """
+
+        return self.parse_expression(condition)
 
     def listen(self, action):
 
@@ -208,7 +346,7 @@ class SocogSystem1Agent(object):
 
     def actions_over_threshold(self, threshold):
         """
-
+        I think this will check conditions in the rule list
         :param threshold:
         :return: A list of iterable things that have a node_to_action method
         """
