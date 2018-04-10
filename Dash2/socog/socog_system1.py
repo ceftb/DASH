@@ -1,5 +1,7 @@
 from Dash2.socog.socog_module import BeliefModule
 from Dash2.socog.socog_module import ConceptPair
+from Dash2.core.system1 import Node
+from collections import deque
 
 
 class Index(object):
@@ -18,12 +20,12 @@ class Index(object):
 
 class SocogSystem1Agent(object):
     """
-
+    A system1-like class that uses a belief module and system rules to fill
+    a queue of actions that the agent will attempt to take
     """
     def __init__(self, belief_module=None):
         """
-
-        :param belief_module:
+        :param belief_module: A BeliefModule object
         """
 
         if belief_module is None:
@@ -35,6 +37,7 @@ class SocogSystem1Agent(object):
         # sequence of actions.
         self.rule_list = []
         self.belief_token_map = {}
+        self.action_queue = deque()
 
     def read_system_rules(self, rule_string):
         """
@@ -328,39 +331,70 @@ class SocogSystem1Agent(object):
 
         return self.parse_expression(condition)
 
-    def listen(self, action):
-
-        pass
-
-    def talk(self, action):
-
-        pass
-
-    def spreading_activation(self):
-
-        pass
-
-    def system1_decay(self):
-
-        pass
-
-    def actions_over_threshold(self, threshold):
+    def listen(self, args):
         """
-        I think this will check conditions in the rule list
-        :param threshold:
+        Takes a two element tuple. The second element must be a Beliefs object
+        which system1 will use to update the belief module. Once updated,
+        the action queue will be emptied and the rules will be checked for
+        satisfied conditions. The action queue will be re-filled with new
+        active actions from the rule list.
+        :param args: goal, belief tuple
+        :return: Empty [{}]
+        """
+        goal, belief = args
+        self._belief_module.listen(belief)
+        self.reset_action_queue()
+        return [{}]
+
+    def talk(self, args):
+        """
+        Calls the belief module's talk method to get and return a Beliefs
+        object with the agents chosen belief for emission.
+        :param args: goal, belief tuple
+        :return: single element list with dictionary. key=belief, value=Beliefs
+        """
+        goal, belief = args
+        return [{belief: self._belief_module.talk()}]
+
+    def select_action_from_queue(self):
+        """
+        :return: Selects an action at the front of the queue. If no actions
+            remain, it returns None. Pops actions from the front (left) of the
+            queue.
+        """
+
+        try:
+            return self.action_queue.popleft()
+        except IndexError:
+            return None
+
+    def actions_from_satisfied_conditions(self):
+        """
+        Check all conditions in rule_list and return a list of actions
+        that satisfy those conditions
         :return: A list of iterable things that have a node_to_action method
         """
 
-        return #list of
+        active_actions = []
+        for condition, actions in self.rule_list:
+            if self._is_condition_satisfied(condition):
+                active_actions += actions
 
-    def add_activation(self, fact, activation_increment=0.3):
+        return active_actions
 
-        pass
+    def reset_action_queue(self):
+        """
+        Empties queue, and calculates what conditions are satisfied and adds
+        them to the queue.
+        :return: None
+        """
+        self.action_queue.clear()
+        self.action_queue.extend(self.actions_from_satisfied_conditions())
 
-
-# Something needs this....................
-def node_to_action(self):
-
-    pass
-
-    return # an action?
+    def add_actions_to_queue(self, action_list):
+        """
+        Adds actions to the right of the action queue
+        :param action_list: a list of primitive actions
+        :return: None
+        """
+        self.action_queue.extend(action_list)
