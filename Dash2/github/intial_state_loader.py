@@ -51,6 +51,38 @@ class GithubStateLoader(object):
             output_file.close()
 
     @staticmethod
+    def trnaslate_user_and_repo_ids_in_event_log(even_log_file, output_file_name, users_ids_file, repos_ids_file):
+        input_file = open(even_log_file, 'r')
+        output_file = open(output_file_name, 'w')
+        users_map = GithubStateLoader.load_id_dictionary(users_ids_file)
+        repos_map = GithubStateLoader.load_id_dictionary(repos_ids_file)
+
+        datareader = csv.reader(input_file)
+        counter = 0
+        for row in datareader:
+            if counter != 0:
+                user_id = int(row[2])
+                repo_id = int(row[3])
+                src_user_id = users_map[user_id]
+                src_repo_id = repos_map[repo_id]
+                output_file.write(row[0])
+                output_file.write(",")
+                output_file.write(row[1])
+                output_file.write(",")
+                output_file.write(src_user_id)
+                output_file.write(",")
+                output_file.write(src_repo_id)
+                output_file.write("\n")
+            counter += 1
+            if counter % 1000000 == 0:
+                print "line: " + str(counter)
+        print counter
+
+        input_file.close()
+        output_file.close()
+
+
+    @staticmethod
     def read_state_file(filename):
         raw_data = json.load(open(filename))
         return raw_data["meta"]
@@ -149,6 +181,22 @@ class GithubStateLoader(object):
     ####################################
     # util methods below
     ####################################
+
+    @staticmethod
+    def load_id_dictionary(dictionary_file_name):
+        dict_file = open(dictionary_file_name, "r")
+        datareader = csv.reader(dict_file)
+        ids_map = {}
+        counter = 0
+        for row in datareader:
+            if counter != 0:
+                src_id = row[0]
+                target_id = row[1]
+                ids_map[int(target_id)] = src_id
+        dict_file.close()
+        return ids_map
+
+
     @staticmethod
     def read_csv_line(row, user_map, users_id_dict, repos_id_dict, repo_map, min_time, max_time):
         event_time = max_time # datetime.datetime.strptime( row[0], "%Y-%m-%dT%H:%M:%SZ" )
@@ -247,3 +295,4 @@ if __name__ == "__main__":
                 print "Unrecognized command " + cmd + "\n"
     else:
         print 'incorrect arguments: ', sys.argv
+

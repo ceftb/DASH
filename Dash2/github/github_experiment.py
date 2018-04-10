@@ -15,6 +15,7 @@ from Dash2.core.parameter import Range, Parameter, Uniform, TruncNorm
 from Dash2.core.measure import Measure
 from git_user_agent import GitUserAgent
 from git_repo_hub import GitRepoHub
+from zk_repo import ZkRepo
 import random
 import time
 import numpy
@@ -36,12 +37,12 @@ class GitHubTrial(Trial):
     def initialize(self):
         # Create a hub object that will reside in the experiment with the agents
         self.hub = GitRepoHub(1)
-
+        self.freqs = {101: 10, 102: 20, 103: 30}
 
     # Override the default (which runs each agent once) to decide whether to create a new agent
     def run_one_iteration(self):
         if not self.agents or random.random() < self.prob_create_new_agent:  # Have to create an agent in the first step
-            a = GitUserAgent(useInternalHub=True, hub=self.hub, port=6000, trace_client=False)
+            a = GitUserAgent(useInternalHub=True, hub=self.hub, port=6000, trace_client=False, freqs=self.freqs)
             a.trace_client = False  # cut chatter when connecting and disconnecting
             a.traceLoop = False  # cut chatter when agent runs steps
             a.trace_github = False  # cut chatter when acting in github world
