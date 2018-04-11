@@ -3,18 +3,6 @@ from Dash2.socog.socog_system1 import SocogSystem1Agent, System1Evaluator
 from Dash2.core.system2 import substitute
 
 
-def request_action(action):
-
-    result = self.performAction(action)
-    self.update_beliefs(result, action)
-
-
-
-
-
-
-
-
 class SocogDASHAgent(SocogSystem1Agent, DASHAgent):
     """
     An Agent that uses the socog modules system1
@@ -31,6 +19,7 @@ class SocogDASHAgent(SocogSystem1Agent, DASHAgent):
         self.system1_evaluator = System1Evaluator(self)
 
     def agentLoop(self, max_iterations=-1, disconnect_at_end=True):
+        self.system1_evaluator.initialize_action_queue()
         next_action = self.choose_action()
         iteration = 0
         while next_action is not None \
@@ -97,8 +86,8 @@ class SocogDASHAgent(SocogSystem1Agent, DASHAgent):
         """
         goal, belief = args
         self.belief_module.listen(belief)
-        self.reset_action_queue(
-            self.system1_evaluator.actions_from_satisfied_conditions())
+        self.system1_evaluator.initialize_action_queue()
+
         return [{}]
 
     def talk(self, args):

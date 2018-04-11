@@ -108,36 +108,14 @@ class SocogSystem1Agent(object):
 
         return token_map
 
-    def _split_condition_string_into_tokens(self, condition_string):
+    @staticmethod
+    def parse_string_to_tokens(condition_string):
         """
         Splits the condition string into a list of tokens, e.g. terminals
         and operators and parentheses and actions.
         :param condition_string: a string representation of the condition
         :return: token list
         """
-
-        # condition_string = condition_string.replace(" ", "")\
-        #     .replace('andnot', ' and not ')\
-        #     .replace('ornot', ' or not ')\
-        #     .replace('[', ' [')\
-        #     .replace(']', '] ')\
-        #     .replace('[', '')\
-        #     .replace(']', '')
-
-        print condition_string #################################################
-
-        tokens = SocogSystem1Agent.parse_string_to_tokens(condition_string)
-        # .replace('(', ' ( ') \
-        # .replace(')', ' ) ')\
-        print
-        print tokens  #################################################
-        print
-
-        return tokens
-
-    @staticmethod
-    def parse_string_to_tokens(condition_string):
-
         slice_start = Index(0)
         slice_end = Index(1)
         tokens = []
@@ -202,7 +180,7 @@ class SocogSystem1Agent(object):
         condition = condition.replace("if", "", 1)
         action = action.strip().split(" ")
 
-        return self._split_condition_string_into_tokens(condition), action
+        return SocogSystem1Agent.parse_string_to_tokens(condition), action
 
     def is_belief_condition_satisfied(self, concept_pair, valence):
         """
@@ -273,6 +251,7 @@ class System1Evaluator(object):
         :param socog_agent: A SocogDASHAgent
         """
         self.socog_agent = socog_agent
+        self._recursion_flag = False
 
     boolean_non_operands = {'and', 'or', 'not', '(', ')'}
     binary_operators = {'and', 'or'}
@@ -402,6 +381,15 @@ class System1Evaluator(object):
             index.increment()
             return token_evaluation
 
+        if System1Evaluator.is_action_token(tokens[index.pos]):
+            # Recursion flag is to prevent actions from
+            # resetting the stack and condition check indefinitely
+            self._recursion_flag = True
+            token_evaluation = self.evaluate_action(tokens[index.pos])
+            self._recursion_flag = False
+            index.increment()
+            return token_evaluation is True
+
         elif tokens[index.pos].lower() == 'true':
             index.increment()
             return True
@@ -448,3 +436,22 @@ class System1Evaluator(object):
                 active_actions += actions
 
         return active_actions
+
+    def evaluate_action(self, action):
+
+        result = self.socog_agent.performAction(action)
+        self.socog_agent.update_beliefs(result, action)
+        return result
+
+    def initialize_action_queue(self):
+        """
+        Fills system1's action queue with actions found to satisfy the
+        conditions of its rules.
+
+        Uses a recursion flag to prevent actions that are called from the
+        condition check to call another condition check.
+
+        :return: None
+        """
+        if not self._recursion_flag:
+            self.socog_agent.reset_action_queue(self.actions_from_satisfied_conditions())
