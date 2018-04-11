@@ -1,21 +1,6 @@
 from Dash2.socog.socog_module import BeliefModule
 from Dash2.socog.socog_module import ConceptPair
-from Dash2.core.system1 import Node
 from collections import deque
-
-
-class Index(object):
-    """
-    Implements a wrapper around an integer to allow a mutable int-like interface
-    """
-    def __init__(self, pos=0):
-        self.pos = pos
-
-    def increment(self):
-        self.pos += 1
-
-    def decrement(self):
-        self.pos -= 1
 
 
 class SocogSystem1Agent(object):
@@ -23,15 +8,18 @@ class SocogSystem1Agent(object):
     A system1-like class that uses a belief module and system rules to fill
     a queue of actions that the agent will attempt to take
     """
+
+    boolean_token = {'and', 'or', 'not', 'true', 'false'}
+
     def __init__(self, belief_module=None):
         """
         :param belief_module: A BeliefModule object
         """
 
         if belief_module is None:
-            self._belief_module = BeliefModule()
+            self.belief_module = BeliefModule()
         else:
-            self._belief_module = belief_module
+            self.belief_module = belief_module
 
         # A list of tuples. The first element is the condition, the second a
         # sequence of actions.
@@ -39,10 +27,10 @@ class SocogSystem1Agent(object):
         self.belief_token_map = {}
         self.action_queue = deque()
 
-    def read_system_rules(self, rule_string):
+    def read_system1_rules(self, rule_string):
         """
         Adds rules from the given string into the list of rules in the socog
-        system.
+        system1.
 
         :param rule_string: A string containing lines for each system rule.
             A system rule is defined by a condition and sequence of actions.
@@ -99,17 +87,17 @@ class SocogSystem1Agent(object):
         belief_token_map = {}
         for rule in rule_list:
             for token in rule[0]:
-                self._add_token_to_map(token, belief_token_map)
+                self.add_token_to_map(token, belief_token_map)
 
         return belief_token_map
 
-    def _add_token_to_map(self, token, token_map):
+    def add_token_to_map(self, token, token_map):
         """
         Checks if token is valid, and if so, adds it to the map in-place
         :param token: a condition token
         :return: same reference to map
         """
-        if SocogSystem1Agent.is_belief_token(token):
+        if System1Evaluator.is_belief_token(token):
             split_token = token.split(",")
             concept_pair = ConceptPair(split_token[0], split_token[1])
             token_map[token] = (concept_pair, float(split_token[2]))
@@ -123,22 +111,82 @@ class SocogSystem1Agent(object):
     def _split_condition_string_into_tokens(self, condition_string):
         """
         Splits the condition string into a list of tokens, e.g. terminals
-        and operators and parentheses.
+        and operators and parentheses and actions.
         :param condition_string: a string representation of the condition
         :return: token list
         """
 
-        condition_string = condition_string.replace(" ", "")\
-            .replace('(', ' ( ')\
-            .replace(')', ' ) ')\
-            .replace('andnot', ' and not ')\
-            .replace('ornot', ' or not ')\
-            .replace('[', ' [')\
-            .replace(']', '] ')\
-            .replace('[', '')\
-            .replace(']', '')
+        # condition_string = condition_string.replace(" ", "")\
+        #     .replace('andnot', ' and not ')\
+        #     .replace('ornot', ' or not ')\
+        #     .replace('[', ' [')\
+        #     .replace(']', '] ')\
+        #     .replace('[', '')\
+        #     .replace(']', '')
 
-        return condition_string.split()
+        print condition_string #################################################
+
+        tokens = SocogSystem1Agent.parse_string_to_tokens(condition_string)
+        # .replace('(', ' ( ') \
+        # .replace(')', ' ) ')\
+        print
+        print tokens  #################################################
+        print
+
+        return tokens
+
+    @staticmethod
+    def parse_string_to_tokens(condition_string):
+
+        slice_start = Index(0)
+        slice_end = Index(1)
+        tokens = []
+        while slice_start.pos < len(condition_string):
+            if condition_string[slice_start.pos].isalnum() \
+                    or condition_string[slice_start.pos] == '[':
+                tokens.append(SocogSystem1Agent.parse_token_expression(
+                    condition_string, slice_start, slice_end))
+                slice_start.pos = slice_end.pos
+
+            elif condition_string[slice_start.pos] == ')':
+                tokens.append(')')
+
+            elif condition_string[slice_start.pos] == '(':
+                tokens.append('(')
+
+            elif condition_string[slice_start.pos] == ']':
+                raise ValueError("Error: unexpected closing bracket ]")
+
+            slice_start.increment()
+            slice_end.pos = slice_start.pos + 1
+
+        return tokens
+
+    @staticmethod
+    def parse_token_expression(condition_string, slice_start, slice_end):
+
+        if condition_string[slice_start.pos] == '[':
+            slice_start.increment()
+            while condition_string[slice_end.pos] != ']':
+                slice_end.increment()
+
+        elif condition_string[slice_start.pos].isalnum():
+            while slice_end.pos < len(condition_string):
+
+                if (condition_string[slice_start.pos:slice_end.pos].lower()
+                    in SocogSystem1Agent.boolean_token) \
+                       and condition_string[slice_end.pos] == ' ':
+                    break
+
+                if condition_string[slice_end.pos] == '(':
+                    while condition_string[slice_end.pos] != ')':
+                        slice_end.increment()
+                    slice_end.increment()
+                    break
+
+                slice_end.increment()
+
+        return condition_string[slice_start.pos:slice_end.pos].replace(' ','')
 
     def _split_rule_into_action_and_condition(self, rule):
         """
@@ -156,31 +204,7 @@ class SocogSystem1Agent(object):
 
         return self._split_condition_string_into_tokens(condition), action
 
-    def _is_belief_token_satisfied(self, belief_token):
-        """
-        :param belief_token: string representing a belief
-        :return: True/False
-        """
-
-        if belief_token in self.belief_token_map:
-            return self._is_belief_condition_satisfied(
-                *self.belief_token_map[belief_token])
-
-        elif belief_token == 'True':
-            return True
-
-        elif belief_token == 'False':
-            return False
-
-        elif SocogSystem1Agent.is_belief_token(belief_token):
-            self._add_token_to_map(belief_token, self.belief_token_map)
-            return self._is_belief_token_satisfied(belief_token)
-
-        else:
-            raise ValueError("Error: Invalid token input <" +
-                             belief_token + "> does not have a truth value")
-
-    def _is_belief_condition_satisfied(self, concept_pair, valence):
+    def is_belief_condition_satisfied(self, concept_pair, valence):
         """
         Checks if the condition is satisfied in the belief system
         :param concept_pair
@@ -188,15 +212,69 @@ class SocogSystem1Agent(object):
         :return: boolean
         """
 
-        if concept_pair in self._belief_module.belief_network:
+        if concept_pair in self.belief_module.belief_network:
             if (abs(valence)
-                    >= abs(self._belief_module.belief_network.beliefs[concept_pair])):
+                    >= abs(self.belief_module.belief_network.beliefs[concept_pair])):
                 return True
 
         return False
 
-    boolean_non_operands = {'and', 'or', 'not', '(', ')'}
+    def select_action_from_queue(self):
+        """
+        :return: Selects an action at the front of the queue. If no actions
+            remain, it returns None. Pops actions from the front (left) of the
+            queue.
+        """
 
+        try:
+            return self.action_queue.popleft()
+        except IndexError:
+            return None
+
+    def reset_action_queue(self, action_list):
+        """
+        Empties queue, and calculates what conditions are satisfied and adds
+        them to the queue.
+        :return: None
+        """
+        self.action_queue.clear()
+        self.action_queue.extend(action_list)
+
+    def add_actions_to_queue(self, action_list):
+        """
+        Adds actions to the right of the action queue
+        :param action_list: a list of primitive actions
+        :return: None
+        """
+        self.action_queue.extend(action_list)
+
+
+class Index(object):
+    """
+    Implements a wrapper around an integer to allow a mutable int-like interface
+    """
+    def __init__(self, pos=0):
+        self.pos = pos
+
+    def increment(self):
+        self.pos += 1
+
+    def decrement(self):
+        self.pos -= 1
+
+
+class System1Evaluator(object):
+    """
+    Helper class that evaluates system1agent rules
+    """
+
+    def __init__(self, socog_agent):
+        """
+        :param socog_agent: A SocogDASHAgent
+        """
+        self.socog_agent = socog_agent
+
+    boolean_non_operands = {'and', 'or', 'not', '(', ')'}
     binary_operators = {'and', 'or'}
 
     @staticmethod
@@ -206,7 +284,7 @@ class SocogSystem1Agent(object):
         :return: boolean
         """
 
-        return token.lower() not in SocogSystem1Agent.boolean_non_operands
+        return token.lower() not in System1Evaluator.boolean_non_operands
 
     @staticmethod
     def is_binary_operator_token(token):
@@ -215,7 +293,7 @@ class SocogSystem1Agent(object):
         :return: boolean
         """
 
-        return token.lower() in SocogSystem1Agent.binary_operators
+        return token.lower() in System1Evaluator.binary_operators
 
     @staticmethod
     def is_belief_token(token):
@@ -224,9 +302,16 @@ class SocogSystem1Agent(object):
         :return: boolean
         """
 
-        return SocogSystem1Agent.is_operand_token(token) \
-            and (token.lower() != 'true') \
-            and (token.lower() != 'false')
+        return token.count(',') == 3
+
+    @staticmethod
+    def is_action_token(token):
+        """
+        :param token: a tokenized string
+        :return: boolean
+        """
+
+        return ('(' in token) and (')' in token)
 
     @staticmethod
     def valid_operator_token(tokens, index):
@@ -240,7 +325,26 @@ class SocogSystem1Agent(object):
         if index.pos >= len(tokens):
             return False
 
-        return SocogSystem1Agent.is_binary_operator_token(tokens[index.pos])
+        return System1Evaluator.is_binary_operator_token(tokens[index.pos])
+
+    def _is_belief_token_satisfied(self, belief_token):
+        """
+        :param belief_token: string representing a belief
+        :return: True/False
+        """
+
+        if belief_token in self.socog_agent.belief_token_map:
+            return self.socog_agent.is_belief_condition_satisfied(
+                *self.socog_agent.belief_token_map[belief_token])
+
+        elif System1Evaluator.is_belief_token(belief_token):
+            self.socog_agent.add_token_to_map(belief_token,
+                                              self.socog_agent.belief_token_map)
+            return self._is_belief_token_satisfied(belief_token)
+
+        else:
+            raise ValueError("Error: Invalid token input <" +
+                             belief_token + "> does not have a truth value")
 
     def parse_expression(self, tokens, index=None):
         """
@@ -263,7 +367,7 @@ class SocogSystem1Agent(object):
             if is_negated:
                 evaluation = not evaluation
 
-            while SocogSystem1Agent.valid_operator_token(tokens, index):
+            while System1Evaluator.valid_operator_token(tokens, index):
                 operator = tokens[index.pos].lower()
                 index.increment()
                 if index.pos >= len(tokens):
@@ -293,7 +397,7 @@ class SocogSystem1Agent(object):
         if index is None:
             index = Index()
 
-        if SocogSystem1Agent.is_belief_token(tokens[index.pos]):
+        if System1Evaluator.is_belief_token(tokens[index.pos]):
             token_evaluation = self._is_belief_token_satisfied(tokens[index.pos])
             index.increment()
             return token_evaluation
@@ -321,7 +425,7 @@ class SocogSystem1Agent(object):
         else:
             return self.parse_expression(tokens, index)
 
-    def _is_condition_satisfied(self, condition):
+    def is_condition_satisfied(self, condition):
         """
         Parses the condition tokens and evaluates whether they are satisfied
         or not.
@@ -331,43 +435,6 @@ class SocogSystem1Agent(object):
 
         return self.parse_expression(condition)
 
-    def listen(self, args):
-        """
-        Takes a two element tuple. The second element must be a Beliefs object
-        which system1 will use to update the belief module. Once updated,
-        the action queue will be emptied and the rules will be checked for
-        satisfied conditions. The action queue will be re-filled with new
-        active actions from the rule list.
-        :param args: goal, belief tuple
-        :return: Empty [{}]
-        """
-        goal, belief = args
-        self._belief_module.listen(belief)
-        self.reset_action_queue()
-        return [{}]
-
-    def talk(self, args):
-        """
-        Calls the belief module's talk method to get and return a Beliefs
-        object with the agents chosen belief for emission.
-        :param args: goal, belief tuple
-        :return: single element list with dictionary. key=belief, value=Beliefs
-        """
-        goal, belief = args
-        return [{belief: self._belief_module.talk()}]
-
-    def select_action_from_queue(self):
-        """
-        :return: Selects an action at the front of the queue. If no actions
-            remain, it returns None. Pops actions from the front (left) of the
-            queue.
-        """
-
-        try:
-            return self.action_queue.popleft()
-        except IndexError:
-            return None
-
     def actions_from_satisfied_conditions(self):
         """
         Check all conditions in rule_list and return a list of actions
@@ -376,25 +443,8 @@ class SocogSystem1Agent(object):
         """
 
         active_actions = []
-        for condition, actions in self.rule_list:
-            if self._is_condition_satisfied(condition):
+        for condition, actions in self.socog_agent.rule_list:
+            if self.is_condition_satisfied(condition):
                 active_actions += actions
 
         return active_actions
-
-    def reset_action_queue(self):
-        """
-        Empties queue, and calculates what conditions are satisfied and adds
-        them to the queue.
-        :return: None
-        """
-        self.action_queue.clear()
-        self.action_queue.extend(self.actions_from_satisfied_conditions())
-
-    def add_actions_to_queue(self, action_list):
-        """
-        Adds actions to the right of the action queue
-        :param action_list: a list of primitive actions
-        :return: None
-        """
-        self.action_queue.extend(action_list)

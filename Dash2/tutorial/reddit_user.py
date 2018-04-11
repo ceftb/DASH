@@ -2,13 +2,7 @@
 This is a short tutorial module that can be run with reddit_hub.
 Reddit_hub contains a set of default comments on a soccer thread that
 the user agent will parse and convert to beliefs, which it will then
-assess. This uses only System2 functions with the socog_module, however,
-because the socog_module has a "has a" relationship with the DASH agents,
-there is no need for inheritance and it can operate independently of the
-function of System1 or System2. Rather, a System1/System2 configuration
-can use the belief module, calling the talk/listen methods for modifying or
-transmitting beliefs. Or they can use the beliefs or perceived_beliefs
-properties to access agent beliefs to implement actions.
+assess. This uses System2 and System1 functions with the socog_module.
 
 The user is instantiated with a sparse belief system where it believes that
 Henry and the GreyTeam are the best. Initial forum posts validate this and
@@ -22,11 +16,11 @@ Verbosity is turned on by default so you can see how the beliefs change
 following each interaction with the forum comments.
 """
 
-from Dash2.core.dash import DASHAgent
 from Dash2.socog.socog_module import *
+from Dash2.socog.socog_dash import SocogDASHAgent
 
 
-class RedditUser(DASHAgent):
+class RedditUser(SocogDASHAgent):
     """
     Test class for socog module
     """
@@ -48,10 +42,15 @@ class RedditUser(DASHAgent):
 goalWeight BrowseReddit 1
 
 goalRequirements BrowseReddit
-    read_comment()
-    write_comment()
+    read_comment(Belief)
+    listen(Belief)
     sleep(1)
-    forget([read_comment(), write_comment(), sleep(x)])
+    forget([read_comment(x), listen(x), sleep(x)])
+            """)
+
+        self.read_system1_rules(
+            """
+if 
             """)
 
         self.primitiveActions([
@@ -125,24 +124,21 @@ goalRequirements BrowseReddit
 
         return concept_pair.concept1 + association + concept_pair.concept2
 
-    def read_comment(self, (goal,)):
+    def read_comment(self, (goal, belief)):
         status, comment = self.sendAction("read_comment", [self.thread_location])
         print(self.id, 'reading...', status, comment)
         # if no comment then it reached the end of the forum
         if comment:
             extracted_belief = self._parse_comment(comment)
             print(self.id, 'belief translation...', extracted_belief)
-            self.belief_module.listen(extracted_belief)
-            print(self.id, 'updating beliefs...')
-            print(self.belief_module)
-
             # Move to next comment in thread and skip your own comments
             while True:
                 self.thread_location += 1
                 if self.thread_location not in self.my_comments:
                     break
-
-        return [{}]
+            return [{belief: extracted_belief}]
+        else:
+            return [{}]
 
     def write_comment(self, (goal,)):
         belief = self.belief_module.talk()
