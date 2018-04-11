@@ -182,6 +182,10 @@ class Beliefs(dict):
                 self[belief] *= other
             return self
 
+    def __hash__(self):
+        return hash(frozenset({frozenset({key, value})
+                               for key, value in self.iteritems()}))
+
     # Ensure commutivity of dot product
     __rmul__ = __mul__
 
