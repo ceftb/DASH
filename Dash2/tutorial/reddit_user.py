@@ -44,14 +44,13 @@ goalWeight BrowseReddit 1
 goalRequirements BrowseReddit
     read_comment(Belief)
     listen(Belief)
-    testprim(1,2)
     sleep(1)
     forget([read_comment(x), listen(x), sleep(x)])
             """)
 
         self.read_system1_rules(
             """
-if [Best,GreyTeam,0.7] and [Henry,Best,0.7] then talk(Belief) write_comment(Belief)
+if [Best,GreyTeam,0.7] and [Henry,Best,0.7] then talk(Belief) write_comment(Belief)   
             """)
 
         self.primitiveActions([
