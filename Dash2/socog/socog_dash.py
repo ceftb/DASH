@@ -1,6 +1,7 @@
 from Dash2.core.dash import DASHAgent
 from Dash2.socog.socog_system1 import SocogSystem1Agent, System1Evaluator
 from Dash2.core.system2 import substitute
+from Dash2.socog.socog_module import *
 
 
 class SocogDASHAgent(SocogSystem1Agent, DASHAgent):
@@ -13,6 +14,12 @@ class SocogDASHAgent(SocogSystem1Agent, DASHAgent):
     """
     
     def __init__(self, belief_module=None):
+        """
+        :param belief_module: A BeliefModule
+        """
+        if belief_module is None:
+            belief_module = BeliefModule()
+
         SocogSystem1Agent.__init__(self, belief_module)
         DASHAgent.__init__(self)
         self.primitiveActions([('listen', self.listen), ['talk', self.talk]])
@@ -73,6 +80,7 @@ class SocogDASHAgent(SocogSystem1Agent, DASHAgent):
                         print("Adding known true and performed", concrete_result)
                     self.knownTuple(concrete_result)
                     self.knownTuple(('performed', concrete_result))
+                self.update_variable_binding(concrete_result)
 
     def listen(self, args):
         """
@@ -85,8 +93,10 @@ class SocogDASHAgent(SocogSystem1Agent, DASHAgent):
         :return: Empty [{}]
         """
         goal, belief = args
-        self.belief_module.listen(belief)
-        self.system1_evaluator.initialize_action_queue()
+
+        if isinstance(belief, Beliefs):
+            self.belief_module.listen(belief)
+            self.system1_evaluator.initialize_action_queue()
 
         return [{}]
 

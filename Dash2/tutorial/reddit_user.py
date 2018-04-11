@@ -32,7 +32,7 @@ class RedditUser(SocogDASHAgent):
     concept_set = {soccer, greyteam, henry, best, corrupt}
 
     def __init__(self, **kwargs):
-        super(RedditUser, self).__init__()
+        SocogDASHAgent.__init__(self, kwargs.get("belief_module", None))
         self.server_host = kwargs.get("host", "localhost")
         self.server_port = kwargs.get("port", 5678)
         self.id = self.register()[1]
@@ -44,38 +44,27 @@ goalWeight BrowseReddit 1
 goalRequirements BrowseReddit
     read_comment(Belief)
     listen(Belief)
+    testprim(1,2)
     sleep(1)
     forget([read_comment(x), listen(x), sleep(x)])
             """)
 
         self.read_system1_rules(
             """
-if 
+if [Best,GreyTeam,0.7] and [Henry,Best,0.7] then talk(Belief) write_comment(Belief)
             """)
 
         self.primitiveActions([
             ('read_comment', self.read_comment),
-            ('write_comment', self.write_comment)])
+            ('write_comment', self.write_comment),
+            ('testprim', self.testprim)])
         self.thread_location = 0
         self.my_comments = set()
 
-        # Instantiate a belief module. It can start empty, but we will put in
-        # a couple initial beliefs first. Note: Concepts need to be immutable
-        # hashable types with __eq__ defined. A string will work.
-        # The Concept class is also provided and it supports name/id values
-        self.belief_module = BeliefModule(belief_net=BeliefNetwork(
-            Beliefs({ConceptPair(RedditUser.soccer, RedditUser.greyteam): 1.0,
-                     ConceptPair(RedditUser.greyteam, RedditUser.henry): 1.0,
-                     ConceptPair(RedditUser.henry, RedditUser.best): 1.0,
-                     ConceptPair(RedditUser.greyteam, RedditUser.best): 1.0,
-                     ConceptPair(RedditUser.best, RedditUser.corrupt): -1.0}
-                    )),
-            T=kwargs.get('T', 1.0),
-            J=kwargs.get('J', 1.0),
-            I=kwargs.get('I', 1.0),
-            tau=kwargs.get('tau', 1),
-            recent_belief_chance=kwargs.get('recent_belief_chance', 0.5),
-            verbose=True)
+    def testprim(self, args):
+
+        goal, a, b = args
+        return [{}]
 
     def _parse_comment(self, comment):
         """
@@ -140,8 +129,7 @@ if
         else:
             return [{}]
 
-    def write_comment(self, (goal,)):
-        belief = self.belief_module.talk()
+    def write_comment(self, (goal, belief)):
         comment = self._construct_comment(belief)
         print(self.id, "talking...", belief)
         status, comment_id = self.sendAction("write_comment", [comment])
@@ -151,5 +139,18 @@ if
 
 
 if __name__ == '__main__':
-    RedditUser(port=6000, I=1.0, J=1.0, T=1.0, tau=4,
-               recent_belief_chance=0.5).agentLoop(60)
+
+    # Instantiate a belief module. It can start empty, but we will put in
+    # a couple initial beliefs first. Note: Concepts need to be immutable
+    # hashable types with __eq__ defined. A string will work.
+    # The Concept class is also provided and it supports name/id values
+    belief_module = BeliefModule(belief_net=BeliefNetwork(
+        Beliefs({ConceptPair(RedditUser.soccer, RedditUser.greyteam): 1.0,
+                 ConceptPair(RedditUser.greyteam, RedditUser.henry): 1.0,
+                 ConceptPair(RedditUser.henry, RedditUser.best): 1.0,
+                 ConceptPair(RedditUser.greyteam, RedditUser.best): 1.0,
+                 ConceptPair(RedditUser.best, RedditUser.corrupt): -1.0}
+                )), T=1.0, J=1.0, I=1.0, tau=1, recent_belief_chance=0.5,
+        verbose=True)
+
+    RedditUser(port=6000, belief_module=belief_module).agentLoop(120)

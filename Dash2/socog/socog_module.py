@@ -185,6 +185,7 @@ class Beliefs(dict):
     # Ensure commutivity of dot product
     __rmul__ = __mul__
 
+
 class BeliefNetwork(object):
     """
     Nodes represent concepts in the belief network and edges represent a
@@ -498,6 +499,7 @@ class BeliefNetwork(object):
 
         else:
             raise NotImplementedError
+
 
 def empty_copy(obj):
     """
