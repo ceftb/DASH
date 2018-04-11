@@ -37,8 +37,8 @@ class WorkProcessor:
                     node_path = "/tasks/nodes/" + str(self.host_id) + "/" + self.task_id
                     self.zk.ensure_path(node_path + "/status")
                     self.zk.set(node_path + "/status", json.dumps({"status": "in progress", "iteration": self.iteration, "update time": time.time()}))
-                    print "Interation " + str(self.iteration) + " " \
-                          + str({"status": "in progress", "iteration": self.iteration, "update time": time.strftime("%b %d %Y %H:%M:%S", time.gmtime(time.time()))})
+                    print "Iteration " + str(self.iteration) + " " \
+                          + str({"status": "in progress", "iteration": self.iteration, "update time": time.strftime("%H:%M:%S", time.gmtime(time.time()))})
 
             self.process_after_run()
 
@@ -49,7 +49,6 @@ class WorkProcessor:
             self.zk.set(result_path, data)
         else:
             raise Exception("Zookeeper is not initialized.")
-        self.log_file.close()
 
     def should_stop(self):
         if self.max_iterations > 0 and self.iteration >= self.max_iterations:
@@ -87,7 +86,7 @@ class WorkProcessor:
         pass
 
     def process_after_run(self):  # do any book-keeping needed after the trial ends and before agents are disconnected
-        pass
+        self.log_file.close()
 
 
 def is_number(s):

@@ -2,7 +2,8 @@ import sys; sys.path.extend(['../../'])
 from Dash2.core.world_hub import WorldHub
 from Dash2.github.zk_repo import ZkRepo
 from Dash2.github.git_repo_hub import GitRepoHub
-
+import datetime
+from time import strftime
 
 # Zookeeper repository hub
 class ZkRepoHub(GitRepoHub):
@@ -40,7 +41,9 @@ class ZkRepoHub(GitRepoHub):
         self.time = curr_time
 
     def log_event(self, user_id, repo_id, event_type, subevent_type, time):
-        self.log_file.write(str(time))
+        date = datetime.datetime.fromtimestamp(time)
+        str_time = date.strftime("%Y-%m-%dT%H:%M:%SZ")
+        self.log_file.write(str_time)
         self.log_file.write(",")
         self.log_file.write(event_type)
         self.log_file.write(",")

@@ -7,6 +7,7 @@ from kazoo.client import KazooClient
 from Dash2.github.git_user_agent import GitUserAgent
 import ijson
 import datetime
+from time import strftime
 
 class GithubStateLoader(object):
 
@@ -30,6 +31,32 @@ class GithubStateLoader(object):
     # "c" - number of other repos/users connected/associated with this user/repo
     # "h" - id hash, not used in profiles file.
     '''
+
+    @staticmethod
+    def build_state_from_event_log(input_event_log, number_of_hosts=1):
+        user_hash_to_profile_map, repo_hash_to_profile_map = GithubStateLoader.convert_csv_to_json_profiles(input_event_log)
+        number_of_users = len(user_hash_to_profile_map)
+        number_of_repos = len(repo_hash_to_profile_map)
+        users_file = input_event_log + "_users.json"
+        repos_file = input_event_log + "_repos.json"
+        users_ids = input_event_log + "_users_id_dict.csv"
+        repos_ids = input_event_log + "_repos_id_dict.csv"
+        GithubStateLoader.partition_profiles_file(users_file, number_of_hosts, number_of_users)
+        state_file_content = {"meta":
+            {
+                "number_of_users": number_of_users,
+                "number_of_repos": number_of_repos,
+                "users_file": users_file,
+                "repos_file": repos_file,
+                "users_ids": users_ids,
+                "repos_ids": repos_ids,
+                "is_partitioning_needed": "False"
+            }
+        }
+        state_file = open(input_event_log + "_state.json", 'w')
+        state_file.write(json.dumps(state_file_content))
+        state_file.close()
+        return state_file_content["meta"]
 
 
     @staticmethod
@@ -63,16 +90,31 @@ class GithubStateLoader(object):
             if counter != 0:
                 user_id = int(row[2])
                 repo_id = int(row[3])
-                src_user_id = users_map[user_id]
-                src_repo_id = repos_map[repo_id]
+                if users_map.has_key(user_id):
+                    src_user_id = users_map[user_id]
+                else:
+                    src_user_id = user_id
+                if repos_map.has_key(repo_id):
+                    src_repo_id = repos_map[repo_id]
+                else:
+                    src_repo_id = repo_id
                 output_file.write(row[0])
                 output_file.write(",")
                 output_file.write(row[1])
                 output_file.write(",")
-                output_file.write(src_user_id)
+                output_file.write(str(src_user_id))
                 output_file.write(",")
-                output_file.write(src_repo_id)
+                output_file.write(str(src_repo_id))
                 output_file.write("\n")
+            else:
+                line_counter = 0
+                for itm in row:
+                    output_file.write(itm)
+                    if line_counter == (len(row) - 1):
+                        output_file.write("\n")
+                    else:
+                        output_file.write(",")
+                    line_counter += 1
             counter += 1
             if counter % 1000000 == 0:
                 print "line: " + str(counter)
@@ -193,6 +235,7 @@ class GithubStateLoader(object):
                 src_id = row[0]
                 target_id = row[1]
                 ids_map[int(target_id)] = src_id
+            counter += 1
         dict_file.close()
         return ids_map
 
@@ -203,7 +246,10 @@ class GithubStateLoader(object):
         if event_time <= max_time and event_time >= min_time:
             event_type = row[1]
             user_id = row[2]
-            repo_id = row[17]
+            if len(row) > 4:
+                repo_id = row[17]
+            else:
+                repo_id = row[3]
 
             user_profile = GithubStateLoader.get_profile_and_update_map_if_new(user_map, user_id, users_id_dict)
             repo_profile = GithubStateLoader.get_profile_and_update_map_if_new(repo_map, repo_id, repos_id_dict)

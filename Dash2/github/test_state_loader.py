@@ -24,13 +24,13 @@ def count_repos_and_agents(user_hash_to_profile_map, repo_hash_to_profile_map):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) == 2 or len(sys.argv) == 3:
-        filename = sys.argv[1]
+    if len(sys.argv) == 2 or len(sys.argv) == 3 or len(sys.argv) == 1:
+        filename = "output.csv" #sys.argv[1]
         while True:
             cmd = raw_input(
                 "Press q to exit loader\n\tr to parse source data file and create user and repo profiles\n\t"
                 "l to load objects from profiles file and load them into memory\n\tp to partition profiles file (not loaded in memory)\n\t"
-                "s to load state file\n\tm to merge output log files\n\tt to translate ids\nt")
+                "s to load state file\n\tm to merge output log files\n\tt to translate ids\n\t")
             if cmd == "q":
                 print("Exiting ...")
                 break
@@ -61,10 +61,10 @@ if __name__ == "__main__":
                 print "Merged."
             elif cmd == "t":
                 print "Translating user and repo ids ..."
-                meta = GithubStateLoader.trnaslate_user_and_repo_ids_in_event_log(even_log_file="",
+                meta = GithubStateLoader.trnaslate_user_and_repo_ids_in_event_log(even_log_file=filename,
                                                                                   output_file_name="translated.csv",
-                                                                                  users_ids_file="",
-                                                                                  repos_ids_file="")
+                                                                                  users_ids_file="./data_jan_2017_json/data_jan_2017.csv_users_id_dict.csv",
+                                                                                  repos_ids_file="./data_jan_2017_json/data_jan_2017.csv_repos_id_dict.csv")
                 print "Merged."
             else:
                 print "Unrecognized command " + cmd + "\n"
