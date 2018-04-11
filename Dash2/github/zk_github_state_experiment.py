@@ -84,8 +84,8 @@ class ZkGithubStateTrial(Trial):
     measures = [Measure('num_agents'), Measure('num_repos'), Measure('total_agent_activity')]
 
     # input event log and output event log files names
-    input_event_log = "./data_jan_2017/data_jan_2017.csv"
-    #input_event_log = "./data_sample/data_sample.csv"
+    #input_event_log = "./data_jan_2017/data_jan_2017.csv"
+    input_event_log = "./data_sample/data_sample.csv"
 
     output_event_log = input_event_log + "_output"
 
