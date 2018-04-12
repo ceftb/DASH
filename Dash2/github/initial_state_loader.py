@@ -1,13 +1,8 @@
 import sys; sys.path.extend(['../../'])
-import time
 import json
 import csv
-import struct
-from kazoo.client import KazooClient
-from Dash2.github.git_user_agent import GitUserAgent
 import ijson
 import datetime
-from time import strftime
 
 class GithubStateLoader(object):
 
@@ -18,6 +13,7 @@ class GithubStateLoader(object):
                         "number_of_users": 10,
                         "number_of_repos": 20,
                         "users_file": "users.json"
+                        ... other properties
                         }
     }
 
