@@ -1,5 +1,5 @@
 import sys; sys.path.extend(['../../'])
-from intial_state_loader import GithubStateLoader
+from initial_state_loader import GithubStateLoader
 
 def count_repos_and_agents(user_hash_to_profile_map, repo_hash_to_profile_map):
 
