@@ -10,10 +10,8 @@ from Dash2.core.experiment import Experiment
 from Dash2.core.dash_controller import DashController
 from Dash2.core.work_processor import WorkProcessor
 from Dash2.github.git_user_agent import GitUserAgent
-from intial_state_loader import GithubStateLoader
-import thread
-import time
-import json
+from Dash2.github.intial_state_loader import GithubStateLoader
+
 # This is an example of experiment script
 
 # Work processor performs simulation as individual process (it is a DashWorker)
@@ -91,17 +89,16 @@ class ZkGithubStateTrial(Trial):
     measures = [Measure('num_agents'), Measure('num_repos'), Measure('total_agent_activity')]
 
     # input event log and output event log files names
-    input_event_log = "./data_jan_2017/data_jan_2017.csv"
-    #input_event_log = "./data_sample/data_sample.csv"
+    #input_event_log = "./data_jan_2017/data_jan_2017.csv"
+    input_event_log = "./data_sample/data_sample.csv"
 
     output_event_log = input_event_log + "_output"
 
     def initialize(self):
-        self.is_loaded = False
         if os.path.isfile(ZkGithubStateTrial.input_event_log + "_state.json"):
             intial_state_meta_data = GithubStateLoader.read_state_file(ZkGithubStateTrial.input_event_log + "_state.json")
         else:
-            intial_state_meta_data = GithubStateLoader.build_state_from_event_log(input_event_log=self.input_event_log,
+            intial_state_meta_data = GithubStateLoader.build_state_from_event_log(input_event_log=ZkGithubStateTrial.input_event_log,
                                                                      number_of_hosts=self.number_of_hosts)
         print intial_state_meta_data
         self.state_file = ZkGithubStateTrial.input_event_log + "_state.json"
@@ -115,13 +112,15 @@ class ZkGithubStateTrial(Trial):
             # Generated task file can be reused across experiments with the same number of dash workers, which speeds up overall time.
             GithubStateLoader.partition_profiles_file(self.users_file, self.number_of_hosts, int(intial_state_meta_data["number_of_users"]))
         # set up max ids
+        #self.zk.restart()
         self.set_max_repo_id(int(intial_state_meta_data["number_of_repos"]))
         self.set_max_user_id(int(intial_state_meta_data["number_of_users"]))
         self.is_loaded = True
 
+
     # this method defines parameters of individual tasks (as a json data object - 'data') that will be sent to dash workers
     def init_task_params(self, task_full_id, data):
-        _, _, task_num = task_full_id.split("-") # self.task_num by default is the same as node id
+        _, _, task_num = task_full_id.split("-")
         self.init_task_param("state_file", self.state_file + "_" + str(int(task_num) - 1), data)
         self.init_task_param("users_file", self.users_file + "_" + str(int(task_num) - 1), data)
         self.init_task_param("repos_file", self.repos_file + "_" + str(int(task_num) - 1), data)
@@ -164,7 +163,13 @@ if __name__ == "__main__":
     else:
         print 'incorrect arguments: ', sys.argv
 
-    number_of_events = 10000 # total number of action in experiments ()
+    # if state file is not present, then create it
+    if not os.path.isfile(ZkGithubStateTrial.input_event_log + "_state.json"):
+        print str(ZkGithubStateTrial.input_event_log) + "_state.json file is not present, creating one. May take a while, please wait ..."
+        intial_state_meta_data = GithubStateLoader.build_state_from_event_log(ZkGithubStateTrial.input_event_log, number_of_hosts)
+        print str(ZkGithubStateTrial.input_event_log) + "_state.json file created."
+
+    number_of_events = 10000 # total number of actions in experiments
     max_iterations_per_worker = number_of_events / number_of_hosts
     num_trials = 1
     independent = ['prob_create_new_agent', Range(0.0, 0.1, 0.1)]
