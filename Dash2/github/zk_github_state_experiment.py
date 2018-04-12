@@ -11,6 +11,8 @@ from Dash2.core.dash_controller import DashController
 from Dash2.core.work_processor import WorkProcessor
 from Dash2.github.git_user_agent import GitUserAgent
 from intial_state_loader import GithubStateLoader
+import thread
+import time
 import json
 # This is an example of experiment script
 
@@ -72,6 +74,11 @@ class ZkGithubStateWorkProcessor(WorkProcessor):
         heappush(self.events_heap, (a.next_event_time(event_time, self.max_time), agent_id))
         self.event_counter += 1
 
+    def get_dependent_vars(self):
+        return {"num_agents": len(self.agents),
+                "num_repos": sum([len(a.name_to_repo_id) for a in self.agents.viewvalues()]),
+                "total_agent_activity": sum([a.total_activity for a in self.agents.viewvalues()])}
+
 
 # Dash Trial decomposes trial into tasks and allocates them to DashWorkers
 class ZkGithubStateTrial(Trial):
@@ -84,12 +91,13 @@ class ZkGithubStateTrial(Trial):
     measures = [Measure('num_agents'), Measure('num_repos'), Measure('total_agent_activity')]
 
     # input event log and output event log files names
-    #input_event_log = "./data_jan_2017/data_jan_2017.csv"
-    input_event_log = "./data_sample/data_sample.csv"
+    input_event_log = "./data_jan_2017/data_jan_2017.csv"
+    #input_event_log = "./data_sample/data_sample.csv"
 
     output_event_log = input_event_log + "_output"
 
     def initialize(self):
+        self.is_loaded = False
         if os.path.isfile(ZkGithubStateTrial.input_event_log + "_state.json"):
             intial_state_meta_data = GithubStateLoader.read_state_file(ZkGithubStateTrial.input_event_log + "_state.json")
         else:
@@ -106,8 +114,10 @@ class ZkGithubStateTrial(Trial):
         if is_partitioning_needed == "True":  # partitioning breaks input simulation state file into series of task files for DashWokers.
             # Generated task file can be reused across experiments with the same number of dash workers, which speeds up overall time.
             GithubStateLoader.partition_profiles_file(self.users_file, self.number_of_hosts, int(intial_state_meta_data["number_of_users"]))
-        # set up max repo id
+        # set up max ids
         self.set_max_repo_id(int(intial_state_meta_data["number_of_repos"]))
+        self.set_max_user_id(int(intial_state_meta_data["number_of_users"]))
+        self.is_loaded = True
 
     # this method defines parameters of individual tasks (as a json data object - 'data') that will be sent to dash workers
     def init_task_params(self, task_full_id, data):
