@@ -10,7 +10,7 @@ from Dash2.core.experiment import Experiment
 from Dash2.core.dash_controller import DashController
 from Dash2.core.work_processor import WorkProcessor
 from Dash2.github.git_user_agent import GitUserAgent
-from intial_state_loader import GithubStateLoader
+from initial_state_loader import GithubStateLoader
 import thread
 import time
 import json
@@ -99,24 +99,24 @@ class ZkGithubStateTrial(Trial):
     def initialize(self):
         self.is_loaded = False
         if os.path.isfile(ZkGithubStateTrial.input_event_log + "_state.json"):
-            intial_state_meta_data = GithubStateLoader.read_state_file(ZkGithubStateTrial.input_event_log + "_state.json")
+            initial_state_meta_data = GithubStateLoader.read_state_file(ZkGithubStateTrial.input_event_log + "_state.json")
         else:
-            intial_state_meta_data = GithubStateLoader.build_state_from_event_log(input_event_log=self.input_event_log,
+            initial_state_meta_data = GithubStateLoader.build_state_from_event_log(input_event_log=self.input_event_log,
                                                                      number_of_hosts=self.number_of_hosts)
-        print intial_state_meta_data
+        print initial_state_meta_data
         self.state_file = ZkGithubStateTrial.input_event_log + "_state.json"
-        self.users_file = intial_state_meta_data["users_file"]
-        self.repos_file = intial_state_meta_data["repos_file"]
-        self.users_ids = intial_state_meta_data["users_ids"]
-        self.repos_ids = intial_state_meta_data["repos_ids"]
-        is_partitioning_needed = intial_state_meta_data["is_partitioning_needed"]
+        self.users_file = initial_state_meta_data["users_file"]
+        self.repos_file = initial_state_meta_data["repos_file"]
+        self.users_ids = initial_state_meta_data["users_ids"]
+        self.repos_ids = initial_state_meta_data["repos_ids"]
+        is_partitioning_needed = initial_state_meta_data["is_partitioning_needed"]
         # generate task files for individual dash workers
         if is_partitioning_needed == "True":  # partitioning breaks input simulation state file into series of task files for DashWokers.
             # Generated task file can be reused across experiments with the same number of dash workers, which speeds up overall time.
-            GithubStateLoader.partition_profiles_file(self.users_file, self.number_of_hosts, int(intial_state_meta_data["number_of_users"]))
+            GithubStateLoader.partition_profiles_file(self.users_file, self.number_of_hosts, int(initial_state_meta_data["number_of_users"]))
         # set up max ids
-        self.set_max_repo_id(int(intial_state_meta_data["number_of_repos"]))
-        self.set_max_user_id(int(intial_state_meta_data["number_of_users"]))
+        self.set_max_repo_id(int(initial_state_meta_data["number_of_repos"]))
+        self.set_max_user_id(int(initial_state_meta_data["number_of_users"]))
         self.is_loaded = True
 
     # this method defines parameters of individual tasks (as a json data object - 'data') that will be sent to dash workers
