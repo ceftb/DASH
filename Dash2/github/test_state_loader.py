@@ -38,8 +38,8 @@ if __name__ == "__main__":
                 print "Reading CSV file and creating object profiles (*_users.json and *_repos.json) ..."
                 users, repos = GithubStateLoader.convert_csv_to_json_profiles(filename)
                 # FIXME: format of profile was changed, need to update counter function
-                # count_repos_and_agents(users, repos)
-                print "users: ", len(users), ", repos: ", len(repos)
+                # count_repos_and_agents(users_hash_to_id, repos_hash_to_id)
+                print "users: ", users, ", repos: ", repos
             elif cmd == "l":
                 print "Loading objects from profiles file..."
                 objects = []

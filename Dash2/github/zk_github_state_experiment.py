@@ -163,7 +163,7 @@ if __name__ == "__main__":
     else:
         print 'incorrect arguments: ', sys.argv
 
-    # if state file is not present, then create it
+    # if state file is not present, then create it.
     if not os.path.isfile(ZkGithubStateTrial.input_event_log + "_state.json"):
         print str(ZkGithubStateTrial.input_event_log) + "_state.json file is not present, creating one. May take a while, please wait ..."
         intial_state_meta_data = GithubStateLoader.build_state_from_event_log(ZkGithubStateTrial.input_event_log, number_of_hosts)

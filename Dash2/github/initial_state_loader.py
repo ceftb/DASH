@@ -30,9 +30,7 @@ class GithubStateLoader(object):
 
     @staticmethod
     def build_state_from_event_log(input_event_log, number_of_hosts=1):
-        user_hash_to_profile_map, repo_hash_to_profile_map = GithubStateLoader.convert_csv_to_json_profiles(input_event_log)
-        number_of_users = len(user_hash_to_profile_map)
-        number_of_repos = len(repo_hash_to_profile_map)
+        number_of_users, number_of_repos = GithubStateLoader.convert_csv_to_json_profiles(input_event_log)
         users_file = input_event_log + "_users.json"
         repos_file = input_event_log + "_repos.json"
         users_ids = input_event_log + "_users_id_dict.csv"
@@ -214,7 +212,7 @@ class GithubStateLoader(object):
         users_id_dict.close()
         repos_id_dict.close()
 
-        return user_hash_to_profile_map, repo_hash_to_profile_map
+        return len(user_hash_to_profile_map), len(repo_hash_to_profile_map)
 
     ####################################
     # util methods below
@@ -317,7 +315,7 @@ if __name__ == "__main__":
             elif cmd == "r":
                 print "Reading CSV file and creating object profiles (*_users.json and *_repos.json) ..."
                 users, repos = GithubStateLoader.convert_csv_to_json_profiles(filename)
-                print "users: ", len(users), ", repos: ", len(repos)
+                print "users: ", users, ", repos: ", repos
             elif cmd == "l":
                 print "Loading objects from profiles file..."
                 objects = []
