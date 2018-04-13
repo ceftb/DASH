@@ -10,7 +10,7 @@ from Dash2.core.experiment import Experiment
 from Dash2.core.dash_controller import DashController
 from Dash2.core.work_processor import WorkProcessor
 from Dash2.github.git_user_agent import GitUserAgent
-from Dash2.github.intial_state_loader import GithubStateLoader
+from Dash2.github.initial_state_loader import GithubStateLoader
 
 # This is an example of experiment script
 
