@@ -65,6 +65,23 @@ class System1Agent:
         self.neighbor_rules = dict()  # maps node fact predicates to lambdas
         self.trace_add_activation = False
 
+    # Interface allows for alternative system 1 approaches, while this default version performs spreading activation
+    def system1_update(self):  # apply newly learned information to update the state of system 1
+        self.spreading_activation()
+
+    def system1_step(self):  # Evolve the state by one step in the absence of new information
+        self.system1_decay()
+
+    def system1_propose_actions(self):  # propose actions to take
+        action_nodes = self.actions_over_threshold(threshold=self.system1_threshold)
+        if action_nodes:
+            return [a.node_to_action() for a in action_nodes]
+        else:
+            return []
+
+
+    # The methods below this point are specific to spreading activation
+
     # Main DASH agent communicates activation for a fact. This looks up the node with fact_node_dict, adding
     # if necessary, and increments the activation
     def add_activation(self, fact, activation_increment=0.3):

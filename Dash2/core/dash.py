@@ -32,7 +32,8 @@ class DASHAgent(Client, System2Agent, System1Agent, HumanTraits):
 
     # This is in the java part in the old agent
     def agentLoop(self, max_iterations=-1, disconnect_at_end=True):
-        self.spreading_activation()
+        # self.spreading_activation()
+        self.system1_update()
         next_action = self.choose_action()
         iteration = 0
         while next_action is not None and (max_iterations < 0 or iteration < max_iterations):
@@ -40,9 +41,10 @@ class DASHAgent(Client, System2Agent, System1Agent, HumanTraits):
                 print(self.id, "next action is", next_action)
             result = self.performAction(next_action)
             self.update_beliefs(result, next_action)
-            self.spreading_activation()
+            #self.spreading_activation()
+            self.system1_update()
             next_action = self.choose_action()
-            self.system1_decay()
+            self.system1_step()
             iteration += 1
         if self.traceLoop and next_action is None:
             print("Exiting simulation: no action chosen")
@@ -54,17 +56,27 @@ class DASHAgent(Client, System2Agent, System1Agent, HumanTraits):
         return next_action
 
     def choose_action(self):
-        system1_actions = self.actions_over_threshold(threshold=self.system1_threshold)
-        if system1_actions and self.reject_reasoning(system1_actions):
-            return system1_actions[0].node_to_action()  # will ultimately choose
-        system2_action = self.choose_action_by_reasoning()
+        # system1_actions = self.actions_over_threshold(threshold=self.system1_threshold)
+        system1_actions = self.system1_propose_actions()
+        if system1_actions and self.bypass_system2(system1_actions):
+            return system1_actions[0]  # will ultimately choose
+        system2_action = self.system2_propose_action()
         # For now always go with the result of reasoning if it was performed
-        return system2_action
+        return self.arbitrate_system1_system2(system1_actions, system2_action)
+
+    # Given that system 2 was not bypassed, choose between the action it suggests and any actions
+    # suggested by system 1
+    def arbitrate_system1_system2(self, system1_actions, system2_action):
+        # By default return system2 action if it is available
+        if system2_action is None and system1_actions:
+            return system1_actions[0]
+        else:
+            return system2_action
 
     # If system1 proposes some actions, should the agent just go with them or opt to employ deliberative reasoning?
-    def reject_reasoning(self, system1_action_nodes):
-        print('considering system1 suggested actions ', [n.fact[1:] for n in system1_action_nodes])
-        return True  # try system 1 if it's available
+    def bypass_system2(self, system1_action_nodes):
+        print('considering system1 suggested actions ', system1_action_nodes)
+        return True  # try system 1 by default if it's available
 
     def primitiveActions(self, l):
         # Add the items into the set of known primitive actions
