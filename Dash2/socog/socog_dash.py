@@ -22,7 +22,8 @@ class SocogDASHAgent(SocogSystem1Agent, DASHAgent):
 
         SocogSystem1Agent.__init__(self, belief_module)
         DASHAgent.__init__(self)
-        self.primitiveActions([('listen', self.listen), ['talk', self.talk]])
+        self.primitiveActions([('process_belief', self.process_belief),
+                               ['emit_belief', self.emit_belief]])
         self.system1_evaluator = System1Evaluator(self)
 
     def agentLoop(self, max_iterations=-1, disconnect_at_end=True):
@@ -54,11 +55,22 @@ class SocogDASHAgent(SocogSystem1Agent, DASHAgent):
 
     def choose_action(self):
         system1_action = self.select_action_from_queue()
-        if not (system1_action is None):
+        if system1_action and self.bypass_system2(system1_action):
             return system1_action
 
         system2_action = self.choose_action_by_reasoning()
-        return system2_action
+        return self.arbitrate_system1_system2(system1_action, system2_action)
+
+    def arbitrate_system1_system2(self, system1_actions, system2_action):
+        # By default return system2 action if it is available
+        if system2_action is None and system1_actions:
+            return system1_actions[0]
+        else:
+            return system2_action
+
+    def bypass_system2(self, system1_action_nodes):
+        print('considering system1 suggested actions ', system1_action_nodes)
+        return False  # try system 1 by default if it's available
 
     def update_beliefs(self, result, action):
         if self.traceUpdate:
@@ -82,7 +94,8 @@ class SocogDASHAgent(SocogSystem1Agent, DASHAgent):
                     self.knownTuple(('performed', concrete_result))
                 self.update_variable_binding(concrete_result)
 
-    def listen(self, args):
+    # move out evaluator initialization stuff -> loop around queue
+    def process_belief(self, args):
         """
         Takes a two element tuple. The second element must be a Beliefs object
         which system1 will use to update the belief module. Once updated,
@@ -95,17 +108,17 @@ class SocogDASHAgent(SocogSystem1Agent, DASHAgent):
         goal, belief = args
 
         if isinstance(belief, Beliefs):
-            self.belief_module.listen(belief)
+            self.belief_module.process_belief(belief)
             self.system1_evaluator.initialize_action_queue()
 
         return [{}]
 
-    def talk(self, args):
+    def emit_belief(self, args):
         """
-        Calls the belief module's talk method to get and return a Beliefs
+        Calls the belief module's emit_belief method to get and return a Beliefs
         object with the agents chosen belief for emission.
         :param args: goal, belief tuple
         :return: single element list with dictionary. key=belief, value=Beliefs
         """
         goal, belief = args
-        return [{belief: self.belief_module.talk()}]
+        return [{belief: self.belief_module.emit_belief()}]

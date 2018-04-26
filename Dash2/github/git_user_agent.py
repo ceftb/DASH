@@ -189,7 +189,7 @@ goalRequirements UpdateOwnRepo
             print "generating a random name"
         alphabet = "abcdefghijklmnopqrstuvwxyz"
         self.total_activity += 1
-        return [{name_var : ''.join(random.sample(alphabet, random.randint(1,20)))}]
+        return [{name_var: ''.join(random.sample(alphabet, random.randint(1,20)))}]
 
     def pick_random_pull_request(self, (goal, pull_request)):
         """

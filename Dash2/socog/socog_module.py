@@ -700,7 +700,7 @@ class BeliefModule(object):
             self.perceived_belief_network.beliefs[concept_pair] += 1. / self.tau * (
                 valence - current_valence)
 
-    def talk(self):
+    def emit_belief(self):
         """
         chooses and emits a belief from belief network from memory or from
         their belief network
@@ -717,7 +717,7 @@ class BeliefModule(object):
                 print("Drawing from beliefs")
             return Beliefs((self._rng.choice(self.belief_network.beliefs.items()),))
 
-    def listen(self, belief):
+    def process_belief(self, belief):
         """
         evaluates veracity of incoming belief(s)
         if the agent likes and accepts it, it will also be added to their

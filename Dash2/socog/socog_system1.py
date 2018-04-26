@@ -1,6 +1,5 @@
 from Dash2.socog.socog_module import BeliefModule
 from Dash2.socog.socog_module import ConceptPair
-from collections import deque
 
 
 class SocogSystem1Agent(object):
@@ -14,6 +13,20 @@ class SocogSystem1Agent(object):
     def __init__(self, belief_module=None):
         """
         :param belief_module: A BeliefModule object
+
+        :properties:
+        rule_list: is a list of tuples where the first element is the condition,
+            and the second a sequence of actions.
+        belief_token_map: a dictionary keyed by belief string and valued by
+            the corresponding token (a concept_pair, valence tuple)
+        action_token_map: a dictionary keyed by an action string and valued
+            by a tuple who's first element is action name and following elements
+            the variable names
+        action_name_to_variable_map: a dictionary keyed by action name and valued
+            by a list of variables that primitive has
+        variable_bindings: a dictionary keyed by variable name and valued by
+            the value of that variable (defaults to None)
+        action_queue: a list of action strings to be carried out.
         """
 
         if belief_module is None:
@@ -28,7 +41,8 @@ class SocogSystem1Agent(object):
         self.action_token_map = {}
         self.action_name_to_variable_map = {}
         self.variable_bindings = {}
-        self.action_queue = deque()
+        self.action_queue = []
+        self.current_action = 0  # points to action in queue
 
     def read_system1_rules(self, rule_string):
         """
@@ -308,21 +322,26 @@ class SocogSystem1Agent(object):
 
     def select_action_from_queue(self):
         """
-        Selects an action at the front of the queue. If no actions
-        remain, it returns None. Pops actions from the front (left) of the
-        queue.
+        Selects an action at the front of the queue (determined by current_action).
 
         It checks variable bindings and substitutes the arguments
         with binding values if present, else the arguments remain as the
         given strings.
 
+        When queue is complete, it resets bindings and starts at the beginning
+
         :return: DASH formatted action
         """
 
-        try:
-            return self.bind_variables_if_available(self.action_queue.popleft())
-        except IndexError:
-            return None
+        if self.current_action < len(self.action_queue):
+            action = self.action_queue[self.current_action]
+            self.current_action += 1
+            return self.bind_variables_if_available(action)
+        # Reset queue and bindings
+        else:
+            self.current_action = 0
+            self.clear_variable_bindings()
+            return self.select_action_from_queue()
 
     def reset_action_queue(self, action_list):
         """
@@ -330,7 +349,8 @@ class SocogSystem1Agent(object):
         them to the queue. Also clears all variable bindings
         :return: None
         """
-        self.action_queue.clear()
+        self.action_queue = []
+        self.current_action = 0
         self.clear_variable_bindings()
         self.add_actions_to_queue(action_list)
 
@@ -340,7 +360,7 @@ class SocogSystem1Agent(object):
         :return: None
         """
 
-        for key, value in self.variable_bindings.items():
+        for key in self.variable_bindings.keys():
             self.variable_bindings[key] = None
 
     def add_actions_to_queue(self, action_list):
@@ -349,7 +369,7 @@ class SocogSystem1Agent(object):
         :param action_list: a list of primitive actions
         :return: None
         """
-        self.action_queue.extend(action_list)
+        self.action_queue += action_list
 
     def bind_variables_if_available(self, action):
         """

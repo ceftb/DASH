@@ -50,7 +50,7 @@ goalRequirements BrowseReddit
 
         self.read_system1_rules(
             """
-if [Best,GreyTeam,0.7] and [Henry,Best,0.7] then talk(Belief) write_comment(Belief)   
+if bad_code(NewBelief) then talk(Belief) write_comment(Belief)  
             """)
 
         self.primitiveActions([
