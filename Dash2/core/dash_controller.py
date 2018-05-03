@@ -65,7 +65,7 @@ class DashController:
                 print "Experiment " + str(exp_id) + " is complete. Time " + str(self.time) + " s."
                 return False
             else:
-                print "Experiment " + str(exp_id) + " status: " + data
+                print "Experiment " + str(exp_id) + " status: " + str(data)
                 return True
 
     def start_experiment(self, experiment, run_data):

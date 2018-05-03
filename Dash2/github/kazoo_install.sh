@@ -38,9 +38,11 @@ function install_single_kazoo_instance {
 	sudo apt-get install python-numpy python-scipy --yes
 	pip freeze | grep kazoo >> $TMP_DIR/kazoo_report_$CURR_NODE_ID.txt
 	
-	cd $IJSON_CLONE 
-	echo $IJSON_CLONE2 >> $TMP_DIR/ijson_report_$CURR_NODE_ID.txt 1>> $TMP_DIR/ijson_report_$CURR_NODE_ID.txt
+	cp -R $IJSON_CLONE $TMP_DIR/ijson_clone_$CURR_NODE_ID
+	cd $TMP_DIR/ijson_clone_$CURR_NODE_ID
 	sudo python setup.py install  2>> $TMP_DIR/ijson_report_$CURR_NODE_ID.txt 1>> $TMP_DIR/ijson_report_$CURR_NODE_ID.txt
+	rm -Rf $TMP_DIR/ijson_clone_$CURR_NODE_ID
+
 }
 
 if [ -z "$1" ]; then
