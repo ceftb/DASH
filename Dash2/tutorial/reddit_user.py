@@ -43,27 +43,38 @@ goalWeight BrowseReddit 1
 
 goalRequirements BrowseReddit
     read_comment(Belief)
-    listen(Belief)
-    sleep(1)
-    forget([read_comment(x), listen(x), sleep(x)])
+    process_belief(Belief)
+    forget([read_comment(x), process_belief(x), sleep(x)])
             """)
 
         self.read_system1_rules(
             """
-if bad_code(NewBelief) then talk(Belief) write_comment(Belief)  
+if last_comment(OtherBelief) and belief_conflict(OtherBelief) then emit_belief(OwnBelief) write_comment(OwnBelief)
+if [Soccer,Corrupt,1.0] and [Soccer,Best,-1.0] then leave_thread()
             """)
 
         self.primitiveActions([
             ('read_comment', self.read_comment),
             ('write_comment', self.write_comment),
-            ('testprim', self.testprim)])
+            ('last_comment', self.last_comment),
+            ('leave_thread', self.leave_thread)])
         self.thread_location = 0
         self.my_comments = set()
+        self.last_comment_belief = None
+        self.intuit = True
 
-    def testprim(self, args):
+    def arbitrate_system1_system2(self, system1_actions, system2_action):
+        if system1_actions and (system1_actions[0] != "write_comment"):
+            self.update_action_queue()
+            return system1_actions
+        elif system1_actions and (system1_actions[0] == "write_comment"):
+            self.reset_action_queue([])
+            return system1_actions
+        else:
+            return system2_action
 
-        goal, a, b = args
-        return [{}]
+    def bypass_system2(self, system1_action_nodes):
+        return False  # try system 1 by default if it's available
 
     def _parse_comment(self, comment):
         """
@@ -118,6 +129,7 @@ if bad_code(NewBelief) then talk(Belief) write_comment(Belief)
         # if no comment then it reached the end of the forum
         if comment:
             extracted_belief = self._parse_comment(comment)
+            self.last_comment_belief = extracted_belief
             print(self.id, 'belief translation...', extracted_belief)
             # Move to next comment in thread and skip your own comments
             while True:
@@ -128,6 +140,14 @@ if bad_code(NewBelief) then talk(Belief) write_comment(Belief)
         else:
             return [{}]
 
+    def last_comment(self, (goal, belief)):
+        if self.last_comment_belief is None:
+            return []
+        else:
+            comment_belief = self.last_comment_belief
+            self.last_comment_belief = None
+            return [{belief: comment_belief}]
+
     def write_comment(self, (goal, belief)):
         comment = self._construct_comment(belief)
         print(self.id, "talking...", belief)
@@ -135,6 +155,9 @@ if bad_code(NewBelief) then talk(Belief) write_comment(Belief)
         print(self.id, 'writing...', status, comment_id, comment)
         self.my_comments.add(comment_id)
         return [{}]
+
+    def leave_thread(self, (goal,)):
+        self.disconnect()
 
 
 if __name__ == '__main__':
@@ -147,9 +170,10 @@ if __name__ == '__main__':
         Beliefs({ConceptPair(RedditUser.soccer, RedditUser.greyteam): 1.0,
                  ConceptPair(RedditUser.greyteam, RedditUser.henry): 1.0,
                  ConceptPair(RedditUser.henry, RedditUser.best): 1.0,
-                 ConceptPair(RedditUser.greyteam, RedditUser.best): 1.0,
-                 ConceptPair(RedditUser.best, RedditUser.corrupt): -1.0}
-                )), T=1.0, J=1.0, I=1.0, tau=1, recent_belief_chance=0.5,
-        verbose=True)
+                 ConceptPair(RedditUser.best, RedditUser.corrupt): -1.0,
+                 ConceptPair(RedditUser.best, RedditUser.soccer): 1.0,
+                 ConceptPair(RedditUser.henry, RedditUser.corrupt): -1.0}
+                )), T=1.0, J=1.0, I=0.90, tau=1, recent_belief_chance=0.5,
+        verbose=True, seed=2)
 
-    RedditUser(port=6000, belief_module=belief_module).agentLoop(120)
+    RedditUser(port=6002, belief_module=belief_module).agentLoop(40)

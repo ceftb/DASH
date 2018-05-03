@@ -23,7 +23,8 @@ class SocogDASHAgent(SocogSystem1Agent, DASHAgent):
         SocogSystem1Agent.__init__(self, belief_module)
         DASHAgent.__init__(self)
         self.primitiveActions([('process_belief', self.process_belief),
-                               ['emit_belief', self.emit_belief]])
+                               ('emit_belief', self.emit_belief),
+                               ('belief_conflict', self.belief_conflict)])
         self.system1_evaluator = System1Evaluator(self)
 
     def agentLoop(self, max_iterations=-1, disconnect_at_end=True):
@@ -56,6 +57,7 @@ class SocogDASHAgent(SocogSystem1Agent, DASHAgent):
     def choose_action(self):
         system1_action = self.select_action_from_queue()
         if system1_action and self.bypass_system2(system1_action):
+            self.update_action_queue()
             return system1_action
 
         system2_action = self.choose_action_by_reasoning()
@@ -64,13 +66,14 @@ class SocogDASHAgent(SocogSystem1Agent, DASHAgent):
     def arbitrate_system1_system2(self, system1_actions, system2_action):
         # By default return system2 action if it is available
         if system2_action is None and system1_actions:
+            self.update_action_queue()
             return system1_actions[0]
         else:
             return system2_action
 
     def bypass_system2(self, system1_action_nodes):
         print('considering system1 suggested actions ', system1_action_nodes)
-        return False  # try system 1 by default if it's available
+        return True  # try system 1 by default if it's available
 
     def update_beliefs(self, result, action):
         if self.traceUpdate:
@@ -103,15 +106,19 @@ class SocogDASHAgent(SocogSystem1Agent, DASHAgent):
         satisfied conditions. The action queue will be re-filled with new
         active actions from the rule list.
         :param args: goal, belief tuple
-        :return: Empty [{}]
+        :return: [{}] if accepted and [] if not accepted
         """
         goal, belief = args
 
+        accepted = False
         if isinstance(belief, Beliefs):
-            self.belief_module.process_belief(belief)
+            accepted = self.belief_module.process_belief(belief)
             self.system1_evaluator.initialize_action_queue()
 
-        return [{}]
+        if accepted:
+            return [{}]
+        else:
+            return []
 
     def emit_belief(self, args):
         """
@@ -122,3 +129,20 @@ class SocogDASHAgent(SocogSystem1Agent, DASHAgent):
         """
         goal, belief = args
         return [{belief: self.belief_module.emit_belief()}]
+
+    def belief_conflict(self, args):
+        """
+        Checks if an incoming belief is in conflict with internal beliefs. A
+        conflict occurs when the belief is of opposite valence to a current
+        belief.
+
+        This method does not update own or perceived beliefs.
+        :param args: (goal, belief)
+        :return: [{}] (evaluated as True) if conflict, else [] (evaluated as False)
+        """
+        goal, belief = args
+        if isinstance(belief, Beliefs):
+            if self.belief_module.is_conflicting_belief(belief):
+                return [{}]
+
+        return []

@@ -190,7 +190,7 @@ class SocogSystem1Agent(object):
 
         if System1Evaluator.is_action_token(token):
             action_name, arguments = token[:-1].split('(')
-            arguments = arguments.replace(' ','').split(',')
+            arguments = arguments.replace(' ', '').split(',')
             token_map[token] = tuple([action_name] + arguments)
 
         return token_map
@@ -311,8 +311,8 @@ class SocogSystem1Agent(object):
         :param valence
         :return: boolean
         """
-        belief_valence = self.belief_module.belief_network.beliefs[concept_pair]
         if concept_pair in self.belief_module.belief_network:
+            belief_valence = self.belief_module.belief_network.beliefs[concept_pair]
             if (valence > 0) and (belief_valence > valence):
                 return True
             elif (valence < 0) and (belief_valence < valence):
@@ -330,18 +330,33 @@ class SocogSystem1Agent(object):
 
         When queue is complete, it resets bindings and starts at the beginning
 
-        :return: DASH formatted action
+        :return: DASH formatted action (or None)
         """
 
         if self.current_action < len(self.action_queue):
             action = self.action_queue[self.current_action]
-            self.current_action += 1
             return self.bind_variables_if_available(action)
+
+        elif len(self.action_queue) == 0:
+            return None
+
+        else:
+            self.update_action_queue()
+            return self.select_action_from_queue()
+
+    def update_action_queue(self):
+        """
+        Increments the current_action pointer
+        :return: None
+        """
+
+        if self.current_action < len(self.action_queue):
+            self.current_action += 1
+
         # Reset queue and bindings
         else:
             self.current_action = 0
             self.clear_variable_bindings()
-            return self.select_action_from_queue()
 
     def reset_action_queue(self, action_list):
         """
@@ -566,7 +581,7 @@ class System1Evaluator(object):
                                                         tokens[index.pos]])
             self._recursion_flag = False
             index.increment()
-            return token_evaluation is True
+            return bool(token_evaluation)
 
         elif tokens[index.pos].lower() == 'true':
             index.increment()
@@ -598,7 +613,6 @@ class System1Evaluator(object):
         :param condition: a tokenized list from the rule_list
         :return: boolean
         """
-
         return self.parse_expression(condition)
 
     def actions_from_satisfied_conditions(self):

@@ -184,7 +184,7 @@ class Beliefs(dict):
 
     def __hash__(self):
         return hash(frozenset({frozenset({key, value})
-                               for key, value in self.iteritems()}))
+                               for key, value in self.items()}))
 
     # Ensure commutivity of dot product
     __rmul__ = __mul__
@@ -429,7 +429,7 @@ class BeliefNetwork(object):
         :return None
         """
 
-        for concept_pair, valence in belief.iteritems():
+        for concept_pair, valence in belief.items():
             if concept_pair in self.beliefs:
                 if self.beliefs[concept_pair] != valence:
                     self.beliefs[concept_pair] = valence
@@ -490,10 +490,10 @@ class BeliefNetwork(object):
 
         if isinstance(item, Beliefs):
 
-            for pair, valence in item.iteritems():
+            for pair, valence in item.items():
                 if pair not in self.beliefs:
                     return False
-                elif self.beliefs[pair] == valence:
+                elif self.beliefs[pair] != valence:
                     return False
 
             return True
@@ -534,7 +534,7 @@ class BeliefModule(object):
         :param belief_net: a BeliefNetwork type object. default=BeliefNetwork()
         :param perceived_net: a BeliefNetwork type object representing the agent's
             perception of other's beliefs. default=BeliefNetwork()
-        :param seed: seed number for rng. default=1
+        :param seed: seed number for internal rng (uses Random). default=1
         :param max_memory: how many steps back the agent remembers incoming beliefs.
             This can be used in methods for outputing popular/recent beliefs.
             default=1
@@ -693,7 +693,7 @@ class BeliefModule(object):
         input belief
         """
 
-        for concept_pair, valence in belief.iteritems():
+        for concept_pair, valence in belief.items():
             # Adding the pair sets up a 0 initialized valence belief
             self.perceived_belief_network.add_concept_pair(concept_pair)
             current_valence = self.perceived_belief_network.beliefs[concept_pair]
@@ -723,8 +723,7 @@ class BeliefModule(object):
         if the agent likes and accepts it, it will also be added to their
         short term memory
         :param belief: Incoming belief(s) as Beliefs object
-        :return True if accepted, False if not. Can be used externally to
-            calculate acceptance rates for calibrating parameters
+        :return [{}]
         """
 
         self._update_perceived_beliefs(belief)
@@ -732,6 +731,30 @@ class BeliefModule(object):
         if self._is_belief_acceptable(belief):
             self._add_belief_to_memory(belief)
             self.belief_network.add_belief(belief)
-            return True
+
+        return [{}]
+
+    def is_conflicting_belief(self, belief):
+        """
+        Returns True is belief is of opposite valence as own belief.
+        Returns False if belief is unknown or same sign of own valence
+        :param belief: a Beliefs (one or more). If more than one belief is in
+            Beliefs object, then any conflict returns True
+        :return: True/False
+        """
+
+        for pair, valence in belief.items():
+            if pair in self.belief_network:
+                if BeliefModule.sign(self.belief_network.beliefs[pair]) \
+                        != BeliefModule.sign(valence):
+                    return True
 
         return False
+
+    @staticmethod
+    def sign(value):
+        """
+        :param value: a numeric
+        :return: +1 if positive, -1 if negative
+        """
+        return (value > 0) - (value < 0)

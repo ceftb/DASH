@@ -20,22 +20,35 @@ class Reddit(WorldHub):
         """
 
         return [
-            'Soccer is not Corrupt',
-            'GreyTeam is with Soccer',
             'GreyTeam is Best',
-            'Henry is with GreyTeam',
+            'Henry is Corrupt',
             'Henry is Best',
-            'Corrupt is not Best',
-            'Soccer is not Corrupt',
             'Henry is Corrupt',
-            'Soccer is not Corrupt',
-            'GreyTeam is Best',
-            'Henry is Corrupt',
-            'GreyTeam is Corrupt',
-            'Soccer is Best',
             'Henry is not Best',
-            'GreyTeam is not Best'
+            'GreyTeam is not Best',
+            'Henry is Corrupt',
+            'Soccer is Corrupt',
+            'Soccer is not Best',
+            'GreyTeam is Corrupt'
         ]
+        # return [
+        #     'Soccer is not Corrupt',
+        #     'GreyTeam is with Soccer',
+        #     'GreyTeam is Best',
+        #     'GreyTeam is Corrupt',
+        #     'Henry is with GreyTeam',
+        #     'Henry is Best',
+        #     'Corrupt is not Best',
+        #     'Soccer is not Corrupt',
+        #     'Henry is Corrupt',
+        #     'Soccer is not Corrupt',
+        #     'GreyTeam is Best',
+        #     'Henry is Corrupt',
+        #     'GreyTeam is Corrupt',
+        #     'Soccer is Best',
+        #     'Henry is not Best',
+        #     'GreyTeam is not Best'
+        # ]
 
     def processRegisterRequest(self, agent_id, aux_data):
         self.users.add(agent_id)
@@ -56,4 +69,4 @@ class Reddit(WorldHub):
 
 
 if __name__ == "__main__":
-    Reddit(port=6000).run()
+    Reddit(port=6002).run()
