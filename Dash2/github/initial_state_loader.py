@@ -1,12 +1,8 @@
 import sys; sys.path.extend(['../../'])
-import time
 import json
 import csv
-import struct
-from kazoo.client import KazooClient
-from Dash2.github.git_user_agent import GitUserAgent
-from dateutil.parser import parse
 import ijson
+import datetime
 
 class GithubStateLoader(object):
 
@@ -17,6 +13,7 @@ class GithubStateLoader(object):
                         "number_of_users": 10,
                         "number_of_repos": 20,
                         "users_file": "users.json"
+                        ... other properties
                         }
     }
 
@@ -30,6 +27,30 @@ class GithubStateLoader(object):
     # "c" - number of other repos/users connected/associated with this user/repo
     # "h" - id hash, not used in profiles file.
     '''
+
+    @staticmethod
+    def build_state_from_event_log(input_event_log, number_of_hosts=1):
+        number_of_users, number_of_repos = GithubStateLoader.convert_csv_to_json_profiles(input_event_log)
+        users_file = input_event_log + "_users.json"
+        repos_file = input_event_log + "_repos.json"
+        users_ids = input_event_log + "_users_id_dict.csv"
+        repos_ids = input_event_log + "_repos_id_dict.csv"
+        GithubStateLoader.partition_profiles_file(users_file, number_of_hosts, number_of_users)
+        state_file_content = {"meta":
+            {
+                "number_of_users": number_of_users,
+                "number_of_repos": number_of_repos,
+                "users_file": users_file,
+                "repos_file": repos_file,
+                "users_ids": users_ids,
+                "repos_ids": repos_ids,
+                "is_partitioning_needed": "False"
+            }
+        }
+        state_file = open(input_event_log + "_state.json", 'w')
+        state_file.write(json.dumps(state_file_content))
+        state_file.close()
+        return state_file_content["meta"]
 
 
     @staticmethod
@@ -49,6 +70,53 @@ class GithubStateLoader(object):
                     output_file.write(line)
                 input_log.close()
             output_file.close()
+
+    @staticmethod
+    def trnaslate_user_and_repo_ids_in_event_log(even_log_file, output_file_name, users_ids_file, repos_ids_file):
+        input_file = open(even_log_file, 'r')
+        output_file = open(output_file_name, 'w')
+        users_map = GithubStateLoader.load_id_dictionary(users_ids_file)
+        repos_map = GithubStateLoader.load_id_dictionary(repos_ids_file)
+
+        datareader = csv.reader(input_file)
+        counter = 0
+        for row in datareader:
+            if counter != 0:
+                user_id = int(row[2])
+                repo_id = int(row[3])
+                if users_map.has_key(user_id):
+                    src_user_id = users_map[user_id]
+                else:
+                    src_user_id = user_id
+                if repos_map.has_key(repo_id):
+                    src_repo_id = repos_map[repo_id]
+                else:
+                    src_repo_id = repo_id
+                output_file.write(row[0])
+                output_file.write(",")
+                output_file.write(row[1])
+                output_file.write(",")
+                output_file.write(str(src_user_id))
+                output_file.write(",")
+                output_file.write(str(src_repo_id))
+                output_file.write("\n")
+            else:
+                line_counter = 0
+                for itm in row:
+                    output_file.write(itm)
+                    if line_counter == (len(row) - 1):
+                        output_file.write("\n")
+                    else:
+                        output_file.write(",")
+                    line_counter += 1
+            counter += 1
+            if counter % 1000000 == 0:
+                print "line: " + str(counter)
+        print counter
+
+        input_file.close()
+        output_file.close()
+
 
     @staticmethod
     def read_state_file(filename):
@@ -110,19 +178,24 @@ class GithubStateLoader(object):
     def convert_csv_to_json_profiles(filename):
         users_file = open(filename + "_users.json", "w")
         repos_file = open(filename + "_repos.json", "w")
+        users_id_dict = open(filename + "_users_id_dict.csv", "w")
+        users_id_dict.write("src_id, sim_id\n")
+        repos_id_dict = open(filename + "_repos_id_dict.csv", "w")
+        repos_id_dict.write("src_id, sim_id\n")
 
         user_hash_to_profile_map = {}
         repo_hash_to_profile_map = {}
 
-        max_time_limit = parse("2017-01-31T23:59:55Z")
-        min_time_limit = parse("2014-01-31T23:59:55Z")
+        max_time_limit = datetime.datetime.strptime( "2017-01-31T23:59:55Z", "%Y-%m-%dT%H:%M:%SZ" )
+        min_time_limit = datetime.datetime.strptime( "2014-01-31T23:59:55Z", "%Y-%m-%dT%H:%M:%SZ" )
 
         with open(filename, "rb") as csvfile:
             datareader = csv.reader(csvfile)
             counter = 0
             for row in datareader:
                 if counter != 0:
-                    GithubStateLoader.read_src_line(row, user_hash_to_profile_map, repo_hash_to_profile_map, min_time_limit, max_time_limit)
+                    GithubStateLoader.read_csv_line(row, user_hash_to_profile_map, users_id_dict, repos_id_dict,
+                                                    repo_hash_to_profile_map, min_time_limit, max_time_limit)
                 counter += 1
                 if counter % 1000000 == 0:
                     print "line: " + str(counter)
@@ -136,29 +209,56 @@ class GithubStateLoader(object):
         csvfile.close()
         users_file.close()
         repos_file.close()
+        users_id_dict.close()
+        repos_id_dict.close()
 
-        return user_hash_to_profile_map, repo_hash_to_profile_map
+        return len(user_hash_to_profile_map), len(repo_hash_to_profile_map)
 
     ####################################
     # util methods below
     ####################################
+
     @staticmethod
-    def read_src_line(row, user_map, repo_map, min_time, max_time):
-        event_time = max_time #parse(row[0])
+    def load_id_dictionary(dictionary_file_name):
+        dict_file = open(dictionary_file_name, "r")
+        datareader = csv.reader(dict_file)
+        ids_map = {}
+        counter = 0
+        for row in datareader:
+            if counter != 0:
+                src_id = row[0]
+                target_id = row[1]
+                ids_map[int(target_id)] = src_id
+            counter += 1
+        dict_file.close()
+        return ids_map
+
+
+    @staticmethod
+    def read_csv_line(row, user_map, users_id_dict, repos_id_dict, repo_map, min_time, max_time):
+        event_time = max_time # datetime.datetime.strptime( row[0], "%Y-%m-%dT%H:%M:%SZ" )
         if event_time <= max_time and event_time >= min_time:
             event_type = row[1]
             user_id = row[2]
-            repo_id = row[17]
+            if len(row) > 4:
+                repo_id = row[17]
+            else:
+                repo_id = row[3]
 
-            user_profile = GithubStateLoader.get_profile_and_update_map_if_new(user_map, hash(user_id))
-            repo_profile = GithubStateLoader.get_profile_and_update_map_if_new(repo_map, hash(repo_id))
+            user_profile = GithubStateLoader.get_profile_and_update_map_if_new(user_map, user_id, users_id_dict)
+            repo_profile = GithubStateLoader.get_profile_and_update_map_if_new(repo_map, repo_id, repos_id_dict)
 
             GithubStateLoader.update_freqs(user_profile, repo_profile, user_id, repo_id)
 
     @staticmethod
-    def get_profile_and_update_map_if_new(map, id_hash):
+    def get_profile_and_update_map_if_new(map, id, id_dict):
+        id_hash = hash(id)
         if not map.has_key(id_hash): # new entry
             map[id_hash] = {"id":len(map)} #Profile(int_id=len(map), freqs={})
+            id_dict.write(str(id))
+            id_dict.write(",")
+            id_dict.write(str(map[id_hash]["id"]))
+            id_dict.write("\n")
         return map[id_hash]
 
     @staticmethod
@@ -215,7 +315,7 @@ if __name__ == "__main__":
             elif cmd == "r":
                 print "Reading CSV file and creating object profiles (*_users.json and *_repos.json) ..."
                 users, repos = GithubStateLoader.convert_csv_to_json_profiles(filename)
-                print "users: ", len(users), ", repos: ", len(repos)
+                print "users: ", users, ", repos: ", repos
             elif cmd == "l":
                 print "Loading objects from profiles file..."
                 objects = []
@@ -235,3 +335,4 @@ if __name__ == "__main__":
                 print "Unrecognized command " + cmd + "\n"
     else:
         print 'incorrect arguments: ', sys.argv
+

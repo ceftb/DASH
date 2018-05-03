@@ -31,6 +31,18 @@ class System2Agent:
         self.traceForget = False
         self.traceProject = False
 
+    def system2_propose_action(self):
+        return self.choose_action_by_reasoning()
+
+    def choose_action_by_reasoning(self):
+        goal = self.chooseGoal()
+        if goal is not None:
+            return self.chooseActionForGoals([goal])
+        else:
+            if self.traceGoals:
+                print 'no unsatisfied goals'
+            return None
+
     # A primitive action is declared in primitiveActionDict, or it might be a method
     # on the agent with the same name, or the same name with camelCase converted to underscores
     def isPrimitive(self, goal):
@@ -273,15 +285,6 @@ class System2Agent:
     # Might be subgoal or top-level goal
     def isGoal(self, goal):
         return goal[0] in self.goalRequirementsDict
-
-    def choose_action_by_reasoning(self):
-        goal = self.chooseGoal()
-        if goal is not None:
-            return self.chooseActionForGoals([goal])
-        else:
-            if self.traceGoals:
-                print 'no unsatisfied goals'
-            return None
 
     def chooseGoal(self):
         if self.goalWeightDict == {}:

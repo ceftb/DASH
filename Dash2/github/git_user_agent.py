@@ -18,9 +18,9 @@ class GitUserAgent(DASHAgent):
         # isSharedSocketEnabled = True will reuse it.
         self.readAgent(
             """
-goalWeight MakeRepo 2
+goalWeight MakeRepo 1
 
-goalWeight UpdateOwnRepo 1
+goalWeight UpdateOwnRepo 2
 
 goalRequirements MakeRepo
   create_repo_event(RepoName)

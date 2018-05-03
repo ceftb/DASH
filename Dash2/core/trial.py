@@ -36,8 +36,9 @@ class Trial(object):
             self.zk.ensure_path(self.curr_trial_path + "/status")
             self.zk.set(self.curr_trial_path + "/status",
                         json.dumps({"trial_id": self.trial_id, "status": "in progress", "dependent": ""}))
-            # set up max repo id
+            # set up max ids
             self.set_max_repo_id(0)
+            self.set_max_user_id(0)
 
             # results dictionary will accumulate values of dependents variables.
             self.results = {}
@@ -48,6 +49,12 @@ class Trial(object):
             self.trial_id) + "/max_repo_id"
         self.zk.ensure_path(max_repo_id_path)
         self.zk.set(max_repo_id_path, str(max_id))
+
+    def set_max_user_id(self, max_id):
+        max_user_id_path = "/experiments/" + str(self.exp_id) + "/" + str(self.trial_id) + "/" + str(
+            self.trial_id) + "/max_user_id"
+        self.zk.ensure_path(max_user_id_path)
+        self.zk.set(max_user_id_path, str(max_id))
 
     # The initialize function sets up the agent list or initializes parameters for dash worker tasks (in zookeeper version)
     def initialize(self):
@@ -84,7 +91,7 @@ class Trial(object):
         self.initialize()
         if self.zk is not None: # distributed trial version (uses zookeeper)
             self.run_distributed_trial()
-            self.process_after_run()
+            # self.process_after_run() - this method is called asynchronously via ZK watcher
         else: # overridden in each subclass to do something useful
             for agent in self.agents:
                 agent.traceLoop = False
@@ -132,10 +139,11 @@ class Trial(object):
                     dependent_vars_path = "/experiments/" + str(self.exp_id) + "/trials/" + str(
                         self.trial_id) + "/nodes/" + str(node_id) + "/dependent_variables"
                     self.zk.set(dependent_vars_path, "")  # clearing data
-                    if self.received_tasks_counter == self.number_of_hosts:
+                    if self.received_tasks_counter == self.number_of_hosts: # all subtasks are completed.
                         self.aggregate_results()
                         self.zk.set(self.curr_trial_path + "/status", json.dumps(
                             {"trial_id": self.trial_id, "status": "completed", "dependent": self.results}))
+                        self.process_after_run()
                         return False
                 return True
 

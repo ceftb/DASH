@@ -1,5 +1,5 @@
 import sys; sys.path.extend(['../../'])
-from intial_state_loader import GithubStateLoader
+from initial_state_loader import GithubStateLoader
 
 def count_repos_and_agents(user_hash_to_profile_map, repo_hash_to_profile_map):
 
@@ -24,13 +24,13 @@ def count_repos_and_agents(user_hash_to_profile_map, repo_hash_to_profile_map):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) == 2 or len(sys.argv) == 3:
-        filename = sys.argv[1]
+    if len(sys.argv) == 2 or len(sys.argv) == 3 or len(sys.argv) == 1:
+        filename = "output.csv" #sys.argv[1]
         while True:
             cmd = raw_input(
                 "Press q to exit loader\n\tr to parse source data file and create user and repo profiles\n\t"
                 "l to load objects from profiles file and load them into memory\n\tp to partition profiles file (not loaded in memory)\n\t"
-                "s to load state file\n\tc to merge output log files")
+                "s to load state file\n\tm to merge output log files\n\tt to translate ids\n\t")
             if cmd == "q":
                 print("Exiting ...")
                 break
@@ -38,8 +38,8 @@ if __name__ == "__main__":
                 print "Reading CSV file and creating object profiles (*_users.json and *_repos.json) ..."
                 users, repos = GithubStateLoader.convert_csv_to_json_profiles(filename)
                 # FIXME: format of profile was changed, need to update counter function
-                # count_repos_and_agents(users, repos)
-                print "users: ", len(users), ", repos: ", len(repos)
+                # count_repos_and_agents(users_hash_to_id, repos_hash_to_id)
+                print "users: ", users, ", repos: ", repos
             elif cmd == "l":
                 print "Loading objects from profiles file..."
                 objects = []
@@ -55,9 +55,16 @@ if __name__ == "__main__":
                 print "Reading state file ..."
                 meta = GithubStateLoader.read_state_file(filename)
                 print "users: ", meta["number_of_users"], ", repos: ", meta["number_of_repos"]
-            elif cmd == "c":
-                print "Merging ouput log files ..."
+            elif cmd == "m":
+                print "Merging output log files ..."
                 meta = GithubStateLoader.merge_log_file(["0-0-1_event_log_file.txt", "0-0-2_event_log_file.txt"], "output.csv", "timestamp,event,user_id,repo_id\n")
+                print "Merged."
+            elif cmd == "t":
+                print "Translating user and repo ids ..."
+                meta = GithubStateLoader.trnaslate_user_and_repo_ids_in_event_log(even_log_file=filename,
+                                                                                  output_file_name="translated.csv",
+                                                                                  users_ids_file="./data_jan_2017_json/data_jan_2017.csv_users_id_dict.csv",
+                                                                                  repos_ids_file="./data_jan_2017_json/data_jan_2017.csv_repos_id_dict.csv")
                 print "Merged."
             else:
                 print "Unrecognized command " + cmd + "\n"
