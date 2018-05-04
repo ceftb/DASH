@@ -143,50 +143,87 @@ A BeliefNetwork can be modified in-place via addition with another belief networ
 The energy of the belief network is the internal energy, not to be confused with the social energy.
 
 \subsection{BeliefModule}
-Represents a cognitive module for assessing the coherence of an agents belief system. It handles receiving (\texttt{listen}) and sending (\texttt{talk}) beliefs, updating the belief network of the agent, and determining whether to  accept or reject new beliefs.
+Represents a cognitive module for assessing the coherence of an agents belief system. It handles receiving (\texttt{process\_belief}) and sending (\texttt{emit\_belief}) beliefs, updating the belief network of the agent, and determining whether to  accept or reject new beliefs.
 
 Shallow copy access to the underlying beliefs of both the beliefs and perceived beliefs is given via the \texttt{beliefs} and \texttt{perceived\_beliefs} properties. Alternatively, direct access to those items can be achieved via \texttt{obj.belief\_network.beliefs} or \texttt{obj.perceived\_belief\_network.beliefs}
 
+A BeliefModule can be instantiated with the following parameters:
+\begin{itemize}
+    \item \texttt{belief\_net}: a BeliefNetwork type object. $default=$\texttt{BeliefNetwork()}
+    \item \texttt{perceived\_net}: a BeliefNetwork type object representing the agent's perception of other's beliefs. $default=$\texttt{BeliefNetwork()}
+    \item \texttt{seed}: seed number for internal rng (uses Random). $default=1$
+    \item \texttt{max\_memory}: how many steps back the agent remembers incoming beliefs. This can be used in methods for outputing recent beliefs. $default=1$
+    \item \texttt{T}: Higher T will increase the likelihood of accepting beliefs that would increase the agents energy. $default=1.0$
+    \item \texttt{J}: coherentism, controls contribution of internal belief system energy to total energy. $default=1.0$
+    \item \texttt{I}: peer-influence, controls contribution of social energy to the total energy. $default=1.0$
+    \item \texttt{tau}: float between $[1,inf]$. Higher values prefer older beliefs and reduce the contribution of newer beliefs to perceived belief network. $default=1.0$
+    \item \texttt{recent\_belief\_chance}: $[0,1]$, the probability of choosing a belief to emit from short-term memory. If a recent belief isn't chosen, then a belief is chosen uniformly at random from the belief network. $default=0.0$
+    \item \texttt{verbose}: prints additional information
+\end{itemize}
+
+\subsection{SocogSystem1Agent}
+A system1-like class that uses a belief module and system rules to fill a queue of actions that the agent will attempt to take. It can be instantiated with the following parameters:
+
+\begin{itemize}
+    \item \texttt{belief\_module}: A \texttt{BeliefModule} object
+\end{itemize}
+
+For the modeller, the most important method is the \texttt{read\_system1\_rules} method which allows the user to define the rules for system1. This method should be called when subclassing the \texttt{SocogDASHAgent}. A rule string is given as input, similar to how system2 receives goals. However, system1 uses a list of conditions that are evaluated. If a condition is true, then a corresponding sequence of actions will be added to a queue of actions in the same order as the conditions. If an action fails, the sequence is reset\footnote{Maybe in the future actions from different conditions can be compartmentalized so that a failure in one condition doesn't affect the others.}. Conditions are re-evaluated once the queue has completed or if \texttt{process\_belief} is called. To prevent recursion, if \texttt{process\_belief} is called within the conditions it will not prompt a reset.
+
+Whenever actions are taken, variables are stored internally. Whenever the sequences completes or fails the variable bindings are reset. Because it is impossible for the class to know when a primitive is supposed to set or use variables, it is up to the user to write primitives that check \texttt{isVar}.
+
+The parameter \texttt{rule\_string} is a string containing lines for each system rule. A system rule is defined by a condition and sequence of actions. If the condition is fulfilled, the sequence is carried out. The condition is a logical statement that can use and, or, not, and parentheses. The action statement is a sequence of primitive actions separated by spaces. The conditions can specify beliefs, which require three values to be specified: two concepts and a valence. Or the conditions can specify primitive actions. For example:
+
+\begin{quote}
+\texttt{if [A,B,0.5] and [C,B,-0.2] then run(speed) jump(height)}
+\end{quote}
+
+Actions can also be added to conditions like so:
+
+\begin{quote}
+\texttt{if foo(Belief) and fee(Belief,height) then jump(height)}
+\texttt{if foo(Belief) and [A,B,1.0] then run(speed)}
+\end{quote}
+
+Square brackets are used to designate a belief. Each concept and the valence are separated by \texttt{,}. Setting valence to 0.0 is ambiguous and will return True if the agent has the belief. The \texttt{True} word can be used to designate conditions that will always return true, e.g.:
+
+\begin{quote}
+\texttt{if [True] then talk(belief) call(belief)}
+\texttt{if [false] or not [TRUE] then talk(belief) call(belief)}
+\end{quote}
+
+Precedence is from left to right or determined by parenthesis and syntax is case sensitive, except for logical operators as beliefs themselves are case-sensitive.
+
+The class has the following main attributes used for mapping rules to actions and maintaining an action queue:
+
+\begin{itemize}
+    \item \texttt{rule\_list}: is a list of tuples where the first element is the condition, and the second a sequence of actions.
+    \item \texttt{belief\_token\_map}: a dictionary keyed by belief string and valued by the corresponding token (a \texttt{concept\_pair}, valence tuple)
+    \item \texttt{action\_token\_map}: a dictionary keyed by an action string and valued by a tuple who's first element is action name and following elements the variable names
+    \item \texttt{action\_name\_to\_variable\_map}: a dictionary keyed by action name and valued by a list of variables that primitive has
+    \item \texttt{variable\_bindings}: a dictionary keyed by variable name and valued by the value of that variable (defaults to None)
+    \item \texttt{action\_queue}: a list of action strings to be carried out.
+    \item \texttt{current\_action}: a pointer to an action in the \texttt{action\_queue}.
+\end{itemize}
+
+\subsection{System1Evaluator}
+
+This is a helper class for \texttt{SocogSystem1Agent}. It handles parsing the rule string and evaluating conditions from primitives supplied in the arguments.
+
+\subsection{SocogDASHAction}
+
+This class replaces \texttt{DASHAction} and implements the agent loops necessary for the socog agent. Currently, \texttt{arbitrate\_system1\_system2} and \texttt{bypass\_system2} default to choosing system 1 actions if they exist, else it defers to system 2. Override these functions if different behavior is desired. System 1 needs to know when its action is taken, because it keeps a memory of where it is in the sequences of suggested actions. Therefore, whenever system1 actions are chosen the \texttt{sys1\_action\_taken} property should be toggled to \texttt{True}.
+
+The class subclasses the \texttt{DASHAction} module, so that it has access to the same properties and methods and primitives as that class. Additional primitives are added by default. The \texttt{process\_belief} primitive takes a belief and calls the belief module's \texttt{process\_belief} method. The \texttt{emit\_belief} primitive sets a belief variable and calls the belief module's \texttt{emit\_belief} method. Lastly, the \texttt{belief\_conflict} primitive takes a belief variable and checks if the belief conflicts with any beliefs in the agent's belief system. If so it returns a value that evaluates to \texttt{True} else it returns a value that evaluates to \texttt{False}.
+
+\subsection{SocogDASHAgent}
+
+This class inherits from the socog classes and calls the respective initializers in the proper order. You can sublass this class to create new agents.
+
 \subsection{Tutorial}
-See tutorial director in Dash2:
+See tutorial director in Dash2 tutorial section. This is a short tutorial module that can be run with \texttt{reddit\_hub}. \texttt{reddit\_hub} contains a set of default comments on a soccer thread that the user agent will parse and convert to beliefs, which it will then assess. It shows how you can subclass the \texttt{SocogDASHAgent} and initialize a belief module.
 
-This is a short tutorial module that can be run with \texttt{reddit\_hub}.
-\texttt{reddit\_hub} contains a set of default comments on a soccer thread that
-the user agent will parse and convert to beliefs, which it will then
-assess. This uses only System2 functions with the \texttt{socog\_module}, however,
-because the \texttt{socog\_module} has a ``has a" relationship with the DASH agents,
-there is no need for inheritance and it can operate independently of the
-function of System1 or System2. Rather, a System1/System2 configuration
-can use the belief module, calling the \texttt{talk}/\texttt{listen} methods for modifying or
-transmitting beliefs. Or they can use the \texttt{beliefs} or \texttt{perceived\_beliefs}
-properties to access agent beliefs to implement actions.
-
-The user is instantiated with a sparse belief system where it believes that
-Henry and the GreyTeam are the best. Initial forum posts validate this and
-provide addition connections to the agent which reinforce its beliefs.
-
-However, later comments suggest that Henry is Corrupt. After repeated
-exposure the agent adopts beliefs the reject Henry and GreyTeams Best status
-and adopt the beliefs that Henry and the GreyTeam are both Corrupt.
-
-Verbosity is turned on by default so you can see how the beliefs change
-following each interaction with the forum comments.
-
-
-
-
-
-
-
-% introduce socog system1
-    % mention that each loop through action list clears internal variable bindings
-% introduce socog_dash
-% introduce how to subclass and use socog_dash
-    % mention updating the action queue
-    % mention something about isVar for primitive actions (it is the primitive actions
-    % responsibility to check if incoming variable is set or not
-
-
+This uses System2 and System1 functions with the \texttt{socog\_module}. The user is instantiated with a sparse belief system where it believes that Henry and the GreyTeam are the best. Initial forum posts validate this and provide addition connections to the agent which reinforce its beliefs. However, later comments suggest that Henry is Corrupt. After repeated exposure the agent adopts beliefs the reject Henry and GreyTeams Best status and adopt the beliefs that Henry and the GreyTeam are both Corrupt. The rules for system 1 cause the agent to respond with its own beliefs if it reads something that conflicts with those beliefs.
 
 
 

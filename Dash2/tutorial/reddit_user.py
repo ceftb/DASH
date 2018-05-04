@@ -11,9 +11,6 @@ provide addition connections to the agent which reinforce its beliefs.
 However, later comments suggest that Henry is Corrupt. After repeated
 exposure the agent adopts beliefs the reject Henry and GreyTeams Best status
 and adopt the beliefs that Henry and the GreyTeam are both Corrupt.
-
-Verbosity is turned on by default so you can see how the beliefs change
-following each interaction with the forum comments.
 """
 
 from Dash2.socog.socog_module import *

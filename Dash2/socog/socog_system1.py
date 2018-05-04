@@ -27,6 +27,7 @@ class SocogSystem1Agent(object):
         variable_bindings: a dictionary keyed by variable name and valued by
             the value of that variable (defaults to None)
         action_queue: a list of action strings to be carried out.
+        current_action: a pointer to an action in the action_queue
         """
 
         if belief_module is None:
