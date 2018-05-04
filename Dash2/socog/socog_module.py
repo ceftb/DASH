@@ -723,7 +723,7 @@ class BeliefModule(object):
         if the agent likes and accepts it, it will also be added to their
         short term memory
         :param belief: Incoming belief(s) as Beliefs object
-        :return [{}]
+        :return True if accepted, else False
         """
 
         self._update_perceived_beliefs(belief)
@@ -731,8 +731,9 @@ class BeliefModule(object):
         if self._is_belief_acceptable(belief):
             self._add_belief_to_memory(belief)
             self.belief_network.add_belief(belief)
+            return True
 
-        return [{}]
+        return False
 
     def is_conflicting_belief(self, belief):
         """

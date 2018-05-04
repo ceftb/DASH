@@ -63,19 +63,6 @@ if [Soccer,Corrupt,1.0] and [Soccer,Best,-1.0] then leave_thread()
         self.last_comment_belief = None
         self.intuit = True
 
-    def arbitrate_system1_system2(self, system1_actions, system2_action):
-        if system1_actions and (system1_actions[0] != "write_comment"):
-            self.update_action_queue()
-            return system1_actions
-        elif system1_actions and (system1_actions[0] == "write_comment"):
-            self.reset_action_queue([])
-            return system1_actions
-        else:
-            return system2_action
-
-    def bypass_system2(self, system1_action_nodes):
-        return False  # try system 1 by default if it's available
-
     def _parse_comment(self, comment):
         """
         Constructs a belief from a comment

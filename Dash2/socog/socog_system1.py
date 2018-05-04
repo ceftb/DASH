@@ -344,6 +344,13 @@ class SocogSystem1Agent(object):
             self.update_action_queue()
             return self.select_action_from_queue()
 
+    def system1_propose_action(self):
+        """
+        Part of the system1 API. Calls select_action_from_queue.
+        :return: action
+        """
+        return self.select_action_from_queue()
+
     def update_action_queue(self):
         """
         Increments the current_action pointer
@@ -655,3 +662,30 @@ class System1Evaluator(object):
         if not self._recursion_flag:
             actions = self.actions_from_satisfied_conditions()
             self.socog_agent.reset_action_queue(actions)
+
+    def update(self, result=None):
+        """
+        Checks conditions and taken actions. Increments to the next action
+        if one is performed. Resets if it fails. Resets if conditions change.
+        :param result: the result of the chosen action
+        :return: None
+        """
+
+        # If system 1 was not chosen, and we are at the start, reset
+        # If system 1 action was taken but it failed, reset
+        # If system 1 action queue is complete, reset
+        if (self.socog_agent.current_action == 0 and
+            not self.socog_agent.sys1_action_taken) or \
+                (self.socog_agent.sys1_action_taken and not bool(result)) or \
+                (self.socog_agent.current_action == (len(self.socog_agent.action_queue) - 1)):
+            self.initialize_action_queue()
+
+        # If system 1 action taken and it was successful move to next action
+        if self.socog_agent.sys1_action_taken and bool(result):
+            self.socog_agent.update_action_queue()
+
+        # If system 1 action was not taken and we aren't on the first action
+        # then nothing happens and it waits until it can perform the rest
+        # of the actions in the sequence
+
+        # note: it can be reset externally via process_belief

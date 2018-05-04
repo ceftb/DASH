@@ -64,6 +64,9 @@ class System1Agent:
         self.fact_node_dict = dict()  # maps node facts to nodes
         self.neighbor_rules = dict()  # maps node fact predicates to lambdas
         self.trace_add_activation = False
+        # Activation threshold at which actions suggested by system 1 will be considered over deliberation
+        # A low threshold will produce more 'impulsive' actions
+        self.system1_threshold = 0.1
 
     # Interface allows for alternative system 1 approaches, while this default version performs spreading activation
     def system1_update(self):  # apply newly learned information to update the state of system 1
