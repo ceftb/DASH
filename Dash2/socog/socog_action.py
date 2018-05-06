@@ -1,5 +1,4 @@
 import Dash2.core.dash_action as dash_action
-from Dash2.socog.socog_system1 import System1Evaluator
 from Dash2.core.system2 import substitute
 from Dash2.socog.socog_module import *
 
@@ -19,11 +18,10 @@ class SocogDASHAction(dash_action.DASHAction):
         self.primitiveActions([('process_belief', self.process_belief),
                                ('emit_belief', self.emit_belief),
                                ('belief_conflict', self.belief_conflict)])
-        self.system1_evaluator = System1Evaluator(self)
         self.sys1_action_taken = False
 
     def agentLoop(self, max_iterations=-1, disconnect_at_end=True):
-        self.system1_evaluator.update()
+        self.system1_update()
         next_action = self.choose_action()
         iteration = 0
         while next_action is not None \
@@ -34,7 +32,7 @@ class SocogDASHAction(dash_action.DASHAction):
 
             result = self.performAction(next_action)
             self.update_beliefs(result, next_action)
-            self.system1_evaluator.update(result)
+            self.system1_update(result)
             self.sys1_action_taken = False
             next_action = self.choose_action()
             iteration += 1
@@ -108,7 +106,7 @@ class SocogDASHAction(dash_action.DASHAction):
 
         if isinstance(belief, Beliefs):
             self.belief_module.process_belief(belief)
-            self.system1_evaluator.initialize_action_queue()
+            self.initialize_action_queue()
 
         return [{}]
 

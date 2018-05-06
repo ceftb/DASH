@@ -9,7 +9,9 @@ class SocogSystem1Agent(object):
     """
 
     boolean_token = {'and', 'or', 'not', 'true', 'false'}
-
+    boolean_non_operands = {'and', 'or', 'not', '(', ')'}
+    binary_operators = {'and', 'or'}
+    
     def __init__(self, belief_module=None):
         """
         :param belief_module: A BeliefModule object
@@ -44,6 +46,7 @@ class SocogSystem1Agent(object):
         self.variable_bindings = {}
         self.action_queue = []
         self.current_action = 0  # points to action in queue
+        self._recursion_flag = False
 
     def read_system1_rules(self, rule_string):
         """
@@ -134,7 +137,7 @@ class SocogSystem1Agent(object):
         for rule in rule_list:
             # Add actions from condition
             for token in rule[0]:
-                if System1Evaluator.is_action_token(token):
+                if SocogSystem1Agent.is_action_token(token):
                     self.add_action_token_to_map(token, action_token_map)
             
             # Add actions from action sequence
@@ -189,7 +192,7 @@ class SocogSystem1Agent(object):
         :return: same reference to map
         """
 
-        if System1Evaluator.is_action_token(token):
+        if SocogSystem1Agent.is_action_token(token):
             action_name, arguments = token[:-1].split('(')
             arguments = arguments.replace(' ', '').split(',')
             token_map[token] = tuple([action_name] + arguments)
@@ -202,7 +205,7 @@ class SocogSystem1Agent(object):
         :param token: a condition token
         :return: same reference to map
         """
-        if System1Evaluator.is_belief_token(token):
+        if SocogSystem1Agent.is_belief_token(token):
             split_token = token.split(",")
             concept_pair = ConceptPair(split_token[0], split_token[1])
             token_map[token] = (concept_pair, float(split_token[2]))
@@ -320,6 +323,240 @@ class SocogSystem1Agent(object):
                 return True
 
         return False
+
+    @staticmethod
+    def is_operand_token(token):
+        """
+        :param token: a tokenized string
+        :return: boolean
+        """
+
+        return token.lower() not in SocogSystem1Agent.boolean_non_operands
+    
+    @staticmethod
+    def is_binary_operator_token(token):
+        """
+        :param token: a tokenized string
+        :return: boolean
+        """
+
+        return token.lower() in SocogSystem1Agent.binary_operators
+    
+    @staticmethod
+    def is_belief_token(token):
+        """
+        :param token: a tokenized string
+        :return: boolean
+        """
+
+        return token.count(',') == 2
+    
+    @staticmethod
+    def is_action_token(token):
+        """
+        :param token: a tokenized string
+        :return: boolean
+        """
+
+        return ('(' in token) and (')' in token)
+    
+    @staticmethod
+    def valid_operator_token(tokens, index):
+        """
+        Returns True if the token at index.pos exists and is an operator
+        :param tokens: a list of tokens
+        :param index: Index object
+        :return: boolean
+        """
+
+        if index.pos >= len(tokens):
+            return False
+
+        return SocogSystem1Agent.is_binary_operator_token(tokens[index.pos])
+    
+    def _is_belief_token_satisfied(self, belief_token):
+        """
+        :param belief_token: string representing a belief
+        :return: True/False
+        """
+
+        if belief_token in self.belief_token_map:
+            return self.is_belief_condition_satisfied(
+                *self.belief_token_map[belief_token])
+
+        elif SocogSystem1Agent.is_belief_token(belief_token):
+            self.add_belief_token_to_map(belief_token, self.belief_token_map)
+            return self._is_belief_token_satisfied(belief_token)
+
+        else:
+            raise ValueError("Error: Invalid token input <" +
+                             belief_token + "> does not have a truth value")
+        
+    def parse_expression(self, tokens, index=None):
+        """
+        A boolean logic parser that is implemented as a recursive decent parser.
+        :param tokens: list of tokens
+        :param index: index location in tokens (default 0)
+        :return: boolean value
+        """
+
+        if index is None:
+            index = Index()
+
+        while index.pos < len(tokens):
+            is_negated = False
+            if tokens[index.pos].lower() == 'not':
+                is_negated = True
+                index.increment()
+
+            evaluation = self.parse_subexpression(tokens, index)
+            if is_negated:
+                evaluation = not evaluation
+
+            while SocogSystem1Agent.valid_operator_token(tokens, index):
+                operator = tokens[index.pos].lower()
+                index.increment()
+                if index.pos >= len(tokens):
+                    raise IndexError("Error: Missing expression after operator: "
+                                     + str(tokens[index.pos - 1]) + " at "
+                                     + str(index.pos))
+
+                next_evaluation = self.parse_subexpression(tokens, index)
+                if operator == 'and':
+                    evaluation = evaluation and next_evaluation
+                elif operator == 'or':
+                    evaluation = evaluation or next_evaluation
+                else:
+                    raise AssertionError("Error: Unknown operator")
+
+            return evaluation
+
+        raise IndexError("Empty expression")
+    
+    def parse_subexpression(self, tokens, index=None):
+        """
+        Parses subexpressions. Is a part of the parse_expression function.
+        :param tokens: list of tokens
+        :param index: index location in tokens (default 0)
+        :return: boolean value
+        """
+        if index is None:
+            index = Index()
+
+        if SocogSystem1Agent.is_belief_token(tokens[index.pos]):
+            token_evaluation = self._is_belief_token_satisfied(tokens[index.pos])
+            index.increment()
+            return token_evaluation
+
+        if SocogSystem1Agent.is_action_token(tokens[index.pos]):
+            # Recursion flag is to prevent actions from
+            # resetting the stack and condition check indefinitely
+            self._recursion_flag = True
+            token_evaluation = self.evaluate_action(self.action_token_map[
+                                                        tokens[index.pos]])
+            self._recursion_flag = False
+            index.increment()
+            return bool(token_evaluation)
+
+        elif tokens[index.pos].lower() == 'true':
+            index.increment()
+            return True
+
+        elif tokens[index.pos].lower() == 'false':
+            index.increment()
+            return False
+
+        elif tokens[index.pos] == '(':
+            index.increment()
+            expression_eval = self.parse_expression(tokens, index)
+            if tokens[index.pos] != ')':
+                raise IndexError("Error: Expected closed parenthesis")
+
+            index.increment()
+            return expression_eval
+
+        elif tokens[index.pos] == ')':
+            raise IndexError("Error: Unexpected closed parenthesis")
+
+        else:
+            return self.parse_expression(tokens, index)
+    
+    def is_condition_satisfied(self, condition):
+        """
+        Parses the condition tokens and evaluates whether they are satisfied
+        or not.
+        :param condition: a tokenized list from the rule_list
+        :return: boolean
+        """
+        return self.parse_expression(condition)
+    
+    def actions_from_satisfied_conditions(self):
+        """
+        Check all conditions in rule_list and return a list of actions
+        that satisfy those conditions
+        :return: A list of iterable things that have a node_to_action method
+        """
+
+        active_actions = []
+        for condition, actions in self.rule_list:
+            if self.is_condition_satisfied(condition):
+                for action in actions:
+                    active_actions.append(self.action_token_map[action])
+
+        return active_actions
+    
+    def evaluate_action(self, action):
+        """
+        Calls on the Socog agent to perform a given action and returns the
+        result
+        :param action: a DASH formatted action 
+        :return: output of the primitive action
+        """
+        result = self.performAction(
+            self.bind_variables_if_available(action))
+        self.update_beliefs(result, action)
+        return result
+    
+    def initialize_action_queue(self):
+        """
+        Fills system1's action queue with actions found to satisfy the
+        conditions of its rules.
+
+        Uses a recursion flag to prevent actions that are called from the
+        condition check to call another condition check.
+
+        :return: None
+        """
+        if not self._recursion_flag:
+            actions = self.actions_from_satisfied_conditions()
+            self.reset_action_queue(actions)
+            
+    def system1_update(self, result=None):
+        """
+        Checks conditions and taken actions. Increments to the next action
+        if one is performed. Resets if it fails. Resets if conditions change.
+        :param result: the result of the chosen action
+        :return: None
+        """
+
+        # If system 1 was not chosen, and we are at the start, reset
+        # If system 1 action was taken but it failed, reset
+        # If system 1 action queue is complete, reset
+        if (self.current_action == 0 and
+            not self.sys1_action_taken) or \
+                (self.sys1_action_taken and not bool(result)) or \
+                (self.current_action == (len(self.action_queue) - 1)):
+            self.initialize_action_queue()
+
+        # If system 1 action taken and it was successful move to next action
+        if self.sys1_action_taken and bool(result):
+            self.update_action_queue()
+
+        # If system 1 action was not taken and we aren't on the first action
+        # then nothing happens and it waits until it can perform the rest
+        # of the actions in the sequence
+
+        # note: it can be reset externally via process_belief
 
     def select_action_from_queue(self):
         """
@@ -439,254 +676,3 @@ class Index(object):
 
     def __str__(self):
         return self.pos.__str__()
-
-
-class System1Evaluator(object):
-    """
-    Helper class that evaluates system1agent rules
-    """
-
-    def __init__(self, socog_agent):
-        """
-        :param socog_agent: A SocogDASHAgent
-        """
-        self.socog_agent = socog_agent
-        self._recursion_flag = False
-
-    boolean_non_operands = {'and', 'or', 'not', '(', ')'}
-    binary_operators = {'and', 'or'}
-
-    @staticmethod
-    def is_operand_token(token):
-        """
-        :param token: a tokenized string
-        :return: boolean
-        """
-
-        return token.lower() not in System1Evaluator.boolean_non_operands
-
-    @staticmethod
-    def is_binary_operator_token(token):
-        """
-        :param token: a tokenized string
-        :return: boolean
-        """
-
-        return token.lower() in System1Evaluator.binary_operators
-
-    @staticmethod
-    def is_belief_token(token):
-        """
-        :param token: a tokenized string
-        :return: boolean
-        """
-
-        return token.count(',') == 2
-
-    @staticmethod
-    def is_action_token(token):
-        """
-        :param token: a tokenized string
-        :return: boolean
-        """
-
-        return ('(' in token) and (')' in token)
-
-    @staticmethod
-    def valid_operator_token(tokens, index):
-        """
-        Returns True if the token at index.pos exists and is an operator
-        :param tokens: a list of tokens
-        :param index: Index object
-        :return: boolean
-        """
-
-        if index.pos >= len(tokens):
-            return False
-
-        return System1Evaluator.is_binary_operator_token(tokens[index.pos])
-
-    def _is_belief_token_satisfied(self, belief_token):
-        """
-        :param belief_token: string representing a belief
-        :return: True/False
-        """
-
-        if belief_token in self.socog_agent.belief_token_map:
-            return self.socog_agent.is_belief_condition_satisfied(
-                *self.socog_agent.belief_token_map[belief_token])
-
-        elif System1Evaluator.is_belief_token(belief_token):
-            self.socog_agent.add_token_to_map(belief_token,
-                                              self.socog_agent.belief_token_map)
-            return self._is_belief_token_satisfied(belief_token)
-
-        else:
-            raise ValueError("Error: Invalid token input <" +
-                             belief_token + "> does not have a truth value")
-
-    def parse_expression(self, tokens, index=None):
-        """
-        A boolean logic parser that is implemented as a recursive decent parser.
-        :param tokens: list of tokens
-        :param index: index location in tokens (default 0)
-        :return: boolean value
-        """
-
-        if index is None:
-            index = Index()
-
-        while index.pos < len(tokens):
-            is_negated = False
-            if tokens[index.pos].lower() == 'not':
-                is_negated = True
-                index.increment()
-
-            evaluation = self.parse_subexpression(tokens, index)
-            if is_negated:
-                evaluation = not evaluation
-
-            while System1Evaluator.valid_operator_token(tokens, index):
-                operator = tokens[index.pos].lower()
-                index.increment()
-                if index.pos >= len(tokens):
-                    raise IndexError("Error: Missing expression after operator: "
-                                     + str(tokens[index.pos - 1]) + " at "
-                                     + str(index.pos))
-
-                next_evaluation = self.parse_subexpression(tokens, index)
-                if operator == 'and':
-                    evaluation = evaluation and next_evaluation
-                elif operator == 'or':
-                    evaluation = evaluation or next_evaluation
-                else:
-                    raise AssertionError("Error: Unknown operator")
-
-            return evaluation
-
-        raise IndexError("Empty expression")
-
-    def parse_subexpression(self, tokens, index=None):
-        """
-        Parses subexpressions. Is a part of the parse_expression function.
-        :param tokens: list of tokens
-        :param index: index location in tokens (default 0)
-        :return: boolean value
-        """
-        if index is None:
-            index = Index()
-
-        if System1Evaluator.is_belief_token(tokens[index.pos]):
-            token_evaluation = self._is_belief_token_satisfied(tokens[index.pos])
-            index.increment()
-            return token_evaluation
-
-        if System1Evaluator.is_action_token(tokens[index.pos]):
-            # Recursion flag is to prevent actions from
-            # resetting the stack and condition check indefinitely
-            self._recursion_flag = True
-            token_evaluation = self.evaluate_action(self.socog_agent.action_token_map[
-                                                        tokens[index.pos]])
-            self._recursion_flag = False
-            index.increment()
-            return bool(token_evaluation)
-
-        elif tokens[index.pos].lower() == 'true':
-            index.increment()
-            return True
-
-        elif tokens[index.pos].lower() == 'false':
-            index.increment()
-            return False
-
-        elif tokens[index.pos] == '(':
-            index.increment()
-            expression_eval = self.parse_expression(tokens, index)
-            if tokens[index.pos] != ')':
-                raise IndexError("Error: Expected closed parenthesis")
-
-            index.increment()
-            return expression_eval
-
-        elif tokens[index.pos] == ')':
-            raise IndexError("Error: Unexpected closed parenthesis")
-
-        else:
-            return self.parse_expression(tokens, index)
-
-    def is_condition_satisfied(self, condition):
-        """
-        Parses the condition tokens and evaluates whether they are satisfied
-        or not.
-        :param condition: a tokenized list from the rule_list
-        :return: boolean
-        """
-        return self.parse_expression(condition)
-
-    def actions_from_satisfied_conditions(self):
-        """
-        Check all conditions in rule_list and return a list of actions
-        that satisfy those conditions
-        :return: A list of iterable things that have a node_to_action method
-        """
-
-        active_actions = []
-        for condition, actions in self.socog_agent.rule_list:
-            if self.is_condition_satisfied(condition):
-                for action in actions:
-                    active_actions.append(self.socog_agent.action_token_map[action])
-
-        return active_actions
-
-    def evaluate_action(self, action):
-        """
-        Calls on the Socog agent to perform a given action and returns the
-        result
-        :param action: a DASH formatted action 
-        :return: output of the primitive action
-        """
-        result = self.socog_agent.performAction(
-            self.socog_agent.bind_variables_if_available(action))
-        self.socog_agent.update_beliefs(result, action)
-        return result
-
-    def initialize_action_queue(self):
-        """
-        Fills system1's action queue with actions found to satisfy the
-        conditions of its rules.
-
-        Uses a recursion flag to prevent actions that are called from the
-        condition check to call another condition check.
-
-        :return: None
-        """
-        if not self._recursion_flag:
-            actions = self.actions_from_satisfied_conditions()
-            self.socog_agent.reset_action_queue(actions)
-
-    def update(self, result=None):
-        """
-        Checks conditions and taken actions. Increments to the next action
-        if one is performed. Resets if it fails. Resets if conditions change.
-        :param result: the result of the chosen action
-        :return: None
-        """
-
-        # If system 1 was not chosen, and we are at the start, reset
-        # If system 1 action was taken but it failed, reset
-        # If system 1 action queue is complete, reset
-        if (self.socog_agent.current_action == 0 and
-            not self.socog_agent.sys1_action_taken) or \
-                (self.socog_agent.sys1_action_taken and not bool(result)) or \
-                (self.socog_agent.current_action == (len(self.socog_agent.action_queue) - 1)):
-            self.initialize_action_queue()
-
-        # If system 1 action taken and it was successful move to next action
-        if self.socog_agent.sys1_action_taken and bool(result):
-            self.socog_agent.update_action_queue()
-
-        # If system 1 action was not taken and we aren't on the first action
-        # then nothing happens and it waits until it can perform the rest
-        # of the actions in the sequence
-
-        # note: it can be reset externally via process_belief
