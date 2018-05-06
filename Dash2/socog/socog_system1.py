@@ -5,7 +5,9 @@ from Dash2.socog.socog_module import ConceptPair
 class SocogSystem1Agent(object):
     """
     A system1-like class that uses a belief module and system rules to fill
-    a queue of actions that the agent will attempt to take
+    a queue of actions that the agent will attempt to take.
+
+    It cannot be instantiated on its own. It must be inherited by a DASH agent
     """
 
     boolean_token = {'and', 'or', 'not', 'true', 'false'}

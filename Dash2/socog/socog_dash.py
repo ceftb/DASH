@@ -10,7 +10,13 @@ class SocogDASHAgent(socog_action.SocogDASHAction, client.Client,
                      system2.System2Agent, socog_system1.SocogSystem1Agent,
                      human_traits.HumanTraits):
     """
-    An Agent that uses the socog modules system1
+    An Agent that uses the socog modules system1.
+    The SocogDASHAgent class is a composite of various non-instantiable and
+    instantiable classes. SocogDASHAction requires SocogSystem1 and system2
+    methods for operation.
+
+    This is a fully functional class will all the methods necessary for the DASH
+    agent to operate.
     """
     
     def __init__(self, belief_module=None):

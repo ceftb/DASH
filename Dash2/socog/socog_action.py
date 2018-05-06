@@ -5,12 +5,14 @@ from Dash2.socog.socog_module import *
 
 class SocogDASHAction(dash_action.DASHAction):
     """
-    An ABC that defines the action behaviors of the DASH agent. It defines
-    an agentLoop and sets up the primitiveActions dictionary and other methods
-    used to update the agent and pick either system1 or system2 actions.
+    An abstract class that defines the action behaviors of the DASH agent.
+    It defines an agentLoop and sets up the primitiveActions dictionary and
+    other methods used to update the agent and pick either system1 or system2
+    actions.
 
-    The DASH agent inherits this class, so you can use any methods or
-    attributes that would exist in the composite DASH agent.
+    It cannot be instantiated on its own. The DASH agent inherits this class,
+    so you can use any methods or attributes that would exist in the composite
+    DASH agent.
     """
 
     def __init__(self):

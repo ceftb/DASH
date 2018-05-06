@@ -7,7 +7,14 @@ import dash_action
 
 class DASHAgent(dash_action.DASHAction, client.Client, system2.System2Agent,
                 system1.System1Agent, human_traits.HumanTraits):
+    """
+    The DASHAgent class is a composite of various non-instantiable and
+    instantiable classes. DASHAction requires system1 and system2 methods for
+    operation.
 
+    This is a fully functional class will all the methods necessary for the DASH
+    agent to operate.
+    """
     def __init__(self):
         client.Client.__init__(self)
         system2.System2Agent.__init__(self)
