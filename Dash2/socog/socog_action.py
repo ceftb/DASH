@@ -22,35 +22,6 @@ class SocogDASHAction(dash_action.DASHAction):
                                ('belief_conflict', self.belief_conflict)])
         self.sys1_action_taken = False
 
-    def agentLoop(self, max_iterations=-1, disconnect_at_end=True):
-        self.system1_update()
-        next_action = self.choose_action()
-        iteration = 0
-        while next_action is not None \
-                and (max_iterations < 0 or iteration < max_iterations):
-
-            if self.traceAction:
-                print(self.id, "next action is", next_action)
-
-            result = self.performAction(next_action)
-            self.update_beliefs(result, next_action)
-            self.system1_update(result)
-            self.sys1_action_taken = False
-            next_action = self.choose_action()
-            iteration += 1
-
-        if self.traceLoop and next_action is None:
-            print("Exiting simulation: no action chosen")
-
-        elif self.traceLoop and 0 <= max_iterations <= iteration:
-            print("Exiting simulation: finished finite agent cycles:",
-                  iteration, "of max", max_iterations)
-
-        if disconnect_at_end:
-            self.disconnect()
-
-        return next_action
-
     def choose_action(self):
         system1_action = self.system1_propose_action()
         if system1_action and self.bypass_system2(system1_action):
@@ -73,6 +44,10 @@ class SocogDASHAction(dash_action.DASHAction):
         return True  # try system 1 by default if it's available
 
     def update_beliefs(self, result, action):
+        """
+        Modified from DASHAgent to replace activation with SocogSys1 variable
+        binding function.
+        """
         if self.traceUpdate:
             print("Updating beliefs based on action", action, "with result", result)
 

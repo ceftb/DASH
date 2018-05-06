@@ -560,6 +560,10 @@ class SocogSystem1Agent(object):
 
         # note: it can be reset externally via process_belief
 
+        # Resets the SocogDASHAction variable for tracking whether an action is
+        # taken
+        self.sys1_action_taken = False
+
     def select_action_from_queue(self):
         """
         Selects an action at the front of the queue (determined by current_action).
@@ -590,6 +594,12 @@ class SocogSystem1Agent(object):
         :return: action
         """
         return self.select_action_from_queue()
+
+    def system1_step(self):
+        """
+        Does nothing atm. Part of System1 API
+        """
+        pass
 
     def update_action_queue(self):
         """

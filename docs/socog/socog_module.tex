@@ -206,13 +206,9 @@ The class has the following main attributes used for mapping rules to actions an
     \item \texttt{current\_action}: a pointer to an action in the \texttt{action\_queue}.
 \end{itemize}
 
-\subsection{System1Evaluator}
-
-This is a helper class for \texttt{SocogSystem1Agent}. It handles parsing the rule string and evaluating conditions from primitives supplied in the arguments.
-
 \subsection{SocogDASHAction}
 
-This class replaces \texttt{DASHAction} and implements the agent loops necessary for the socog agent. Currently, \texttt{arbitrate\_system1\_system2} and \texttt{bypass\_system2} default to choosing system 1 actions if they exist, else it defers to system 2. Override these functions if different behavior is desired. System 1 needs to know when its action is taken, because it keeps a memory of where it is in the sequences of suggested actions. Therefore, whenever system1 actions are chosen the \texttt{sys1\_action\_taken} property should be toggled to \texttt{True}.
+This class replaces \texttt{DASHAction} and implements the agent loops necessary for the socog agent. Currently, \texttt{arbitrate\_system1\_system2} and \texttt{bypass\_system2} default to choosing system 1 actions if they exist, else it defers to system 2. Override these functions if different behavior is desired. System 1 needs to know when its action is taken, because it keeps a memory of where it is in the sequences of suggested actions. Therefore, whenever system1 actions are chosen the \texttt{sys1\_action\_taken} property should be toggled to \texttt{True}. This class can't be instantiated into objects of its own. It requires the SocogSystem1 module for operation. The composite of all the DASH classes come together to build a functional DASHAgent.
 
 The class subclasses the \texttt{DASHAction} module, so that it has access to the same properties and methods and primitives as that class. Additional primitives are added by default. The \texttt{process\_belief} primitive takes a belief and calls the belief module's \texttt{process\_belief} method. The \texttt{emit\_belief} primitive sets a belief variable and calls the belief module's \texttt{emit\_belief} method. Lastly, the \texttt{belief\_conflict} primitive takes a belief variable and checks if the belief conflicts with any beliefs in the agent's belief system. If so it returns a value that evaluates to \texttt{True} else it returns a value that evaluates to \texttt{False}.
 
