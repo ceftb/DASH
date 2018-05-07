@@ -1,13 +1,9 @@
-import scipy
 import time
 import csv
 import sys
 import networkx as nx
-import ijson
 import json
 import metis
-import matplotlib.pyplot as plt
-from networkx.algorithms import community
 
 
 class GraphBuilder:
