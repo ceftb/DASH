@@ -52,7 +52,7 @@ function install_single_kazoo_instance {
 	rm -Rf $TMP_DIR/networkx_clone_$CURR_NODE_ID
 
     # install METIS
-	sudo apt-get install graphviz graphviz-dev pkg-config --yes
+	sudo apt-get install graphviz graphviz-dev pkg-config metis --yes
 
 
     # install METIS for Python wrapper

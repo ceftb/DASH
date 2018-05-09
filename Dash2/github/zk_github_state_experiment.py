@@ -28,14 +28,14 @@ class ZkGithubStateWorkProcessor(WorkProcessor):
         self.hub = ZkRepoHub(self.zk, self.task_full_id, 0, log_file=self.log_file)
         self.log_file.close()
 
-        if not (self.state_file is None and self.state_file != "") and os.path.isfile(self.state_file):
-            meta_data = GithubStateLoader.read_state_file(ZkGithubStateTrial.state_file)
-            pass
-        if not (self.users_file is None and self.users_file != "") and os.path.isfile(self.users_file): # it is important to load users first, since this will instantiate list of
-            # repos used by agents in this dash worker
+        if self.state_file is not None and self.state_file != "":
+            meta_data = GithubStateLoader.read_state_file(self.state_file)
+        if self.users_file is not None and self.users_file != "":
+            # it is important to load users first, since this will instantiate list of repos used by agents in this dash worker
             GithubStateLoader.load_profiles_from_file(self.users_file, self.populate_agents_collection)
-        if not (self.repos_file is None and self.repos_file != "") and os.path.isfile(self.repos_file):
-            GithubStateLoader.load_profiles_from_file(self.repos_file, self.populate_repos_collection)
+        if self.repos_file is not None and self.repos_file != "":
+            pass
+            #GithubStateLoader.load_profiles_from_file(self.repos_file, self.populate_repos_collection)
 
         self.log_file = open(self.task_full_id + '_event_log_file.txt', 'w')
         self.hub.log_file = self.log_file
@@ -124,7 +124,7 @@ class ZkGithubStateTrial(Trial):
     # this method defines parameters of individual tasks (as a json data object - 'data') that will be sent to dash workers
     def init_task_params(self, task_full_id, data):
         _, _, task_num = task_full_id.split("-")
-        self.init_task_param("state_file", self.state_file + "_" + str(int(task_num) - 1), data)
+        self.init_task_param("state_file", self.state_file, data)
         self.init_task_param("users_file", self.users_file + "_" + str(int(task_num) - 1), data)
         self.init_task_param("repos_file", self.repos_file + "_" + str(int(task_num) - 1), data)
 
