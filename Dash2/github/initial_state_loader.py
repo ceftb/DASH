@@ -91,8 +91,8 @@ class GithubStateLoader(object):
         counter = 0
         for row in datareader:
             if counter != 0:
-                user_id = int(row[2])
-                repo_id = int(row[3])
+                user_id = int(row[0])
+                repo_id = int(row[1])
                 if users_map.has_key(user_id):
                     src_user_id = users_map[user_id]
                 else:
@@ -101,13 +101,13 @@ class GithubStateLoader(object):
                     src_repo_id = repos_map[repo_id]
                 else:
                     src_repo_id = repo_id
-                output_file.write(row[0])
-                output_file.write(",")
-                output_file.write(row[1])
-                output_file.write(",")
                 output_file.write(str(src_user_id))
                 output_file.write(",")
                 output_file.write(str(src_repo_id))
+                output_file.write(",")
+                output_file.write(row[2])
+                output_file.write(",")
+                output_file.write(row[3])
                 output_file.write("\n")
             else:
                 line_counter = 0
