@@ -46,8 +46,8 @@ function install_single_kazoo_instance {
 	rm -Rf $TMP_DIR/ijson_clone_$CURR_NODE_ID
 
     # install networkX from $NETWORKX_CLONE ( https://github.com/networkx/networkx.git )
-    cp -R $NETWORKX_CLONE $TMP_DIR/networkx_clone_$CURR_NODE_ID
-	cd $TMP_DIR/netwrokx_clone_$CURR_NODE_ID
+    cp -R $NETWORKX_CLONE $TMP_DIR/netwo    rkx_clone_$CURR_NODE_ID
+	cd $TMP_DIR/networkx_clone_$CURR_NODE_ID
 	sudo python setup.py install  2>> $TMP_DIR/networkx_report_$CURR_NODE_ID.txt 1>> $TMP_DIR/networkx_report_$CURR_NODE_ID.txt
 	rm -Rf $TMP_DIR/networkx_clone_$CURR_NODE_ID
 
@@ -66,6 +66,6 @@ function install_single_kazoo_instance {
 if [ -z "$1" ]; then
 	install_on_all_nodes
 else
-	install_single_kazoo_instance $1 $2 $3 $4 $5
+	install_single_kazoo_instance $1 $2 $3 $4 $5 $6
 fi
 
