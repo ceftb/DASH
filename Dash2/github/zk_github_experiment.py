@@ -9,6 +9,7 @@ from Dash2.core.experiment import Experiment
 from Dash2.core.work_processor import WorkProcessor
 from Dash2.core.dash_controller import DashController
 from Dash2.github.git_user_agent import GitUserAgent
+from Dash2.github.zk_repo_hub import ZkRepoHub
 
 # This is an example of experiment script
 
@@ -18,8 +19,8 @@ class ZkGithubWorkProcessor(WorkProcessor):
     # I cannot use reflection in super class here because, it would return path to superclass, therefore need to define it explicitly in subclasses
     module_name = "Dash2.github.zk_github_experiment"
 
-    def __init__(self, zk, host_id, task_full_id, data):
-        WorkProcessor.__init__(self, zk, host_id, task_full_id, data)
+    def initialize(self):
+        self.hub = ZkRepoHub(self.zk, self.task_full_id, 0, log_file=self.log_file)
 
     def run_one_iteration(self):
         if not self.agents or random.random() < self.prob_create_new_agent:  # Have to create an agent in the first step

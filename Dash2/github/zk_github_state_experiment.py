@@ -11,6 +11,7 @@ from Dash2.core.dash_controller import DashController
 from Dash2.core.work_processor import WorkProcessor
 from Dash2.github.git_user_agent import GitUserAgent
 from Dash2.github.initial_state_loader import GithubStateLoader
+from Dash2.github.zk_repo_hub import ZkRepoHub
 
 # This is an example of experiment script
 
@@ -21,11 +22,11 @@ class ZkGithubStateWorkProcessor(WorkProcessor):
     module_name = "Dash2.github.zk_github_state_experiment"
 
     def initialize(self):
-        # Optionally can choose a different hub. Default hub definde in _init_()
-        #self.hub = ZkRepoHub(zk, task_full_id, 0, log_file=self.log_file)
         self.agents = {} # in this experiment agents are stored as a dictionary (fyi: by default it was a list)
         self.events_heap = []
         self.event_counter = 0
+        self.hub = ZkRepoHub(self.zk, self.task_full_id, 0, log_file=self.log_file)
+        self.log_file.close()
 
         if not (self.state_file is None and self.state_file != "") and os.path.isfile(self.state_file):
             meta_data = GithubStateLoader.read_state_file(ZkGithubStateTrial.state_file)
@@ -36,6 +37,8 @@ class ZkGithubStateWorkProcessor(WorkProcessor):
         if not (self.repos_file is None and self.repos_file != "") and os.path.isfile(self.repos_file):
             GithubStateLoader.load_profiles_from_file(self.repos_file, self.populate_repos_collection)
 
+        self.log_file = open(self.task_full_id + '_event_log_file.txt', 'w')
+        self.hub.log_file = self.log_file
         print "Agents instantiated: ", len(self.agents)
 
     # Function takes a user profile and creates an agent.

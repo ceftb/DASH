@@ -1,16 +1,15 @@
 import sys; sys.path.extend(['../../'])
 import json
 import time
-from Dash2.github.zk_repo_hub import ZkRepoHub
 
 # WorkProcessor class is responsible for running experiment trial on a node in cluster (distributed/parallel trial)
 class WorkProcessor:
-    def __init__(self, zk, host_id, task_full_id, data, hub = None):
+    def __init__(self, zk, host_id, task_full_id, data):
         self.agents = []
         self.zk = zk
         self.host_id = host_id
         self.exp_id, self.trial_id, self.task_num = task_full_id.split("-") # self.task_num by default is the same as node id
-        self.task_id = task_full_id
+        self.task_full_id = task_full_id
         self.max_iterations = int(data["max_iterations"])
         for param in data["parameters"] :
             if is_number(data[param]):
@@ -19,22 +18,23 @@ class WorkProcessor:
                 setattr(self, param, str(data[param]))
 
         self.log_file = open(task_full_id + '_event_log_file.txt', 'w')
-        self.hub = ZkRepoHub(zk, task_full_id, 0, log_file=self.log_file) if hub is None else hub
         self.iteration = 0
         # init agents and their relationships with repos
 
     def initialize(self):
+        # subclasses must initialize their own communication hub
+        # self.hub = ZkRepoHub(zk, task_full_id, 0, log_file=self.log_file)
         pass
 
     def process_task(self):
         self.initialize()
-        if self.zk is not None and self.task_id is not None:
+        if self.zk is not None and self.task_full_id is not None:
             while not self.should_stop():
                 self.run_one_iteration()
                 self.process_after_iteration()
                 self.iteration += 1
                 if self.iteration % 1000 == 0 :
-                    node_path = "/tasks/nodes/" + str(self.host_id) + "/" + self.task_id
+                    node_path = "/tasks/nodes/" + str(self.host_id) + "/" + self.task_full_id
                     self.zk.ensure_path(node_path + "/status")
                     self.zk.set(node_path + "/status", json.dumps({"status": "in progress", "iteration": self.iteration, "update time": time.time()}))
                     print "Iteration " + str(self.iteration) + " " \
