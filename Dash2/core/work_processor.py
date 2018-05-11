@@ -33,7 +33,7 @@ class WorkProcessor:
                 self.run_one_iteration()
                 self.process_after_iteration()
                 self.iteration += 1
-                if self.iteration % 1000 == 0 :
+                if self.iteration % 100000 == 0 :
                     node_path = "/tasks/nodes/" + str(self.host_id) + "/" + self.task_full_id
                     self.zk.ensure_path(node_path + "/status")
                     self.zk.set(node_path + "/status", json.dumps({"status": "in progress", "iteration": self.iteration, "update time": time.time()}))
@@ -54,10 +54,6 @@ class WorkProcessor:
         if self.max_iterations > 0 and self.iteration >= self.max_iterations:
             print 'reached end of iterations for trial'
             return True
-        if self.agents:
-            for a in self.agents:
-                if not self.agent_should_stop(a):
-                    return False
         if self.max_iterations > 0 and self.iteration < self.max_iterations:
             return False  # Follow the number of iterations by default
         else:

@@ -78,7 +78,9 @@ class ZkGithubStateWorkProcessor(WorkProcessor):
     def get_dependent_vars(self):
         return {"num_agents": len(self.agents),
                 "num_repos": sum([len(a.name_to_repo_id) for a in self.agents.viewvalues()]),
-                "total_agent_activity": sum([a.total_activity for a in self.agents.viewvalues()])}
+                "total_agent_activity": sum([a.total_activity for a in self.agents.viewvalues()]),
+                "number_of_cross_process_communications": self.hub.sync_event_counter
+                }
 
 
 # Dash Trial decomposes trial into tasks and allocates them to DashWorkers
@@ -89,11 +91,12 @@ class ZkGithubStateTrial(Trial):
                   Parameter('start_time', distribution=Uniform(1523464880, 1523464881), default=1523464880)]
 
     # all measures are considered depended vars, values are aggregated in self.results
-    measures = [Measure('num_agents'), Measure('num_repos'), Measure('total_agent_activity')]
+    measures = [Measure('num_agents'), Measure('num_repos'), Measure('total_agent_activity'), Measure('number_of_cross_process_communications')]
 
     # input event log and output event log files names
     #input_event_log = "./data_jan_2017/data_jan_2017.csv"
     input_event_log = "./data_sample/data_sample.csv"
+    #input_event_log = "./data_4days/4days.csv"
 
     output_event_log = input_event_log + "_output"
 
@@ -172,7 +175,7 @@ if __name__ == "__main__":
         intial_state_meta_data = GithubStateLoader.build_state_from_event_log(ZkGithubStateTrial.input_event_log, number_of_hosts)
         print str(ZkGithubStateTrial.input_event_log) + "_state.json file created."
 
-    number_of_events = 10000 # total number of actions in experiments
+    number_of_events = 100000 # total number of actions in experiments
     max_iterations_per_worker = number_of_events / number_of_hosts
     num_trials = 1
     independent = ['prob_create_new_agent', Range(0.0, 0.1, 0.1)]
