@@ -31,8 +31,8 @@ class GithubStateLoader(object):
 
     @staticmethod
     def build_state_from_event_log(input_event_log, number_of_hosts=1):
-        G, users, repos = build_graph_from_csv(input_event_log)
-        print "User-repo graph constructed. Users ", len(users), ", repos ", len(repos), ", nodes ", len(G.nodes()), ", edges", len(G.edges())
+        G, number_of_users, number_of_repos = build_graph_from_csv(input_event_log)
+        print "User-repo graph constructed. Users ", number_of_users, ", repos ", number_of_repos, ", nodes ", len(G.nodes()), ", edges", len(G.edges())
 
         shared_repos, shared_users = partition_graph(G, number_of_hosts)
         print "shared repos ", len(shared_repos), ", shared users ", len(shared_users)
@@ -47,8 +47,8 @@ class GithubStateLoader(object):
 
         state_file_content = {"meta":
             {
-                "number_of_users": len(users),
-                "number_of_repos": len(repos),
+                "number_of_users": number_of_users,
+                "number_of_repos": number_of_repos,
                 "users_file": users_file,
                 "repos_file": repos_file,
                 "users_ids": users_ids,
@@ -88,40 +88,25 @@ class GithubStateLoader(object):
         repos_map = GithubStateLoader.load_id_dictionary(repos_ids_file)
 
         datareader = csv.reader(input_file)
-        counter = 0
         for row in datareader:
-            if counter != 0:
-                user_id = int(row[2])
-                repo_id = int(row[3])
-                if users_map.has_key(user_id):
-                    src_user_id = users_map[user_id]
-                else:
-                    src_user_id = user_id
-                if repos_map.has_key(repo_id):
-                    src_repo_id = repos_map[repo_id]
-                else:
-                    src_repo_id = repo_id
-                output_file.write(row[0])
-                output_file.write(",")
-                output_file.write(row[1])
-                output_file.write(",")
-                output_file.write(str(src_user_id))
-                output_file.write(",")
-                output_file.write(str(src_repo_id))
-                output_file.write("\n")
+            user_id = int(row[2])
+            repo_id = int(row[3])
+            if users_map.has_key(user_id):
+                src_user_id = users_map[user_id]
             else:
-                line_counter = 0
-                for itm in row:
-                    output_file.write(itm)
-                    if line_counter == (len(row) - 1):
-                        output_file.write("\n")
-                    else:
-                        output_file.write(",")
-                    line_counter += 1
-            counter += 1
-            if counter % 1000000 == 0:
-                print "line: " + str(counter)
-        print counter
+                src_user_id = user_id
+            if repos_map.has_key(repo_id):
+                src_repo_id = repos_map[repo_id]
+            else:
+                src_repo_id = repo_id
+            output_file.write(row[0])
+            output_file.write(",")
+            output_file.write(row[1])
+            output_file.write(",")
+            output_file.write(str(src_user_id))
+            output_file.write(",")
+            output_file.write(str(src_repo_id))
+            output_file.write("\n")
 
         input_file.close()
         output_file.close()

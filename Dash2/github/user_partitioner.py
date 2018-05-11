@@ -29,10 +29,11 @@ class IdDictionaryStream:
     """
     A stream that creates user and repo dictionary files
     """
+    MAGIC_NUMBER = 20000000
 
     def __init__(self, user_dictionary_filename, repo_dictionary_filename, event_filter=None):
-        self.users = set()
-        self.repos = set()
+        self.users = {}
+        self.repos = {}
         self.user_dictionary = open(user_dictionary_filename, "w")
         self.repo_dictionary = open(repo_dictionary_filename, "w")
         self.user_dictionary.write("src_id, sim_id\n")
@@ -40,18 +41,30 @@ class IdDictionaryStream:
         self.is_stream_open = True
         self.events_to_accept = event_filter
 
-    def update_dictionary(self, repo_id, original_repo_id, user_id, original_user_id, event_type):
-        if self.events_to_accept is None or event_type in self.events_to_accept:
-            self._append_line(self.repos, self.repo_dictionary, repo_id, original_repo_id)
-            self._append_line(self.users, self.user_dictionary, user_id, original_user_id)
+    def update_dictionary(self, original_user_id, original_repo_id):
+        hash_user_id = hash(original_user_id)
+        hash_repo_id = hash(original_repo_id)
+        int_user_id, int_repo_id = self._conver_to_conseq_int_ids(hash_user_id, hash_repo_id)
 
-    def _append_line(self, id_set, id_dict, int_id, original_id):
-        if int_id not in id_set:
-            id_set.add(int_id)
-            id_dict.write(str(original_id))
-            id_dict.write(",")
-            id_dict.write(str(int_id))
-            id_dict.write("\n")
+        if hash_user_id not in self.users:
+            self.users[hash_user_id] = int_user_id
+            self._append_line(self.user_dictionary, int_user_id, original_user_id)
+        if hash_repo_id not in self.repos:
+            self.repos[hash_repo_id] = int_repo_id
+            self._append_line(self.repo_dictionary, int_repo_id, original_repo_id)
+
+        return int_user_id, int_repo_id
+
+    def _conver_to_conseq_int_ids(self, user_id, repo_id):
+        int_user_id = len(self.users) if user_id not in self.users else self.users[user_id]
+        int_repo_id = len(self.repos) + IdDictionaryStream.MAGIC_NUMBER if repo_id not in self.repos else self.repos[repo_id]
+        return int_user_id, int_repo_id
+
+    def _append_line(self, id_dict, int_id, original_id):
+        id_dict.write(str(original_id))
+        id_dict.write(",")
+        id_dict.write(str(int_id))
+        id_dict.write("\n")
 
     def close(self):
         self.user_dictionary.close()
@@ -134,9 +147,7 @@ def _print_json_profile(graph, user_node, fp, shared_repos, isFirst=False):
     fp.write(json.dumps(profile_data))
 
 
-def build_graph_from_csv(csv_event_log_file, user_dict_file=None, repo_dict_file=None):
-    MAGIC_NUMBER = 20000000
-    event_filter = ["PushEvent", "IssueCommentEvent", "PullRequestEvent", "PullRequestReviewCommentEvent"]
+def build_graph_from_csv(csv_event_log_file, user_dict_file=None, repo_dict_file=None, event_filter=["PushEvent", "IssueCommentEvent", "PullRequestEvent", "PullRequestReviewCommentEvent"]):
     user_repo_graph_builder = GraphBuilder(event_filter = event_filter)
     ids_dictionary_stream = IdDictionaryStream(csv_event_log_file + "_users_id_dict.csv", csv_event_log_file + "_repos_id_dict.csv", event_filter = event_filter)
 
@@ -146,10 +157,9 @@ def build_graph_from_csv(csv_event_log_file, user_dict_file=None, repo_dict_file
         for row in datareader:
             if counter != 0:
                 event_type = row[1]
-                user_id = hash(row[2])
-                repo_id = MAGIC_NUMBER + hash(row[3] if len(row) == 4 else row[17])
-                user_repo_graph_builder.update_graph(repo_id, user_id, event_type)
-                ids_dictionary_stream.update_dictionary(repo_id, row[3] if len(row) == 4 else row[17], user_id, row[2], event_type)
+                if event_filter is None or event_type in event_filter:
+                    user_id, repo_id = ids_dictionary_stream.update_dictionary(row[2], row[3])
+                    user_repo_graph_builder.update_graph(repo_id, user_id, event_type)
             counter += 1
             if counter % 1000000 == 0:
                 print "line: " + str(counter)
@@ -158,7 +168,7 @@ def build_graph_from_csv(csv_event_log_file, user_dict_file=None, repo_dict_file
     csvfile.close()
     ids_dictionary_stream.close()
 
-    return user_repo_graph_builder.graph, ids_dictionary_stream.users, ids_dictionary_stream.repos
+    return user_repo_graph_builder.graph, len(ids_dictionary_stream.users), len(ids_dictionary_stream.repos)
 
 if __name__ == "__main__":
     if len(sys.argv) == 2 or len(sys.argv) == 3:
