@@ -147,7 +147,8 @@ def _print_json_profile(graph, user_node, fp, shared_repos, isFirst=False):
     fp.write(json.dumps(profile_data))
 
 
-def build_graph_from_csv(csv_event_log_file, user_dict_file=None, repo_dict_file=None, event_filter=["PushEvent", "IssueCommentEvent", "PullRequestEvent", "PullRequestReviewCommentEvent"]):
+def build_graph_from_csv(csv_event_log_file, user_dict_file=None, repo_dict_file=None, event_filter=None):
+    #["PushEvent", "IssueCommentEvent", "PullRequestEvent", "PullRequestReviewCommentEvent"]):
     user_repo_graph_builder = GraphBuilder(event_filter = event_filter)
     ids_dictionary_stream = IdDictionaryStream(csv_event_log_file + "_users_id_dict.csv", csv_event_log_file + "_repos_id_dict.csv", event_filter = event_filter)
 
@@ -171,28 +172,65 @@ def build_graph_from_csv(csv_event_log_file, user_dict_file=None, repo_dict_file
     return user_repo_graph_builder.graph, len(ids_dictionary_stream.users), len(ids_dictionary_stream.repos)
 
 if __name__ == "__main__":
-    if len(sys.argv) == 2 or len(sys.argv) == 3:
+    if len(sys.argv) == 3:
         filename = sys.argv[1]
+        number_of_partitions = int(sys.argv[2])
     else:
         filename = "tmp.txt"
+        number_of_partitions = 2
+
     while True:
         cmd = raw_input(
-            "Press q to exit loader\n\tg to test networkX graph\n")
+            "Press q to exit loader\n\tt to test networkX graph partitioning\n\tp to partition graph\n")
         if cmd == "q":
             print("Exiting ...")
             break
-        elif cmd == "g":
+        elif cmd == "t":
             print "graph test"
             start_time = time.time()
 
             G, users, repos = build_graph_from_csv(filename)
             print "User-repo graph constructed. Users ", len(users), ", repos ", len(repos), ", nodes ", len(G.nodes()), ", edges", len(G.edges())
 
-            shared_repos, shared_users = partition_graph(G, 10)
+            shared_repos, shared_users = partition_graph(G, number_of_partitions)
             print "shared repos ", len(shared_repos), ", shared users ", len(shared_users)
 
             print "printing graph..."
             print_user_profiles(G, filename, 10, shared_repos)
+
+            end_time = time.time()
+            print "Time ", end_time - start_time, " sec."
+        elif cmd == "p":
+            print "Partitioning users from ", filename, " into ", number_of_partitions, " partitions ..."
+            start_time = time.time()
+
+            G, number_of_users, number_of_repos = build_graph_from_csv(filename)
+            print "User-repo graph constructed. Users ", number_of_users, ", repos ", number_of_repos, ", nodes ", len(G.nodes()), ", edges", len(G.edges())
+            shared_repos, shared_users = partition_graph(G, number_of_partitions)
+            print "shared repos ", len(shared_repos), ", shared users ", len(shared_users)
+
+            print "printing graph..."
+            print_user_profiles(G, filename + "_users.json", number_of_partitions, shared_repos)
+
+            users_file = filename + "_users.json"
+            repos_file = filename + "_repos.json"
+            users_ids = filename + "_users_id_dict.csv"
+            repos_ids = filename + "_repos_id_dict.csv"
+
+            state_file_content = {"meta":
+                {
+                    "number_of_users": number_of_users,
+                    "number_of_repos": number_of_repos,
+                    "users_file": users_file,
+                    "repos_file": repos_file,
+                    "users_ids": users_ids,
+                    "repos_ids": repos_ids,
+                    "is_partitioning_needed": "False"
+                }
+            }
+            state_file = open(filename + "_state.json", 'w')
+            state_file.write(json.dumps(state_file_content))
+            state_file.close()
 
             end_time = time.time()
             print "Time ", end_time - start_time, " sec."
