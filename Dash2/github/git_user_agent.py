@@ -94,6 +94,7 @@ goalRequirements UpdateOwnRepo
         self.watching_list = {} # ght_id_h: {full_name_h, watching_date, watching_dow}
         self.owned_repos = {} # {ght_id_h : name_h}
         self.name_to_repo_id = {} # {name_h : ght_id_h} Contains all repos known by the agent
+        self.all_known_repos = []
         if kwargs.get("freqs") is not None:
             self.repo_id_to_freq = kwargs.get("freqs").copy()
             for r_id in self.repo_id_to_freq:
@@ -146,6 +147,31 @@ goalRequirements UpdateOwnRepo
             ('follow_event', self.follow_event),
             ('member_event', self.member_event),
             ('public_event', self.public_event)])
+
+
+    all_event_types = ["CreateEvent", "DeleteEvent", "PullRequestEvent", "IssuesEvent", "PushEvent", "WatchEvent", "ForkEvent"]
+    event_probabilities = [0.1, 0.05, 0.3, 0.1, 0.3, 0.1, 0.05]
+
+    def agentLoop(self, max_iterations=-1, disconnect_at_end=True, skipS12=False):
+        """
+        This a test agentLoop that can skip System 1 and System 2 and picks repo and event based on frequencies.
+        """
+        if skipS12:
+            if (self.probabilities is None or self.all_known_repos == []):
+                self.probabilities = []
+                self.all_known_repos = []
+                sum = 0.0
+                for repo_id, fr in self.repo_id_to_freq.iteritems():
+                    sum += fr
+                    self.all_known_repos.append(repo_id)
+                for fr in self.repo_id_to_freq.itervalues():
+                    self.probabilities.append(fr / sum)
+            selected_repo = numpy.random.choice(self.all_known_repos, p=self.probabilities)
+            selected_event = numpy.random.choice(self.all_event_types, p=self.event_probabilities)
+            self.hub.log_event(self.id, selected_repo, selected_event, None, self.hub.time)
+            self.total_activity += 1
+        else:
+            return DASHAgent.agentLoop(self, max_iterations, disconnect_at_end)
 
     def generate_random_repo_name(self, name=None):
         """
