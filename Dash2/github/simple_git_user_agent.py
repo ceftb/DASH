@@ -47,7 +47,7 @@ class SimpleGitUserAgent(object):
     def agentLoop(self, max_iterations=-1, disconnect_at_end=True, skipS12=False):
         selected_repo = numpy.random.choice(self.all_known_repos, p=self.repo_probabilities)
         selected_event = numpy.random.choice(self.all_event_types, p=self.event_probabilities)
-        self.hub.log_event(self.id, selected_repo, selected_event, None, self.hub.time)
+        self.hub.event_handler(selected_repo, self.id, selected_event)
         self.total_activity += 1
 
     def next_event_time(self, curr_time, max_time):
