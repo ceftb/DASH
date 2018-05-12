@@ -9,7 +9,7 @@ from Dash2.core.trial import Trial
 from Dash2.core.experiment import Experiment
 from Dash2.core.dash_controller import DashController
 from Dash2.core.work_processor import WorkProcessor
-from Dash2.github.git_user_agent import GitUserAgent
+from Dash2.github.simple_git_user_agent import SimpleGitUserAgent
 from Dash2.github.initial_state_loader import GithubStateLoader
 from Dash2.github.zk_repo_hub import ZkRepoHub
 
@@ -44,20 +44,20 @@ class ZkGithubStateWorkProcessor(WorkProcessor):
     # Function takes a user profile and creates an agent.
     def populate_agents_collection(self, profile):
         agent_id = profile.pop("id", None)
-        a = GitUserAgent(useInternalHub=True, hub=self.hub, id=agent_id,
-                         trace_client=False, traceLoop=False, trace_github=False)
         # frequency of use of associated repos:
         total_even_counter = 0
+        repo_id_to_freq = {}
         for repo_id, freq in profile.iteritems():
             int_repo_id = int(repo_id)
-            a.repo_id_to_freq[int_repo_id] = int(freq["f"])
-            a.name_to_repo_id[int_repo_id] = int_repo_id
-            total_even_counter += a.repo_id_to_freq[int_repo_id]
-            is_node_shared = True if int(freq["c"]) > 1 else False
-            self.hub.init_repo(repo_id=int_repo_id, user_id=a.id, curr_time=0, is_node_shared=is_node_shared)
-        a.total_activity = total_even_counter
-        heappush(self.events_heap, (a.next_event_time(self.start_time, self.max_time), a.id))
-        self.agents[a.id] = a
+            repo_id_to_freq[int_repo_id] = int(freq["f"])
+            total_even_counter += repo_id_to_freq[int_repo_id]
+            is_repo_shared = True if int(freq["c"]) > 1 else False
+            self.hub.init_repo(repo_id=int_repo_id, user_id=agent_id, curr_time=0, is_node_shared=is_repo_shared)
+
+        agent = SimpleGitUserAgent(useInternalHub=True, hub=self.hub, id=agent_id, freqs=repo_id_to_freq)
+        agent.total_activity = total_even_counter
+        heappush(self.events_heap, (agent.next_event_time(self.start_time, self.max_time), agent.id))
+        self.agents[agent.id] = agent
 
     # Function takes a repo profile and populates repo object in self.hub
     def populate_repos_collection(self, profile):
@@ -77,7 +77,7 @@ class ZkGithubStateWorkProcessor(WorkProcessor):
 
     def get_dependent_vars(self):
         return {"num_agents": len(self.agents),
-                "num_repos": sum([len(a.name_to_repo_id) for a in self.agents.viewvalues()]),
+                "num_repos": sum([len(a.all_known_repos) for a in self.agents.viewvalues()]),
                 "total_agent_activity": sum([a.total_activity for a in self.agents.viewvalues()]),
                 "number_of_cross_process_communications": self.hub.sync_event_counter
                 }
