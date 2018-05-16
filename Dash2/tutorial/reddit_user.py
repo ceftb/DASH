@@ -29,7 +29,7 @@ class RedditMixin(object):
     concept_set = {soccer, greyteam, henry, best, corrupt}
 
     def __init__(self, **kwargs):
-        SocogDASHAgent.__init__(self, kwargs.get("belief_module", None))
+        # SocogDASHAgent.__init__(self, kwargs.get("belief_module", None))
         self.server_host = kwargs.get("host", "localhost")
         self.server_port = kwargs.get("port", 5678)
         self.id = self.register()[1]
@@ -145,7 +145,9 @@ if [Soccer,Corrupt,1.0] and [Soccer,Best,-1.0] then leave_thread()
 
 
 class RedditUser(RedditMixin, SocogDASHAgent):
-    pass
+    def __init__(self, **kwargs):
+        SocogDASHAgent.__init__(self)
+        RedditMixin.__init__(self, **kwargs)
 
 
 if __name__ == '__main__':
