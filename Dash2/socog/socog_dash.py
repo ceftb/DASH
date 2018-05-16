@@ -16,7 +16,8 @@ class SocogDASHAgent(socog_action.SocogDASHAction, client.Client,
     methods for operation.
 
     This is a fully functional class will all the methods necessary for the DASH
-    agent to operate.
+    agent to operate. It is made of action, client, system1, system2, and
+    human traits classes.
     """
     
     def __init__(self, belief_module=None):

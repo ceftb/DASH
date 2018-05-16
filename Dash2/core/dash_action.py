@@ -4,12 +4,16 @@ import re
 
 class DASHAction(object):
     """
-    An abstract class that defines the action behaviors of the DASH agent.
+    A mixin class that defines the action behaviors of the DASH agent.
     It also defines the interaction between system1 and system2.
 
     It cannot be instantiated on its own. The DASH agent inherits this class,
     so you can use any methods or attributes that would exist in the composite
     DASH agent.
+
+    To change the behavior of this classes, you can inherit this class
+    and override desired methods in a derived class. You can then create a new
+    DASHAgent by inheriting said derived class.
     """
     parameters = []  # Input parameters, each an instance of Parameter giving a name and info about the possible values
     measures = []  # Possible measures on the performance of the agent used for validation or as an outcome
