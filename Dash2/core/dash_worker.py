@@ -57,7 +57,7 @@ class DashWorker(object):
 
             while self.status == "active":
                 print "Waiting for tasks ... \nTo terminate dash nodes change /experiment_assemble_status to 'terminated' via ExperimentController\n"
-                time.sleep(5)
+                time.sleep(60)
             self.zk.stop()
             return
         else:

@@ -11,6 +11,7 @@ from Dash2.core.dash_controller import DashController
 from Dash2.core.work_processor import WorkProcessor
 from Dash2.github.git_user_agent import GitUserAgent
 from Dash2.github.initial_state_loader import GithubStateLoader
+from Dash2.github.zk_repo_hub import ZkRepoHub
 
 # This is an example of experiment script
 
@@ -21,21 +22,23 @@ class ZkGithubStateWorkProcessor(WorkProcessor):
     module_name = "Dash2.github.zk_github_state_experiment"
 
     def initialize(self):
-        # Optionally can choose a different hub. Default hub definde in _init_()
-        #self.hub = ZkRepoHub(zk, task_full_id, 0, log_file=self.log_file)
         self.agents = {} # in this experiment agents are stored as a dictionary (fyi: by default it was a list)
         self.events_heap = []
         self.event_counter = 0
+        self.hub = ZkRepoHub(self.zk, self.task_full_id, 0, log_file=self.log_file)
+        self.log_file.close()
 
-        if not (self.state_file is None and self.state_file != "") and os.path.isfile(self.state_file):
-            meta_data = GithubStateLoader.read_state_file(ZkGithubStateTrial.state_file)
-            pass
-        if not (self.users_file is None and self.users_file != "") and os.path.isfile(self.users_file): # it is important to load users first, since this will instantiate list of
-            # repos used by agents in this dash worker
+        if self.state_file is not None and self.state_file != "":
+            meta_data = GithubStateLoader.read_state_file(self.state_file)
+        if self.users_file is not None and self.users_file != "":
+            # it is important to load users first, since this will instantiate list of repos used by agents in this dash worker
             GithubStateLoader.load_profiles_from_file(self.users_file, self.populate_agents_collection)
-        if not (self.repos_file is None and self.repos_file != "") and os.path.isfile(self.repos_file):
-            GithubStateLoader.load_profiles_from_file(self.repos_file, self.populate_repos_collection)
+        if self.repos_file is not None and self.repos_file != "":
+            pass
+            #GithubStateLoader.load_profiles_from_file(self.repos_file, self.populate_repos_collection)
 
+        self.log_file = open(self.task_full_id + '_event_log_file.txt', 'w')
+        self.hub.log_file = self.log_file
         print "Agents instantiated: ", len(self.agents)
 
     # Function takes a user profile and creates an agent.
@@ -75,7 +78,9 @@ class ZkGithubStateWorkProcessor(WorkProcessor):
     def get_dependent_vars(self):
         return {"num_agents": len(self.agents),
                 "num_repos": sum([len(a.name_to_repo_id) for a in self.agents.viewvalues()]),
-                "total_agent_activity": sum([a.total_activity for a in self.agents.viewvalues()])}
+                "total_agent_activity": sum([a.total_activity for a in self.agents.viewvalues()]),
+                "number_of_cross_process_communications": self.hub.sync_event_counter
+                }
 
 
 # Dash Trial decomposes trial into tasks and allocates them to DashWorkers
@@ -86,11 +91,12 @@ class ZkGithubStateTrial(Trial):
                   Parameter('start_time', distribution=Uniform(1523464880, 1523464881), default=1523464880)]
 
     # all measures are considered depended vars, values are aggregated in self.results
-    measures = [Measure('num_agents'), Measure('num_repos'), Measure('total_agent_activity')]
+    measures = [Measure('num_agents'), Measure('num_repos'), Measure('total_agent_activity'), Measure('number_of_cross_process_communications')]
 
     # input event log and output event log files names
     #input_event_log = "./data_jan_2017/data_jan_2017.csv"
     input_event_log = "./data_sample/data_sample.csv"
+    #input_event_log = "./data_4days/4days.csv"
 
     output_event_log = input_event_log + "_output"
 
@@ -121,7 +127,7 @@ class ZkGithubStateTrial(Trial):
     # this method defines parameters of individual tasks (as a json data object - 'data') that will be sent to dash workers
     def init_task_params(self, task_full_id, data):
         _, _, task_num = task_full_id.split("-")
-        self.init_task_param("state_file", self.state_file + "_" + str(int(task_num) - 1), data)
+        self.init_task_param("state_file", self.state_file, data)
         self.init_task_param("users_file", self.users_file + "_" + str(int(task_num) - 1), data)
         self.init_task_param("repos_file", self.repos_file + "_" + str(int(task_num) - 1), data)
 
@@ -138,7 +144,7 @@ class ZkGithubStateTrial(Trial):
         for task_index in range(0, number_of_files, 1):
             log_file_name = str(self.exp_id) + "-" + str(self.trial_id) + "-" + str(task_index + 1) + "_event_log_file.txt"
             file_names.append(log_file_name)
-        GithubStateLoader.merge_log_file(file_names , "tmp_output.csv", "timestamp,event,user_id,repo_id")
+        GithubStateLoader.merge_log_file(file_names , "tmp_output.csv")
         for log_file_name in file_names:
             os.remove(log_file_name)
         output_file_name = ZkGithubStateTrial.output_event_log + "_trial_" + str(self.trial_id) + ".csv"
@@ -169,7 +175,7 @@ if __name__ == "__main__":
         intial_state_meta_data = GithubStateLoader.build_state_from_event_log(ZkGithubStateTrial.input_event_log, number_of_hosts)
         print str(ZkGithubStateTrial.input_event_log) + "_state.json file created."
 
-    number_of_events = 10000 # total number of actions in experiments
+    number_of_events = 100000 # total number of actions in experiments
     max_iterations_per_worker = number_of_events / number_of_hosts
     num_trials = 1
     independent = ['prob_create_new_agent', Range(0.0, 0.1, 0.1)]

@@ -28,29 +28,18 @@ if __name__ == "__main__":
         filename = "output.csv" #sys.argv[1]
         while True:
             cmd = raw_input(
-                "Press q to exit loader\n\tr to parse source data file and create user and repo profiles\n\t"
-                "l to load objects from profiles file and load them into memory\n\tp to partition profiles file (not loaded in memory)\n\t"
+                "Press q to exit loader\n\t"
+                "l to load objects from profiles file and load them into memory\n\t"
                 "s to load state file\n\tm to merge output log files\n\tt to translate ids\n\t")
             if cmd == "q":
                 print("Exiting ...")
                 break
-            elif cmd == "r":
-                print "Reading CSV file and creating object profiles (*_users.json and *_repos.json) ..."
-                users, repos = GithubStateLoader.convert_csv_to_json_profiles(filename)
-                # FIXME: format of profile was changed, need to update counter function
-                # count_repos_and_agents(users_hash_to_id, repos_hash_to_id)
-                print "users: ", users, ", repos: ", repos
             elif cmd == "l":
                 print "Loading objects from profiles file..."
                 objects = []
                 appender = lambda rec: objects.append(rec)
                 GithubStateLoader.load_profiles_from_file(filename, appender)
                 print "objects loaded: ", len(objects)
-            elif cmd == "p":
-                print "Partitioning file ..."
-                number_of_partitions = raw_input("Enter number of partitions:\n")
-                GithubStateLoader.partition_profiles_file(filename, int(number_of_partitions), 2646461)
-                print "partitioned"
             elif cmd == "s":
                 print "Reading state file ..."
                 meta = GithubStateLoader.read_state_file(filename)
