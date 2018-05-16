@@ -759,3 +759,43 @@ class BeliefModule(object):
         :return: +1 if positive, -1 if negative
         """
         return (value > 0) - (value < 0)
+
+
+def generate_random_belief_network_from_concepts(concept_sequence,
+                                                 connection_probability,
+                                                 valence_range=None,
+                                                 rng=None):
+    """
+    Uses a sequence or set of concepts to generate a belief network in the
+    same style as an erdos-renyi graph. Valences are drawn uniformly between
+    the values of the valence_range.
+
+    :param concept_sequence: a set or sequence of concepts
+    :param connection_probability: value between [0,1], controls the density
+        of the graph
+    :param valence_range: the range between the lowest and highest valence.
+        defaults to (-1, 1)
+    :param rng: an instance of python Random. If none is given, an instance
+        is generated with a seed determined by the default behavior of Random.
+    :return: An instance of BeliefNetwork
+    """
+
+    if rng is None:
+        # Generate default Random instance, it will be auto-seeded
+        rng = Random()
+
+    if valence_range is None:
+        # Default range is (-1, 1)
+        valence_range = (-1.0, 1.0)
+
+    belief_net = BeliefNetwork()
+    concept_sequence = list(concept_sequence)
+    for i in range(len(concept_sequence)-1):
+        for j in range(i+1, len(concept_sequence)):
+            if rng.random() < connection_probability:
+                belief_net.add_belief(belief=Beliefs({ConceptPair(concept_sequence[i],
+                                                                  concept_sequence[j]):
+                                                      rng.uniform(*valence_range)}),
+                                      update_energy=False)
+
+    return belief_net
