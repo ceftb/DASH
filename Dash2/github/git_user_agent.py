@@ -5,14 +5,13 @@ import random
 import numpy
 
 
-class GitUserAgent(DASHAgent):
+class GitUserMixin(object):
     """
     A basic Git user agent that can communicate with a Git repository hub and
     perform basic actions. Can be inherited to perform other specific functions.
     """
 
     def __init__(self, **kwargs):
-        super(GitUserAgent, self).__init__()
         self.isSharedSocketEnabled = True  # if it is True, then common socket for all agents is used.
         # The first agent to use the socket, gets to set up the connection. All other agents with
         # isSharedSocketEnabled = True will reuse it.
@@ -790,6 +789,13 @@ goalRequirements UpdateOwnRepo
         if self.trace_github:
             print 'pull event:', status, repo_name, self.name_to_repo_id[repo_name]
         return [{}]
+
+
+class GitUserAgent(GitUserMixin, DASHAgent):
+    def __init__(self, **kwargs):
+        DASHAgent.__init__(self)
+        GitUserMixin.__init__(self, **kwargs)
+
 
 if __name__ == '__main__':
     """
