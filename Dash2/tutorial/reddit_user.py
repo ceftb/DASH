@@ -17,7 +17,7 @@ from Dash2.socog.socog_module import *
 from Dash2.socog.socog_dash import SocogDASHAgent
 
 
-class RedditUser(SocogDASHAgent):
+class RedditMixin(object):
     """
     Test class for socog module
     """
@@ -71,10 +71,10 @@ if [Soccer,Corrupt,1.0] and [Soccer,Best,-1.0] then leave_thread()
         second_concept = None
         for word in comment.split():
             if first_concept is None:
-                if word in RedditUser.concept_set:
+                if word in RedditMixin.concept_set:
                     first_concept = word
             else:
-                if word in RedditUser.concept_set:
+                if word in RedditMixin.concept_set:
                     second_concept = word
 
         if (first_concept is None) or (second_concept is None):
@@ -142,6 +142,10 @@ if [Soccer,Corrupt,1.0] and [Soccer,Best,-1.0] then leave_thread()
 
     def leave_thread(self, (goal,)):
         self.disconnect()
+
+
+class RedditUser(RedditMixin, SocogDASHAgent):
+    pass
 
 
 if __name__ == '__main__':
