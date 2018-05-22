@@ -182,6 +182,10 @@ class Beliefs(dict):
                 self[belief] *= other
             return self
 
+    def __hash__(self):
+        return hash(frozenset({frozenset({key, value})
+                               for key, value in self.items()}))
+
     # Ensure commutivity of dot product
     __rmul__ = __mul__
 
@@ -225,8 +229,8 @@ class BeliefNetwork(object):
         self.beliefs = beliefs
         self.concept_set = self._find_all_concepts(self.beliefs.keys())
         self.triangle_set = self._find_all_triangles(self.beliefs.keys(), 
-                                            self.beliefs, 
-                                            self.concept_set)
+                                                     self.beliefs,
+                                                     self.concept_set)
         self.energy = self._calc_energy(self.triangle_set, self.beliefs)
 
     def __str__(self):
@@ -425,7 +429,7 @@ class BeliefNetwork(object):
         :return None
         """
 
-        for concept_pair, valence in belief.iteritems():
+        for concept_pair, valence in belief.items():
             if concept_pair in self.beliefs:
                 if self.beliefs[concept_pair] != valence:
                     self.beliefs[concept_pair] = valence
@@ -474,6 +478,32 @@ class BeliefNetwork(object):
         newcopy.energy = self.energy
         return newcopy
 
+    def __contains__(self, item):
+        """
+        Implemented for use with 'in' operator
+        :param item: either a Beliefs or a ConceptPair. If Beliefs, it will
+            iterate over each Belief and check that the ConceptPair and
+            valence match what is in the network. If it is a ConceptPair, then
+            it just checks if the concept is in the network.
+        :return: True/False
+        """
+
+        if isinstance(item, Beliefs):
+
+            for pair, valence in item.items():
+                if pair not in self.beliefs:
+                    return False
+                elif self.beliefs[pair] != valence:
+                    return False
+
+            return True
+
+        elif isinstance(item, ConceptPair):
+            return item in self.beliefs
+
+        else:
+            raise NotImplementedError
+
 
 def empty_copy(obj):
     """
@@ -504,7 +534,7 @@ class BeliefModule(object):
         :param belief_net: a BeliefNetwork type object. default=BeliefNetwork()
         :param perceived_net: a BeliefNetwork type object representing the agent's
             perception of other's beliefs. default=BeliefNetwork()
-        :param seed: seed number for rng. default=1
+        :param seed: seed number for internal rng (uses Random). default=1
         :param max_memory: how many steps back the agent remembers incoming beliefs.
             This can be used in methods for outputing popular/recent beliefs.
             default=1
@@ -663,14 +693,14 @@ class BeliefModule(object):
         input belief
         """
 
-        for concept_pair, valence in belief.iteritems():
+        for concept_pair, valence in belief.items():
             # Adding the pair sets up a 0 initialized valence belief
             self.perceived_belief_network.add_concept_pair(concept_pair)
             current_valence = self.perceived_belief_network.beliefs[concept_pair]
             self.perceived_belief_network.beliefs[concept_pair] += 1. / self.tau * (
                 valence - current_valence)
 
-    def talk(self):
+    def emit_belief(self):
         """
         chooses and emits a belief from belief network from memory or from
         their belief network
@@ -687,14 +717,13 @@ class BeliefModule(object):
                 print("Drawing from beliefs")
             return Beliefs((self._rng.choice(self.belief_network.beliefs.items()),))
 
-    def listen(self, belief):
+    def process_belief(self, belief):
         """
         evaluates veracity of incoming belief(s)
         if the agent likes and accepts it, it will also be added to their
         short term memory
         :param belief: Incoming belief(s) as Beliefs object
-        :return True if accepted, False if not. Can be used externally to
-            calculate acceptance rates for calibrating parameters
+        :return True if accepted, else False
         """
 
         self._update_perceived_beliefs(belief)
@@ -705,3 +734,68 @@ class BeliefModule(object):
             return True
 
         return False
+
+    def is_conflicting_belief(self, belief):
+        """
+        Returns True is belief is of opposite valence as own belief.
+        Returns False if belief is unknown or same sign of own valence
+        :param belief: a Beliefs (one or more). If more than one belief is in
+            Beliefs object, then any conflict returns True
+        :return: True/False
+        """
+
+        for pair, valence in belief.items():
+            if pair in self.belief_network:
+                if BeliefModule.sign(self.belief_network.beliefs[pair]) \
+                        != BeliefModule.sign(valence):
+                    return True
+
+        return False
+
+    @staticmethod
+    def sign(value):
+        """
+        :param value: a numeric
+        :return: +1 if positive, -1 if negative
+        """
+        return (value > 0) - (value < 0)
+
+
+def generate_random_belief_network_from_concepts(concept_sequence,
+                                                 connection_probability,
+                                                 valence_range=None,
+                                                 rng=None):
+    """
+    Uses a sequence or set of concepts to generate a belief network in the
+    same style as an erdos-renyi graph. Valences are drawn uniformly between
+    the values of the valence_range.
+
+    :param concept_sequence: a set or sequence of concepts
+    :param connection_probability: value between [0,1], controls the density
+        of the graph
+    :param valence_range: the range between the lowest and highest valence.
+        defaults to (-1, 1)
+    :param rng: an instance of python Random. If none is given, an instance
+        is generated with a seed determined by the default behavior of Random.
+    :return: An instance of BeliefNetwork
+    """
+
+    if rng is None:
+        # Generate default Random instance, it will be auto-seeded
+        rng = Random()
+
+    if valence_range is None:
+        # Default range is (-1, 1)
+        valence_range = (-1.0, 1.0)
+
+    belief_net = BeliefNetwork()
+    concept_sequence = list(concept_sequence)
+    for i in range(len(concept_sequence)-1):
+        for j in range(i+1, len(concept_sequence)):
+            if rng.random() < connection_probability:
+                belief_net.add_belief(belief=Beliefs({ConceptPair(concept_sequence[i],
+                                                                  concept_sequence[j]):
+                                                      rng.uniform(*valence_range)}),
+                                      update_energy=False)
+
+    return belief_net

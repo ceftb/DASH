@@ -1,5 +1,5 @@
 # Contains code relating to goal decomposition and mental model projection
-import dash  # don't import specific names so this module will be compiled first
+import dash_action  # don't import specific names so this module will be compiled first
 import compiler # Testing using the compiler to parse expressions
 import time
 import collections
@@ -54,7 +54,7 @@ class System2Agent:
             return True
         if hasattr(self, predicate) and callable(getattr(self, predicate)):
             return True
-        underscore_action = dash.convert_camel(predicate)
+        underscore_action = dash_action.convert_camel(predicate)
         if hasattr(self, underscore_action) and callable(getattr(self, underscore_action)):
             return True
         return False
@@ -160,7 +160,7 @@ class System2Agent:
 
     def readPrimitive(self, line):
         # 'primitive a, b, c' means that a, b and c and primitive actions with their own names as the defining functions
-        dash.primitiveActions(line[10:].split(", "))
+        dash_action.primitiveActions(line[10:].split(", "))
 
     def readProject(self, lines):
         if self.traceParse:

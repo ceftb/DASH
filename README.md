@@ -13,4 +13,8 @@ To install Dash2 (python), run the following command.
 python setup.py install
 ```
 
+Dash2 can also be installed directly from github using pip with the following command:
 
+```python
+pip install git+https://github.com/cuts/webdash.git
+```
