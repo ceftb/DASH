@@ -64,9 +64,8 @@ class System2Agent:
         self.goalWeightDict = agent.goalWeightDict
         self.goalRequirementsDict = agent.goalRequirementsDict
         self.primitiveActionDict = agent.primitiveActionDict
-        self.knownDict = agent.knownDict
-        self.knownFalseDict = agent.knownFalseDict
-        self.transientDict = agent.transientDict
+        #self.knownDict = agent.knownDict  # These are dynamic structures that should be separate for each agent
+        #self.knownFalseDict = agent.knownFalseDict
         self.transientDict = agent.transientDict
         self.projectionRuleDict = agent.projectionRuleDict
         self.triggerRules = agent.triggerRules

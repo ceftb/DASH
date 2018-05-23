@@ -97,8 +97,8 @@ start = time.time()
 agents = []
 hub = GitRepoHub(1)
 # Create a system2 for the first agent and copy it for all the rest
-sys2_agent = None
-for i in xrange(0, 10000):
+sys2_agent =
+for i in xrange(0, 100000):
     agents.append(GitUserAgent(useInternalHub=True, hub=hub, port=6000, trace_client=False, system2_proxy=sys2_agent))
     sys2_agent = agents[0]  # The first call above, sys2_agent will be None and system2 data will be created
 #    agents.append(DASHAgent())
