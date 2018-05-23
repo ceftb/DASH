@@ -17,9 +17,9 @@ class GitUserMixin(object):
         # isSharedSocketEnabled = True will reuse it.
         self.readAgent(
             """
-goalWeight MakeRepo 1
+goalWeight MakeRepo 2
 
-goalWeight UpdateOwnRepo 2
+goalWeight UpdateOwnRepo 1
 
 goalRequirements MakeRepo
   create_repo_event(RepoName)
@@ -239,6 +239,9 @@ goalRequirements UpdateOwnRepo
         Function that will pick a repository and return the id
         """
         self.total_activity += 1
+
+        if len(self.repo_id_to_freq) == 0:
+            self.pick_random_repo((goal, repo_name_variable))
 
         if (self.probabilities is None):
             self.probabilities = []
