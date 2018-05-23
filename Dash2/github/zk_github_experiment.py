@@ -23,8 +23,11 @@ class ZkGithubWorkProcessor(WorkProcessor):
         self.hub = ZkRepoHub(self.zk, self.task_full_id, 0, log_file=self.log_file)
 
     def run_one_iteration(self):
+        sys2_proxy = None
         if not self.agents or random.random() < self.prob_create_new_agent:  # Have to create an agent in the first step
-            a = GitUserAgent(useInternalHub=True, hub=self.hub, trace_client=False)
+            a = GitUserAgent(useInternalHub=True, hub=self.hub, trace_client=False, system2_proxy=sys2_proxy)
+            if sys2_proxy is None:
+                sys2_proxy = a
             a.trace_client = False  # cut chatter when connecting and disconnecting
             a.traceLoop = False  # cut chatter when agent runs steps
             a.trace_github = False  # cut chatter when acting in github world

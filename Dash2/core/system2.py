@@ -59,6 +59,20 @@ class System2Agent:
             return True
         return False
 
+    # Point to the internal structures of the other agent, typically to save space
+    def use_system2(self, agent):
+        self.goalWeightDict = agent.goalWeightDict
+        self.goalRequirementsDict = agent.goalRequirementsDict
+        self.primitiveActionDict = agent.primitiveActionDict
+        self.knownDict = agent.knownDict
+        self.knownFalseDict = agent.knownFalseDict
+        self.transientDict = agent.transientDict
+        self.transientDict = agent.transientDict
+        self.projectionRuleDict = agent.projectionRuleDict
+        self.triggerRules = agent.triggerRules
+        self.utilityRules = agent.utilityRules
+
+
     def readAgent(self, string):
         # state is used for multi-line statements like goalRequirements
         # and projection rules

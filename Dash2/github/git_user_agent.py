@@ -15,7 +15,9 @@ class GitUserMixin(object):
         self.isSharedSocketEnabled = True  # if it is True, then common socket for all agents is used.
         # The first agent to use the socket, gets to set up the connection. All other agents with
         # isSharedSocketEnabled = True will reuse it.
-        self.readAgent(
+        self.system2_proxy = kwargs.get("system2_proxy")
+        if self.system2_proxy is None:
+            self.readAgent(
             """
 goalWeight MakeRepo 2
 
@@ -38,7 +40,8 @@ goalRequirements UpdateOwnRepo
   push_event(RepoName)
   forget([pick_repo_using_frequencies(RepoName), push_event(RepoName)])
             """)
-
+        else:
+          self.use_system2(self.system2_proxy)
 
         # Registration
         self.useInternalHub = kwargs.get("useInternalHub")

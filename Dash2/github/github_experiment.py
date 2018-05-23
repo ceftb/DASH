@@ -9,6 +9,7 @@ and sends it to the hub, for a new repo the create event is sent.
 """
 import sys; sys.path.extend(['../../'])
 
+from Dash2.core.dash import DASHAgent
 from Dash2.core.experiment import Experiment
 from Dash2.core.trial import Trial
 from Dash2.core.parameter import Range, Parameter, Uniform, TruncNorm
@@ -88,8 +89,18 @@ if __name__ == "__main__":
         ar = find_posterior(hosts=sys.argv[2:])
 
 start = time.time()
-exp, trial_outputs = run_exp(max_iterations=1000,
-                             dependent=lambda t: [t.num_agents(), t.num_repos(), t.total_agent_activity()],
-                             num_trials=1)
-print 'run took', time.time() - start, 'seconds'
+#exp, trial_outputs = run_exp(max_iterations=1000,
+#                             dependent=lambda t: [t.num_agents(), t.num_repos(), t.total_agent_activity()],
+#                             num_trials=1)
+
+# Test time and space to create a lot of agents
+agents = []
+hub = GitRepoHub(1)
+# Create a system2 for the first agent and copy it for all the rest
+sys2_agent = None
+for i in xrange(0, 10000):
+    agents.append(GitUserAgent(useInternalHub=True, hub=hub, port=6000, trace_client=False, system2_proxy=sys2_agent))
+    sys2_agent = agents[0]  # The first call above, sys2_agent will be None and system2 data will be created
+#    agents.append(DASHAgent())
+print 'loading took', time.time() - start, 'seconds'
 
