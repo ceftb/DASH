@@ -43,6 +43,7 @@ goalRequirements UpdateOwnRepo
         else:
           self.use_system2(self.system2_proxy)
 
+        self.skipS12 = kwargs.get("skipS12", False)
         # Registration
         self.useInternalHub = kwargs.get("useInternalHub")
         self.hub = kwargs.get("hub")
@@ -154,11 +155,11 @@ goalRequirements UpdateOwnRepo
     all_event_types = ["CreateEvent", "DeleteEvent", "PullRequestEvent", "IssuesEvent", "PushEvent", "WatchEvent", "ForkEvent"]
     event_probabilities = [0.1, 0.05, 0.3, 0.1, 0.3, 0.1, 0.05]
 
-    def agentLoop(self, max_iterations=-1, disconnect_at_end=True, skipS12=False):
+    def agentLoop(self, max_iterations=-1, disconnect_at_end=True):
         """
         This a test agentLoop that can skip System 1 and System 2 and picks repo and event based on frequencies.
         """
-        if skipS12:
+        if self.skipS12:
             if (self.probabilities is None or self.all_known_repos == []):
                 self.probabilities = []
                 self.all_known_repos = []

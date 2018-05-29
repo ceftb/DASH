@@ -12,6 +12,7 @@ from Dash2.core.work_processor import WorkProcessor
 from Dash2.github.git_user_agent import GitUserAgent
 from Dash2.github.initial_state_loader import GithubStateLoader
 from Dash2.github.zk_repo_hub import ZkRepoHub
+from Dash2.github.distributed_event_log_utils import merge_log_file, trnaslate_user_and_repo_ids_in_event_log
 
 # This is an example of experiment script
 
@@ -44,7 +45,7 @@ class ZkGithubStateWorkProcessor(WorkProcessor):
     # Function takes a user profile and creates an agent.
     def populate_agents_collection(self, profile):
         agent_id = profile.pop("id", None)
-        a = GitUserAgent(useInternalHub=True, hub=self.hub, id=agent_id,
+        a = GitUserAgent(useInternalHub=True, hub=self.hub, id=agent_id, skipS12=True,
                          trace_client=False, traceLoop=False, trace_github=False)
         # frequency of use of associated repos:
         total_even_counter = 0
@@ -144,11 +145,11 @@ class ZkGithubStateTrial(Trial):
         for task_index in range(0, number_of_files, 1):
             log_file_name = str(self.exp_id) + "-" + str(self.trial_id) + "-" + str(task_index + 1) + "_event_log_file.txt"
             file_names.append(log_file_name)
-        GithubStateLoader.merge_log_file(file_names , "tmp_output.csv")
+        merge_log_file(file_names , "tmp_output.csv", sort_chronologically=True)
         for log_file_name in file_names:
             os.remove(log_file_name)
         output_file_name = ZkGithubStateTrial.output_event_log + "_trial_" + str(self.trial_id) + ".csv"
-        GithubStateLoader.trnaslate_user_and_repo_ids_in_event_log(even_log_file="tmp_output.csv",
+        trnaslate_user_and_repo_ids_in_event_log(even_log_file="tmp_output.csv",
                                                                    output_file_name=output_file_name,
                                                                    users_ids_file=self.users_ids,
                                                                    repos_ids_file=self.repos_ids)
@@ -175,7 +176,7 @@ if __name__ == "__main__":
         intial_state_meta_data = GithubStateLoader.build_state_from_event_log(ZkGithubStateTrial.input_event_log, number_of_hosts)
         print str(ZkGithubStateTrial.input_event_log) + "_state.json file created."
 
-    number_of_events = 100000 # total number of actions in experiments
+    number_of_events = 10000 # total number of actions in experiments
     max_iterations_per_worker = number_of_events / number_of_hosts
     num_trials = 1
     independent = ['prob_create_new_agent', Range(0.0, 0.1, 0.1)]

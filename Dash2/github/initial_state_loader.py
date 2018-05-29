@@ -2,7 +2,7 @@ import sys; sys.path.extend(['../../'])
 import json
 import csv
 import ijson
-import datetime
+from datetime import datetime
 from user_partitioner import build_graph_from_csv, partition_graph, print_user_profiles
 
 class GithubStateLoader(object):
@@ -62,55 +62,6 @@ class GithubStateLoader(object):
         return state_file_content["meta"]
 
 
-    @staticmethod
-    def merge_log_file(file_names, output_file_name, header_line=None, sort_chronologically=False):
-        if sort_chronologically:
-            print "Under development, work in progress ..."
-        else:
-            output_file = open(output_file_name, 'w')
-            if header_line is not  None:
-                output_file.write(header_line)
-                output_file.write("\n")
-
-            for filename in file_names:
-                input_log = open(filename, "r")
-                datareader = input_log.readlines()
-                for line in datareader:
-                    output_file.write(line)
-                input_log.close()
-            output_file.close()
-
-    @staticmethod
-    def trnaslate_user_and_repo_ids_in_event_log(even_log_file, output_file_name, users_ids_file, repos_ids_file):
-        input_file = open(even_log_file, 'r')
-        output_file = open(output_file_name, 'w')
-        users_map = GithubStateLoader.load_id_dictionary(users_ids_file)
-        repos_map = GithubStateLoader.load_id_dictionary(repos_ids_file)
-
-        datareader = csv.reader(input_file)
-        for row in datareader:
-            user_id = int(row[2])
-            repo_id = int(row[3])
-            if users_map.has_key(user_id):
-                src_user_id = users_map[user_id]
-            else:
-                src_user_id = user_id
-            if repos_map.has_key(repo_id):
-                src_repo_id = repos_map[repo_id]
-            else:
-                src_repo_id = repo_id
-            output_file.write(row[0])
-            output_file.write(",")
-            output_file.write(row[1])
-            output_file.write(",")
-            output_file.write(str(src_user_id))
-            output_file.write(",")
-            output_file.write(str(src_repo_id))
-            output_file.write("\n")
-
-        input_file.close()
-        output_file.close()
-
 
     @staticmethod
     def read_state_file(filename):
@@ -126,24 +77,6 @@ class GithubStateLoader(object):
                 profile_handler(rec)
             f.close()
 
-    ####################################
-    # util methods below
-    ####################################
-
-    @staticmethod
-    def load_id_dictionary(dictionary_file_name):
-        dict_file = open(dictionary_file_name, "r")
-        datareader = csv.reader(dict_file)
-        ids_map = {}
-        counter = 0
-        for row in datareader:
-            if counter != 0:
-                src_id = row[0]
-                target_id = row[1]
-                ids_map[int(target_id)] = src_id
-            counter += 1
-        dict_file.close()
-        return ids_map
 
 if __name__ == "__main__":
     if len(sys.argv) == 2 or len(sys.argv) == 3:

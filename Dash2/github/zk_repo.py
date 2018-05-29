@@ -30,8 +30,8 @@ class ZkRepo():
                 zk.ensure_path(repo_path)
                 zk.set(repo_path, json.dumps({"repo_activity": 0}))
             else:
-                lock = zk.Lock(repo_path)
-                lock.acquire(repo_path)
+                #lock = zk.Lock(repo_path)
+                #lock.acquire(repo_path)
                 raw_data, _ = zk.get(repo_path)
                 data = None
                 if raw_data is not None and raw_data != "":
@@ -40,7 +40,7 @@ class ZkRepo():
                     data = {"repo_activity": 0}
                 data["repo_activity"] = int(data["repo_activity"]) + 1
                 zk.set(repo_path, json.dumps(data))
-                lock.release()
+                #lock.release()
 
             self.unsynchronized_events_counter = 0
             self.last_time_synchronized = curr_time
