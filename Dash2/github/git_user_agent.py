@@ -31,6 +31,7 @@ class GitUserDecisionData(object):
         self.outgoing_requests = {} # keyed tuple of (head_name, base_name, request_id) valued by state
         self.probabilities = None
         self.event_rate = kwargs.get("rate", 5)  # number of events per months
+        self.id = kwargs.get("id", None)
 
 
 class GitUserMixin(object):
@@ -184,7 +185,7 @@ goalRequirements UpdateOwnRepo
                     self.decision_data.probabilities.append(fr / sum)
             selected_repo = numpy.random.choice(self.decision_data.all_known_repos, p=self.decision_data.probabilities)
             selected_event = numpy.random.choice(self.all_event_types, p=self.event_probabilities)
-            self.hub.log_event(self.id, selected_repo, selected_event, None, self.hub.time)
+            self.hub.log_event(self.decision_data.id, selected_repo, selected_event, None, self.hub.time)
             self.decision_data.total_activity += 1
         else:
             return DASHAgent.agentLoop(self, max_iterations, disconnect_at_end)
