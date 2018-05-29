@@ -2,6 +2,7 @@ import sys; sys.path.extend(['../../'])
 import json
 import csv
 import ijson
+import pickle
 from datetime import datetime
 from user_partitioner import build_graph_from_csv, partition_graph, print_user_profiles
 
@@ -20,13 +21,14 @@ class GithubStateLoader(object):
 
     profiles file structure (used for both users and repos - relationship is symmetrical) :
     [
-            {"id":234, "234":{"f":2, "c":23}, "234":{"f":2, "c":4}, ... },
-            {"id":123, "1222":{"f":2, "c":23}, "233":{"f":2, "c":4}, ... }
+            {"id":234, "r":21, "ef": [12,24,0,1,0], "234":{"f":2, "c":23}, "234":{"f":2, "c":4}, ... },
+            {"id":123, "r":321, "ef": [12,24,0,1,0], "1222":{"f":2, "c":23}, "233":{"f":2, "c":4}, ... }
     ]
-    # profile = {"id":234, "234":{ "f":2, "c":23}, "234":{"f":2, "c":4}, ... }
+    # profile = {"id":234, "r":321, "ef": [12,24,0,1,0], "234":{ "f":2, "c":23}, "234":{"f":2, "c":4}, ... }
     # "f" - frequency of use
     # "c" - number of other repos/users connected/associated with this user/repo
-
+    # "r" - event rate per month
+    # "ef" - event frequencies
     '''
 
     @staticmethod
@@ -68,13 +70,15 @@ class GithubStateLoader(object):
         raw_data = json.load(open(filename))
         return raw_data["meta"]
 
-
     @staticmethod
-    def load_profiles_from_file(filename, profile_handler):
+    def load_profiles(filename, profile_handler):
         with open(filename, 'r') as f:
-            records = ijson.items(f, 'item')
-            for rec in records:
-                profile_handler(rec)
+            while True:
+                try:
+                    profile = pickle.load(f)
+                    profile_handler(profile)
+                except EOFError:
+                    break
             f.close()
 
 

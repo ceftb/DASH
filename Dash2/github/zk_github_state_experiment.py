@@ -33,7 +33,7 @@ class ZkGithubStateWorkProcessor(WorkProcessor):
             meta_data = GithubStateLoader.read_state_file(self.state_file)
         if self.users_file is not None and self.users_file != "":
             # it is important to load users first, since this will instantiate list of repos used by agents in this dash worker
-            GithubStateLoader.load_profiles_from_file(self.users_file, self.populate_agents_collection)
+            GithubStateLoader.load_profiles(self.users_file, self.populate_agents_collection)
         if self.repos_file is not None and self.repos_file != "":
             pass
             #GithubStateLoader.load_profiles_from_file(self.repos_file, self.populate_repos_collection)
@@ -45,7 +45,8 @@ class ZkGithubStateWorkProcessor(WorkProcessor):
     # Function takes a user profile and creates an agent.
     def populate_agents_collection(self, profile):
         agent_id = profile.pop("id", None)
-        a = GitUserAgent(useInternalHub=True, hub=self.hub, id=agent_id, skipS12=True,
+        event_rate = profile.pop("r", None)
+        a = GitUserAgent(useInternalHub=True, hub=self.hub, id=agent_id, event_rate=event_rate, skipS12=True,
                          trace_client=False, traceLoop=False, trace_github=False)
         # frequency of use of associated repos:
         total_even_counter = 0

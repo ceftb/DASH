@@ -42,8 +42,8 @@ goalRequirements UpdateOwnRepo
             """)
         else:
           self.use_system2(self.system2_proxy)
-
         self.skipS12 = kwargs.get("skipS12", False)
+
         # Registration
         self.useInternalHub = kwargs.get("useInternalHub")
         self.hub = kwargs.get("hub")
@@ -97,6 +97,9 @@ goalRequirements UpdateOwnRepo
         self.watching_list = {} # ght_id_h: {full_name_h, watching_date, watching_dow}
         self.owned_repos = {} # {ght_id_h : name_h}
         self.name_to_repo_id = {} # {name_h : ght_id_h} Contains all repos known by the agent
+
+        # State setup information
+        self.event_rate = kwargs.get("rate", 5) # number of events per months
         self.all_known_repos = []
         if kwargs.get("freqs") is not None:
             self.repo_id_to_freq = kwargs.get("freqs").copy()

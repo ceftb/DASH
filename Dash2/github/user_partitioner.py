@@ -4,6 +4,8 @@ import sys
 import networkx as nx
 import json
 import metis
+import pickle
+
 
 
 class GraphBuilder:
@@ -18,7 +20,12 @@ class GraphBuilder:
     def update_graph(self, repo_id, user_id, event_type, event_subtype=None):
         if self.events_to_accept is None or event_type in self.events_to_accept:
             self.graph.add_node(repo_id, shared=0, isUser=0)
-            self.graph.add_node(user_id, shared=0, isUser=1)
+
+            if self.graph.has_node(user_id):
+                self.graph.nodes[user_id]["rate"] = self.graph.nodes[user_id]["rate"] + 1
+            else:
+                self.graph.add_node(user_id, shared=0, isUser=1, rate=1)
+
             if self.graph.has_edge(repo_id, user_id):
                 self.graph.add_edge(repo_id, user_id, weight=self.graph.get_edge_data(repo_id, user_id)['weight'] + 1)
             else:
@@ -110,41 +117,28 @@ def partition_graph(graph, number_of_partitions):
 
 
 def print_user_profiles(graph, users_filename, number_of_partitions, shared_repos):
-    users_file = open(users_filename, 'w')
     users_parts_file = {}
     for i in range(0, number_of_partitions, 1):
         fp = open(users_filename + "_" + str(i), 'w')
-        users_parts_file[i] = {'fp':fp, 'isFirst':True}
+        users_parts_file[i] = {'fp':fp}
 
-    isFirstLine = True
     for node in graph.nodes():
         if graph.nodes[node]['isUser'] == 1:
             fp = users_parts_file[graph.nodes[node]['partition']]['fp']
-            _print_json_profile(graph, node, fp, shared_repos, users_parts_file[graph.nodes[node]['partition']]['isFirst'])
-            users_parts_file[graph.nodes[node]['partition']]['isFirst'] = False
-
-            _print_json_profile(graph, node, users_file, shared_repos, isFirstLine)
-            isFirstLine = False
+            _print_profile(graph, node, fp, shared_repos)
 
     for i in range(0, number_of_partitions, 1):
         fp = users_parts_file[i]['fp']
-        fp.write("]")
         fp.close()
 
-    users_file.write("]")
-    users_file.close()
 
-def _print_json_profile(graph, user_node, fp, shared_repos, isFirst=False):
-    profile_data = {'id': user_node}
+def _print_profile(graph, user_node, fp, shared_repos):
+    profile_object = {'id': user_node, 'r': graph.nodes[user_node]["rate"]}
     for neighbour in graph.neighbors(user_node):
         edge_weight = graph.get_edge_data(user_node, neighbour)['weight']
         isSharedRepo = 2 if neighbour in shared_repos else 1
-        profile_data[neighbour] = {'f':edge_weight, 'c':isSharedRepo}
-    if not isFirst:
-        fp.write(",\n")
-    else:
-        fp.write("[")
-    fp.write(json.dumps(profile_data))
+        profile_object[neighbour] = {'f':edge_weight, 'c':isSharedRepo}
+    fp.write(pickle.dumps(profile_object))
 
 
 def build_graph_from_csv(csv_event_log_file, user_dict_file=None, repo_dict_file=None, event_filter=None):
