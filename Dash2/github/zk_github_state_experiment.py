@@ -60,6 +60,7 @@ class ZkGithubStateWorkProcessor(WorkProcessor):
             is_node_shared = True if int(freq["c"]) > 1 else False
             self.hub.init_repo(repo_id=int_repo_id, user_id=a.id, curr_time=0, is_node_shared=is_node_shared)
         a.total_activity = total_even_counter
+        self.agent.decision_data = a
         heappush(self.events_heap, (self.agent.next_event_time(self.start_time, self.max_time), a.id))
         self.agents[a.id] = a
 

@@ -30,7 +30,7 @@ class GitUserDecisionData(object):
             self.repo_id_to_freq = {}  # {ght_id_h : frequency of use/communication} Contains all repos agent interacted with
         self.outgoing_requests = {} # keyed tuple of (head_name, base_name, request_id) valued by state
         self.probabilities = None
-        self.event_rate = kwargs.get("rate", 5)  # number of events per months
+        self.event_rate = kwargs.get("event_rate", 5)  # number of events per months
         self.id = kwargs.get("id", None)
 
 
@@ -190,20 +190,11 @@ goalRequirements UpdateOwnRepo
         else:
             return DASHAgent.agentLoop(self, max_iterations, disconnect_at_end)
 
-    def generate_random_repo_name(self, name=None):
-        """
-        Function that randomly generates name for a repo
-        """
-        if self.trace_github:
-            print 'generate random repo name'
-        alphabet = "abcdefghijklmnopqrstuvwxyz"
-        if name is None:
-            name = ''.join(random.sample(alphabet, random.randint(1,20)))
-        return {'name_h': name,
-                'owner': {'login_h': self.decision_data.login_h,
-                          'ght_id_h': self.decision_data.ght_id_h,
-                          'type': self.decision_data.type}
-                }
+
+    def next_event_time(self, curr_time, max_time):
+        delta = 30 * 24 * 3600 / self.decision_data.event_rate
+        next_time = min(max_time, curr_time + delta)
+        return next_time #random.uniform(curr_time + 0.1, max_time)
 
     ############################################################################
     # Core git user methods
@@ -222,6 +213,21 @@ goalRequirements UpdateOwnRepo
     ############################################################################
     # Utility Primitive actions
     ############################################################################
+
+    def generate_random_repo_name(self, name=None):
+        """
+        Function that randomly generates name for a repo
+        """
+        if self.trace_github:
+            print 'generate random repo name'
+        alphabet = "abcdefghijklmnopqrstuvwxyz"
+        if name is None:
+            name = ''.join(random.sample(alphabet, random.randint(1,20)))
+        return {'name_h': name,
+                'owner': {'login_h': self.decision_data.login_h,
+                          'ght_id_h': self.decision_data.ght_id_h,
+                          'type': self.decision_data.type}
+                }
 
     def generate_random_name(self, (goal, name_var)):
         """
@@ -283,10 +289,6 @@ goalRequirements UpdateOwnRepo
         repo_name = random.choice(self.known_issues.keys())
         issue_id = random.choice(self.known_issues[repo_name])
         return [{issue : (repo_name, issue_id)}]
-
-
-    def next_event_time(self, curr_time, max_time):
-        return random.uniform(curr_time + 0.1, max_time)
 
     ############################################################################
     # CreateEvents (Tag/branch/repo)
