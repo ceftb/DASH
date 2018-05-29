@@ -5,6 +5,33 @@ import random
 import numpy
 
 
+class GitUserDecisionData(object):
+
+    def __init__(self, **kwargs):
+        # This is taken from the block a area in GitUserMixin referenced below
+        self.login_h = kwargs.get("login_h", None)
+        self.ght_id_h = kwargs.get("ght_id_h", None)
+        self.type = kwargs.get("type", "user")
+
+
+        # This is block b from GitUserMixin referenced below
+        # Other Non-Schema information
+        self.total_activity = 0
+        self.following_list = {} # ght_id_h: {full_name_h, following_date, following_dow}
+        self.watching_list = {} # ght_id_h: {full_name_h, watching_date, watching_dow}
+        self.owned_repos = {} # {ght_id_h : name_h}
+        self.name_to_repo_id = {} # {name_h : ght_id_h} Contains all repos known by the agent
+        self.all_known_repos = []
+        if kwargs.get("freqs") is not None:
+            self.repo_id_to_freq = kwargs.get("freqs").copy()
+            for r_id in self.repo_id_to_freq:
+                self.name_to_repo_id[r_id] = r_id
+        else:
+            self.repo_id_to_freq = {}  # {ght_id_h : frequency of use/communication} Contains all repos agent interacted with
+        self.outgoing_requests = {} # keyed tuple of (head_name, base_name, request_id) valued by state
+        self.probabilities = None
+
+
 class GitUserMixin(object):
     """
     A basic Git user agent that can communicate with a Git repository hub and
@@ -52,64 +79,49 @@ goalRequirements UpdateOwnRepo
         self.trace_client = kwargs.get("trace_client", True)
         registration = self.register({"id": kwargs.get("id", None), "freqs": kwargs.get("freqs", {})})
 
+        # This is block a in GitUserDecisionData above. As much as possible is commented out to keep agents small.
         # Setup information
-        self.use_model_assignment = kwargs.get("use_model", True)
-        self.type = kwargs.get("type", "user")
-        self.login_h = kwargs.get("login_h", None)
-        self.ght_id_h = kwargs.get("ght_id_h", None)
-        self.company = kwargs.get("company", "")
-        self.location = kwargs.get("location", "")
-        self.created_at = kwargs.get("created_at", None)
-        self.created_dow = kwargs.get("created_dow", None)
-        self.fake = kwargs.get("fake", False)
-        self.deleted = kwargs.get("deleted", False)
-        self.lat = kwargs.get("lat", None)
-        self.lon = kwargs.get("lon", None)
-        self.state = kwargs.get("state", None)
-        self.city = kwargs.get("city", None)
-        self.country_code = kwargs.get("country_code", None)
-        self.site_admin = kwargs.get("site_admin", False)
-        self.public_repos = kwargs.get("public_repos", 0)
-        self.followers = kwargs.get("followers", 0)
-        self.following = kwargs.get("following", 0)
+        #self.use_model_assignment = kwargs.get("use_model", True)
+        #self.company = kwargs.get("company", "")
+        #self.location = kwargs.get("location", "")
+        #self.created_at = kwargs.get("created_at", None)
+        #self.created_dow = kwargs.get("created_dow", None)
+        #self.fake = kwargs.get("fake", False)
+        #self.deleted = kwargs.get("deleted", False)
+        #self.lat = kwargs.get("lat", None)
+        #self.lon = kwargs.get("lon", None)
+        #self.state = kwargs.get("state", None)
+        #self.city = kwargs.get("city", None)
+        #self.country_code = kwargs.get("country_code", None)
+        #self.site_admin = kwargs.get("site_admin", False)
+        #self.public_repos = kwargs.get("public_repos", 0)
+        #self.followers = kwargs.get("followers", 0)
+        #self.following = kwargs.get("following", 0)
         # Follower list would be composed of dictionaries with items:
         # login_h, type, ght_id_h, following_date, following_dow
-        self.follower_list = kwargs.get('follower_list', {}) # Keyed by id
+        #self.follower_list = kwargs.get('follower_list', {}) # Keyed by id
 
         # If account is an organization it can have members
         # members is a list of dictionaries with keys for
         # user: login_h, type, ght_id_h, joined_at_date, joined_at_dow
-        if self.type.lower() == "organization":
-            self.members = kwargs.get("members", {}) # Keyed by id
+        #if self.type.lower() == "organization":
+        #    self.members = kwargs.get("members", {}) # Keyed by id
 
         # Assigned information
         self.id = registration[1] if registration is not None else None
-        if self.use_model_assignment:
-            self.ght_id_h = self.id
-            self.created_at = registration[2] if registration is not None else None
+        #if self.use_model_assignment:
+        #    self.ght_id_h = self.id
+        #    self.created_at = registration[2] if registration is not None else None
 
         self.trace_github = kwargs.get("trace_github", True)  # Will print far less to the screen if this is False
         self.traceLoop = kwargs.get("traceLoop", True)
 
-        # Other Non-Schema information
-        self.total_activity = 0
-        self.following_list = {} # ght_id_h: {full_name_h, following_date, following_dow}
-        self.watching_list = {} # ght_id_h: {full_name_h, watching_date, watching_dow}
-        self.owned_repos = {} # {ght_id_h : name_h}
-        self.name_to_repo_id = {} # {name_h : ght_id_h} Contains all repos known by the agent
-        self.all_known_repos = []
-        if kwargs.get("freqs") is not None:
-            self.repo_id_to_freq = kwargs.get("freqs").copy()
-            for r_id in self.repo_id_to_freq:
-                self.name_to_repo_id[r_id] = r_id
-        else:
-            self.repo_id_to_freq = {}  # {ght_id_h : frequency of use/communication} Contains all repos agent interacted with
-        self.probabilities = None
+        # block b taken from here to GitUserDecisionData
 
-        self.name_to_user_id = {} # {login_h : ght_id_h} Contains all users known by the agent
-        self.known_issue_comments = {} # key: (repo_name) value: [(issue #)]
-        self.known_issues = {} # key: (repo_name) value: [(issue #)]
-        self.outgoing_requests = {} # keyed tuple of (head_name, base_name, request_id) valued by state
+        #self.name_to_user_id = {} # {login_h : ght_id_h} Contains all users known by the agent
+        #self.known_issue_comments = {} # key: (repo_name) value: [(issue #)]
+        #self.known_issues = {} # key: (repo_name) value: [(issue #)]
+        self.decision_data = None  # Should be set to the GitUserDecisionData representing the agent on each call
 
         # Actions
         self.primitiveActions([
@@ -160,16 +172,16 @@ goalRequirements UpdateOwnRepo
         This a test agentLoop that can skip System 1 and System 2 and picks repo and event based on frequencies.
         """
         if self.skipS12:
-            if (self.probabilities is None or self.all_known_repos == []):
-                self.probabilities = []
-                self.all_known_repos = []
+            if (self.decision_data.probabilities is None or self.decision_data.all_known_repos == []):
+                self.decision_data.probabilities = []
+                self.decision_data.all_known_repos = []
                 sum = 0.0
-                for repo_id, fr in self.repo_id_to_freq.iteritems():
+                for repo_id, fr in self.decision_data.repo_id_to_freq.iteritems():
                     sum += fr
-                    self.all_known_repos.append(repo_id)
-                for fr in self.repo_id_to_freq.itervalues():
+                    self.decision_data.all_known_repos.append(repo_id)
+                for fr in self.decision_data.repo_id_to_freq.itervalues():
                     self.probabilities.append(fr / sum)
-            selected_repo = numpy.random.choice(self.all_known_repos, p=self.probabilities)
+            selected_repo = numpy.random.choice(self.decision_data.all_known_repos, p=self.decision_data.probabilities)
             selected_event = numpy.random.choice(self.all_event_types, p=self.event_probabilities)
             self.hub.log_event(self.id, selected_repo, selected_event, None, self.hub.time)
             self.total_activity += 1
@@ -186,9 +198,9 @@ goalRequirements UpdateOwnRepo
         if name is None:
             name = ''.join(random.sample(alphabet, random.randint(1,20)))
         return {'name_h': name,
-                'owner': {'login_h': self.login_h, 
-                          'ght_id_h': self.ght_id_h, 
-                          'type': self.type}
+                'owner': {'login_h': self.decision_data.login_h,
+                          'ght_id_h': self.decision_data.ght_id_h,
+                          'type': self.decision_data.type}
                 }
 
     ############################################################################
@@ -217,7 +229,7 @@ goalRequirements UpdateOwnRepo
         if self.trace_github:
             print "generating a random name"
         alphabet = "abcdefghijklmnopqrstuvwxyz"
-        self.total_activity += 1
+        self.decision_data.total_activity += 1
         return [{name_var: ''.join(random.sample(alphabet, random.randint(1,20)))}]
 
     def pick_random_pull_request(self, (goal, pull_request)):
@@ -228,34 +240,34 @@ goalRequirements UpdateOwnRepo
         if self.trace_github:
             print "picking random pull request"
 
-        chosen_head, chosen_base, chosen_id = random.choice(self.outgoing_requests.keys())
+        chosen_head, chosen_base, chosen_id = random.choice(self.decision_data.outgoing_requests.keys())
         return [{pull_request : {'head': chosen_head, 'base': chosen_base, 'id': chosen_id}}]
 
     def pick_random_repo(self, (goal, repo_name_variable)):
         """
         Function that will randomly pick a repository and return the id
         """
-        self.total_activity += 1
-        return [{repo_name_variable : random.choice(self.name_to_repo_id.keys()) }]
+        self.decision_data.total_activity += 1
+        return [{repo_name_variable: random.choice(self.decision_data.name_to_repo_id.keys()) }]
 
     def pick_repo_using_frequencies(self, (goal, repo_name_variable)):
         """
         Function that will pick a repository and return the id
         """
-        self.total_activity += 1
+        self.decision_data.total_activity += 1
 
-        if len(self.repo_id_to_freq) == 0:
+        if len(self.decision_data.repo_id_to_freq) == 0:
             self.pick_random_repo((goal, repo_name_variable))
 
-        if (self.probabilities is None):
-            self.probabilities = []
+        if (self.decision_data.probabilities is None):
+            self.decision_data.probabilities = []
             sum = 0.0
-            for fr in self.repo_id_to_freq.itervalues():
+            for fr in self.decision_data.repo_id_to_freq.itervalues():
                 sum += fr
-            for fr in self.repo_id_to_freq.itervalues():
-                self.probabilities.append(fr / sum)
-        selected_repo = numpy.random.choice(numpy.arange(1, len(self.repo_id_to_freq)+1), p=self.probabilities)
-        return [{repo_name_variable : random.choice(self.repo_id_to_freq.keys()) }]
+            for fr in self.decision_data.repo_id_to_freq.itervalues():
+                self.decision_data.probabilities.append(fr / sum)
+        selected_repo = numpy.random.choice(numpy.arange(1, len(self.decision_data.repo_id_to_freq)+1), p=self.decision_data.probabilities)
+        return [{repo_name_variable: random.choice(self.decision_data.repo_id_to_freq.keys()) }]
 
     def pick_random_issue_comment(self, (goal, issue_comment)):
         self.total_activity += 1
@@ -288,9 +300,9 @@ goalRequirements UpdateOwnRepo
         status, repo_id = self.sendAction("create_repo_event", [repo_info])
         if self.trace_github:
             print 'create repo result:', status, repo_id, 'for', repo_info
-        self.owned_repos.update({repo_id: repo_info['name_h']})
-        self.name_to_repo_id[repo_info['name_h']] = repo_id
-        self.total_activity += 1
+        self.decision_data.owned_repos.update({repo_id: repo_info['name_h']})
+        self.decision_data.name_to_repo_id[repo_info['name_h']] = repo_id
+        self.decision_data.total_activity += 1
         # Binds the name of the repo if it was not bound before this call
         return [{name_var: repo_info['name_h']}] if isVar(name_var) else [{}]
 
@@ -300,10 +312,10 @@ goalRequirements UpdateOwnRepo
         """
 
         status = self.sendAction("create_tag_event", 
-                                [self.name_to_repo_id[repo_name], tag_name])
+                                [self.decision_data.name_to_repo_id[repo_name], tag_name])
         if self.trace_github:
             print 'create tag result:', status, 'for', tag_name
-        self.total_activity += 1
+        self.decision_data.total_activity += 1
         return [{}]
 
     def create_branch_event(self, (goal, repo_name, branch_name)):
@@ -312,10 +324,10 @@ goalRequirements UpdateOwnRepo
         """
 
         status = self.sendAction("create_branch_event", 
-                                [self.name_to_repo_id[repo_name], branch_name])
+                                [self.decision_data.name_to_repo_id[repo_name], branch_name])
         if self.trace_github:
             print 'create branch result:', status, 'for', branch_name
-        self.total_activity += 1
+        self.decision_data.total_activity += 1
         return [{}]
 
     def delete_tag_event(self, (goal, repo_name, tag_name)):
@@ -323,10 +335,10 @@ goalRequirements UpdateOwnRepo
         agent removes tag from repo
         """
         status = self.sendAction("delete_tag_event", 
-                                [self.name_to_repo_id[repo_name], tag_name])
+                                [self.decision_data.name_to_repo_id[repo_name], tag_name])
         if self.trace_github:
             print 'delete tag result:', status, 'for', tag_name
-        self.total_activity += 1
+        self.decision_data.total_activity += 1
         return [{}]
 
     def delete_branch_event(self, (goal, repo_name, branch_name)):
@@ -335,10 +347,10 @@ goalRequirements UpdateOwnRepo
         """
 
         status = self.sendAction("delete_branch_event", 
-                                [self.name_to_repo_id[repo_name], branch_name])
+                                [self.decision_data.name_to_repo_id[repo_name], branch_name])
         if self.trace_github:
             print 'delete branch result:', status, 'for', branch_name
-        self.total_activity += 1
+        self.decision_data.total_activity += 1
         return [{}]
 
     ############################################################################

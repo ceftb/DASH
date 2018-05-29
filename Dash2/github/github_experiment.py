@@ -14,7 +14,7 @@ from Dash2.core.experiment import Experiment
 from Dash2.core.trial import Trial
 from Dash2.core.parameter import Range, Parameter, Uniform, TruncNorm
 from Dash2.core.measure import Measure
-from git_user_agent import GitUserAgent
+from git_user_agent import GitUserDecisionData, GitUserAgent, GitUserMixin
 from git_repo_hub import GitRepoHub
 from zk_repo import ZkRepo
 import random
@@ -93,14 +93,43 @@ start = time.time()
 #                             dependent=lambda t: [t.num_agents(), t.num_repos(), t.total_agent_activity()],
 #                             num_trials=1)
 
+# Create a class that can perform all the actions but does not have a full DASHAgent. This seems to be a red herring,
+# instead I'll try to reduce the information stored with each GitUserMixin.
+class SmallAgent(GitUserMixin):
+    def __init__(self, **kwargs):
+        GitUserMixin.__init__(self, **kwargs)
+
+    def readAgent(self, goal_def):
+        pass
+
+    def agentLoop(self, max_iterations=-1, disconnect_at_end=True, skipS12=False):
+        GitUserMixin.agentLoop(self, max_iterations, disconnect_at_end, True)  # Don't allow using the DASH loop
+
+    def register(self, args):
+        pass
+
+    def primitiveActions(self, list):
+        pass
+
+    def use_system2(self, a):
+        pass
+
+
 # Test time and space to create a lot of agents
 agents = []
 hub = GitRepoHub(1)
 # Create a system2 for the first agent and copy it for all the rest
-sys2_agent =
+sys2_agent = None
 for i in xrange(0, 100000):
-    agents.append(GitUserAgent(useInternalHub=True, hub=hub, port=6000, trace_client=False, system2_proxy=sys2_agent))
+    # Try runing the mixin instead of the full DASH agent. We can always create a DASH agent later if needed.
+    # 10k SmallAgents took 85mb on my laptop, 10k DASHAgents took 106mb, so the difference is not huge.
+    #agents.append(GitUserAgent(useInternalHub=True, hub=hub, port=6000, trace_client=False, system2_proxy=sys2_agent))
+    #agents.append(SmallAgent(useInternalHub=True, hub=hub, port=6000, trace_client=False, system2_proxy=sys2_agent))
+    agents.append(GitUserDecisionData())  # Takes the same space as SmallAgent
     sys2_agent = agents[0]  # The first call above, sys2_agent will be None and system2 data will be created
 #    agents.append(DASHAgent())
 print 'loading took', time.time() - start, 'seconds'
+# getsizeof returns the same for GitUserAgents as for SmallAgents, but the python process sits in less than half
+# the memory for the latter, so pursuing this idea.
+print 'total size for', len(agents), 'agents:', sum([sys.getsizeof(a) for a in agents])
 
