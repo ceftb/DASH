@@ -32,15 +32,15 @@ class GithubStateLoader(object):
     '''
 
     @staticmethod
-    def build_state_from_event_log(input_event_log, number_of_hosts=1):
+    def build_state_from_event_log(input_event_log, number_of_user_partitions=1):
         G, number_of_users, number_of_repos = build_graph_from_csv(input_event_log)
         print "User-repo graph constructed. Users ", number_of_users, ", repos ", number_of_repos, ", nodes ", len(G.nodes()), ", edges", len(G.edges())
 
-        shared_repos, shared_users = partition_graph(G, number_of_hosts)
+        shared_repos, shared_users = partition_graph(G, number_of_user_partitions)
         print "shared repos ", len(shared_repos), ", shared users ", len(shared_users)
 
         print "printing graph..."
-        print_user_profiles(G, input_event_log + "_users.json", number_of_hosts, shared_repos)
+        print_user_profiles(G, input_event_log + "_users.json", number_of_user_partitions, shared_repos)
 
         users_file = input_event_log + "_users.json"
         repos_file = input_event_log + "_repos.json"
@@ -55,15 +55,13 @@ class GithubStateLoader(object):
                 "repos_file": repos_file,
                 "users_ids": users_ids,
                 "repos_ids": repos_ids,
-                "is_partitioning_needed": "False"
+                "number_of_partitions": number_of_user_partitions
             }
         }
         state_file = open(input_event_log + "_state.json", 'w')
         state_file.write(json.dumps(state_file_content))
         state_file.close()
         return state_file_content["meta"]
-
-
 
     @staticmethod
     def read_state_file(filename):
@@ -94,11 +92,8 @@ if __name__ == "__main__":
                 print("Exiting ...")
                 break
             elif cmd == "l":
-                print "Loading objects from profiles file..."
-                objects = []
-                appender = lambda rec: objects.append(rec)
-                GithubStateLoader.load_profiles_from_file(filename, appender)
-                print "objects loaded: ", len(objects)
+                print "Generating state file for 1 partition ..."
+                GithubStateLoader.build_state_from_event_log(filename, 1)
             elif cmd == "s":
                 print "Reading state file ..."
                 n_users, n_repos = GithubStateLoader.read_state_file(filename)

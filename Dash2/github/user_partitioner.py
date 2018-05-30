@@ -5,7 +5,7 @@ import networkx as nx
 import json
 import metis
 import pickle
-
+from distributed_event_log_utils import event_types, event_types_indexes
 
 
 class GraphBuilder:
@@ -21,15 +21,22 @@ class GraphBuilder:
         if self.events_to_accept is None or event_type in self.events_to_accept:
             self.graph.add_node(repo_id, shared=0, isUser=0)
 
+            event_index = event_types_indexes[event_type]
             if self.graph.has_node(user_id):
-                self.graph.nodes[user_id]["rate"] = self.graph.nodes[user_id]["rate"] + 1
+                self.graph.nodes[user_id]["r"] = self.graph.nodes[user_id]["r"] + 1
+                self.graph.nodes[user_id]["ef"][event_index] += 1
             else:
-                self.graph.add_node(user_id, shared=0, isUser=1, rate=1)
+                self.graph.add_node(user_id, shared=0, isUser=1, r=1)
+                self.graph.nodes[user_id]["ef"] = [0] * len(event_types)
+                self.graph.nodes[user_id]["ef"][event_index] += 1
 
             if self.graph.has_edge(repo_id, user_id):
                 self.graph.add_edge(repo_id, user_id, weight=self.graph.get_edge_data(repo_id, user_id)['weight'] + 1)
             else:
                 self.graph.add_edge(repo_id, user_id, weight= 1)
+
+
+
 
 
 class IdDictionaryStream:
@@ -133,7 +140,7 @@ def print_user_profiles(graph, users_filename, number_of_partitions, shared_repo
 
 
 def _print_profile(graph, user_node, fp, shared_repos):
-    profile_object = {'id': user_node, 'r': graph.nodes[user_node]["rate"]}
+    profile_object = {'id': user_node, 'r': graph.nodes[user_node]["r"], 'ef':graph.nodes[user_node]["ef"]}
     for neighbour in graph.neighbors(user_node):
         edge_weight = graph.get_edge_data(user_node, neighbour)['weight']
         isSharedRepo = 2 if neighbour in shared_repos else 1

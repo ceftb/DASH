@@ -3,7 +3,8 @@ from Dash2.core.dash import DASHAgent
 from Dash2.core.system2 import isVar
 import random
 import numpy
-
+from distributed_event_log_utils import event_types
+import sys
 
 class GitUserDecisionData(object):
 
@@ -32,6 +33,13 @@ class GitUserDecisionData(object):
         self.probabilities = None
         self.event_rate = kwargs.get("event_rate", 5)  # number of events per months
         self.id = kwargs.get("id", None)
+        event_frequencies = kwargs.get("event_frequencies", [1] * len(event_types))
+        sum = 0
+        for e in event_frequencies:
+            sum += e
+        self.event_probabilities = []
+        for event in event_frequencies:
+            self.event_probabilities.append(float(event) / float(sum))
 
 
 class GitUserMixin(object):
@@ -165,10 +173,6 @@ goalRequirements UpdateOwnRepo
             ('member_event', self.member_event),
             ('public_event', self.public_event)])
 
-
-    all_event_types = ["CreateEvent", "DeleteEvent", "PullRequestEvent", "IssuesEvent", "PushEvent", "WatchEvent", "ForkEvent"]
-    event_probabilities = [0.1, 0.05, 0.3, 0.1, 0.3, 0.1, 0.05]
-
     def agentLoop(self, max_iterations=-1, disconnect_at_end=True):
         """
         This a test agentLoop that can skip System 1 and System 2 and picks repo and event based on frequencies.
@@ -184,7 +188,7 @@ goalRequirements UpdateOwnRepo
                 for fr in self.decision_data.repo_id_to_freq.itervalues():
                     self.decision_data.probabilities.append(fr / sum)
             selected_repo = numpy.random.choice(self.decision_data.all_known_repos, p=self.decision_data.probabilities)
-            selected_event = numpy.random.choice(self.all_event_types, p=self.event_probabilities)
+            selected_event = numpy.random.choice(event_types, p=self.decision_data.event_probabilities)
             self.hub.log_event(self.decision_data.id, selected_repo, selected_event, None, self.hub.time)
             self.decision_data.total_activity += 1
         else:

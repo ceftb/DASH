@@ -49,7 +49,8 @@ class ZkGithubStateWorkProcessor(WorkProcessor):
     def populate_agents_collection(self, profile):
         agent_id = profile.pop("id", None)
         event_rate = profile.pop("r", None)
-        a = GitUserDecisionData(id=agent_id, event_rate=event_rate)
+        event_frequencies = profile.pop("ef", None)
+        a = GitUserDecisionData(id=agent_id, event_rate=event_rate, event_frequencies=event_frequencies)
         # frequency of use of associated repos:
         total_even_counter = 0
         for repo_id, freq in profile.iteritems():
@@ -111,20 +112,14 @@ class ZkGithubStateTrial(Trial):
             intial_state_meta_data = GithubStateLoader.read_state_file(ZkGithubStateTrial.input_event_log + "_state.json")
         else:
             intial_state_meta_data = GithubStateLoader.build_state_from_event_log(input_event_log=ZkGithubStateTrial.input_event_log,
-                                                                     number_of_hosts=self.number_of_hosts)
+                                                                                  number_of_user_partitions=self.number_of_hosts)
         print intial_state_meta_data
         self.state_file = ZkGithubStateTrial.input_event_log + "_state.json"
         self.users_file = intial_state_meta_data["users_file"]
         self.repos_file = intial_state_meta_data["repos_file"]
         self.users_ids = intial_state_meta_data["users_ids"]
         self.repos_ids = intial_state_meta_data["repos_ids"]
-        is_partitioning_needed = intial_state_meta_data["is_partitioning_needed"]
-        # generate task files for individual dash workers
-        if is_partitioning_needed == "True":  # partitioning breaks input simulation state file into series of task files for DashWokers.
-            # Generated task file can be reused across experiments with the same number of dash workers, which speeds up overall time.
-            GithubStateLoader.partition_profiles_file(self.users_file, self.number_of_hosts, int(intial_state_meta_data["number_of_users"]))
         # set up max ids
-        #self.zk.restart()
         self.set_max_repo_id(int(intial_state_meta_data["number_of_repos"]))
         self.set_max_user_id(int(intial_state_meta_data["number_of_users"]))
         self.is_loaded = True

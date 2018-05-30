@@ -1,10 +1,13 @@
 import sys; sys.path.extend(['../../'])
-import json
 import csv
-import ijson
 from datetime import datetime
 
-
+event_types = ["CreateEvent", "DeleteEvent", "PullRequestEvent", "PullRequestReviewCommentEvent", "IssuesEvent",
+               "IssueCommentEvent", "PushEvent", "CommitCommentEvent","WatchEvent", "ForkEvent", "GollumEvent",
+               "PublicEvent", "ReleaseEvent", "MemberEvent"]
+event_types_indexes = {"CreateEvent":0, "DeleteEvent":1, "PullRequestEvent":2, "PullRequestReviewCommentEvent":3,
+                       "IssuesEvent":4, "IssueCommentEvent":5, "PushEvent":6, "CommitCommentEvent":7, "WatchEvent":8,
+                       "ForkEvent":9, "GollumEvent":10, "PublicEvent":11, "ReleaseEvent":12, "MemberEvent":13}
 
 def merge_log_file(file_names, output_file_name, header_line=None, sort_chronologically=False):
     if sort_chronologically:
