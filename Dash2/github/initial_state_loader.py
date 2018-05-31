@@ -57,7 +57,9 @@ def build_state_from_event_log(input_event_log, number_of_user_partitions=1):
             "repos_file": repos_file,
             "users_ids": users_ids,
             "repos_ids": repos_ids,
-            "number_of_partitions": number_of_user_partitions
+            "number_of_partitions": number_of_user_partitions,
+            "embedding_files": "",
+            "event_rate_model_file": ""
         }
     }
     state_file = open(input_event_log + "_state.json", 'w')
@@ -141,12 +143,21 @@ class EmbeddingCalculator(object):
         return result
 
 
-def populate_embedding_probabilities(agents_data, simulation_user_ids_dictionary_file, embedding_files_data, probability_vector_size = 10):
+def populate_embedding_probabilities(agents, simulation_user_ids_dictionary_file, embedding_files_data, probability_vector_size = 10):
     int_to_str_ids_map = _load_id_dictionary(simulation_user_ids_dictionary_file)
     for event_type in event_types:
         calculator = EmbeddingCalculator(embedding_files_data[event_type]["file_name"], embedding_files_data[event_type]["dictionary"], int_to_str_ids_map)
-        for agent_decision_data in agents_data:
-            agent_decision_data.embedding_probabilities[event_type] = calculator.calculate_probabilities(agent_decision_data.id, probability_vector_size)
+        for agent in agents:
+            agents.decision_data.embedding_probabilities[event_type] = calculator.calculate_probabilities(agents.decision_data.id, probability_vector_size)
+
+def populate_event_rate(agents, model_file):
+    event_rate = agents.decision_data.event_rate
+    focus = len(agents.decision_data.all_known_repos)
+    # load model from model_file
+    model = None
+    if event_rate is not None and focus is not None and model is not None and focus != 0:
+        new_rate = model(event_rate, model)
+        agents.decision_data.event_rate = new_rate
 
 
 if __name__ == "__main__":

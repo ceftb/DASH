@@ -10,7 +10,8 @@ from Dash2.core.experiment import Experiment
 from Dash2.core.dash_controller import DashController
 from Dash2.core.work_processor import WorkProcessor
 from Dash2.github.git_user_agent import GitUserAgent, GitUserDecisionData
-from Dash2.github.initial_state_loader import build_state_from_event_log, read_state_file, load_profiles, populate_embedding_probabilities
+from Dash2.github.initial_state_loader import build_state_from_event_log, read_state_file, load_profiles, \
+    populate_embedding_probabilities, populate_event_rate
 from Dash2.github.zk_repo_hub import ZkRepoHub
 from Dash2.github.distributed_event_log_utils import merge_log_file, trnaslate_user_and_repo_ids_in_event_log
 
@@ -29,7 +30,6 @@ class ZkGithubStateWorkProcessor(WorkProcessor):
         self.hub = ZkRepoHub(self.zk, self.task_full_id, 0, log_file=self.log_file)
         self.agent = GitUserAgent(useInternalHub=True, hub=self.hub, skipS12=True,
                          trace_client=False, traceLoop=False, trace_github=False)
-        self.embedding_files = None
 
         self.log_file.close()
 
@@ -38,8 +38,12 @@ class ZkGithubStateWorkProcessor(WorkProcessor):
         if self.users_file is not None and self.users_file != "":
             # it is important to load users first, since this will instantiate list of repos used by agents in this dash worker
             load_profiles(self.users_file, self.populate_agents_collection)
+        # embeddings
         if self.embedding_files is not None and self.embedding_files != "":
             populate_embedding_probabilities(self.agents, self.users_file, self.embedding_files)
+        # regression model for event_rate
+        if self.event_rate_model_file is not None and self.event_rate_model_file != "":
+            populate_event_rate(self.agents, self.event_rate_model_file)
 
         self.log_file = open(self.task_full_id + '_event_log_file.txt', 'w')
         self.hub.log_file = self.log_file
@@ -111,6 +115,9 @@ class ZkGithubStateTrial(Trial):
         self.state_file = ZkGithubStateTrial.input_event_log + "_state.json"
         self.users_file = intial_state_meta_data["users_file"]
         self.repos_file = intial_state_meta_data["repos_file"]
+        self.embedding_files = intial_state_meta_data["embedding_files"]
+        self.event_rate_model_file = intial_state_meta_data["event_rate_model_file"]
+
         self.users_ids = intial_state_meta_data["users_ids"]
         self.repos_ids = intial_state_meta_data["repos_ids"]
         # set up max ids
@@ -125,6 +132,8 @@ class ZkGithubStateTrial(Trial):
         self.init_task_param("state_file", self.state_file, data)
         self.init_task_param("users_file", self.users_file + "_" + str(int(task_num) - 1), data)
         self.init_task_param("repos_file", self.repos_file + "_" + str(int(task_num) - 1), data)
+        self.init_task_param("embedding_files", self.embedding_files, data)
+        self.init_task_param("event_rate_model_file", self.event_rate_model_file, data)
 
     # partial_dependent is a dictionary of dependent vars
     def append_partial_results(self, partial_dependent):
