@@ -9,7 +9,8 @@ from distributed_event_log_utils import _load_id_dictionary
 from heapq import heappush, heappop
 from user_partitioner import build_graph_from_csv, partition_graph, print_user_profiles
 from distributed_event_log_utils import event_types
-
+import pandas as pd
+from sklearn.tree import DecisionTreeRegressor
 
 '''
 state file structure:
@@ -148,16 +149,19 @@ def populate_embedding_probabilities(agents, simulation_user_ids_dictionary_file
     for event_type in event_types:
         calculator = EmbeddingCalculator(embedding_files_data[event_type]["file_name"], embedding_files_data[event_type]["dictionary"], int_to_str_ids_map)
         for agent in agents:
-            agents.decision_data.embedding_probabilities[event_type] = calculator.calculate_probabilities(agents.decision_data.id, probability_vector_size)
+            agent.decision_data.embedding_probabilities[event_type] = calculator.calculate_probabilities(agents.decision_data.id, probability_vector_size)
 
 def populate_event_rate(agents, model_file):
-    event_rate = agents.decision_data.event_rate
-    focus = len(agents.decision_data.all_known_repos)
     # load model from model_file
-    model = None
-    if event_rate is not None and focus is not None and model is not None and focus != 0:
-        new_rate = model(event_rate, model)
-        agents.decision_data.event_rate = new_rate
+    loaded_model = pickle.load(open(model_file, 'rb'))
+
+    for agent in agents:
+        event_rate = agent.decision_data.event_rate
+        focus = len(agent.decision_data.all_known_repos)
+        if event_rate is not None and focus is not None and focus != 0:
+            X = np.array([[float(event_rate) / 30.0, focus]])  # the first feature is previous pace and the second feature is focus
+            new_rate = loaded_model.predict(X)
+            agent.decision_data.event_rate = new_rate
 
 
 if __name__ == "__main__":

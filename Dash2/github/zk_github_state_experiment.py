@@ -179,7 +179,11 @@ if __name__ == "__main__":
         intial_state_meta_data = build_state_from_event_log(ZkGithubStateTrial.input_event_log, number_of_hosts)
         print str(ZkGithubStateTrial.input_event_log) + "_state.json file created."
 
-    number_of_events = 30000000 # total number of actions in experiments
+    # length of the simulation
+    number_of_days = 30
+
+    events_per_month = 30000000 # assuming ~2M github users involved
+    number_of_events = events_per_month * number_of_days / 30 # total number of actions in experiments
     max_iterations_per_worker = number_of_events / number_of_hosts
     num_trials = 1
     independent = ['prob_create_new_agent', Range(0.0, 0.1, 0.1)]
