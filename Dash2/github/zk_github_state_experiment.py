@@ -10,7 +10,7 @@ from Dash2.core.experiment import Experiment
 from Dash2.core.dash_controller import DashController
 from Dash2.core.work_processor import WorkProcessor
 from Dash2.github.git_user_agent import GitUserAgent, GitUserDecisionData
-from Dash2.github.initial_state_loader import GithubStateLoader
+from Dash2.github.initial_state_loader import build_state_from_event_log, read_state_file, load_profiles, populate_embedding_probabilities
 from Dash2.github.zk_repo_hub import ZkRepoHub
 from Dash2.github.distributed_event_log_utils import merge_log_file, trnaslate_user_and_repo_ids_in_event_log
 
@@ -29,20 +29,21 @@ class ZkGithubStateWorkProcessor(WorkProcessor):
         self.hub = ZkRepoHub(self.zk, self.task_full_id, 0, log_file=self.log_file)
         self.agent = GitUserAgent(useInternalHub=True, hub=self.hub, skipS12=True,
                          trace_client=False, traceLoop=False, trace_github=False)
+        self.embedding_files = None
 
         self.log_file.close()
 
         if self.state_file is not None and self.state_file != "":
-            meta_data = GithubStateLoader.read_state_file(self.state_file)
+            meta_data = read_state_file(self.state_file)
         if self.users_file is not None and self.users_file != "":
             # it is important to load users first, since this will instantiate list of repos used by agents in this dash worker
-            GithubStateLoader.load_profiles(self.users_file, self.populate_agents_collection)
-        if self.repos_file is not None and self.repos_file != "":
-            pass
-            #GithubStateLoader.load_profiles_from_file(self.repos_file, self.populate_repos_collection)
+            load_profiles(self.users_file, self.populate_agents_collection)
+        if self.embedding_files is not None and self.embedding_files != "":
+            populate_embedding_probabilities(self.agents, self.users_file, self.embedding_files)
 
         self.log_file = open(self.task_full_id + '_event_log_file.txt', 'w')
         self.hub.log_file = self.log_file
+
         print "Agents instantiated: ", len(self.agents)
 
     # Function takes a user profile and creates an agent.
@@ -64,14 +65,6 @@ class ZkGithubStateWorkProcessor(WorkProcessor):
         self.agent.decision_data = a
         heappush(self.events_heap, (self.agent.next_event_time(self.start_time, self.max_time), a.id))
         self.agents[a.id] = a
-
-    # Function takes a repo profile and populates repo object in self.hub
-    def populate_repos_collection(self, profile):
-        int_repo_id = int(profile.pop("id", None))
-        if int_repo_id in self.hub.all_repos:
-            # self.hub.init_repo(repo_id=int_repo_id, profile=profile)
-            repo = self.hub.all_repos[int_repo_id]
-            # update repo properties here
 
     def run_one_iteration(self):
         event_time, agent_id = heappop(self.events_heap)
@@ -102,16 +95,17 @@ class ZkGithubStateTrial(Trial):
 
     # input event log and output event log files names
     #input_event_log = "./data_jan_2017/data_jan_2017.csv"
-    input_event_log = "./data_sample/data_sample.csv"
-    #input_event_log = "./data_4days/4days.csv"
+    #input_event_log = "./data_sample/data_sample.csv"
+    #input_event_log = "./data_two_weeks/two_weeks.csv"
+    input_event_log = "./data_4days/4days.csv"
 
     output_event_log = input_event_log + "_output"
 
     def initialize(self):
         if os.path.isfile(ZkGithubStateTrial.input_event_log + "_state.json"):
-            intial_state_meta_data = GithubStateLoader.read_state_file(ZkGithubStateTrial.input_event_log + "_state.json")
+            intial_state_meta_data = read_state_file(ZkGithubStateTrial.input_event_log + "_state.json")
         else:
-            intial_state_meta_data = GithubStateLoader.build_state_from_event_log(input_event_log=ZkGithubStateTrial.input_event_log,
+            intial_state_meta_data = build_state_from_event_log(input_event_log=ZkGithubStateTrial.input_event_log,
                                                                                   number_of_user_partitions=self.number_of_hosts)
         print intial_state_meta_data
         self.state_file = ZkGithubStateTrial.input_event_log + "_state.json"
@@ -173,10 +167,10 @@ if __name__ == "__main__":
     # if state file is not present, then create it.
     if not os.path.isfile(ZkGithubStateTrial.input_event_log + "_state.json"):
         print str(ZkGithubStateTrial.input_event_log) + "_state.json file is not present, creating one. May take a while, please wait ..."
-        intial_state_meta_data = GithubStateLoader.build_state_from_event_log(ZkGithubStateTrial.input_event_log, number_of_hosts)
+        intial_state_meta_data = build_state_from_event_log(ZkGithubStateTrial.input_event_log, number_of_hosts)
         print str(ZkGithubStateTrial.input_event_log) + "_state.json file created."
 
-    number_of_events = 10000 # total number of actions in experiments
+    number_of_events = 30000000 # total number of actions in experiments
     max_iterations_per_worker = number_of_events / number_of_hosts
     num_trials = 1
     independent = ['prob_create_new_agent', Range(0.0, 0.1, 0.1)]

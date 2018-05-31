@@ -40,7 +40,9 @@ class GitUserDecisionData(object):
         self.event_probabilities = []
         for event in event_frequencies:
             self.event_probabilities.append(float(event) / float(sum))
-
+        self.embedding_probabilities = {}
+        for ev in event_types:
+            self.embedding_probabilities[ev] = None
 
 class GitUserMixin(object):
     """
@@ -187,8 +189,13 @@ goalRequirements UpdateOwnRepo
                     self.decision_data.all_known_repos.append(repo_id)
                 for fr in self.decision_data.repo_id_to_freq.itervalues():
                     self.decision_data.probabilities.append(fr / sum)
-            selected_repo = numpy.random.choice(self.decision_data.all_known_repos, p=self.decision_data.probabilities)
             selected_event = numpy.random.choice(event_types, p=self.decision_data.event_probabilities)
+
+            if self.decision_data.embedding_probabilities[selected_event] is None:
+                selected_repo = numpy.random.choice(self.decision_data.all_known_repos, p=self.decision_data.probabilities)
+            else:
+                selected_repo = numpy.random.choice(self.decision_data.all_known_repos,
+                                                    p=self.decision_data.embedding_probabilities[selected_event])
             self.hub.log_event(self.decision_data.id, selected_repo, selected_event, None, self.hub.time)
             self.decision_data.total_activity += 1
         else:
