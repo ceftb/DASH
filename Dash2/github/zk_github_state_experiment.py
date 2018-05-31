@@ -95,9 +95,9 @@ class ZkGithubStateTrial(Trial):
 
     # input event log and output event log files names
     #input_event_log = "./data_jan_2017/data_jan_2017.csv"
-    #input_event_log = "./data_sample/data_sample.csv"
+    input_event_log = "./data_sample/data_sample.csv"
     #input_event_log = "./data_two_weeks/two_weeks.csv"
-    input_event_log = "./data_4days/4days.csv"
+    #input_event_log = "./data_4days/4days.csv"
 
     output_event_log = input_event_log + "_output"
 
