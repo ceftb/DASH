@@ -21,6 +21,7 @@ class GitRepoHub(WorldHub):
         self.repos_hubs = kwargs.get('repos_hubs', {}).update({self.host: self.port})
         self.lowest_unassigned_repo_id = 0
         self.local_event_log = []  # Each log item stores a dictionary with keys 'userID', 'repoID', 'eventType', 'subeventtype', 'time'
+        self.time = 0  # Added for compatibility with zk_repo_hub
 
         self.trace_handler = False
 

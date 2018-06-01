@@ -10,6 +10,9 @@ import sys
 class GitUserDecisionData(object):
 
     def __init__(self, **kwargs):
+        # System 1 dynamic information needs to be separate for each agent. I will add general support for this later.
+        self.nodes = set()
+        self.action_nodes = set()
         # System 2 dynamic information needs to be separate for each agent. I will add general support for this later.
         self.knownDict = dict()
         self.knowFalseDict = dict()

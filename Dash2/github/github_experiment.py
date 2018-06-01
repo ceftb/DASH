@@ -45,6 +45,7 @@ class GitHubTrial(Trial):
         # On each iteration that an agent takes a step, the agent-specific data is copied into the agent
         a = GitUserAgent(useInternalHub=True, hub=self.hub, port=6000, trace_client=False)
         self.agents = [a]
+        #a.skipS12 = True  # Use a hard-wired decision process. Standard is not slower but gets larger with system 1 perfect memory.
         a.trace_client = False  # cut chatter when connecting and disconnecting
         a.traceLoop = False  # cut chatter when agent runs steps
         a.trace_github = False  # cut chatter when acting in github world
@@ -67,6 +68,8 @@ class GitHubTrial(Trial):
             d = self.agent_objects[agent_object_index]
         # Not quite right since doesn't use an event from the heap for a new agent
         a.decision_data = d
+        a.nodes = d.nodes  # keep track of dynamic system 1 data for agents
+        a.action_nodes = d.action_nodes
         a.knownDict = d.knownDict  # keep track of dynamic system 2 data for agents
         a.knownFalseDict = d.knowFalseDict
         a.agentLoop(max_iterations=1, disconnect_at_end=False)  # don't disconnect since will run again
@@ -150,7 +153,7 @@ hub = GitRepoHub(1)
     #agents.append(GitUserDecisionData())  # Takes the same space as SmallAgent
     #sys2_agent = agents[0]  # The first call above, sys2_agent will be None and system2 data will be created
 #    agents.append(DASHAgent())
-exp, trial_outputs = run_exp(max_iterations=1000,
+exp, trial_outputs = run_exp(max_iterations=100000,
                              dependent=lambda t: {'trial': t, 'agents': t.num_agents(), 'repos': t.num_repos(),
                                                   'actions': sum([a.total_activity for a in t.agent_objects])})
 print 'running took', time.time() - start, 'seconds, with'
