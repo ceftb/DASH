@@ -6,14 +6,18 @@ import numpy
 from distributed_event_log_utils import event_types
 import sys
 
+
 class GitUserDecisionData(object):
 
     def __init__(self, **kwargs):
+        # System 2 dynamic information needs to be separate for each agent. I will add general support for this later.
+        self.knownDict = dict()
+        self.knowFalseDict = dict()
+
         # This is taken from the block a area in GitUserMixin referenced below
         self.login_h = kwargs.get("login_h", None)
         self.ght_id_h = kwargs.get("ght_id_h", None)
         self.type = kwargs.get("type", "user")
-
 
         # This is block b from GitUserMixin referenced below
         # Other Non-Schema information
@@ -29,20 +33,15 @@ class GitUserDecisionData(object):
                 self.name_to_repo_id[r_id] = r_id
         else:
             self.repo_id_to_freq = {}  # {ght_id_h : frequency of use/communication} Contains all repos agent interacted with
-        self.outgoing_requests = {} # keyed tuple of (head_name, base_name, request_id) valued by state
+        self.outgoing_requests = {}  # keyed tuple of (head_name, base_name, request_id) valued by state
         self.probabilities = None
-        self.event_rate = kwargs.get("event_rate", 5)  # number of events per months
+        self.event_rate = kwargs.get("event_rate", 5)  # number of events per month
         self.id = kwargs.get("id", None)
         event_frequencies = kwargs.get("event_frequencies", [1] * len(event_types))
-        sum = 0
-        for e in event_frequencies:
-            sum += e
-        self.event_probabilities = []
-        for event in event_frequencies:
-            self.event_probabilities.append(float(event) / float(sum))
-        self.embedding_probabilities = {}
-        for ev in event_types:
-            self.embedding_probabilities[ev] = None
+        f_sum = float(sum(event_frequencies))
+        self.event_probabilities = [event/f_sum for event in event_frequencies]
+        self.embedding_probabilities = {ev: None for ev in event_types}
+
 
 class GitUserMixin(object):
     """
@@ -200,7 +199,6 @@ goalRequirements UpdateOwnRepo
             self.decision_data.total_activity += 1
         else:
             return DASHAgent.agentLoop(self, max_iterations, disconnect_at_end)
-
 
     def next_event_time(self, curr_time, max_time):
         delta = 30 * 24 * 3600 / self.decision_data.event_rate
@@ -552,17 +550,17 @@ goalRequirements UpdateOwnRepo
         """
         submit pull request
         """
-        if head_name not in self.name_to_repo_id:
+        if head_name not in self.decision_data.name_to_repo_id:
             if self.trace_github:
                 print 'Agent does not know the id of the repo with name', head_name, 'cannot pull'
             return []
-        elif base_name not in self.name_to_repo_id:
+        elif base_name not in self.decision_data.name_to_repo_id:
             if self.trace_github:
                 print 'Agent does not know the id of the repo with name', base_name, 'cannot pull'
             return []
         status, request_id = self.sendAction("submit_pull_request_event", 
-            (self.name_to_repo_id[head_name], self.name_to_repo_id[base_name]))
-        self.outgoing_requests[(head_name, base_name, request_id)] = 'open'
+            (self.decision_data.name_to_repo_id[head_name], self.decision_data.name_to_repo_id[base_name]))
+        self.decision_data.outgoing_requests[(head_name, base_name, request_id)] = 'open'
         self.decision_data.total_activity += 1
         if self.trace_github:
             print status, 'submit_pull_request_event', head_name, base_name, request_id
@@ -576,14 +574,14 @@ goalRequirements UpdateOwnRepo
         base_name = pull_request['base']
         request_id = pull_request['id']
         
-        if base_name not in self.name_to_repo_id:
+        if base_name not in self.decision_data.name_to_repo_id:
             if self.trace_github:
                 print 'Agent does not know the id of the repo with name', base_name, 'cannot pull'
             return []
 
         status = self.sendAction("close_pull_request_event", 
-                                (self.name_to_repo_id[base_name], request_id))
-        self.outgoing_requests[(head_name, base_name, request_id)] = 'closed'
+                                (self.decision_data.name_to_repo_id[base_name], request_id))
+        self.decision_data.outgoing_requests[(head_name, base_name, request_id)] = 'closed'
         self.decision_data.total_activity += 1
         if self.trace_github:
             print status, 'close_pull_request_event', head_name, base_name, request_id
@@ -597,14 +595,14 @@ goalRequirements UpdateOwnRepo
         base_name = pull_request['base']
         request_id = pull_request['id']
         
-        if base_name not in self.name_to_repo_id:
+        if base_name not in self.decision_data.name_to_repo_id:
             if self.trace_github:
                 print 'Agent does not know the id of the repo with name', base_name, 'cannot pull'
             return []
 
         status = self.sendAction("reopened_pull_request_event",
-                                (self.name_to_repo_id[base_name], request_id))
-        self.outgoing_requests[(head_name, base_name, request_id)] = 'open'
+                                (self.decision_data.name_to_repo_id[base_name], request_id))
+        self.decision_data.outgoing_requests[(head_name, base_name, request_id)] = 'open'
         self.decision_data.total_activity += 1
         if self.trace_github:
             print status, 'reopened_pull_request_event', head_name, base_name, request_id
@@ -633,13 +631,13 @@ goalRequirements UpdateOwnRepo
         base_name = pull_request['base']
         request_id = pull_request['id']
 
-        if base_name not in self.name_to_repo_id:
+        if base_name not in self.decision_data.name_to_repo_id:
             if self.trace_github:
                 print 'Agent does not know the id of the repo with name', base_name, 'cannot pull'
             return []
 
         status = self.sendAction("label_pull_request_event", 
-                                (self.name_to_repo_id[base_name], request_id))
+                                 (self.decision_data.name_to_repo_id[base_name], request_id))
         self.decision_data.total_activity += 1
         if self.trace_github:
             print status, 'label_pull_request_event', head_name, base_name, request_id
@@ -651,13 +649,13 @@ goalRequirements UpdateOwnRepo
         base_name = pull_request['base']
         request_id = pull_request['id']
 
-        if base_name not in self.name_to_repo_id:
+        if base_name not in self.decision_data.name_to_repo_id:
             if self.trace_github:
                 print 'Agent does not know the id of the repo with name', base_name, 'cannot pull'
             return []
 
         status = self.sendAction("unlabel_pull_request_event", 
-                                (self.name_to_repo_id[base_name], request_id))
+                                 (self.decision_data.name_to_repo_id[base_name], request_id))
         self.decision_data.total_activity += 1
         if self.trace_github:
             print status, 'unlabel_pull_request_event', head_name, base_name, request_id
@@ -669,13 +667,13 @@ goalRequirements UpdateOwnRepo
         base_name = pull_request['base']
         request_id = pull_request['id']
 
-        if base_name not in self.name_to_repo_id:
+        if base_name not in self.decision_data.name_to_repo_id:
             if self.trace_github:
                 print 'Agent does not know the id of the repo with name', base_name, 'cannot pull'
             return []
 
         status = self.sendAction("review_pull_request_event", 
-                                (self.name_to_repo_id[base_name], request_id))
+                                 (self.decision_data.name_to_repo_id[base_name], request_id))
         self.decision_data.total_activity += 1
         if self.trace_github:
             print status, 'review_pull_request_event', head_name, base_name, request_id
@@ -687,13 +685,13 @@ goalRequirements UpdateOwnRepo
         base_name = pull_request['base']
         request_id = pull_request['id']
 
-        if base_name not in self.name_to_repo_id:
+        if base_name not in self.decision_data.name_to_repo_id:
             if self.trace_github:
                 print 'Agent does not know the id of the repo with name', base_name, 'cannot pull'
             return []
 
         status = self.sendAction("remove_review_pull_request_event", 
-                                (self.name_to_repo_id[base_name], request_id))
+                                 (self.decision_data.name_to_repo_id[base_name], request_id))
         self.decision_data.total_activity += 1
         if self.trace_github:
             print status, 'remove_review_pull_request_event', head_name, base_name, request_id
@@ -754,10 +752,10 @@ goalRequirements UpdateOwnRepo
         """
 
         # Check if already watching
-        if self.name_to_repo_id[target_repo_name] not in self.watching_list:
-            user_info = {'login_h': self.login_h, 'type':self.type, 'ght_id_h': self.ght_id_h}
-            status, watch_info = self.sendAction("watch_event", (self.name_to_repo_id[target_repo_name], user_info))
-            self.watching_list[self.name_to_repo_id[target_repo_name]] = watch_info
+        if self.decision_data.name_to_repo_id[target_repo_name] not in self.decision_data.watching_list:
+            user_info = {'login_h': self.decision_data.login_h, 'type':self.decision_data.type, 'ght_id_h': self.decision_data.ght_id_h}
+            status, watch_info = self.sendAction("watch_event", (self.decision_data.name_to_repo_id[target_repo_name], user_info))
+            self.decision_data.watching_list[self.decision_data.name_to_repo_id[target_repo_name]] = watch_info
             self.decision_data.total_activity += 1
 
         return [{}]
@@ -770,10 +768,10 @@ goalRequirements UpdateOwnRepo
         _, target_user_name = args
 
         # Check if already following
-        if self.name_to_user_id[target_user_name] not in self.following_list:
-            status, follow_info = self.sendAction("follow_event", [self.name_to_user_id[target_user_name]])
-            self.following += 1
-            self.following_list[self.name_to_user_id[target_user_name]] = follow_info
+        if self.decision_data.name_to_user_id[target_user_name] not in self.decision_data.following_list:
+            status, follow_info = self.sendAction("follow_event", [self.decision_data.name_to_user_id[target_user_name]])
+            self.decision_data.following += 1
+            self.decision_data.following_list[self.decision_data.name_to_user_id[target_user_name]] = follow_info
             self.decision_data.total_activity += 1
 
         return [{}]
@@ -784,8 +782,8 @@ goalRequirements UpdateOwnRepo
         """
         
         _, target_user_name, repo_name, action, permissions = args
-        collaborator_info = {'user_ght_id_h': self.name_to_user_id[target_user_name],
-                             'repo_ght_id_h': self.name_to_repo_id[repo_name],
+        collaborator_info = {'user_ght_id_h': self.decision_data.name_to_user_id[target_user_name],
+                             'repo_ght_id_h': self.decision_data.name_to_repo_id[repo_name],
                              'action': action,
                              'permissions': permissions}
         status = self.sendAction("member_event", [collaborator_info])
@@ -798,11 +796,11 @@ goalRequirements UpdateOwnRepo
         agent requests server change repo public status
         """
         
-        if repo_name not in self.name_to_repo_id:
+        if repo_name not in self.decision_data.name_to_repo_id:
             if self.trace_github:
                 print 'Agent does not know the id of the repo, cannot commit'
             return []
-        status = self.sendAction("public_event", [self.name_to_repo_id[repo_name]])
+        status = self.sendAction("public_event", [self.decision_data.name_to_repo_id[repo_name]])
         if self.trace_github:
             print "Toggling", repo_name, "public", status
         self.decision_data.total_activity += 1
@@ -814,15 +812,15 @@ goalRequirements UpdateOwnRepo
         This event describes local code update (pull from the repo)
         """
         _, repo_name = args
-        if repo_name not in self.name_to_repo_id:
+        if repo_name not in self.decision_data.name_to_repo_id:
             if self.trace_github:
                 print 'Agent does not know the id of the repo with name', repo_name, 'cannot pull'
             return []
-        status = self.sendAction("pull_repo_event", (self.name_to_repo_id[repo_name]))
+        status = self.sendAction("pull_repo_event", (self.decision_data.name_to_repo_id[repo_name]))
         self.decision_data.total_activity += 1
 
         if self.trace_github:
-            print 'pull event:', status, repo_name, self.name_to_repo_id[repo_name]
+            print 'pull event:', status, repo_name, self.decision_data.name_to_repo_id[repo_name]
         return [{}]
 
 
