@@ -61,6 +61,9 @@ function install_single_kazoo_instance {
 	sudo python setup.py install  2>> $TMP_DIR/metis_report_$CURR_NODE_ID.txt 1>> $TMP_DIR/metis_report_$CURR_NODE_ID.txt
 	rm -Rf $TMP_DIR/metis_clone_$CURR_NODE_ID
 
+	# install pandas
+	sudo apt-get install python-pandas --yes
+
 }
 
 if [ -z "$1" ]; then
