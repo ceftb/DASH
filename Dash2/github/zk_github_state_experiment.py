@@ -24,7 +24,7 @@ class ZkGithubStateWorkProcessor(WorkProcessor):
     module_name = "Dash2.github.zk_github_state_experiment"
 
     def initialize(self):
-        self.agents = {} # in this experiment agents are stored as a dictionary (fyi: by default it was a list)
+        self.agents_decision_data = {} # in this experiment agents are stored as a dictionary (fyi: by default it was a list)
         self.events_heap = []
         self.event_counter = 0
         self.hub = ZkRepoHub(self.zk, self.task_full_id, 0, log_file=self.log_file)
@@ -40,41 +40,41 @@ class ZkGithubStateWorkProcessor(WorkProcessor):
             load_profiles(self.users_file, self.populate_agents_collection)
         # embeddings
         if self.embedding_files is not None and self.embedding_files != "":
-            populate_embedding_probabilities(self.agents, self.users_file, self.embedding_files)
+            populate_embedding_probabilities(self.agents_decision_data, self.users_file, self.embedding_files)
         # regression model for event_rate
         if self.event_rate_model_file is not None and self.event_rate_model_file != "":
-            populate_event_rate(self.agents, self.event_rate_model_file)
+            populate_event_rate(self.agents_decision_data, self.event_rate_model_file)
 
         self.log_file = open(self.task_full_id + '_event_log_file.txt', 'w')
         self.hub.log_file = self.log_file
 
-        print "Agents instantiated: ", len(self.agents)
+        print "Agents instantiated: ", len(self.agents_decision_data)
 
     # Function takes a user profile and creates an agent.
     def populate_agents_collection(self, profile):
         agent_id = profile.pop("id", None)
         event_rate = profile.pop("r", None)
         event_frequencies = profile.pop("ef", None)
-        a = GitUserDecisionData(id=agent_id, event_rate=event_rate, event_frequencies=event_frequencies)
+        decision_data = GitUserDecisionData(id=agent_id, event_rate=event_rate, event_frequencies=event_frequencies)
         # frequency of use of associated repos:
         total_even_counter = 0
         for repo_id, freq in profile.iteritems():
             int_repo_id = int(repo_id)
-            a.repo_id_to_freq[int_repo_id] = int(freq["f"])
-            a.name_to_repo_id[int_repo_id] = int_repo_id
-            total_even_counter += a.repo_id_to_freq[int_repo_id]
+            decision_data.repo_id_to_freq[int_repo_id] = int(freq["f"])
+            decision_data.name_to_repo_id[int_repo_id] = int_repo_id
+            total_even_counter += decision_data.repo_id_to_freq[int_repo_id]
             is_node_shared = True if int(freq["c"]) > 1 else False
-            self.hub.init_repo(repo_id=int_repo_id, user_id=a.id, curr_time=0, is_node_shared=is_node_shared)
-        a.total_activity = total_even_counter
-        self.agent.decision_data = a
-        heappush(self.events_heap, (self.agent.next_event_time(self.start_time, self.max_time), a.id))
-        self.agents[a.id] = a
+            self.hub.init_repo(repo_id=int_repo_id, user_id=decision_data.id, curr_time=0, is_node_shared=is_node_shared)
+        decision_data.total_activity = total_even_counter
+        self.agent.decision_data = decision_data
+        heappush(self.events_heap, (self.agent.next_event_time(self.start_time, self.max_time), decision_data.id))
+        self.agents_decision_data[decision_data.id] = decision_data
 
     def run_one_iteration(self):
         event_time, agent_id = heappop(self.events_heap)
-        a = self.agents[int(agent_id)]
+        decision_data = self.agents_decision_data[int(agent_id)]
         self.hub.set_curr_time(event_time)
-        self.agent.decision_data = a
+        self.agent.decision_data = decision_data
         self.agent.agentLoop(max_iterations=1, disconnect_at_end=False)
         heappush(self.events_heap, (self.agent.next_event_time(event_time, self.max_time), agent_id))
         self.event_counter += 1
@@ -98,7 +98,7 @@ class ZkGithubStateTrial(Trial):
     measures = [Measure('num_agents'), Measure('num_repos'), Measure('total_agent_activity'), Measure('number_of_cross_process_communications')]
 
     # input event log and output event log files names
-    #input_event_log = "./data_jan_2017/data_jan_2017.csv"
+    #input_event_log = "./data_jan_2017/one_month.csv"
     input_event_log = "./data_sample/data_sample.csv"
     #input_event_log = "./data_two_weeks/two_weeks.csv"
     #input_event_log = "./data_4days/4days.csv"
