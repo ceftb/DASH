@@ -206,7 +206,7 @@ goalRequirements UpdateOwnRepo
     def next_event_time(self, curr_time):
         delta = float(30 * 24 * 3600) / float(self.decision_data.event_rate)
         next_time = curr_time + delta
-        return next_time - random.uniform(60, min(delta, 5 * 24 * 3600))
+        return next_time
 
     ############################################################################
     # Core git user methods
