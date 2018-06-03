@@ -1,5 +1,7 @@
 import sys; sys.path.extend(['../../'])
 import os.path
+import time
+from datetime import datetime
 from heapq import heappush, heappop
 from Dash2.core.parameter import Range
 from Dash2.core.measure import Measure
@@ -28,19 +30,20 @@ class ZkGithubStateWorkProcessor(WorkProcessor):
         self.events_heap = []
         self.event_counter = 0
         self.hub = ZkRepoHub(self.zk, self.task_full_id, 0, log_file=self.log_file)
-        self.agent = GitUserAgent(useInternalHub=True, hub=self.hub, skipS12=True,
-                         trace_client=False, traceLoop=False, trace_github=False)
-
+        self.agent = GitUserAgent(useInternalHub=True, hub=self.hub, skipS12=True, trace_client=False, traceLoop=False, trace_github=False)
         self.log_file.close()
 
-        if self.state_file is not None and self.state_file != "":
-            meta_data = read_state_file(self.state_file)
         if self.users_file is not None and self.users_file != "":
-            # it is important to load users first, since this will instantiate list of repos used by agents in this dash worker
             load_profiles(self.users_file, self.populate_agents_collection)
-        # embeddings
+
+        # embeddings and other initial state parameters from initial state file
+        initial_state_meta_data = read_state_file(self.initial_state_file)
+        self.embedding_files = initial_state_meta_data["embedding_files"]
+        self.event_rate_model_file = initial_state_meta_data["event_rate_model_file"]
+        self.users_ids = initial_state_meta_data["users_ids"]
+
         if self.embedding_files is not None and self.embedding_files != "":
-            populate_embedding_probabilities(self.agents_decision_data, self.users_file, self.embedding_files)
+            populate_embedding_probabilities(self.agents_decision_data, self.users_ids, self.embedding_files)
         # regression model for event_rate
         if self.event_rate_model_file is not None and self.event_rate_model_file != "":
             populate_event_rate(self.agents_decision_data, self.event_rate_model_file)
@@ -67,7 +70,7 @@ class ZkGithubStateWorkProcessor(WorkProcessor):
             self.hub.init_repo(repo_id=int_repo_id, user_id=decision_data.id, curr_time=0, is_node_shared=is_node_shared)
         decision_data.total_activity = total_even_counter
         self.agent.decision_data = decision_data
-        heappush(self.events_heap, (self.agent.next_event_time(self.start_time, self.max_time), decision_data.id))
+        heappush(self.events_heap, (self.agent.next_event_time(self.start_time), decision_data.id))
         self.agents_decision_data[decision_data.id] = decision_data
 
     def run_one_iteration(self):
@@ -76,64 +79,55 @@ class ZkGithubStateWorkProcessor(WorkProcessor):
         self.hub.set_curr_time(event_time)
         self.agent.decision_data = decision_data
         self.agent.agentLoop(max_iterations=1, disconnect_at_end=False)
-        heappush(self.events_heap, (self.agent.next_event_time(event_time, self.max_time), agent_id))
+        next_event_time = self.agent.next_event_time(event_time)
+        if next_event_time < self.max_time:
+            heappush(self.events_heap, (next_event_time, agent_id))
         self.event_counter += 1
+
+    def should_stop(self):
+        if self.max_iterations > 0 and self.iteration >= self.max_iterations:
+            print 'reached end of iterations for trial'
+            return True
+        if len(self.events_heap) == 0:
+            print 'reached end of event queue, no more events'
+            return True
+        return False
 
     def get_dependent_vars(self):
         return {"num_agents": len(self.agents),
-                "num_repos": sum([len(a.name_to_repo_id) for a in self.agents.viewvalues()]),
-                "total_agent_activity": sum([a.total_activity for a in self.agents.viewvalues()]),
+                "num_repos": sum([len(a.name_to_repo_id) for a in self.agents_decision_data.viewvalues()]),
+                "total_agent_activity": sum([a.total_activity for a in self.agents_decision_data.viewvalues()]),
                 "number_of_cross_process_communications": self.hub.sync_event_counter
                 }
 
 
 # Dash Trial decomposes trial into tasks and allocates them to DashWorkers
 class ZkGithubStateTrial(Trial):
-    parameters = [Parameter('prob_create_new_agent', distribution=Uniform(0,1), default=0.5),
-                  Parameter('prob_agent_creates_new_repo', distribution=Uniform(0,1), default=0.5),
-                  Parameter('max_time', distribution=Uniform(1528648881, 1528648882), default=1528648881),
-                  Parameter('start_time', distribution=Uniform(1523464880, 1523464881), default=1523464880)]
-
+    parameters = []
     # all measures are considered depended vars, values are aggregated in self.results
-    measures = [Measure('num_agents'), Measure('num_repos'), Measure('total_agent_activity'), Measure('number_of_cross_process_communications')]
-
-    # input event log and output event log files names
-    #input_event_log = "./data_jan_2017/one_month.csv"
-    input_event_log = "./data_sample/data_sample.csv"
-    #input_event_log = "./data_two_weeks/two_weeks.csv"
-    #input_event_log = "./data_4days/4days.csv"
-
-    output_event_log = input_event_log + "_output"
+    measures = []
 
     def initialize(self):
-        if os.path.isfile(ZkGithubStateTrial.input_event_log + "_state.json"):
-            intial_state_meta_data = read_state_file(ZkGithubStateTrial.input_event_log + "_state.json")
-        else:
-            intial_state_meta_data = build_state_from_event_log(input_event_log=ZkGithubStateTrial.input_event_log,
-                                                                                  number_of_user_partitions=self.number_of_hosts)
-        print intial_state_meta_data
-        self.state_file = ZkGithubStateTrial.input_event_log + "_state.json"
-        self.users_file = intial_state_meta_data["users_file"]
-        self.repos_file = intial_state_meta_data["repos_file"]
-        self.embedding_files = intial_state_meta_data["embedding_files"]
-        self.event_rate_model_file = intial_state_meta_data["event_rate_model_file"]
-
-        self.users_ids = intial_state_meta_data["users_ids"]
-        self.repos_ids = intial_state_meta_data["repos_ids"]
+        # self.initial_state_file is defined via experiment_data
+        if not os.path.isfile(self.initial_state_file):
+            raise Exception("Initial state file was not found")
+        initial_state_meta_data = read_state_file(self.initial_state_file)
+        print initial_state_meta_data
+        self.users_file = initial_state_meta_data["users_file"]
+        self.users_ids = initial_state_meta_data["users_ids"]
+        self.repos_ids = initial_state_meta_data["repos_ids"]
         # set up max ids
-        self.set_max_repo_id(int(intial_state_meta_data["number_of_repos"]))
-        self.set_max_user_id(int(intial_state_meta_data["number_of_users"]))
+        self.set_max_repo_id(int(initial_state_meta_data["number_of_repos"]))
+        self.set_max_user_id(int(initial_state_meta_data["number_of_users"]))
         self.is_loaded = True
 
 
     # this method defines parameters of individual tasks (as a json data object - 'data') that will be sent to dash workers
     def init_task_params(self, task_full_id, data):
         _, _, task_num = task_full_id.split("-")
-        self.init_task_param("state_file", self.state_file, data)
+        self.init_task_param("initial_state_file", self.initial_state_file, data)
         self.init_task_param("users_file", self.users_file + "_" + str(int(task_num) - 1), data)
-        self.init_task_param("repos_file", self.repos_file + "_" + str(int(task_num) - 1), data)
-        self.init_task_param("embedding_files", self.embedding_files, data)
-        self.init_task_param("event_rate_model_file", self.event_rate_model_file, data)
+
 
     # partial_dependent is a dictionary of dependent vars
     def append_partial_results(self, partial_dependent):
@@ -151,18 +145,18 @@ class ZkGithubStateTrial(Trial):
         merge_log_file(file_names , "tmp_output.csv", sort_chronologically=True)
         for log_file_name in file_names:
             os.remove(log_file_name)
-        output_file_name = ZkGithubStateTrial.output_event_log + "_trial_" + str(self.trial_id) + ".csv"
+        output_file_name = self.initial_state_file + "_trial_" + str(self.trial_id) + ".csv"
         trnaslate_user_and_repo_ids_in_event_log(even_log_file="tmp_output.csv",
-                                                                   output_file_name=output_file_name,
-                                                                   users_ids_file=self.users_ids,
-                                                                   repos_ids_file=self.repos_ids)
+                                                 output_file_name=output_file_name,
+                                                 users_ids_file=self.users_ids,
+                                                 repos_ids_file=self.repos_ids)
         os.remove("tmp_output.csv")
 
 
 if __name__ == "__main__":
     zk_hosts = '127.0.0.1:2181'
     number_of_hosts = 1
-
+    input_event_log = None
     if len(sys.argv) == 1:
         pass
     elif len(sys.argv) == 2:
@@ -170,32 +164,62 @@ if __name__ == "__main__":
     elif len(sys.argv) == 3:
         zk_hosts = sys.argv[1]
         number_of_hosts = int(sys.argv[2])
+    elif len(sys.argv) == 4:
+        zk_hosts = sys.argv[1]
+        number_of_hosts = int(sys.argv[2])
+        input_event_log = sys.argv[3]
     else:
         print 'incorrect arguments: ', sys.argv
 
-    # if state file is not present, then create it.
-    if not os.path.isfile(ZkGithubStateTrial.input_event_log + "_state.json"):
-        print str(ZkGithubStateTrial.input_event_log) + "_state.json file is not present, creating one. May take a while, please wait ..."
-        intial_state_meta_data = build_state_from_event_log(ZkGithubStateTrial.input_event_log, number_of_hosts)
-        print str(ZkGithubStateTrial.input_event_log) + "_state.json file created."
+    if input_event_log is None:
+        #input event log and output event log files names
+        #input_event_log = "./data_jan_2017/one_month.csv"
+        input_event_log = "./data_sample/data_sample.csv"
+        #input_event_log = "./data_2016/jan_2016_events.csv"
+        #input_event_log = "./data_two_weeks/two_weeks.csv"
+        #input_event_log = "./data_4days/4days.csv"
 
-    # length of the simulation
+    # if state file is not present, then create it. State file is created from input event log.
+    # Users in the initial state are partitioned (number of hosts is the number of partitions)
+    initial_state_file_name = input_event_log + "_state.json"
+    if not os.path.isfile(initial_state_file_name):
+        print initial_state_file_name + " file is not present, creating one. May take a while, please wait ..."
+        build_state_from_event_log(input_event_log, number_of_hosts, initial_state_file_name)
+        print str(initial_state_file_name) + " file created."
+
+    # length of the simulation is determined by two parameters: max_iterations_per_worker and end max_time
+    # max_iterations_per_worker - defines maximum number of events each dash worker can do
+    # max_time - defines end time of the simulaition (event with time later than max_time will not be scheduled in the event queue)
     number_of_days = 30
+    max_iterations_per_worker = number_of_days * 1000000 / number_of_hosts # assuming ~1M events per day
 
-    events_per_month = 30000000 # assuming ~2M github users involved
-    number_of_events = events_per_month * number_of_days / 30 # total number of actions in experiments
-    max_iterations_per_worker = number_of_events / number_of_hosts
+    # experiment setup
     num_trials = 1
     independent = ['prob_create_new_agent', Range(0.0, 0.1, 0.1)]
-    exp_data = {'max_iterations': max_iterations_per_worker}
+    experiment_data = {
+        'max_iterations': max_iterations_per_worker,
+        'initial_state_file': initial_state_file_name}
+
+    # Trial parameters and measures
+    ZkGithubStateTrial.parameters = [
+        Parameter('prob_create_new_agent', default=0.5),
+        Parameter('prob_agent_creates_new_repo', default=0.5),
+        Parameter('start_time', default=time.mktime(datetime.strptime('2017-01-01 00:00:00', "%Y-%m-%d %H:%M:%S").timetuple())),
+        Parameter('max_time', default=time.mktime(datetime.strptime('2017-01-31 23:59:59', "%Y-%m-%d %H:%M:%S").timetuple()))
+    ]
+    ZkGithubStateTrial.measures = [
+        Measure('num_agents'),
+        Measure('num_repos'),
+        Measure('total_agent_activity'),
+        Measure('number_of_cross_process_communications')]
 
     # ExperimentController is a until class that provides command line interface to run the experiment on clusters
     controller = DashController(zk_hosts=zk_hosts, number_of_hosts=number_of_hosts)
     exp = Experiment(trial_class=ZkGithubStateTrial,
-                         work_processor_class=ZkGithubStateWorkProcessor,
-                         number_of_hosts=number_of_hosts,
-                         independent=independent,
-                         exp_data=exp_data,
-                         num_trials=num_trials)
+                     work_processor_class=ZkGithubStateWorkProcessor,
+                     number_of_hosts=number_of_hosts,
+                     independent=independent,
+                     exp_data=experiment_data,
+                     num_trials=num_trials)
     results = controller.run(experiment=exp, run_data={}, start_right_away=False)
 

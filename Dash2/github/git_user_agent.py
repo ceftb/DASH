@@ -203,10 +203,10 @@ goalRequirements UpdateOwnRepo
         else:
             return DASHAgent.agentLoop(self, max_iterations, disconnect_at_end)
 
-    def next_event_time(self, curr_time, max_time):
-        delta = 30 * 24 * 3600 / self.decision_data.event_rate
-        next_time = min(max_time, curr_time + delta)
-        return next_time #random.uniform(curr_time + 0.1, max_time)
+    def next_event_time(self, curr_time):
+        delta = float(30 * 24 * 3600) / float(self.decision_data.event_rate)
+        next_time = curr_time + delta
+        return next_time - random.uniform(60, min(delta, 5 * 24 * 3600))
 
     ############################################################################
     # Core git user methods

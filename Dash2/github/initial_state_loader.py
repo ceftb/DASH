@@ -9,8 +9,6 @@ from distributed_event_log_utils import _load_id_dictionary
 from heapq import heappush, heappop
 from user_partitioner import build_graph_from_csv, partition_graph, print_user_profiles
 from distributed_event_log_utils import event_types
-import pandas as pd
-from sklearn.tree import DecisionTreeRegressor
 
 '''
 state file structure:
@@ -35,7 +33,7 @@ profiles file structure (used for both users and repos - relationship is symmetr
 # "ef" - event frequencies
 '''
 
-def build_state_from_event_log(input_event_log, number_of_user_partitions=1):
+def build_state_from_event_log(input_event_log, number_of_user_partitions=1, state_file_name=None):
     G, number_of_users, number_of_repos = build_graph_from_csv(input_event_log)
     print "User-repo graph constructed. Users ", number_of_users, ", repos ", number_of_repos, ", nodes ", len(G.nodes()), ", edges", len(G.edges())
 
@@ -63,7 +61,8 @@ def build_state_from_event_log(input_event_log, number_of_user_partitions=1):
             "event_rate_model_file": ""
         }
     }
-    state_file = open(input_event_log + "_state.json", 'w')
+    state_file_name = input_event_log + "_state.json" if state_file_name is None else state_file_name
+    state_file = open(state_file_name, 'w')
     state_file.write(json.dumps(state_file_content))
     state_file.close()
     return state_file_content["meta"]
@@ -165,7 +164,6 @@ def populate_event_rate(agents, model_file):
 
 
 if __name__ == "__main__":
-    filename = sys.argv[1]
     while True:
         cmd = raw_input(
             "Press q to exit loader\n\t"
@@ -176,13 +174,16 @@ if __name__ == "__main__":
             print("Exiting ...")
             break
         elif cmd == "l":
+            filename = sys.argv[1]
             print "Generating state file for 1 partition ..."
             build_state_from_event_log(filename, 1)
         elif cmd == "s":
+            filename = sys.argv[1]
             print "Reading state file ..."
             n_users, n_repos = read_state_file(filename)
             print "users: ", n_users, ", repos: ", n_repos
         elif cmd == "e":
+            filename = sys.argv[1]
             print "Reading embedding file ..."
             embedding_ids_file = sys.argv[2]
             sim_ids_file = sys.argv[3]
