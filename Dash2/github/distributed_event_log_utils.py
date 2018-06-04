@@ -132,3 +132,26 @@ def trnaslate_user_and_repo_ids_in_event_log(even_log_file, output_file_name, us
 
     input_file.close()
     output_file.close()
+
+def remove_owner_id_from_repos_in_event_log(even_log_file, output_file_name):
+    input_file = open(even_log_file, 'r')
+    output_file = open(output_file_name, 'w')
+
+    datareader = csv.reader(input_file)
+    for row in datareader:
+        if row[0] != "timestamp":
+            output_file.write(row[0])
+            output_file.write(",")
+            output_file.write(row[1])
+            output_file.write(",")
+            output_file.write(row[2])
+            output_file.write(",")
+            output_file.write(str(row[3]).split("/")[1])
+            output_file.write("\n")
+
+    input_file.close()
+    output_file.close()
+
+
+if __name__ == "__main__":
+    remove_owner_id_from_repos_in_event_log(sys.argv[1], sys.argv[2])
