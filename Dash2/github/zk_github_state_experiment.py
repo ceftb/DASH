@@ -1,6 +1,7 @@
 import sys; sys.path.extend(['../../'])
 import os.path
 import time
+import random
 from datetime import datetime
 from heapq import heappush, heappop
 from Dash2.core.parameter import Range
@@ -70,7 +71,7 @@ class ZkGithubStateWorkProcessor(WorkProcessor):
             self.hub.init_repo(repo_id=int_repo_id, user_id=decision_data.id, curr_time=0, is_node_shared=is_node_shared)
         decision_data.total_activity = total_even_counter
         self.agent.decision_data = decision_data
-        heappush(self.events_heap, (self.agent.next_event_time(self.start_time), decision_data.id))
+        heappush(self.events_heap, (self.agent.next_event_time(self.start_time + random.uniform(1, 4*24*3600)), decision_data.id))
         self.agents_decision_data[decision_data.id] = decision_data
 
     def run_one_iteration(self):
@@ -204,8 +205,8 @@ if __name__ == "__main__":
     ZkGithubStateTrial.parameters = [
         Parameter('prob_create_new_agent', default=0.5),
         Parameter('prob_agent_creates_new_repo', default=0.5),
-        Parameter('start_time', default=time.mktime(datetime.strptime('2017-01-01 00:00:00', "%Y-%m-%d %H:%M:%S").timetuple())),
-        Parameter('max_time', default=time.mktime(datetime.strptime('2017-01-31 23:59:59', "%Y-%m-%d %H:%M:%S").timetuple()))
+        Parameter('start_time', default=time.mktime(datetime.strptime('2016-02-01 00:00:00', "%Y-%m-%d %H:%M:%S").timetuple())),
+        Parameter('max_time', default=time.mktime(datetime.strptime('2016-02-28 23:59:59', "%Y-%m-%d %H:%M:%S").timetuple()))
     ]
     ZkGithubStateTrial.measures = [
         Measure('num_agents'),
