@@ -48,6 +48,9 @@ def build_state_from_event_log(input_event_log, number_of_user_partitions=1, sta
     users_ids = input_event_log + "_users_id_dict.csv"
     repos_ids = input_event_log + "_repos_id_dict.csv"
 
+    if embedding_files is None or len(embedding_files) == 0:
+        embedding_files = ""
+
     state_file_content = {"meta":
         {
             "number_of_users": number_of_users,
@@ -57,7 +60,7 @@ def build_state_from_event_log(input_event_log, number_of_user_partitions=1, sta
             "users_ids": users_ids,
             "repos_ids": repos_ids,
             "number_of_partitions": number_of_user_partitions,
-            "embedding_files": "" if embedding_files is None else embedding_files,
+            "embedding_files": embedding_files,
             "event_rate_model_file": ""
         }
     }
@@ -147,9 +150,14 @@ def populate_embedding_probabilities(agents_decision_data, simulation_user_ids_d
     int_to_str_ids_map = _load_id_dictionary(simulation_user_ids_dictionary_file)
     for event_type in event_types:
         if event_type in embedding_files_data:
-            calculator = EmbeddingCalculator(embedding_files_data[event_type]["file_name"], embedding_files_data[event_type]["dictionary"], int_to_str_ids_map)
-            for agent_id, decision_data in agents_decision_data.iteritems():
-                decision_data.embedding_probabilities[event_type] = calculator.calculate_probabilities(decision_data.id, probability_vector_size)
+            if "probabilities_file" in embedding_files_data[event_type]:
+                probabilities = pickle.load(embedding_files_data[event_type]["probabilities_file"])
+                for _, decision_data in agents_decision_data.iteritems():
+                    decision_data.embedding_probabilities[event_type] = probabilities[decision_data.id]
+            else:
+                calculator = EmbeddingCalculator(embedding_files_data[event_type]["file_name"], embedding_files_data[event_type]["dictionary"], int_to_str_ids_map)
+                for agent_id, decision_data in agents_decision_data.iteritems():
+                    decision_data.embedding_probabilities[event_type] = calculator.calculate_probabilities(decision_data.id, probability_vector_size)
 
 def populate_event_rate(agents, model_file):
     # load model from model_file

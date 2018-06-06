@@ -186,14 +186,16 @@ if __name__ == "__main__":
         #input_event_log = "./data_two_weeks/two_weeks.csv"
         #input_event_log = "./data_4days/4days.csv"
 
-    if embedding_directory is not None:
+    if embedding_directory is not None and os.path.isdir(embedding_directory):
+        embedding_files = {}
         for event_type in event_types:
             emb_file_path = embedding_directory + event_type + ".emb"
             if os.path.isfile(emb_file_path):
-                if embedding_files is None:
-                    embedding_files = {}
                 pickle_file_path = embedding_directory + event_type + "_nodeID_gf.pickle"
                 embedding_files[event_type] = {"file_name": emb_file_path, "dictionary": pickle_file_path}
+                probabilities_file_path = embedding_directory + event_type + ".prob"
+                if os.path.isfile(probabilities_file_path):
+                    embedding_files[event_type]["probabilities_file"] = probabilities_file_path
 
 
     # if state file is not present, then create it. State file is created from input event log.
