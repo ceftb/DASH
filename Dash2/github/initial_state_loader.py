@@ -33,7 +33,7 @@ profiles file structure (used for both users and repos - relationship is symmetr
 # "ef" - event frequencies
 '''
 
-def build_state_from_event_log(input_event_log, number_of_user_partitions=1, state_file_name=None):
+def build_state_from_event_log(input_event_log, number_of_user_partitions=1, state_file_name=None, embedding_files=None):
     G, number_of_users, number_of_repos = build_graph_from_csv(input_event_log)
     print "User-repo graph constructed. Users ", number_of_users, ", repos ", number_of_repos, ", nodes ", len(G.nodes()), ", edges", len(G.edges())
 
@@ -57,7 +57,7 @@ def build_state_from_event_log(input_event_log, number_of_user_partitions=1, sta
             "users_ids": users_ids,
             "repos_ids": repos_ids,
             "number_of_partitions": number_of_user_partitions,
-            "embedding_files": "",
+            "embedding_files": "" if embedding_files is None else embedding_files,
             "event_rate_model_file": ""
         }
     }
@@ -119,7 +119,7 @@ class EmbeddingCalculator(object):
     def _calculate_top_probabilities(self, user_id, embedding, node_ids_map, all_repos_indexes,
                                      number_of_top_probabilities=10):
         X = embedding
-        user_emb = X[node_ids_map[user_id]]
+        user_emb = X[user_id]
         max_probabilities_heap = []  # max size of the heap is number_of_top_probabilities
         for repo_index in all_repos_indexes:
             repo_emb = X[repo_index]
@@ -143,12 +143,13 @@ class EmbeddingCalculator(object):
         return result
 
 
-def populate_embedding_probabilities(agents, simulation_user_ids_dictionary_file, embedding_files_data, probability_vector_size = 10):
+def populate_embedding_probabilities(agents_decision_data, simulation_user_ids_dictionary_file, embedding_files_data, probability_vector_size = 10):
     int_to_str_ids_map = _load_id_dictionary(simulation_user_ids_dictionary_file)
     for event_type in event_types:
-        calculator = EmbeddingCalculator(embedding_files_data[event_type]["file_name"], embedding_files_data[event_type]["dictionary"], int_to_str_ids_map)
-        for agent in agents:
-            agent.decision_data.embedding_probabilities[event_type] = calculator.calculate_probabilities(agents.decision_data.id, probability_vector_size)
+        if event_type in embedding_files_data:
+            calculator = EmbeddingCalculator(embedding_files_data[event_type]["file_name"], embedding_files_data[event_type]["dictionary"], int_to_str_ids_map)
+            for agent_id, decision_data in agents_decision_data.iteritems():
+                decision_data.embedding_probabilities[event_type] = calculator.calculate_probabilities(decision_data.id, probability_vector_size)
 
 def populate_event_rate(agents, model_file):
     # load model from model_file

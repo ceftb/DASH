@@ -16,7 +16,7 @@ from Dash2.github.git_user_agent import GitUserAgent, GitUserDecisionData
 from Dash2.github.initial_state_loader import build_state_from_event_log, read_state_file, load_profiles, \
     populate_embedding_probabilities, populate_event_rate
 from Dash2.github.zk_repo_hub import ZkRepoHub
-from Dash2.github.distributed_event_log_utils import merge_log_file, trnaslate_user_and_repo_ids_in_event_log
+from Dash2.github.distributed_event_log_utils import merge_log_file, trnaslate_user_and_repo_ids_in_event_log, event_types
 
 # This is an example of experiment script
 
@@ -27,7 +27,7 @@ class ZkGithubStateWorkProcessor(WorkProcessor):
     module_name = "Dash2.github.zk_github_state_experiment"
 
     def initialize(self):
-        self.agents_decision_data = {} # in this experiment agents are stored as a dictionary (fyi: by default it was a list)
+        self.agents_decision_data = {}
         self.events_heap = []
         self.event_counter = 0
         self.hub = ZkRepoHub(self.zk, self.task_full_id, 0, log_file=self.log_file)
@@ -158,6 +158,7 @@ if __name__ == "__main__":
     zk_hosts = '127.0.0.1:2181'
     number_of_hosts = 1
     input_event_log = None
+    embedding_directory = "./embeddings/"; embedding_files = None
     if len(sys.argv) == 1:
         pass
     elif len(sys.argv) == 2:
@@ -169,23 +170,38 @@ if __name__ == "__main__":
         zk_hosts = sys.argv[1]
         number_of_hosts = int(sys.argv[2])
         input_event_log = sys.argv[3]
+    elif len(sys.argv) == 5:
+        zk_hosts = sys.argv[1]
+        number_of_hosts = int(sys.argv[2])
+        input_event_log = sys.argv[3]
+        embedding_directory = sys.argv[4]
     else:
         print 'incorrect arguments: ', sys.argv
 
     if input_event_log is None:
         #input event log and output event log files names
         #input_event_log = "./data_jan_2017/one_month.csv"
-        input_event_log = "./data_sample/data_sample.csv"
-        #input_event_log = "./data_2016/jan_2016_events.csv"
+        #input_event_log = "./data_sample/data_sample.csv"
+        input_event_log = "./data_2016/jan_2016_events.csv"
         #input_event_log = "./data_two_weeks/two_weeks.csv"
         #input_event_log = "./data_4days/4days.csv"
+
+    if embedding_directory is not None:
+        for event_type in event_types:
+            emb_file_path = embedding_directory + event_type + ".emb"
+            if os.path.isfile(emb_file_path):
+                if embedding_files is None:
+                    embedding_files = {}
+                pickle_file_path = embedding_directory + event_type + "_nodeID_gf.pickle"
+                embedding_files[event_type] = {"file_name": emb_file_path, "dictionary": pickle_file_path}
+
 
     # if state file is not present, then create it. State file is created from input event log.
     # Users in the initial state are partitioned (number of hosts is the number of partitions)
     initial_state_file_name = input_event_log + "_state.json"
     if not os.path.isfile(initial_state_file_name):
         print initial_state_file_name + " file is not present, creating one. May take a while, please wait ..."
-        build_state_from_event_log(input_event_log, number_of_hosts, initial_state_file_name)
+        build_state_from_event_log(input_event_log, number_of_hosts, initial_state_file_name, embedding_files=embedding_files)
         print str(initial_state_file_name) + " file created."
 
     # length of the simulation is determined by two parameters: max_iterations_per_worker and end max_time

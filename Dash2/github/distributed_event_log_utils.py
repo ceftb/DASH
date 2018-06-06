@@ -1,5 +1,6 @@
 import sys; sys.path.extend(['../../'])
 import csv
+import pickle
 from datetime import datetime
 
 event_types = ["CreateEvent", "DeleteEvent", "PullRequestEvent", "PullRequestReviewCommentEvent", "IssuesEvent",
@@ -140,6 +141,7 @@ def remove_owner_id_from_repos_in_event_log(even_log_file, output_file_name):
     datareader = csv.reader(input_file)
     for row in datareader:
         if row[0] != "timestamp":
+            #output_file.write(str(row[0]).replace("2016-03", "2016-01"))
             output_file.write(row[0])
             output_file.write(",")
             output_file.write(row[1])
@@ -147,11 +149,11 @@ def remove_owner_id_from_repos_in_event_log(even_log_file, output_file_name):
             output_file.write(row[2])
             output_file.write(",")
             output_file.write(str(row[3]).split("/")[1])
+            #output_file.write(row[3])
             output_file.write("\n")
 
     input_file.close()
     output_file.close()
-
 
 if __name__ == "__main__":
     remove_owner_id_from_repos_in_event_log(sys.argv[1], sys.argv[2])
