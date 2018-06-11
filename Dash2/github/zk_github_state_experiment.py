@@ -44,7 +44,7 @@ class ZkGithubStateWorkProcessor(WorkProcessor):
         self.users_ids = initial_state_meta_data["users_ids"]
 
         if self.embedding_files is not None and self.embedding_files != "":
-            populate_embedding_probabilities(self.agents_decision_data, self.users_ids, self.embedding_files)
+            populate_embedding_probabilities(self.agents_decision_data, initial_state_meta_data)
         # regression model for event_rate
         if self.event_rate_model_file is not None and self.event_rate_model_file != "":
             populate_event_rate(self.agents_decision_data, self.event_rate_model_file)
@@ -182,9 +182,10 @@ if __name__ == "__main__":
         #input event log and output event log files names
         #input_event_log = "./data_jan_2017/one_month.csv"
         #input_event_log = "./data_sample/data_sample.csv"
-        input_event_log = "./data_2016/jan_2016_events.csv"
+        #input_event_log = "./data_2016/jan_2016_events.csv"
         #input_event_log = "./data_two_weeks/two_weeks.csv"
         #input_event_log = "./data_4days/4days.csv"
+        input_event_log = "./2016/2016-01.csv"
 
     if embedding_directory is not None and os.path.isdir(embedding_directory):
         embedding_files = {}

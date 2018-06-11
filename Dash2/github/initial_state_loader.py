@@ -2,8 +2,10 @@ import sys; sys.path.extend(['../../'])
 import json
 import csv
 import ijson
+import time
 from datetime import datetime
 import numpy as np
+from scipy import sparse
 import cPickle as pickle
 from distributed_event_log_utils import _load_id_dictionary
 from heapq import heappush, heappop
@@ -84,25 +86,67 @@ def load_profiles(filename, profile_handler):
                 break
         f.close()
 
-
-
+'''
+This class keeps embedding matrices fro users and repos. 
+It allows to compute probabilities of using repos for a given user id.
+'''
 class EmbeddingCalculator(object):
 
-    def __init__(self, embedding_file_name, embdg_ids_dictionary_file, int_to_str_ids_map):
-        self.X, self.node_ids_map, self.all_repos_indexes = self._load_embedding(embedding_file_name, embdg_ids_dictionary_file)
-        self.int_to_str_ids_map = int_to_str_ids_map
+    def __init__(self, embedding_file_name, strId2Xindex_file, UsimId2strId=None, strId2RsimId=None, UsimId2strId_file=None, strId2RsimId_file=None):
+        # self.U - user embedding - matrix |U| x d
+        # self.R - repo embedding - matrix |R| x d (d - number of embedding dimensions)
+        # self.UsimId2Uindex - dictionary to convert integer simulation user ids to index number in U
+        # self.Rindex2RsimId - dictionary to convert repo index index in R to simulation repo id. We need it because probabilities vector comes in pair with corresponding repo ids
+        if UsimId2strId is None:
+            UsimId2strId = self._load_UsimId2strId(UsimId2strId_file)
+        if strId2RsimId is None:
+            strId2RsimId = self._load_strId2RsimId_file(strId2RsimId_file)
 
-    def calculate_probabilities(self, user_id, probability_vector_size = 10):
-        user_str_id = self.int_to_str_ids_map[user_id]
-        if user_str_id in self.node_ids_map:
-            embedding_id = self.node_ids_map[user_str_id]
-            probabilities = self._calculate_top_probabilities(embedding_id, self.X, self.node_ids_map, self.all_repos_indexes, probability_vector_size)
-            return probabilities
-        else:
-            return None
+        # X -> U and R - split adjacency matrix X into U - user embedding and R - repo embedding. Intermediate index dictionaries are created: Xindex2Uindex and Rindex2Xindex
+        strId2Xindex = pickle.load(open(strId2Xindex_file, 'rb'))
+        self.U, self.R, Xindex2Uindex, Rindex2Xindex, self.d = self._split_X_to_U_R(embedding_file_name, strId2Xindex)
 
-    def _load_embedding(self, file_name, embdg_ids_dictionary_file):
-        with open(file_name, 'r') as f:
+        # initializing self.UsimId2Uindex
+        # UsimId2strId* -> (not 1:1) strId2Xindex** -> Xindex2Uindex***
+        self.UsimId2Uindex = {k: Xindex2Uindex[strId2Xindex[v]] if v in strId2Xindex else None for k, v in UsimId2strId.iteritems()}
+
+        # initializing self.Rindex2simId
+        # Rindex2Xindex*** -> (not 1:1) Xindex2strId** -> strId2RsimId*
+        Xindex2strId = {v: k for k, v in strId2Xindex.iteritems()}
+        self.Rindex2simId = {k: strId2RsimId[Xindex2strId[v]] if Xindex2strId[v] in strId2RsimId else None for k, v in Rindex2Xindex.iteritems()}
+
+    def _split_X_to_U_R(self, embedding_file_name, strId2Xindex):
+        X, d =self._load_X(embedding_file_name)
+
+        number_of_repos_in_R = 0
+        number_of_users_in_U = 0
+        for strId, XIndex in strId2Xindex.iteritems():
+            if str(strId).find("/") != -1: # if repo
+                number_of_repos_in_R += 1
+            else:
+                number_of_users_in_U += 1
+        U = np.zeros((int(number_of_users_in_U), int(d)), dtype=np.float)
+        R = np.zeros((int(number_of_repos_in_R), int(d)), dtype=np.float)
+
+        repo_row_index = 0
+        user_row_index = 0
+        Rindex2Xindex = {}
+        Xindex2Uindex = {}
+        for strId, XIndex in strId2Xindex.iteritems():
+            if str(strId).find("/") != -1: # if repo
+                Rindex2Xindex[repo_row_index] = XIndex
+                R[repo_row_index, :] = X[int(XIndex), :]
+                repo_row_index += 1
+            else:
+                Xindex2Uindex[XIndex] = user_row_index
+                U[user_row_index, :] = X[int(XIndex), :]
+                user_row_index += 1
+
+        R = sparse.csr_matrix(R) # |R| x d matrix
+        return U, R, Xindex2Uindex, Rindex2Xindex, d
+
+    def _load_X(self, embedding_file_name):
+        with open(embedding_file_name, 'r') as f:
             n, d = f.readline().strip().split()
             X = np.zeros((int(n), int(d)))
             for line in f:
@@ -110,44 +154,56 @@ class EmbeddingCalculator(object):
                 emb_fl = [float(emb_i) for emb_i in emb[1:]]
                 X[int(emb[0]), :] = emb_fl
         f.close()
-        node_ids_map = pickle.load(open(embdg_ids_dictionary_file, 'rb'))
+        return X, d
 
-        all_repos_indexes = []
-        for node_id, node_embd_int_id in node_ids_map.iteritems():
-            if str(node_id).find("/") != -1:
-                all_repos_indexes.append(node_embd_int_id)
+    def _load_UsimId2strId(self, UsimId2strId_file):
+        return _load_id_dictionary(UsimId2strId_file, True)
 
-        return X, node_ids_map, all_repos_indexes
+    def _load_strId2RsimId_file(self, strId2RsimId_file):
+        return _load_id_dictionary(strId2RsimId_file, False)
 
-    def _calculate_top_probabilities(self, user_id, embedding, node_ids_map, all_repos_indexes,
-                                     number_of_top_probabilities=10):
-        X = embedding
-        user_emb = X[user_id]
-        max_probabilities_heap = []  # max size of the heap is number_of_top_probabilities
-        for repo_index in all_repos_indexes:
-            repo_emb = X[repo_index]
-            value = np.dot(user_emb, repo_emb)
-            if len(max_probabilities_heap) < number_of_top_probabilities:
-                heappush(max_probabilities_heap, value)
+    def calculate_probabilities(self, user_id, probability_vector_size=10):
+        max_probabilities_heap = []  # max size of the heap is probability_vector_size
+        if user_id not in self.UsimId2Uindex or self.UsimId2Uindex[user_id] is None:
+            return None
+        user_emb_sparse = np.array(self.U[self.UsimId2Uindex[user_id], :])[np.newaxis].T
+        prob_vector = self.R * user_emb_sparse
+        prob_vector = prob_vector >= 0.05
+
+        rows, cols = prob_vector.nonzero()
+        if len(rows) == 0:
+            return None
+        print len(rows), ", ", len(cols)
+        for row, col in zip(rows, cols): # col == 1
+            value = prob_vector[row, col]
+            if len(max_probabilities_heap) < probability_vector_size:
+                heappush(max_probabilities_heap, (value, col))
+                max = max_probabilities_heap[0][0]
             else:
-                if value > max_probabilities_heap[0]:
+                if value > max:
+                    max = max_probabilities_heap[0][0]
                     heappop(max_probabilities_heap)
-                    heappush(max_probabilities_heap, value)
-        # normalize
-        result = []
-        total_sum = 0
-        while len(max_probabilities_heap) > 0:
-            val = heappop(max_probabilities_heap)
-            result.append(val)
-            total_sum += val
-        for i in range(1, len(result)):
-            result[i] = result[i] / total_sum
+                    heappush(max_probabilities_heap, (value, row))
 
+        result = {'ids': [], 'prob': []}
+        while len(max_probabilities_heap) > 0:
+            prob, id = heappop(max_probabilities_heap)
+            if id in self.Rindex2simId:
+                result['prob'].append(float(prob))
+                result['ids'].append(self.Rindex2simId[id]) # convert repo_id_index to simulation id
+
+        norm = np.linalg.norm(result['prob'], ord=1)
+        result['prob'] = result['prob'] / norm
         return result
 
-
-def populate_embedding_probabilities(agents_decision_data, simulation_user_ids_dictionary_file, embedding_files_data, probability_vector_size = 10):
-    int_to_str_ids_map = _load_id_dictionary(simulation_user_ids_dictionary_file)
+'''
+Populates agent's decision data objects with repo probabilities. Probabilities either loaded from a .prob file 
+(precomputed values of probability vectors) or from embedding files.
+'''
+def populate_embedding_probabilities(agents_decision_data, initial_state_meta_data, probability_vector_size = 10):
+    embedding_files_data = initial_state_meta_data["embedding_files"]
+    UsimId2strId = _load_id_dictionary(initial_state_meta_data["users_ids"], isSimId2strId=True)
+    strId2RsimId = _load_id_dictionary(initial_state_meta_data["repos_ids"], isSimId2strId=False)
     for event_type in event_types:
         if event_type in embedding_files_data:
             if "probabilities_file" in embedding_files_data[event_type]:
@@ -155,9 +211,44 @@ def populate_embedding_probabilities(agents_decision_data, simulation_user_ids_d
                 for _, decision_data in agents_decision_data.iteritems():
                     decision_data.embedding_probabilities[event_type] = probabilities[decision_data.id]
             else:
-                calculator = EmbeddingCalculator(embedding_files_data[event_type]["file_name"], embedding_files_data[event_type]["dictionary"], int_to_str_ids_map)
+                calculator = EmbeddingCalculator(embedding_files_data[event_type]["file_name"], embedding_files_data[event_type]["dictionary"], UsimId2strId, strId2RsimId)
                 for agent_id, decision_data in agents_decision_data.iteritems():
                     decision_data.embedding_probabilities[event_type] = calculator.calculate_probabilities(decision_data.id, probability_vector_size)
+
+''' 
+creates probability files (.prob files). Probabilities are computed from graph embedding.
+'''
+def compute_probabilities(state_file, destination_dir="./probabilities/", probability_vector_size = 10, users_batch_number=1, total_user_batches=1):
+    initial_state_meta_data = read_state_file(state_file)
+    embeddings_data = initial_state_meta_data["embedding_files"]
+    UsimId2strId = _load_id_dictionary(initial_state_meta_data["users_ids"], isSimId2strId=True)
+    strId2RsimId = _load_id_dictionary(initial_state_meta_data["repos_ids"], isSimId2strId=False)
+    total_number_of_agents = len(UsimId2strId)
+    total_number_of_repos = len(strId2RsimId)
+    batch_size = total_number_of_agents / total_number_of_batches if total_number_of_agents % total_number_of_batches == 0 else total_number_of_agents / total_number_of_batches + 1
+    min_index = (users_batch_number - 1) * batch_size
+    max_index = users_batch_number * batch_size
+
+    for event_type in event_types:
+        if event_type in embeddings_data:
+            all_probabilities = {}
+            calculator = EmbeddingCalculator(embeddings_data[event_type]["file_name"], embeddings_data[event_type]["dictionary"], UsimId2strId, strId2RsimId)
+            start_time = time.time()
+            for index, agent_sim_id in enumerate(UsimId2strId.iterkeys()):
+                if index >= min_index and index < max_index:
+                    all_probabilities[agent_sim_id] = calculator.calculate_probabilities(agent_sim_id, probability_vector_size)
+                    if index % 100 == 0:
+                        end_time = time.time()
+                        print "Agent ", index, " out of ", total_number_of_agents, " : ", 100.0 * float(index) / float(total_number_of_agents), "%, repos = ", total_number_of_repos, " time:", (end_time - start_time)
+                        start_time = time.time()
+            if total_user_batches > 1:
+                output_file = open(destination_dir + event_type + "_" + str(users_batch_number) + ".prob", 'wb')
+            else:
+                output_file = open(destination_dir + event_type + ".prob", 'wb')
+            pickle.dump(all_probabilities, output_file, protocol=2)
+            output_file.close()
+
+
 
 def populate_event_rate(agents, model_file):
     # load model from model_file
@@ -178,6 +269,7 @@ if __name__ == "__main__":
             "Press q to exit loader\n\t"
             "l to load objects from profiles file and load them into memory\n\t"
             "e to load embedding into memory\n\t"
+            "p to create probabilities file\n\t"
             "s to load state file\n")
         if cmd == "q":
             print("Exiting ...")
@@ -199,7 +291,12 @@ if __name__ == "__main__":
             embedding_calculator = EmbeddingCalculator(filename, embedding_ids_file, sim_ids_file)
             prob = embedding_calculator.calculate_probabilities(10)
             print "done: ", prob
-
+        elif cmd == "p":
+            filename = sys.argv[1]
+            batch_number = int(sys.argv[2])
+            total_number_of_batches = int(sys.argv[3])
+            print "computing probabilities from embedding ..."
+            compute_probabilities(filename, users_batch_number=batch_number, total_user_batches=total_number_of_batches)
         else:
             print "Unrecognized command " + cmd + "\n"
 

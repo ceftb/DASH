@@ -196,8 +196,8 @@ goalRequirements UpdateOwnRepo
             if self.decision_data.embedding_probabilities[selected_event] is None:
                 selected_repo = numpy.random.choice(self.decision_data.all_known_repos, p=self.decision_data.probabilities)
             else:
-                selected_repo = numpy.random.choice(self.decision_data.all_known_repos,
-                                                    p=self.decision_data.embedding_probabilities[selected_event])
+                selected_repo = numpy.random.choice(self.decision_data.embedding_probabilities[selected_event]['ids'],
+                                                    p=self.decision_data.embedding_probabilities[selected_event]['prob'])
             self.hub.log_event(self.decision_data.id, selected_repo, selected_event, None, self.hub.time)
             self.decision_data.total_activity += 1
         else:

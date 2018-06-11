@@ -90,7 +90,7 @@ def _retreive_earliest_event(lines):
     return earliest_event_line
 
 
-def _load_id_dictionary(dictionary_file_name):
+def _load_id_dictionary(dictionary_file_name, isSimId2strId = True):
     dict_file = open(dictionary_file_name, "r")
     datareader = csv.reader(dict_file)
     ids_map = {}
@@ -99,7 +99,10 @@ def _load_id_dictionary(dictionary_file_name):
         if counter != 0:
             src_id = row[0]
             target_id = row[1]
-            ids_map[int(target_id)] = src_id
+            if isSimId2strId:
+                ids_map[int(target_id)] = src_id
+            else:
+                ids_map[src_id] = int(target_id)
         counter += 1
     dict_file.close()
     return ids_map
@@ -155,5 +158,46 @@ def remove_owner_id_from_repos_in_event_log(even_log_file, output_file_name):
     input_file.close()
     output_file.close()
 
+def split_event_log_by_month(even_log_file, output_file_name, prefix):
+    input_file = open(even_log_file, 'r')
+    output_file = open(output_file_name, 'w')
+
+    datareader = csv.reader(input_file)
+    for row in datareader:
+        if row[0] != "timestamp":
+            if not str(row[0]).startswith(prefix):
+                output_file.close()
+                prefix = str(row[0])[0:7]
+                output_file = open(output_file_name + prefix, 'w')
+            output_file.write(row[0])
+            output_file.write(",")
+            output_file.write(row[1])
+            output_file.write(",")
+            output_file.write(row[2])
+            output_file.write(",")
+            output_file.write(row[3])
+            output_file.write("\n")
+
+    input_file.close()
+    output_file.close()
+
+def count_unique_user_event_pairs(even_log_file):
+    input_file = open(even_log_file, 'r')
+    unique_events = set()
+    unique_events.add(("user", "event"))
+    unique_events.add(("user", "event"))
+    print len(unique_events)
+
+    datareader = csv.reader(input_file)
+    for row in datareader:
+        if row[0] != "timestamp":
+            event = row[1]
+            user = row[2]
+            unique_events.add((user, event))
+    print "unique events ", len(unique_events)
+    input_file.close()
+
+
 if __name__ == "__main__":
-    remove_owner_id_from_repos_in_event_log(sys.argv[1], sys.argv[2])
+    count_unique_user_event_pairs(sys.argv[1])
+    #split_event_log_by_month(sys.argv[1], sys.argv[2], sys.argv[3])
