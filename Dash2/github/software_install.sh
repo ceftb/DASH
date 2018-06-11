@@ -9,20 +9,21 @@ function install_on_all_nodes {
 	echo 'Total ' $NUMBER_OF_NODES ' workers in assemble'
 	for ID in `seq 1 $NUMBER_OF_NODES`;
 		do
-			echo 'Installing Zookeeper on node ' ${DASH_NODES[$ID-1]}
-			ssh ${DASH_NODES[$ID-1]} "tmux new-session -d bash $WEBDASH_CLONE/Dash2/github/kazoo_install.sh $ID $KAZOO_CLONE $TMP_DIR $IJSON_CLONE $NETWORKX_CLONE $METIS_CLONE"
+			echo 'Installing software packages on node ' ${DASH_NODES[$ID-1]}
+			ssh ${DASH_NODES[$ID-1]} "tmux new-session -d bash $WEBDASH_CLONE/Dash2/github/software_install.sh $ID $KAZOO_CLONE $TMP_DIR $IJSON_CLONE $NETWORKX_CLONE $METIS_CLONE $NUMPY_CLONE"
 		done
 	
 	echo "Kazoo installation completed on all DASH nodes"
 }
 
-function install_single_kazoo_instance {
+function install_on_single_instance {
 	CURR_NODE_ID=$1
 	KAZOO_CLONE=$2
 	TMP_DIR=$3
 	IJSON_CLONE=$4
     NETWORKX_CLONE=$5
     METIS_CLONE=$6
+    NUMPY_CLONE=$7
 
 	cp -R $KAZOO_CLONE $TMP_DIR/kazoo_clone_$CURR_NODE_ID
 	cd $TMP_DIR/kazoo_clone_$CURR_NODE_ID
@@ -64,11 +65,46 @@ function install_single_kazoo_instance {
 	# install pandas
 	sudo apt-get install python-pandas --yes
 
+	# Numpy and OpenBLAS installation:
+    sudo apt-get install libopenblas-base --yes
+    sudo apt-get install cython  --yes
+    #
+    cd ~/projects/OpenBLAS
+    sudo make install
+    sudo update-alternatives --install /usr/lib/libblas.so.3 libblas.so.3 /opt/OpenBLAS/lib/libopenblas.so 50
+    #
+    #cd ~/projects/numpy/
+    #sudo python setup.py install
+    # install numpy from $NUMPY_CLONE ( https://github.com/numpy/numpy.git )
+	cp -R $NUMPY_CLONE $TMP_DIR/numpy_clone_$CURR_NODE_ID
+	cd $TMP_DIR/numpy_clone_$CURR_NODE_ID
+	sudo python setup.py install  2>> $TMP_DIR/numpy_report_$CURR_NODE_ID.txt 1>> $TMP_DIR/numpy_report_$CURR_NODE_ID.txt
+	rm -Rf $TMP_DIR/numpy_clone_$CURR_NODE_ID
+
+}
+
+function run_external_script_on_all_nodes {
+	source deter.conf
+	FULL_SCRIPT_PATH=$1
+
+	NUMBER_OF_NODES=${#DASH_NODES[@]}
+	echo 'Total ' $NUMBER_OF_NODES ' workers in assemble'
+	for ID in `seq 1 $NUMBER_OF_NODES`;
+		do
+			echo 'Running script on node ' ${DASH_NODES[$ID-1]}
+			ssh ${DASH_NODES[$ID-1]} "tmux new-session -d bash FULL_SCRIPT_PATH $ID"
+		done
+
+	echo "Script executed on all DASH nodes"
 }
 
 if [ -z "$1" ]; then
 	install_on_all_nodes
 else
-	install_single_kazoo_instance $1 $2 $3 $4 $5 $6
+    if [ "$#" -eq 1 ]; then
+        run_external_script_on_all_nodes $1
+    else
+        install_on_single_instance $1 $2 $3 $4 $5 $6 $7
+    fi
 fi
 
