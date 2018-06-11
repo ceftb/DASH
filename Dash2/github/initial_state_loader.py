@@ -142,7 +142,8 @@ class EmbeddingCalculator(object):
                 U[user_row_index, :] = X[int(XIndex), :]
                 user_row_index += 1
 
-        R = sparse.csr_matrix(R) # |R| x d matrix
+        #R = sparse.csr_matrix(R) # |R| x d matrix
+        U = U.transpose()
         return U, R, Xindex2Uindex, Rindex2Xindex, d
 
     def _load_X(self, embedding_file_name):
@@ -166,24 +167,31 @@ class EmbeddingCalculator(object):
         max_probabilities_heap = []  # max size of the heap is probability_vector_size
         if user_id not in self.UsimId2Uindex or self.UsimId2Uindex[user_id] is None:
             return None
-        user_emb_sparse = np.array(self.U[self.UsimId2Uindex[user_id], :])[np.newaxis].T
-        prob_vector = self.R * user_emb_sparse
-        prob_vector = prob_vector >= 0.05
+        #user_emb_sparse = self.U[:, self.UsimId2Uindex[user_id]]
+        prob_vector = np.dot(self.R, self.U[:, self.UsimId2Uindex[user_id]])
 
-        rows, cols = prob_vector.nonzero()
-        if len(rows) == 0:
-            return None
-        print len(rows), ", ", len(cols)
-        for row, col in zip(rows, cols): # col == 1
-            value = prob_vector[row, col]
+        for index in range(0, probability_vector_size, 1):
+            row = prob_vector.argmax()
+            max_probabilities_heap.append((prob_vector[row], row))
+            prob_vector[row] = 0
+
+        #rows, cols = prob_vector.nonzero()
+        #if len(rows) == 0:
+        #    return None
+        #print len(rows), ", ", len(cols)
+        #for row, col in zip(rows, cols): # col == 1
+        '''
+        for row, value in enumerate(prob_vector):
+            #value = prob_vector[row]
             if len(max_probabilities_heap) < probability_vector_size:
-                heappush(max_probabilities_heap, (value, col))
+                heappush(max_probabilities_heap, (value, row))
                 max = max_probabilities_heap[0][0]
             else:
                 if value > max:
                     max = max_probabilities_heap[0][0]
                     heappop(max_probabilities_heap)
                     heappush(max_probabilities_heap, (value, row))
+        '''
 
         result = {'ids': [], 'prob': []}
         while len(max_probabilities_heap) > 0:
@@ -218,7 +226,7 @@ def populate_embedding_probabilities(agents_decision_data, initial_state_meta_da
 ''' 
 creates probability files (.prob files). Probabilities are computed from graph embedding.
 '''
-def compute_probabilities(state_file, destination_dir="./probabilities/", probability_vector_size = 10, users_batch_number=1, total_user_batches=1):
+def compute_probabilities(state_file, destination_dir="./probabilities/", probability_vector_size = 10, users_batch_number=1, total_user_batches=1, event2users=None):
     initial_state_meta_data = read_state_file(state_file)
     embeddings_data = initial_state_meta_data["embedding_files"]
     UsimId2strId = _load_id_dictionary(initial_state_meta_data["users_ids"], isSimId2strId=True)
@@ -229,25 +237,35 @@ def compute_probabilities(state_file, destination_dir="./probabilities/", probab
     min_index = (users_batch_number - 1) * batch_size
     max_index = users_batch_number * batch_size
 
+    def _time(index, start_time):
+        if index % 100 == 0:
+            end_time = time.time()
+            print "Agent ", index, " out of ", total_number_of_agents, " : ", 100.0 * float(index) / float(
+                total_number_of_agents), "%, repos = ", total_number_of_repos, " time:", (end_time - start_time)
+            start_time = time.time()
+        return start_time
+
     for event_type in event_types:
         if event_type in embeddings_data:
             all_probabilities = {}
             calculator = EmbeddingCalculator(embeddings_data[event_type]["file_name"], embeddings_data[event_type]["dictionary"], UsimId2strId, strId2RsimId)
             start_time = time.time()
-            for index, agent_sim_id in enumerate(UsimId2strId.iterkeys()):
-                if index >= min_index and index < max_index:
-                    all_probabilities[agent_sim_id] = calculator.calculate_probabilities(agent_sim_id, probability_vector_size)
-                    if index % 100 == 0:
-                        end_time = time.time()
-                        print "Agent ", index, " out of ", total_number_of_agents, " : ", 100.0 * float(index) / float(total_number_of_agents), "%, repos = ", total_number_of_repos, " time:", (end_time - start_time)
-                        start_time = time.time()
+            if event2users is None:
+                for index, agent_sim_id in enumerate(UsimId2strId.iterkeys()):
+                    if index >= min_index and index < max_index:
+                        all_probabilities[agent_sim_id] = calculator.calculate_probabilities(agent_sim_id, probability_vector_size)
+                        start_time = _time(index, start_time)
+            else:
+                for index, user_id in enumerate(event2users[event_type]):
+                    all_probabilities[user_id] = calculator.calculate_probabilities(user_id, probability_vector_size)
+                    start_time = _time(index, start_time)
+
             if total_user_batches > 1:
                 output_file = open(destination_dir + event_type + "_" + str(users_batch_number) + ".prob", 'wb')
             else:
                 output_file = open(destination_dir + event_type + ".prob", 'wb')
             pickle.dump(all_probabilities, output_file, protocol=2)
             output_file.close()
-
 
 
 def populate_event_rate(agents, model_file):

@@ -158,6 +158,7 @@ def remove_owner_id_from_repos_in_event_log(even_log_file, output_file_name):
     input_file.close()
     output_file.close()
 
+
 def split_event_log_by_month(even_log_file, output_file_name, prefix):
     input_file = open(even_log_file, 'r')
     output_file = open(output_file_name, 'w')
@@ -181,7 +182,10 @@ def split_event_log_by_month(even_log_file, output_file_name, prefix):
     input_file.close()
     output_file.close()
 
-def count_unique_user_event_pairs(even_log_file):
+
+def count_unique_user_event_pairs(even_log_file, UstrId2UsimId):
+    event2users = {k : {} for k in event_types}
+    # TBD work in progress
     input_file = open(even_log_file, 'r')
     unique_events = set()
     unique_events.add(("user", "event"))
@@ -199,5 +203,5 @@ def count_unique_user_event_pairs(even_log_file):
 
 
 if __name__ == "__main__":
-    count_unique_user_event_pairs(sys.argv[1])
+    count_unique_user_event_pairs(sys.argv[1], None)
     #split_event_log_by_month(sys.argv[1], sys.argv[2], sys.argv[3])
