@@ -1,5 +1,5 @@
 #!/bin/bash
-# This scrip installs Kazoo python library (zookeeper client API for Python)..
+# This scrip installs Kazoo python library (zookeeper client API for Python) and other software
 # Tested on Ubuntu 16.04 LTS
 
 function install_on_all_nodes {
@@ -13,7 +13,7 @@ function install_on_all_nodes {
 			ssh ${DASH_NODES[$ID-1]} "tmux new-session -d bash $WEBDASH_CLONE/Dash2/github/software_install.sh $ID $KAZOO_CLONE $TMP_DIR $IJSON_CLONE $NETWORKX_CLONE $METIS_CLONE $NUMPY_CLONE"
 		done
 	
-	echo "Kazoo installation completed on all DASH nodes"
+	echo "Software installation started on all nodes"
 }
 
 function install_on_single_instance {
@@ -21,17 +21,21 @@ function install_on_single_instance {
 	KAZOO_CLONE=$2
 	TMP_DIR=$3
 	IJSON_CLONE=$4
-    NETWORKX_CLONE=$5
-    METIS_CLONE=$6
-    NUMPY_CLONE=$7
+	NETWORKX_CLONE=$5
+	METIS_CLONE=$6
+	NUMPY_CLONE=$7
 
+	echo "installing python-numpy python-scipy ..."
+	sudo apt-get install python-numpy python-scipy --yes
+	
 	cp -R $KAZOO_CLONE $TMP_DIR/kazoo_clone_$CURR_NODE_ID
 	cd $TMP_DIR/kazoo_clone_$CURR_NODE_ID
 	# install kazoo
 	echo "installing kazoo ..."
+
 	sudo apt-get install python-setuptools --yes
 	sudo python setup.py install >> $TMP_DIR/kazoo_report_$CURR_NODE_ID.txt
-	rm -Rf $TMP_DIR/kazoo_clone_$CURR_NODE_ID
+	sudo rm -Rf $TMP_DIR/kazoo_clone_$CURR_NODE_ID
 
 	echo "installing mc ..."
 	sudo apt-get install mc --yes
@@ -43,13 +47,13 @@ function install_on_single_instance {
 	cp -R $IJSON_CLONE $TMP_DIR/ijson_clone_$CURR_NODE_ID
 	cd $TMP_DIR/ijson_clone_$CURR_NODE_ID
 	sudo python setup.py install  2>> $TMP_DIR/ijson_report_$CURR_NODE_ID.txt 1>> $TMP_DIR/ijson_report_$CURR_NODE_ID.txt
-	rm -Rf $TMP_DIR/ijson_clone_$CURR_NODE_ID
+	sudo rm -Rf $TMP_DIR/ijson_clone_$CURR_NODE_ID
 
     # install networkX from $NETWORKX_CLONE ( https://github.com/networkx/networkx.git )
     cp -R $NETWORKX_CLONE $TMP_DIR/networkx_clone_$CURR_NODE_ID
 	cd $TMP_DIR/networkx_clone_$CURR_NODE_ID
 	sudo python setup.py install  2>> $TMP_DIR/networkx_report_$CURR_NODE_ID.txt 1>> $TMP_DIR/networkx_report_$CURR_NODE_ID.txt
-	rm -Rf $TMP_DIR/networkx_clone_$CURR_NODE_ID
+	sudo rm -Rf $TMP_DIR/networkx_clone_$CURR_NODE_ID
 
     # install METIS
 	sudo apt-get install graphviz graphviz-dev pkg-config metis --yes
@@ -59,7 +63,7 @@ function install_on_single_instance {
     cp -R $METIS_CLONE $TMP_DIR/metis_clone_$CURR_NODE_ID
 	cd $TMP_DIR/metis_clone_$CURR_NODE_ID
 	sudo python setup.py install  2>> $TMP_DIR/metis_report_$CURR_NODE_ID.txt 1>> $TMP_DIR/metis_report_$CURR_NODE_ID.txt
-	rm -Rf $TMP_DIR/metis_clone_$CURR_NODE_ID
+	sudo rm -Rf $TMP_DIR/metis_clone_$CURR_NODE_ID
 
 	# install pandas
 	sudo apt-get install python-pandas --yes
@@ -67,7 +71,7 @@ function install_on_single_instance {
 	# Numpy and OpenBLAS installation:
     sudo apt-get install libopenblas-base --yes
     sudo apt-get install cython  --yes
-    #
+    # requires precompilied BLAS - do it manually
     cd ~/projects/OpenBLAS
     sudo make install
     sudo update-alternatives --install /usr/lib/libblas.so.3 libblas.so.3 /opt/OpenBLAS/lib/libopenblas.so 50
@@ -75,13 +79,12 @@ function install_on_single_instance {
     #cd ~/projects/numpy/
     #sudo python setup.py install
     # install numpy from $NUMPY_CLONE ( https://github.com/numpy/numpy.git )
-	cp -R $NUMPY_CLONE $TMP_DIR/numpy_clone_$CURR_NODE_ID
+	sudo cp -R $NUMPY_CLONE $TMP_DIR/numpy_clone_$CURR_NODE_ID
 	cd $TMP_DIR/numpy_clone_$CURR_NODE_ID
 	sudo python setup.py install  2>> $TMP_DIR/numpy_report_$CURR_NODE_ID.txt 1>> $TMP_DIR/numpy_report_$CURR_NODE_ID.txt
-	rm -Rf $TMP_DIR/numpy_clone_$CURR_NODE_ID
+	sudo rm -Rf $TMP_DIR/numpy_clone_$CURR_NODE_ID
 
-	echo "installing python-numpy python-scipy ..."
-	sudo apt-get install python-scipy --yes
+
 
 }
 
@@ -94,7 +97,7 @@ function run_external_script_on_all_nodes {
 	for ID in `seq 1 $NUMBER_OF_NODES`;
 		do
 			echo 'Running script on node ' ${DASH_NODES[$ID-1]}
-			ssh ${DASH_NODES[$ID-1]} "tmux new-session -d bash FULL_SCRIPT_PATH $ID"
+			ssh ${DASH_NODES[$ID-1]} "tmux new-session -d bash $FULL_SCRIPT_PATH $ID"
 		done
 
 	echo "Script executed on all DASH nodes"
