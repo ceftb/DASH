@@ -7,7 +7,7 @@ from datetime import datetime
 import numpy as np
 from scipy import sparse
 import cPickle as pickle
-from distributed_event_log_utils import _load_id_dictionary
+from distributed_event_log_utils import load_id_dictionary, collect_unique_user_event_pairs
 from heapq import heappush, heappop
 from user_partitioner import build_graph_from_csv, partition_graph, print_user_profiles
 from distributed_event_log_utils import event_types
@@ -158,44 +158,24 @@ class EmbeddingCalculator(object):
         return X, d
 
     def _load_UsimId2strId(self, UsimId2strId_file):
-        return _load_id_dictionary(UsimId2strId_file, True)
+        return load_id_dictionary(UsimId2strId_file, True)
 
     def _load_strId2RsimId_file(self, strId2RsimId_file):
-        return _load_id_dictionary(strId2RsimId_file, False)
+        return load_id_dictionary(strId2RsimId_file, False)
 
     def calculate_probabilities(self, user_id, probability_vector_size=10):
-        max_probabilities_heap = []  # max size of the heap is probability_vector_size
+        topk_probabilities = []  # k is probability_vector_size
         if user_id not in self.UsimId2Uindex or self.UsimId2Uindex[user_id] is None:
             return None
-        #user_emb_sparse = self.U[:, self.UsimId2Uindex[user_id]]
         prob_vector = np.dot(self.R, self.U[:, self.UsimId2Uindex[user_id]])
 
         for index in range(0, probability_vector_size, 1):
             row = prob_vector.argmax()
-            max_probabilities_heap.append((prob_vector[row], row))
+            topk_probabilities.append((prob_vector[row], row))
             prob_vector[row] = 0
 
-        #rows, cols = prob_vector.nonzero()
-        #if len(rows) == 0:
-        #    return None
-        #print len(rows), ", ", len(cols)
-        #for row, col in zip(rows, cols): # col == 1
-        '''
-        for row, value in enumerate(prob_vector):
-            #value = prob_vector[row]
-            if len(max_probabilities_heap) < probability_vector_size:
-                heappush(max_probabilities_heap, (value, row))
-                max = max_probabilities_heap[0][0]
-            else:
-                if value > max:
-                    max = max_probabilities_heap[0][0]
-                    heappop(max_probabilities_heap)
-                    heappush(max_probabilities_heap, (value, row))
-        '''
-
         result = {'ids': [], 'prob': []}
-        while len(max_probabilities_heap) > 0:
-            prob, id = heappop(max_probabilities_heap)
+        for prob, id in topk_probabilities:
             if id in self.Rindex2simId:
                 result['prob'].append(float(prob))
                 result['ids'].append(self.Rindex2simId[id]) # convert repo_id_index to simulation id
@@ -210,14 +190,17 @@ Populates agent's decision data objects with repo probabilities. Probabilities e
 '''
 def populate_embedding_probabilities(agents_decision_data, initial_state_meta_data, probability_vector_size = 10):
     embedding_files_data = initial_state_meta_data["embedding_files"]
-    UsimId2strId = _load_id_dictionary(initial_state_meta_data["users_ids"], isSimId2strId=True)
-    strId2RsimId = _load_id_dictionary(initial_state_meta_data["repos_ids"], isSimId2strId=False)
+    UsimId2strId = load_id_dictionary(initial_state_meta_data["users_ids"], isSimId2strId=True)
+    strId2RsimId = load_id_dictionary(initial_state_meta_data["repos_ids"], isSimId2strId=False)
     for event_type in event_types:
         if event_type in embedding_files_data:
             if "probabilities_file" in embedding_files_data[event_type]:
-                probabilities = pickle.load(embedding_files_data[event_type]["probabilities_file"])
+                prob_file = open(embedding_files_data[event_type]["probabilities_file"], 'rb')
+                probabilities = pickle.load(prob_file)
+                prob_file.close()
                 for _, decision_data in agents_decision_data.iteritems():
-                    decision_data.embedding_probabilities[event_type] = probabilities[decision_data.id]
+                    if decision_data.id in probabilities:
+                        decision_data.embedding_probabilities[event_type] = probabilities[decision_data.id]
             else:
                 calculator = EmbeddingCalculator(embedding_files_data[event_type]["file_name"], embedding_files_data[event_type]["dictionary"], UsimId2strId, strId2RsimId)
                 for agent_id, decision_data in agents_decision_data.iteritems():
@@ -229,16 +212,13 @@ creates probability files (.prob files). Probabilities are computed from graph e
 def compute_probabilities(state_file, destination_dir="./probabilities/", probability_vector_size = 10, users_batch_number=1, total_user_batches=1, event2users=None):
     initial_state_meta_data = read_state_file(state_file)
     embeddings_data = initial_state_meta_data["embedding_files"]
-    UsimId2strId = _load_id_dictionary(initial_state_meta_data["users_ids"], isSimId2strId=True)
-    strId2RsimId = _load_id_dictionary(initial_state_meta_data["repos_ids"], isSimId2strId=False)
+    UsimId2strId = load_id_dictionary(initial_state_meta_data["users_ids"], isSimId2strId=True)
+    strId2RsimId = load_id_dictionary(initial_state_meta_data["repos_ids"], isSimId2strId=False)
     total_number_of_agents = len(UsimId2strId)
     total_number_of_repos = len(strId2RsimId)
-    batch_size = total_number_of_agents / total_number_of_batches if total_number_of_agents % total_number_of_batches == 0 else total_number_of_agents / total_number_of_batches + 1
-    min_index = (users_batch_number - 1) * batch_size
-    max_index = users_batch_number * batch_size
 
     def _time(index, start_time):
-        if index % 100 == 0:
+        if index % 1000 == 0:
             end_time = time.time()
             print "Agent ", index, " out of ", total_number_of_agents, " : ", 100.0 * float(index) / float(
                 total_number_of_agents), "%, repos = ", total_number_of_repos, " time:", (end_time - start_time)
@@ -252,13 +232,17 @@ def compute_probabilities(state_file, destination_dir="./probabilities/", probab
             start_time = time.time()
             if event2users is None:
                 for index, agent_sim_id in enumerate(UsimId2strId.iterkeys()):
-                    if index >= min_index and index < max_index:
-                        all_probabilities[agent_sim_id] = calculator.calculate_probabilities(agent_sim_id, probability_vector_size)
-                        start_time = _time(index, start_time)
-            else:
-                for index, user_id in enumerate(event2users[event_type]):
-                    all_probabilities[user_id] = calculator.calculate_probabilities(user_id, probability_vector_size)
+                    all_probabilities[agent_sim_id] = calculator.calculate_probabilities(agent_sim_id, probability_vector_size)
                     start_time = _time(index, start_time)
+            else:
+                total_number_of_agents = len(event2users[event_type])
+                min_index = (users_batch_number - 1) * int(total_number_of_agents / total_number_of_batches)
+                max_index = users_batch_number * int(total_number_of_agents / total_number_of_batches) if users_batch_number != total_user_batches else total_number_of_agents
+                #print "min: ", min_index, ", max : ", max_index, " total agents: ", total_number_of_agents
+                for index, user_id in enumerate(event2users[event_type]):
+                    if index >= min_index and index < max_index:
+                        all_probabilities[user_id] = calculator.calculate_probabilities(user_id, probability_vector_size)
+                        start_time = _time(index, start_time)
 
             if total_user_batches > 1:
                 output_file = open(destination_dir + event_type + "_" + str(users_batch_number) + ".prob", 'wb')
@@ -310,11 +294,16 @@ if __name__ == "__main__":
             prob = embedding_calculator.calculate_probabilities(10)
             print "done: ", prob
         elif cmd == "p":
-            filename = sys.argv[1]
-            batch_number = int(sys.argv[2])
-            total_number_of_batches = int(sys.argv[3])
+            state_filename = sys.argv[1]
+            events_filename = sys.argv[2]
+            batch_number = int(sys.argv[3])
+            total_number_of_batches = int(sys.argv[4])
+            event2users = collect_unique_user_event_pairs(events_filename, load_id_dictionary(read_state_file(state_filename)["users_ids"], isSimId2strId=False))
             print "computing probabilities from embedding ..."
-            compute_probabilities(filename, users_batch_number=batch_number, total_user_batches=total_number_of_batches)
+            compute_probabilities(state_file=state_filename, destination_dir="./probabilities/",
+                                  probability_vector_size = 10,
+                                  users_batch_number=batch_number, total_user_batches=total_number_of_batches,
+                                  event2users=event2users)
         else:
             print "Unrecognized command " + cmd + "\n"
 

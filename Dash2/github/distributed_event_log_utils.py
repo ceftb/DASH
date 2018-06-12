@@ -90,7 +90,7 @@ def _retreive_earliest_event(lines):
     return earliest_event_line
 
 
-def _load_id_dictionary(dictionary_file_name, isSimId2strId = True):
+def load_id_dictionary(dictionary_file_name, isSimId2strId = True):
     dict_file = open(dictionary_file_name, "r")
     datareader = csv.reader(dict_file)
     ids_map = {}
@@ -110,8 +110,8 @@ def _load_id_dictionary(dictionary_file_name, isSimId2strId = True):
 def trnaslate_user_and_repo_ids_in_event_log(even_log_file, output_file_name, users_ids_file, repos_ids_file):
     input_file = open(even_log_file, 'r')
     output_file = open(output_file_name, 'w')
-    users_map = _load_id_dictionary(users_ids_file)
-    repos_map = _load_id_dictionary(repos_ids_file)
+    users_map = load_id_dictionary(users_ids_file)
+    repos_map = load_id_dictionary(repos_ids_file)
 
     datareader = csv.reader(input_file)
     for row in datareader:
@@ -183,14 +183,9 @@ def split_event_log_by_month(even_log_file, output_file_name, prefix):
     output_file.close()
 
 
-def count_unique_user_event_pairs(even_log_file, UstrId2UsimId):
-    event2users = {k : {} for k in event_types}
-    # TBD work in progress
+def collect_unique_user_event_pairs(even_log_file, UstrId2UsimId=None):
     input_file = open(even_log_file, 'r')
     unique_events = set()
-    unique_events.add(("user", "event"))
-    unique_events.add(("user", "event"))
-    print len(unique_events)
 
     datareader = csv.reader(input_file)
     for row in datareader:
@@ -201,7 +196,12 @@ def count_unique_user_event_pairs(even_log_file, UstrId2UsimId):
     print "unique events ", len(unique_events)
     input_file.close()
 
+    if UstrId2UsimId is not None:
+        event2users = {k : [] for k in event_types}
+        for user, event in unique_events:
+            event2users[event].append(UstrId2UsimId[user])
+        return  event2users
+
 
 if __name__ == "__main__":
-    count_unique_user_event_pairs(sys.argv[1], None)
-    #split_event_log_by_month(sys.argv[1], sys.argv[2], sys.argv[3])
+    collect_unique_user_event_pairs(sys.argv[1])
