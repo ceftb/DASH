@@ -215,13 +215,12 @@ def compute_probabilities(state_file, destination_dir="./probabilities/", probab
     UsimId2strId = load_id_dictionary(initial_state_meta_data["users_ids"], isSimId2strId=True)
     strId2RsimId = load_id_dictionary(initial_state_meta_data["repos_ids"], isSimId2strId=False)
     total_number_of_agents = len(UsimId2strId)
-    total_number_of_repos = len(strId2RsimId)
 
     def _time(index, start_time):
         if index % 1000 == 0:
             end_time = time.time()
             print "Agent ", index, " out of ", total_number_of_agents, " : ", 100.0 * float(index) / float(
-                total_number_of_agents), "%, repos = ", total_number_of_repos, " time:", (end_time - start_time)
+                total_number_of_agents), "%, ", " time:", (end_time - start_time)
             start_time = time.time()
         return start_time
 
@@ -239,10 +238,10 @@ def compute_probabilities(state_file, destination_dir="./probabilities/", probab
                 min_index = (users_batch_number - 1) * int(total_number_of_agents / total_number_of_batches)
                 max_index = users_batch_number * int(total_number_of_agents / total_number_of_batches) if users_batch_number != total_user_batches else total_number_of_agents
                 #print "min: ", min_index, ", max : ", max_index, " total agents: ", total_number_of_agents
-                for index, user_id in enumerate(event2users[event_type]):
-                    if index >= min_index and index < max_index:
-                        all_probabilities[user_id] = calculator.calculate_probabilities(user_id, probability_vector_size)
-                        start_time = _time(index, start_time)
+                for index in range(min_index, max_index, 1):
+                    user_id = event2users[event_type][index]
+                    all_probabilities[user_id] = calculator.calculate_probabilities(user_id, probability_vector_size)
+                    start_time = _time(index, start_time)
 
             if total_user_batches > 1:
                 output_file = open(destination_dir + event_type + "_" + str(users_batch_number) + ".prob", 'wb')
