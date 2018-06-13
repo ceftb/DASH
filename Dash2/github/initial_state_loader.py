@@ -1,14 +1,10 @@
 import sys; sys.path.extend(['../../'])
 import json
-import csv
-import ijson
+import os.path
 import time
-from datetime import datetime
 import numpy as np
-from scipy import sparse
 import cPickle as pickle
 from distributed_event_log_utils import load_id_dictionary, collect_unique_user_event_pairs
-from heapq import heappush, heappop
 from user_partitioner import build_graph_from_csv, partition_graph, print_user_profiles
 from distributed_event_log_utils import event_types
 
@@ -263,6 +259,21 @@ def populate_event_rate(agents, model_file):
             new_rate = loaded_model.predict(X)
             agent.decision_data.event_rate = new_rate
 
+def gather_prob_files(src_dir, dst_dir):
+    for event_type in event_types:
+        probabilities = {}
+        index = 1
+        file_path = src_dir + event_type + "_" + str(index) + ".prob"
+        while os.path.isfile(file_path):
+            prob_file = open(file_path, 'rb')
+            part_prob = pickle.load(prob_file)
+            prob_file.close()
+            probabilities.update(part_prob)
+            index += 1
+            file_path = src_dir + event_type + "_" + str(index) + ".prob"
+        if index > 1:
+            output_file = open(dst_dir + event_type + ".prob", "wb")
+            pickle.dump(probabilities, output_file, protocol=2)
 
 if __name__ == "__main__":
     while True:
@@ -271,6 +282,7 @@ if __name__ == "__main__":
             "l to load objects from profiles file and load them into memory\n\t"
             "e to load embedding into memory\n\t"
             "p to create probabilities file\n\t"
+            "g to gather (merge) probability files\n\t"
             "s to load state file\n")
         if cmd == "q":
             print("Exiting ...")
@@ -303,6 +315,12 @@ if __name__ == "__main__":
                                   probability_vector_size = 10,
                                   users_batch_number=batch_number, total_user_batches=total_number_of_batches,
                                   event2users=event2users)
+        elif cmd == "g":
+            src_dir = sys.argv[1] # must have '/' in the end
+            dst_dir = sys.argv[2] # must have '/' in the end
+            print "Gathering all probability files togather"
+            gather_prob_files(src_dir, dst_dir)
+            print "Done"
         else:
             print "Unrecognized command " + cmd + "\n"
 
