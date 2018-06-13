@@ -188,19 +188,19 @@ def populate_embedding_probabilities(agents_decision_data, initial_state_meta_da
     embedding_files_data = initial_state_meta_data["embedding_files"]
     UsimId2strId = load_id_dictionary(initial_state_meta_data["users_ids"], isSimId2strId=True)
     strId2RsimId = load_id_dictionary(initial_state_meta_data["repos_ids"], isSimId2strId=False)
-    for event_type in event_types:
-        if event_type in embedding_files_data:
-            if "probabilities_file" in embedding_files_data[event_type]:
-                prob_file = open(embedding_files_data[event_type]["probabilities_file"], 'rb')
-                probabilities = pickle.load(prob_file)
-                prob_file.close()
-                for _, decision_data in agents_decision_data.iteritems():
-                    if decision_data.id in probabilities:
-                        decision_data.embedding_probabilities[event_type] = probabilities[decision_data.id]
-            else:
-                calculator = EmbeddingCalculator(embedding_files_data[event_type]["file_name"], embedding_files_data[event_type]["dictionary"], UsimId2strId, strId2RsimId)
-                for agent_id, decision_data in agents_decision_data.iteritems():
-                    decision_data.embedding_probabilities[event_type] = calculator.calculate_probabilities(decision_data.id, probability_vector_size)
+    for event_type, embedding_info in embedding_files_data.iteritems():
+        if "probabilities_file" in embedding_info:
+            print "Event type: ", event_type, ", loading probabilities from .prob files (.prob - probabilities are precomputed in advance)."
+            prob_file = open(embedding_info["probabilities_file"], 'rb')
+            probabilities = pickle.load(prob_file); prob_file.close()
+            for _, decision_data in agents_decision_data.iteritems():
+                if decision_data.id in probabilities:
+                    decision_data.embedding_probabilities[event_type] = probabilities[decision_data.id]
+        else: # this takes a long time, so in normal scenario it should not hit this case (assuming probabilities are precomputed)
+            print "Event type: ", event_type, ", computing probabilities from embedding. May take a while... "
+            calculator = EmbeddingCalculator(embedding_info["file_name"], embedding_info["dictionary"], UsimId2strId, strId2RsimId)
+            for agent_id, decision_data in agents_decision_data.iteritems():
+                decision_data.embedding_probabilities[event_type] = calculator.calculate_probabilities(decision_data.id, probability_vector_size)
 
 ''' 
 creates probability files (.prob files). Probabilities are computed from graph embedding.
@@ -220,31 +220,30 @@ def compute_probabilities(state_file, destination_dir="./probabilities/", probab
             start_time = time.time()
         return start_time
 
-    for event_type in event_types:
-        if event_type in embeddings_data:
-            all_probabilities = {}
-            calculator = EmbeddingCalculator(embeddings_data[event_type]["file_name"], embeddings_data[event_type]["dictionary"], UsimId2strId, strId2RsimId)
-            start_time = time.time()
-            if event2users is None:
-                for index, agent_sim_id in enumerate(UsimId2strId.iterkeys()):
-                    all_probabilities[agent_sim_id] = calculator.calculate_probabilities(agent_sim_id, probability_vector_size)
-                    start_time = _time(index, start_time)
-            else:
-                total_number_of_agents = len(event2users[event_type])
-                min_index = (users_batch_number - 1) * int(total_number_of_agents / total_number_of_batches)
-                max_index = users_batch_number * int(total_number_of_agents / total_number_of_batches) if users_batch_number != total_user_batches else total_number_of_agents
-                #print "min: ", min_index, ", max : ", max_index, " total agents: ", total_number_of_agents
-                for index in range(min_index, max_index, 1):
-                    user_id = event2users[event_type][index]
-                    all_probabilities[user_id] = calculator.calculate_probabilities(user_id, probability_vector_size)
-                    start_time = _time(index, start_time)
+    for event_type, embedding_info in embeddings_data.iteritems():
+        all_probabilities = {}
+        calculator = EmbeddingCalculator(embedding_info["file_name"], embedding_info["dictionary"], UsimId2strId, strId2RsimId)
+        start_time = time.time()
+        if event2users is None:
+            for index, agent_sim_id in enumerate(UsimId2strId.iterkeys()):
+                all_probabilities[agent_sim_id] = calculator.calculate_probabilities(agent_sim_id, probability_vector_size)
+                start_time = _time(index, start_time)
+        else:
+            total_number_of_agents = len(event2users[event_type])
+            min_index = (users_batch_number - 1) * int(total_number_of_agents / total_number_of_batches)
+            max_index = users_batch_number * int(total_number_of_agents / total_number_of_batches) if users_batch_number != total_user_batches else total_number_of_agents
+            #print "min: ", min_index, ", max : ", max_index, " total agents: ", total_number_of_agents
+            for index in range(min_index, max_index, 1):
+                user_id = event2users[event_type][index]
+                all_probabilities[user_id] = calculator.calculate_probabilities(user_id, probability_vector_size)
+                start_time = _time(index, start_time)
 
-            if total_user_batches > 1:
-                output_file = open(destination_dir + event_type + "_" + str(users_batch_number) + ".prob", 'wb')
-            else:
-                output_file = open(destination_dir + event_type + ".prob", 'wb')
-            pickle.dump(all_probabilities, output_file, protocol=2)
-            output_file.close()
+        if total_user_batches > 1:
+            output_file = open(destination_dir + event_type + "_" + str(users_batch_number) + ".prob", 'wb')
+        else:
+            output_file = open(destination_dir + event_type + ".prob", 'wb')
+        pickle.dump(all_probabilities, output_file, protocol=2)
+        output_file.close()
 
 
 def populate_event_rate(agents, model_file):
