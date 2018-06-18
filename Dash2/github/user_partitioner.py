@@ -122,6 +122,14 @@ def partition_graph(graph, number_of_partitions):
 
     return shared_repos, shared_users
 
+def removeK2componnets(graph):
+    k2components = []
+    for component in nx.connected_components(graph):
+        if len(component) == 2:
+            k2components.append(component)
+    for component in k2components:
+        for node in component:
+            graph.remove_node(node)
 
 def print_user_profiles(graph, users_filename, number_of_partitions, shared_repos):
     users_parts_file = {}
