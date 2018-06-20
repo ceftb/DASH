@@ -39,7 +39,8 @@ def build_state_from_event_log(input_event_log, number_of_user_partitions=1, sta
     print "shared repos ", len(shared_repos), ", shared users ", len(shared_users)
 
     print "printing graph..."
-    print_user_profiles(G, input_event_log + "_users.json", number_of_user_partitions, shared_repos)
+    print_user_profiles(G, input_event_log + "_users.json", number_of_user_partitions, shared_repos, owned_repos_file_name="./owned_repos.pickle")
+    os.remove("./owned_repos.pickle")
 
     users_file = input_event_log + "_users.json"
     repos_file = input_event_log + "_repos.json"

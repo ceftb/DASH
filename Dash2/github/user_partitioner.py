@@ -54,6 +54,7 @@ class IdDictionaryStream:
         self.repo_dictionary.write("src_id, sim_id\n")
         self.is_stream_open = True
         self.events_to_accept = event_filter
+        self.user_creator_to_repos = {} # dictionary of lists
 
     def update_dictionary(self, original_user_id, original_repo_id):
         hash_user_id = hash(original_user_id)
@@ -66,6 +67,11 @@ class IdDictionaryStream:
         if hash_repo_id not in self.repos:
             self.repos[hash_repo_id] = int_repo_id
             self._append_line(self.repo_dictionary, int_repo_id, original_repo_id)
+
+        usr_repo = str(original_repo_id).split("/")
+        if usr_repo[0] not in self.user_creator_to_repos:
+            self.user_creator_to_repos[usr_repo[0]] = []
+        self.user_creator_to_repos[usr_repo[0]].append(usr_repo[1])
 
         return int_user_id, int_repo_id
 
@@ -83,7 +89,25 @@ class IdDictionaryStream:
     def close(self):
         self.user_dictionary.close()
         self.repo_dictionary.close()
+        self.print_own_repos_to_file("owned_repos.pickle")
         self.is_stream_open = False
+
+    # convert ids to sequential int ids and write to file
+    def print_own_repos_to_file(self, owned_repos_file_name):
+        creator2repos = {}
+        for owner, repo_list in self.user_creator_to_repos.iteritems():
+            hash_user_id = hash(owner)
+            if hash_user_id in self.users:
+                if self.users[hash_user_id] not in creator2repos:
+                    creator2repos[self.users[hash_user_id]] = []
+                for repo in repo_list:
+                    hash_repo_id = hash(repo)
+                    if hash_repo_id in self.repos:
+                        creator2repos[self.users[hash_user_id]].append(self.repos[hash_repo_id])
+        owned_repos_file = open(owned_repos_file_name, "w")
+        pickle.dump(creator2repos, owned_repos_file)
+        owned_repos_file.close()
+
 
 
 def partition_graph(graph, number_of_partitions):
@@ -131,8 +155,9 @@ def removeK2componnets(graph):
         for node in component:
             graph.remove_node(node)
 
-def print_user_profiles(graph, users_filename, number_of_partitions, shared_repos):
+def print_user_profiles(graph, users_filename, number_of_partitions, shared_repos, owned_repos_file_name=None):
     users_parts_file = {}
+    owned_repos = pickle.load(open(owned_repos_file_name, "r")) if owned_repos_file_name is not None else None
     for i in range(0, number_of_partitions, 1):
         fp = open(users_filename + "_" + str(i), 'w')
         users_parts_file[i] = {'fp':fp}
@@ -140,15 +165,16 @@ def print_user_profiles(graph, users_filename, number_of_partitions, shared_repo
     for node in graph.nodes():
         if graph.nodes[node]['isUser'] == 1:
             fp = users_parts_file[graph.nodes[node]['partition']]['fp']
-            _print_profile(graph, node, fp, shared_repos)
+            _print_profile(graph, node, fp, shared_repos, owned_repos)
 
     for i in range(0, number_of_partitions, 1):
         fp = users_parts_file[i]['fp']
         fp.close()
 
 
-def _print_profile(graph, user_node, fp, shared_repos):
+def _print_profile(graph, user_node, fp, shared_repos, owned_repos=None):
     profile_object = {'id': user_node, 'r': graph.nodes[user_node]["r"], 'ef':graph.nodes[user_node]["ef"]}
+    profile_object["own"] = owned_repos[user_node] if owned_repos is not None and user_node in owned_repos else []
     for neighbour in graph.neighbors(user_node):
         edge_weight = graph.get_edge_data(user_node, neighbour)['weight']
         isSharedRepo = 2 if neighbour in shared_repos else 1

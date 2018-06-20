@@ -27,7 +27,7 @@ class GitUserDecisionData(object):
         self.total_activity = 0
         self.following_list = {} # ght_id_h: {full_name_h, following_date, following_dow}
         self.watching_list = {} # ght_id_h: {full_name_h, watching_date, watching_dow}
-        self.owned_repos = {} # {ght_id_h : name_h}
+        self.owned_repos = [] # {ght_id_h : name_h}
         self.name_to_repo_id = {} # {name_h : ght_id_h} Contains all repos known by the agent
         self.all_known_repos = []
         if kwargs.get("freqs") is not None:
@@ -319,7 +319,7 @@ goalRequirements UpdateOwnRepo
         status, repo_id = self.sendAction("create_repo_event", [repo_info])
         if self.trace_github:
             print 'create repo result:', status, repo_id, 'for', repo_info
-        self.decision_data.owned_repos.update({repo_id: repo_info['name_h']})
+        self.decision_data.owned_repos.append(repo_id) #update({repo_id: repo_info['name_h']})
         self.decision_data.name_to_repo_id[repo_info['name_h']] = repo_id
         self.decision_data.total_activity += 1
         # Binds the name of the repo if it was not bound before this call

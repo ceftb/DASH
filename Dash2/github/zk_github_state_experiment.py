@@ -59,7 +59,9 @@ class ZkGithubStateWorkProcessor(WorkProcessor):
         agent_id = profile.pop("id", None)
         event_rate = profile.pop("r", None)
         event_frequencies = profile.pop("ef", None)
+        own_repos = profile.pop("own", None) # [234, 2344, 2312] # an array of integer repo ids
         decision_data = GitUserDecisionData(id=agent_id, event_rate=event_rate, event_frequencies=event_frequencies)
+        decision_data.owned_repos = own_repos
         # frequency of use of associated repos:
         total_even_counter = 0
         for repo_id, freq in profile.iteritems():
@@ -158,7 +160,8 @@ if __name__ == "__main__":
     zk_hosts = '127.0.0.1:2181'
     number_of_hosts = 1
     input_event_log = None
-    embedding_directory = "./embeddings/"; embedding_files = None
+    embedding_directory = None #"./embeddings/";
+    embedding_files = None
     if len(sys.argv) == 1:
         pass
     elif len(sys.argv) == 2:
