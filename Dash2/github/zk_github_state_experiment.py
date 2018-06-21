@@ -17,6 +17,8 @@ from Dash2.github.initial_state_loader import build_state_from_event_log, read_s
     populate_embedding_probabilities, populate_event_rate
 from Dash2.github.zk_repo_hub import ZkRepoHub
 from Dash2.github.distributed_event_log_utils import merge_log_file, trnaslate_user_and_repo_ids_in_event_log, event_types
+from iu_agent1 import IUDecisionData, IUGitUserAgent
+
 
 # This is an example of experiment script
 
@@ -31,7 +33,8 @@ class ZkGithubStateWorkProcessor(WorkProcessor):
         self.events_heap = []
         self.event_counter = 0
         self.hub = ZkRepoHub(self.zk, self.task_full_id, 0, log_file=self.log_file)
-        self.agent = GitUserAgent(useInternalHub=True, hub=self.hub, skipS12=True, trace_client=False, traceLoop=False, trace_github=False)
+        #self.agent = GitUserAgent(useInternalHub=True, hub=self.hub, skipS12=True, trace_client=False, traceLoop=False, trace_github=False)
+        self.agent = IUGitUserAgent(useInternalHub=True, hub=self.hub, skipS12=True, trace_client=False, traceLoop=False, trace_github=False)
         self.log_file.close()
 
         if self.users_file is not None and self.users_file != "":
@@ -59,15 +62,16 @@ class ZkGithubStateWorkProcessor(WorkProcessor):
         agent_id = profile.pop("id", None)
         event_rate = profile.pop("r", None)
         event_frequencies = profile.pop("ef", None)
-        own_repos = profile.pop("own", None) # [234, 2344, 2312] # an array of integer repo ids
-        decision_data = GitUserDecisionData(id=agent_id, event_rate=event_rate, event_frequencies=event_frequencies)
+        own_repos = profile.pop("own", None) # e.g. [234, 2344, 2312] # an array of integer repo ids
+        #decision_data = GitUserDecisionData(id=agent_id, event_rate=event_rate, event_frequencies=event_frequencies)
+        decision_data = IUDecisionData(id=agent_id, event_rate=event_rate, event_frequencies=event_frequencies)
         decision_data.owned_repos = own_repos
         # frequency of use of associated repos:
         total_even_counter = 0
         for repo_id, freq in profile.iteritems():
             int_repo_id = int(repo_id)
             decision_data.repo_id_to_freq[int_repo_id] = int(freq["f"])
-            decision_data.name_to_repo_id[int_repo_id] = int_repo_id
+            #decision_data.name_to_repo_id[int_repo_id] = int_repo_id
             total_even_counter += decision_data.repo_id_to_freq[int_repo_id]
             is_node_shared = True if int(freq["c"]) > 1 else False
             self.hub.init_repo(repo_id=int_repo_id, user_id=decision_data.id, curr_time=0, is_node_shared=is_node_shared)

@@ -28,6 +28,7 @@ class GitUserDecisionData(object):
         self.following_list = {} # ght_id_h: {full_name_h, following_date, following_dow}
         self.watching_list = {} # ght_id_h: {full_name_h, watching_date, watching_dow}
         self.owned_repos = [] # {ght_id_h : name_h}
+        self.not_own_repos = []
         self.name_to_repo_id = {} # {name_h : ght_id_h} Contains all repos known by the agent
         self.all_known_repos = []
         if kwargs.get("freqs") is not None:
@@ -189,6 +190,8 @@ goalRequirements UpdateOwnRepo
                 for repo_id, fr in self.decision_data.repo_id_to_freq.iteritems():
                     sum += fr
                     self.decision_data.all_known_repos.append(repo_id)
+                    if repo_id not in self.decision_data.owned_repos:
+                        self.decision_data.not_own_repos.append(repo_id)
                 for fr in self.decision_data.repo_id_to_freq.itervalues():
                     self.decision_data.probabilities.append(fr / sum)
             selected_event = numpy.random.choice(event_types, p=self.decision_data.event_probabilities)
