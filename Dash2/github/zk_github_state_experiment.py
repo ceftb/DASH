@@ -65,7 +65,7 @@ class ZkGithubStateWorkProcessor(WorkProcessor):
         own_repos = profile.pop("own", None) # e.g. [234, 2344, 2312] # an array of integer repo ids
         #decision_data = GitUserDecisionData(id=agent_id, event_rate=event_rate, event_frequencies=event_frequencies)
         decision_data = IUDecisionData(id=agent_id, event_rate=event_rate, event_frequencies=event_frequencies)
-        decision_data.owned_repos = own_repos
+        decision_data.owned_repos = own_repos if own_repos is not None else []
         # frequency of use of associated repos:
         total_even_counter = 0
         for repo_id, freq in profile.iteritems():
