@@ -192,7 +192,8 @@ if __name__ == "__main__":
         #input_event_log = "./data_2016/jan_2016_events.csv"
         #input_event_log = "./data_two_weeks/two_weeks.csv"
         #input_event_log = "./data_4days/4days.csv"
-        input_event_log = "./2016/2016-01.csv"
+        #input_event_log = "./2016/2016-01_01.csv"
+        input_event_log = "./2017/20170701-20170816.csv"
 
     if embedding_directory is not None and os.path.isdir(embedding_directory):
         embedding_files = {}

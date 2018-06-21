@@ -27,11 +27,12 @@ class IUDecisionData(object):
         self.name_to_repo_id = []
         self.event_rate = kwargs.get("event_rate", 5)  # number of events per month
         self.id = kwargs.get("id", None)
+        self.probabilities = None
         event_frequencies = kwargs.get("event_frequencies", [1] * len(event_types))
         del event_frequencies[event_types_indexes["CreateEvent"]]
         del event_frequencies[event_types_indexes["ForkEvent"]]
         f_sum = float(sum(event_frequencies))
-        self.event_probabilities = [event/f_sum for event in event_frequencies] if f_sum != 0 else [event for event in event_frequencies]
+        self.event_probabilities = [event/f_sum for event in event_frequencies] if f_sum != 0 else [1.0 / len(event_frequencies) for event in event_frequencies]
 
         if kwargs.get("freqs") is not None:
             self.repo_id_to_freq = kwargs.get("freqs").copy()
@@ -79,7 +80,7 @@ class IUMixin(GitUserMixin):
                 self.fork_event()  # NOT YET IMPLEMENTED in GitUserAgent. Needs to update decision_data.forked_repos
             #elif choice < IUMixin.p_create_repo + IUMixin.p_fork + IUMixin.p_own_repo:
             #    repo_for_action = random.choice(self.decision_data.owned_repos)
-            elif choice < IUMixin.p_create_repo + IUMixin.p_fork + IUMixin.p_own_repo + IUMixin.p_own_fork: # own repos
+            elif len(self.decision_data.owned_repos) > 0 and choice < IUMixin.p_create_repo + IUMixin.p_fork + IUMixin.p_own_repo + IUMixin.p_own_fork: # own repos
                 repo_for_action = random.choice(self.decision_data.owned_repos)#self.decision_data.owned_forks)
             #elif choice < IUMixin.p_create_repo + IUMixin.p_fork + IUMixin.p_own_repo + IUMixin.p_own_fork + IUMixin.p_other_repo:
             #    repo_for_action = random.choice(self.decision_data.other_repos)
@@ -97,11 +98,13 @@ class IUMixin(GitUserMixin):
             return DASHAgent.agentLoop(self, max_iterations, disconnect_at_end)
 
     def create_event(self):
-        new_repo_id = self.hub.create_repo_event(self.id, ("", ""))
+        _, new_repo_id = self.hub.create_repo_event(self.id, (""))
+        self.decision_data.owned_repos.append(new_repo_id)
         self.hub.log_event(self.decision_data.id, new_repo_id, "CreateEvent", None, self.hub.time)
 
     def fork_event(self):
-        new_repo_id = self.hub.create_repo_event(self.id, ("", "")) # new fork has a new id
+        _, new_repo_id = self.hub.create_repo_event(self.id, ("")) # new fork has a new id
+        self.decision_data.owned_repos.append(new_repo_id)
         self.hub.log_event(self.decision_data.id, new_repo_id, "ForkEvent", None, self.hub.time)
 
 
