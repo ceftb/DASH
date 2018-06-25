@@ -78,14 +78,10 @@ class IUMixin(GitUserMixin):
                 self.create_event()  # Will pick a name and add it to decision_data.owned_repos
             elif choice < IUMixin.p_create_repo + IUMixin.p_fork:
                 self.fork_event()  # NOT YET IMPLEMENTED in GitUserAgent. Needs to update decision_data.forked_repos
-            #elif choice < IUMixin.p_create_repo + IUMixin.p_fork + IUMixin.p_own_repo:
-            #    repo_for_action = random.choice(self.decision_data.owned_repos)
             elif len(self.decision_data.owned_repos) > 0 and choice < IUMixin.p_create_repo + IUMixin.p_fork + IUMixin.p_own_repo + IUMixin.p_own_fork: # own repos
-                repo_for_action = random.choice(self.decision_data.owned_repos)#self.decision_data.owned_forks)
-            #elif choice < IUMixin.p_create_repo + IUMixin.p_fork + IUMixin.p_own_repo + IUMixin.p_own_fork + IUMixin.p_other_repo:
-            #    repo_for_action = random.choice(self.decision_data.other_repos)
+                repo_for_action = random.choice(self.decision_data.owned_repos)
             else: # other repos
-                repo_for_action = random.choice(self.decision_data.not_own_repos)#self.decision_data.other_forks)
+                repo_for_action = random.choice(self.decision_data.not_own_repos)
 
             if repo_for_action is not None:  # Otherwise, a create or fork action was already taken and total_activity was incremented
                 # Pick a random event type. In later versions the probabilities will change based on the kind of repo
@@ -98,14 +94,15 @@ class IUMixin(GitUserMixin):
             return DASHAgent.agentLoop(self, max_iterations, disconnect_at_end)
 
     def create_event(self):
-        _, new_repo_id = self.hub.create_repo_event(self.id, (""))
+        new_repo_id = self.hub.create_repo(self.id, (""))
         self.decision_data.owned_repos.append(new_repo_id)
         self.hub.log_event(self.decision_data.id, new_repo_id, "CreateEvent", None, self.hub.time)
 
     def fork_event(self):
-        _, new_repo_id = self.hub.create_repo_event(self.id, ("")) # new fork has a new id
+        repo_to_fork = random.choice(self.decision_data.not_own_repos) # parent repo
+        new_repo_id = self.hub.create_repo(self.id, (repo_to_fork))
         self.decision_data.owned_repos.append(new_repo_id)
-        self.hub.log_event(self.decision_data.id, new_repo_id, "ForkEvent", None, self.hub.time)
+        self.hub.log_event(self.decision_data.id, repo_to_fork, "ForkEvent", None, self.hub.time)
 
 
 

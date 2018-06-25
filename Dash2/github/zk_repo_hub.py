@@ -77,6 +77,12 @@ class ZkRepoHub(GitRepoHub):
     # Create/Delete Events (Tag/branch/repo)
     ############################################################################
 
+    def _create_repo(self, agent_id, (repo_info)):
+        repo_id = self.create_new_repo_id()
+        self.all_repos[repo_id] = ZkRepo(id=repo_id, curr_time=self.time, is_node_shared=False, hub=self)
+
+        return repo_id
+
     def create_repo_event(self, agent_id, (repo_info)):
         """
         Requests that a git_repo_hub create and start a new repo given
