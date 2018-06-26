@@ -9,6 +9,11 @@ from distributed_event_log_utils import event_types
 class GitUserDecisionData(object):
 
     def __init__(self, **kwargs):
+        """
+        Initializes empty DecisionData object. If kwargs is empty object must be initialized via
+        initialize_using_user_profile() after creation.
+        :param kwargs: may contain such paramenters as id, event_rate, event_frequencies, login_h, etc.
+        """
         # System 1 dynamic information needs to be separate for each agent. I will add general support for this later.
         self.nodes = set()
         self.action_nodes = set()
@@ -45,15 +50,17 @@ class GitUserDecisionData(object):
         """
         This method initializes GitUserDecisionData using information from initial state loader. Information from intial
         state loader is passes via profile object. Profile object is created and pickled by initial state loader.
+        This method initializes:
+            id, event_rate, last_event_time, all_known_repos, repo_id_to_freq, probabilities, event_probabilities,
+            embedding probabilities
+
         :param profile: contains information about the initial state of the agent, created by initial state loader.
         :param hub: hub is needed to register repos.
         :return: None
         """
-        own_repos = profile.pop("own", None)  # e.g. [234, 2344, 2312] # an array of integer repo ids
-        self.owned_repos = own_repos if own_repos is not None else []
 
         self.id = profile.pop("id", None)
-        self.event_rate = profile.pop("r", None)
+        self.event_rate = profile.pop("r", 5)  # number of events per month
 
         event_frequencies = profile.pop("ef", None)
         f_sum = float(sum(event_frequencies))
@@ -66,17 +73,13 @@ class GitUserDecisionData(object):
         for repo_id in profile.iterkeys():
             hub.init_repo(repo_id=int(repo_id), user_id=self.id, curr_time=0, is_node_shared=int(repo_id))
 
-        for repo_id in self.repo_id_to_freq.iterkeys():
-            if repo_id not in self.owned_repos:
-                self.not_own_repos.append(repo_id)
-
         self.all_known_repos = []
         self.all_known_repos.extend(self.repo_id_to_freq.iterkeys())
 
         f_sum = float(sum(self.repo_id_to_freq.itervalues()))
         self.probabilities = [repo_fr / f_sum for repo_fr in self.repo_id_to_freq.itervalues()]
 
-        self.last_event_time = -1 # FIXME: need to be set from profile
+        self.last_event_time = -1
 
 
 class GitUserMixin(object):
@@ -84,6 +87,16 @@ class GitUserMixin(object):
     A basic Git user agent that can communicate with a Git repository hub and
     perform basic actions. Can be inherited to perform other specific functions.
     """
+
+    decision_object_class_name = "GitUserDecisionData"
+
+    def _new_empty_decision_object(self):
+        return GitUserDecisionData()
+
+    def create_new_decision_object(self, profile, hub):
+        decisionObject = self._new_empty_decision_object()
+        decisionObject.initialize_using_user_profile(profile, hub)
+        return decisionObject
 
     def __init__(self, **kwargs):
         self.isSharedSocketEnabled = True  # if it is True, then common socket for all agents is used.
@@ -215,19 +228,7 @@ goalRequirements UpdateOwnRepo
         This a test agentLoop that can skip System 1 and System 2 and picks repo and event based on frequencies.
         """
         if self.skipS12:
-            if (self.decision_data.probabilities is None or self.decision_data.all_known_repos == []):
-                self.decision_data.probabilities = []
-                self.decision_data.all_known_repos = []
-                sum = 0.0
-                for repo_id, fr in self.decision_data.repo_id_to_freq.iteritems():
-                    sum += fr
-                    self.decision_data.all_known_repos.append(repo_id)
-                    if repo_id not in self.decision_data.owned_repos:
-                        self.decision_data.not_own_repos.append(repo_id)
-                for fr in self.decision_data.repo_id_to_freq.itervalues():
-                    self.decision_data.probabilities.append(fr / sum)
             selected_event = numpy.random.choice(event_types, p=self.decision_data.event_probabilities)
-
             if self.decision_data.embedding_probabilities[selected_event] is None:
                 selected_repo = numpy.random.choice(self.decision_data.all_known_repos, p=self.decision_data.probabilities)
             else:
@@ -241,10 +242,13 @@ goalRequirements UpdateOwnRepo
         else:
             return DASHAgent.agentLoop(self, max_iterations, disconnect_at_end)
 
+    def first_event_time(self, start_time):
+        delta = float(30 * 24 * 3600) / float(self.decision_data.event_rate)
+        next_event_time = self.decision_data.last_event_time + delta if self.decision_data.last_event_time != -1 else start_time
+        while next_event_time < start_time:
+            next_event_time += delta
 
     def next_event_time(self, curr_time):
-        if curr_time is None:
-            curr_time = self.last_event_time
         delta = float(30 * 24 * 3600) / float(self.decision_data.event_rate)
         next_time = curr_time + delta
         return next_time

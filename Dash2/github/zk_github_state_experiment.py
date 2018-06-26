@@ -59,10 +59,9 @@ class ZkGithubStateWorkProcessor(WorkProcessor):
 
     # Function takes a user profile and creates an agent.
     def populate_agents_collection(self, profile):
-        decision_data = GitUserDecisionData()
-        decision_data.initialize_using_user_profile(profile, self.hub)
+        decision_data = self.agent.create_new_decision_object(profile, self.hub)
         self.agent.decision_data = decision_data
-        heappush(self.events_heap, (self.agent.next_event_time(self.start_time + random.uniform(1, 4*24*3600)), decision_data.id))
+        heappush(self.events_heap, (self.agent.next_event_time(self.start_time), decision_data.id))
         self.agents_decision_data[decision_data.id] = decision_data
 
     def run_one_iteration(self):

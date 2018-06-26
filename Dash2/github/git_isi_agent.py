@@ -6,9 +6,7 @@ from distributed_event_log_utils import event_types, event_types_indexes
 
 
 # Similar to GitUserDecisionData, encapsulates any agent-specific data to minimize creation of DASHAgent objects
-class IUDecisionData(GitUserDecisionData):
-
-    event_types_no_create_fork = [ev for ev in event_types if ev != "CreateEvent" and ev != "ForkEvent"]
+class ISIDecisionData(GitUserDecisionData):
 
     def initialize_using_user_profile(self, profile, hub):
 
@@ -26,47 +24,27 @@ class IUDecisionData(GitUserDecisionData):
             if repo_id not in self.owned_repos:
                 self.not_own_repos.append(repo_id)
 
-        # remove Fork and Create events from event probabilities
-        del self.event_probabilities[event_types_indexes["CreateEvent"]]
-        del self.event_probabilities[event_types_indexes["ForkEvent"]]
 
 # Not inheriting directly from GitUserAgent in case alt system 1 is desired
-class IUMixin(GitUserMixin):
-
-    p_create_user = 0.015  # The action to create a new user is taken in the controller, e.g. git_user_experiment,
-                           # but the value is stored here to keep the IU level 1 values together.
-    p_create_repo = 0.048
-    p_fork = 0.028
-    p_own_repo = 0.423
-    p_own_fork = 0.074
-    p_other_repo = 0.403
-    p_other_fork = (1 - p_create_repo - p_fork - p_own_repo - p_own_fork - p_other_repo)
-
+class ISIMixin(GitUserMixin):
 
     def _new_empty_decision_object(self):
-        return IUDecisionData()
+        return ISIDecisionData()
 
     def __init__(self, **kwargs):
         GitUserMixin.__init__(self, **kwargs)
 
     def agentLoop(self, max_iterations=-1, disconnect_at_end=True):
         # If control passes to here, the decision on choosing a user has already been made.
-        repo_for_action = None
         if self.skipS12:
-            choice = random.uniform(0, 1)
-            if choice < IUMixin.p_create_repo:
-                self.create_event()  # Will pick a name and add it to decision_data.owned_repos
-            elif choice < IUMixin.p_create_repo + IUMixin.p_fork:
-                self.fork_event()  # NOT YET IMPLEMENTED in GitUserAgent. Needs to update decision_data.forked_repos
-            elif len(self.decision_data.owned_repos) > 0 and choice < IUMixin.p_create_repo + IUMixin.p_fork + IUMixin.p_own_repo + IUMixin.p_own_fork: # own repos
-                repo_for_action = random.choice(self.decision_data.owned_repos)
-            else: # other repos
-                repo_for_action = random.choice(self.decision_data.not_own_repos)
-
-            if repo_for_action is not None:  # Otherwise, a create or fork action was already taken and total_activity was incremented
-                # Pick a random event type. In later versions the probabilities will change based on the kind of repo
-                # But for now uses the same probabilities as used in the original DASH model
-                selected_event = numpy.random.choice(IUDecisionData.event_types_no_create_fork, p=self.decision_data.event_probabilities)
+            repo_for_action = None
+            # Pick a random event type.
+            selected_event = numpy.random.choice(event_types, p=self.decision_data.event_probabilities)
+            if selected_event == "CreateEvent":
+                self.create_event()
+            elif selected_event == "ForkEvent":
+                self.fork_event()
+            else:
                 self.hub.log_event(self.decision_data.id, repo_for_action, selected_event, None, self.hub.time)
                 self.decision_data.total_activity += 1
         else:
@@ -74,18 +52,20 @@ class IUMixin(GitUserMixin):
 
     def create_event(self):
         new_repo_id = self.hub.create_repo(self.id, (""))
+        # TBD:
         self.decision_data.owned_repos.append(new_repo_id)
         self.hub.log_event(self.decision_data.id, new_repo_id, "CreateEvent", None, self.hub.time)
 
     def fork_event(self):
         repo_to_fork = random.choice(self.decision_data.not_own_repos) # parent repo
         new_repo_id = self.hub.create_repo(self.id, (repo_to_fork))
+        # TBD:
         self.decision_data.owned_repos.append(new_repo_id)
         self.hub.log_event(self.decision_data.id, repo_to_fork, "ForkEvent", None, self.hub.time)
 
 
 
-class IUGitUserAgent(IUMixin, DASHAgent):
+class ISIGitUserAgent(ISIMixin, DASHAgent):
     def __init__(self, **kwargs):
         DASHAgent.__init__(self)
         GitUserMixin.__init__(self, **kwargs)
