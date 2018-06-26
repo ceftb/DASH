@@ -42,12 +42,8 @@ class ZkGithubStateWorkProcessor(WorkProcessor):
         if self.users_file is not None and self.users_file != "":
             load_profiles(self.users_file, self.populate_agents_collection)
 
-        # TBD (for future refactoring): move to initial state loader.
-        # embeddings from initial state file
-        initial_state_meta_data = read_state_file(self.initial_state_file)
-        self.embedding_files = initial_state_meta_data["embedding_files"]
-        if self.embedding_files is not None and self.embedding_files != "":
-            populate_embedding_probabilities(self.agents_decision_data, initial_state_meta_data)
+        # load embeddings probabilities, if such are specified in the initial state file
+        populate_embedding_probabilities(self.agents_decision_data, self.initial_state_file)
 
         self.log_file = open(self.task_full_id + '_event_log_file.txt', 'w')
         self.hub.log_file = self.log_file

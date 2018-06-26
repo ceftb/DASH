@@ -185,23 +185,25 @@ class EmbeddingCalculator(object):
 Populates agent's decision data objects with repo probabilities. Probabilities either loaded from a .prob file 
 (precomputed values of probability vectors) or from embedding files.
 '''
-def populate_embedding_probabilities(agents_decision_data, initial_state_meta_data, probability_vector_size = 10):
-    embedding_files_data = initial_state_meta_data["embedding_files"]
-    UsimId2strId = load_id_dictionary(initial_state_meta_data["users_ids"], isSimId2strId=True)
-    strId2RsimId = load_id_dictionary(initial_state_meta_data["repos_ids"], isSimId2strId=False)
-    for event_type, embedding_info in embedding_files_data.iteritems():
-        if "probabilities_file" in embedding_info:
-            print "Event type: ", event_type, ", loading probabilities from .prob files (.prob - probabilities are precomputed in advance)."
-            prob_file = open(embedding_info["probabilities_file"], 'rb')
-            probabilities = pickle.load(prob_file); prob_file.close()
-            for _, decision_data in agents_decision_data.iteritems():
-                if decision_data.id in probabilities:
-                    decision_data.embedding_probabilities[event_type] = probabilities[decision_data.id]
-        else: # this takes a long time, so in normal scenario it should not hit this case (assuming probabilities are precomputed)
-            print "Event type: ", event_type, ", computing probabilities from embedding. May take a while... "
-            calculator = EmbeddingCalculator(embedding_info["file_name"], embedding_info["dictionary"], UsimId2strId, strId2RsimId)
-            for agent_id, decision_data in agents_decision_data.iteritems():
-                decision_data.embedding_probabilities[event_type] = calculator.calculate_probabilities(decision_data.id, probability_vector_size)
+def populate_embedding_probabilities(agents_decision_data, state_file, probability_vector_size = 10):
+    initial_state_meta_data = read_state_file(state_file)
+    if initial_state_meta_data["embedding_files"] is not None and initial_state_meta_data["embedding_files"] != "":
+        embedding_files_data = initial_state_meta_data["embedding_files"]
+        UsimId2strId = load_id_dictionary(initial_state_meta_data["users_ids"], isSimId2strId=True)
+        strId2RsimId = load_id_dictionary(initial_state_meta_data["repos_ids"], isSimId2strId=False)
+        for event_type, embedding_info in embedding_files_data.iteritems():
+            if "probabilities_file" in embedding_info:
+                print "Event type: ", event_type, ", loading probabilities from .prob files (.prob - probabilities are precomputed in advance)."
+                prob_file = open(embedding_info["probabilities_file"], 'rb')
+                probabilities = pickle.load(prob_file); prob_file.close()
+                for _, decision_data in agents_decision_data.iteritems():
+                    if decision_data.id in probabilities:
+                        decision_data.embedding_probabilities[event_type] = probabilities[decision_data.id]
+            else: # this takes a long time, so in normal scenario it should not hit this case (assuming probabilities are precomputed)
+                print "Event type: ", event_type, ", computing probabilities from embedding. May take a while... "
+                calculator = EmbeddingCalculator(embedding_info["file_name"], embedding_info["dictionary"], UsimId2strId, strId2RsimId)
+                for agent_id, decision_data in agents_decision_data.iteritems():
+                    decision_data.embedding_probabilities[event_type] = calculator.calculate_probabilities(decision_data.id, probability_vector_size)
 
 ''' 
 creates probability files (.prob files). Probabilities are computed from graph embedding.
