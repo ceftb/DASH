@@ -59,23 +59,8 @@ class ZkGithubStateWorkProcessor(WorkProcessor):
 
     # Function takes a user profile and creates an agent.
     def populate_agents_collection(self, profile):
-        agent_id = profile.pop("id", None)
-        event_rate = profile.pop("r", None)
-        event_frequencies = profile.pop("ef", None)
-        own_repos = profile.pop("own", None) # e.g. [234, 2344, 2312] # an array of integer repo ids
-        #decision_data = GitUserDecisionData(id=agent_id, event_rate=event_rate, event_frequencies=event_frequencies)
-        decision_data = IUDecisionData(id=agent_id, event_rate=event_rate, event_frequencies=event_frequencies)
-        decision_data.owned_repos = own_repos if own_repos is not None else []
-        # frequency of use of associated repos:
-        total_even_counter = 0
-        for repo_id, freq in profile.iteritems():
-            int_repo_id = int(repo_id)
-            decision_data.repo_id_to_freq[int_repo_id] = int(freq["f"])
-            #decision_data.name_to_repo_id[int_repo_id] = int_repo_id
-            total_even_counter += decision_data.repo_id_to_freq[int_repo_id]
-            is_node_shared = True if int(freq["c"]) > 1 else False
-            self.hub.init_repo(repo_id=int_repo_id, user_id=decision_data.id, curr_time=0, is_node_shared=is_node_shared)
-        decision_data.total_activity = total_even_counter
+        decision_data = GitUserDecisionData()
+        decision_data.initialize_using_user_profile(profile, self.hub)
         self.agent.decision_data = decision_data
         heappush(self.events_heap, (self.agent.next_event_time(self.start_time + random.uniform(1, 4*24*3600)), decision_data.id))
         self.agents_decision_data[decision_data.id] = decision_data

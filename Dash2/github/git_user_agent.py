@@ -4,7 +4,6 @@ from Dash2.core.system2 import isVar
 import random
 import numpy
 from distributed_event_log_utils import event_types
-import sys
 
 
 class GitUserDecisionData(object):
@@ -27,24 +26,57 @@ class GitUserDecisionData(object):
         self.total_activity = 0
         self.following_list = {} # ght_id_h: {full_name_h, following_date, following_dow}
         self.watching_list = {} # ght_id_h: {full_name_h, watching_date, watching_dow}
-        self.owned_repos = [] # {ght_id_h : name_h}
-        self.not_own_repos = []
         self.name_to_repo_id = {} # {name_h : ght_id_h} Contains all repos known by the agent
-        self.all_known_repos = []
-        if kwargs.get("freqs") is not None:
-            self.repo_id_to_freq = kwargs.get("freqs").copy()
-            for r_id in self.repo_id_to_freq:
-                self.name_to_repo_id[r_id] = r_id
-        else:
-            self.repo_id_to_freq = {}  # {ght_id_h : frequency of use/communication} Contains all repos agent interacted with
         self.outgoing_requests = {}  # keyed tuple of (head_name, base_name, request_id) valued by state
-        self.probabilities = None
+
+        self.owned_repos = []
+        self.not_own_repos = []
+        self.repo_id_to_freq = {}
+        self.all_known_repos = []
         self.event_rate = kwargs.get("event_rate", 5)  # number of events per month
         self.id = kwargs.get("id", None)
+
         event_frequencies = kwargs.get("event_frequencies", [1] * len(event_types))
         f_sum = float(sum(event_frequencies))
         self.event_probabilities = [event/f_sum for event in event_frequencies]
         self.embedding_probabilities = {ev: None for ev in event_types}
+
+    def initialize_using_user_profile(self, profile, hub):
+        """
+        This method initializes GitUserDecisionData using information from initial state loader. Information from intial
+        state loader is passes via profile object. Profile object is created and pickled by initial state loader.
+        :param profile: contains information about the initial state of the agent, created by initial state loader.
+        :param hub: hub is needed to register repos.
+        :return: None
+        """
+        own_repos = profile.pop("own", None)  # e.g. [234, 2344, 2312] # an array of integer repo ids
+        self.owned_repos = own_repos if own_repos is not None else []
+
+        self.id = profile.pop("id", None)
+        self.event_rate = profile.pop("r", None)
+
+        event_frequencies = profile.pop("ef", None)
+        f_sum = float(sum(event_frequencies))
+        self.event_probabilities = [event / f_sum for event in event_frequencies]
+
+        # for each event type embedding_probabilities keeps {"ids":[23423, 435434, 34534], "probs":[0.34, 0345, 0.42] }
+        self.embedding_probabilities = {ev: None for ev in event_types}
+        # frequency of use of associated repos:
+        self.repo_id_to_freq = {int(repo_id) : int(freq["f"]) for repo_id, freq in profile.iteritems()}
+        for repo_id in profile.iterkeys():
+            hub.init_repo(repo_id=int(repo_id), user_id=self.id, curr_time=0, is_node_shared=int(repo_id))
+
+        for repo_id in self.repo_id_to_freq.iterkeys():
+            if repo_id not in self.owned_repos:
+                self.not_own_repos.append(repo_id)
+
+        self.all_known_repos = []
+        self.all_known_repos.extend(self.repo_id_to_freq.iterkeys())
+
+        f_sum = float(sum(self.repo_id_to_freq.itervalues()))
+        self.probabilities = [repo_fr / f_sum for repo_fr in self.repo_id_to_freq.itervalues()]
+
+        self.last_event_time = -1 # FIXME: need to be set from profile
 
 
 class GitUserMixin(object):
@@ -209,7 +241,10 @@ goalRequirements UpdateOwnRepo
         else:
             return DASHAgent.agentLoop(self, max_iterations, disconnect_at_end)
 
+
     def next_event_time(self, curr_time):
+        if curr_time is None:
+            curr_time = self.last_event_time
         delta = float(30 * 24 * 3600) / float(self.decision_data.event_rate)
         next_time = curr_time + delta
         return next_time
