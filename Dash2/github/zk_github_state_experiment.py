@@ -18,6 +18,7 @@ from Dash2.github.initial_state_loader import build_state_from_event_log, read_s
 from Dash2.github.zk_repo_hub import ZkRepoHub
 from Dash2.github.distributed_event_log_utils import merge_log_file, trnaslate_user_and_repo_ids_in_event_log, event_types
 from iu_agent1 import IUDecisionData, IUGitUserAgent
+from git_isi_agent import ISIDecisionData, ISIGitUserAgent
 
 
 # This is an example of experiment script
@@ -34,32 +35,28 @@ class ZkGithubStateWorkProcessor(WorkProcessor):
         self.event_counter = 0
         self.hub = ZkRepoHub(self.zk, self.task_full_id, 0, log_file=self.log_file)
         #self.agent = GitUserAgent(useInternalHub=True, hub=self.hub, skipS12=True, trace_client=False, traceLoop=False, trace_github=False)
-        self.agent = IUGitUserAgent(useInternalHub=True, hub=self.hub, skipS12=True, trace_client=False, traceLoop=False, trace_github=False)
+        #self.agent = IUGitUserAgent(useInternalHub=True, hub=self.hub, skipS12=True, trace_client=False, traceLoop=False, trace_github=False)
+        self.agent = ISIGitUserAgent(useInternalHub=True, hub=self.hub, skipS12=True, trace_client=False, traceLoop=False, trace_github=False)
         self.log_file.close()
 
         if self.users_file is not None and self.users_file != "":
             load_profiles(self.users_file, self.populate_agents_collection)
 
-        # embeddings and other initial state parameters from initial state file
+        # TBD (for future refactoring): move to initial state loader.
+        # embeddings from initial state file
         initial_state_meta_data = read_state_file(self.initial_state_file)
         self.embedding_files = initial_state_meta_data["embedding_files"]
-        self.event_rate_model_file = initial_state_meta_data["event_rate_model_file"]
-        self.users_ids = initial_state_meta_data["users_ids"]
-
         if self.embedding_files is not None and self.embedding_files != "":
             populate_embedding_probabilities(self.agents_decision_data, initial_state_meta_data)
-        # regression model for event_rate
-        if self.event_rate_model_file is not None and self.event_rate_model_file != "":
-            populate_event_rate(self.agents_decision_data, self.event_rate_model_file)
 
         self.log_file = open(self.task_full_id + '_event_log_file.txt', 'w')
         self.hub.log_file = self.log_file
 
         print "Agents instantiated: ", len(self.agents_decision_data)
 
-    # Function takes a user profile and creates an agent.
+    # Function takes a user profile and creates an agent decision data object.
     def populate_agents_collection(self, profile):
-        decision_data = self.agent.create_new_decision_object(profile, self.hub)
+        decision_data = self.agent.create_new_decision_object(profile)
         self.agent.decision_data = decision_data
         heappush(self.events_heap, (self.agent.next_event_time(self.start_time), decision_data.id))
         self.agents_decision_data[decision_data.id] = decision_data

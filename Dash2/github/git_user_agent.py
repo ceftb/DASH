@@ -93,9 +93,9 @@ class GitUserMixin(object):
     def _new_empty_decision_object(self):
         return GitUserDecisionData()
 
-    def create_new_decision_object(self, profile, hub):
+    def create_new_decision_object(self, profile):
         decisionObject = self._new_empty_decision_object()
-        decisionObject.initialize_using_user_profile(profile, hub)
+        decisionObject.initialize_using_user_profile(profile, self.hub)
         return decisionObject
 
     def __init__(self, **kwargs):
