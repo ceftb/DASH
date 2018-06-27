@@ -19,7 +19,8 @@ class GraphBuilder:
 
     def update_graph(self, repo_id, user_id, event_type, event_subtype=None):
         if self.events_to_accept is None or event_type in self.events_to_accept:
-            self.graph.add_node(repo_id, shared=0, isUser=0)
+            if not self.graph.has_node(repo_id):
+                self.graph.add_node(repo_id, popularity=0, isUser=0)
 
             event_index = event_types_indexes[event_type]
             if self.graph.has_node(user_id):
@@ -30,8 +31,6 @@ class GraphBuilder:
                 self.graph.nodes[user_id]["ef"] = [0] * len(event_types)
                 self.graph.nodes[user_id]["ef"][event_index] += 1
                 self.graph.nodes[user_id]["popularity"] = 0 # init popularity
-            if not self.graph.has_node(repo_id):
-                self.graph.add_node(repo_id, popularity=0)
 
             if self.graph.has_edge(repo_id, user_id):
                 self.graph.add_edge(repo_id, user_id, weight=self.graph.get_edge_data(repo_id, user_id)['weight'] + 1)
@@ -192,10 +191,11 @@ def print_user_profiles(graph, users_filename, number_of_partitions, shared_repo
 def _print_profile(graph, user_node, fp, shared_repos, owned_repos=None):
     profile_object = {'id': user_node, 'r': graph.nodes[user_node]["r"], 'ef':graph.nodes[user_node]["ef"]}
     profile_object["own"] = owned_repos[user_node] if owned_repos is not None and user_node in owned_repos else []
+    profile_object["all_repos"] = {}
     for neighbour in graph.neighbors(user_node):
         edge_weight = graph.get_edge_data(user_node, neighbour)['weight']
         isSharedRepo = 2 if neighbour in shared_repos else 1
-        profile_object[neighbour] = {'f':edge_weight, 'c':isSharedRepo}
+        profile_object["all_repos"][neighbour] = {'f':edge_weight, 'c':isSharedRepo}
     fp.write(pickle.dumps(profile_object))
 
 

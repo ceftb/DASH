@@ -69,8 +69,8 @@ class GitUserDecisionData(object):
         # for each event type embedding_probabilities keeps {"ids":[23423, 435434, 34534], "probs":[0.34, 0345, 0.42] }
         self.embedding_probabilities = {ev: None for ev in event_types}
         # frequency of use of associated repos:
-        self.repo_id_to_freq = {int(repo_id) : int(freq["f"]) for repo_id, freq in profile.iteritems()}
-        for repo_id in profile.iterkeys():
+        self.repo_id_to_freq = {int(repo_id) : int(freq["f"]) for repo_id, freq in profile["all_repos"].iteritems()}
+        for repo_id in profile["all_repos"].iterkeys():
             hub.init_repo(repo_id=int(repo_id), user_id=self.id, curr_time=0, is_node_shared=int(repo_id))
 
         self.all_known_repos = []
