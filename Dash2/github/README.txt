@@ -1,8 +1,8 @@
 #########################################################
-#### STANALONE INSTALLATION  (with single dash worke) ###
+#### STANDALONE INSTALLATION  (with single dash worker)##
 #########################################################
 Install software by calling (do it only once).
-standalone_install.sh
+webdash/Dash2/github/standalone_install.sh
 
 To run an experiment:
 1. start worker in separate terminal by calling
