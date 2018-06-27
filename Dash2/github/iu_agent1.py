@@ -73,13 +73,13 @@ class IUMixin(GitUserMixin):
             return DASHAgent.agentLoop(self, max_iterations, disconnect_at_end)
 
     def create_event(self):
-        new_repo_id = self.hub.create_repo(self.id, (""))
+        new_repo_id = self.hub._create_repo(self.id, (""))
         self.decision_data.owned_repos.append(new_repo_id)
         self.hub.log_event(self.decision_data.id, new_repo_id, "CreateEvent", None, self.hub.time)
 
     def fork_event(self):
         repo_to_fork = random.choice(self.decision_data.not_own_repos) # parent repo
-        new_repo_id = self.hub.create_repo(self.id, (repo_to_fork))
+        new_repo_id = self.hub._create_repo(self.id, (repo_to_fork))
         self.decision_data.owned_repos.append(new_repo_id)
         self.hub.log_event(self.decision_data.id, repo_to_fork, "ForkEvent", None, self.hub.time)
 

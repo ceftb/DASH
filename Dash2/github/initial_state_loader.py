@@ -160,16 +160,22 @@ class EmbeddingCalculator(object):
     def _load_strId2RsimId_file(self, strId2RsimId_file):
         return load_id_dictionary(strId2RsimId_file, False)
 
-    def calculate_probabilities(self, user_id, probability_vector_size=10):
+    def calculate_probabilities(self, user_id, probability_vector_size=10, cut_off_threshold = 0.99):
         topk_probabilities = []  # k is probability_vector_size
         if user_id not in self.UsimId2Uindex or self.UsimId2Uindex[user_id] is None:
             return None
         prob_vector = np.dot(self.R, self.U[:, self.UsimId2Uindex[user_id]])
 
+        prob_vector_sum = 0.0
         for index in range(0, probability_vector_size, 1):
             row = prob_vector.argmax()
             topk_probabilities.append((prob_vector[row], row))
+            prob_vector_sum += prob_vector[row]
+            if prob_vector_sum > cut_off_threshold: # stop searching for max probability already have enough
+                break
             prob_vector[row] = 0
+        # tail is for random choice, coded with -1
+        topk_probabilities.append((1.0 - prob_vector_sum, -1))
 
         result = {'ids': [], 'prob': []}
         for prob, id in topk_probabilities:

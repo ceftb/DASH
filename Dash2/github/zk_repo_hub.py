@@ -3,6 +3,8 @@ from Dash2.core.world_hub import WorldHub
 from Dash2.github.zk_repo import ZkRepo
 from Dash2.github.git_repo_hub import GitRepoHub
 import datetime
+import random
+from user_repo_graph_utils import IdDictionaryStream
 
 # Zookeeper repository hub
 class ZkRepoHub(GitRepoHub):
@@ -31,6 +33,8 @@ class ZkRepoHub(GitRepoHub):
     def init_repo(self, repo_id, user_id=None, curr_time=0, is_node_shared=False, **kwargs):
         if not (repo_id in self.all_repos):
             self.all_repos[repo_id] = ZkRepo(id=repo_id, curr_time=curr_time, is_node_shared=is_node_shared, hub=self)
+            if self.repo_id_counter < repo_id:
+                self.repo_id_counter = repo_id
         else:
              pass # update repo properties here if needed
 
@@ -68,6 +72,14 @@ class ZkRepoHub(GitRepoHub):
         lock.release()
         return max_repo_id
 
+    # localhost version
+    def _create_new_repo_id(self):
+        self.repo_id_counter += 1
+        return self.repo_id_counter
+
+    def pick_random_repo(self):
+        random.randint(IdDictionaryStream.MAGIC_NUMBER, self.repo_id_counter)
+
     def event_counter_callback (self, repo_id, curr_time):
         ZkRepoHub.sync_event_counter += 1
         if ZkRepoHub.sync_event_counter % 1000 == 0 and ZkRepoHub.sync_event_counter > 0:
@@ -78,7 +90,7 @@ class ZkRepoHub(GitRepoHub):
     ############################################################################
 
     def _create_repo(self, agent_id, (repo_info)):
-        repo_id = self.create_new_repo_id()
+        repo_id = self._create_new_repo_id()
         self.all_repos[repo_id] = ZkRepo(id=repo_id, curr_time=self.time, is_node_shared=False, hub=self)
 
         return repo_id
