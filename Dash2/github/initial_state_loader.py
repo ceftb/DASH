@@ -5,7 +5,7 @@ import time
 import numpy as np
 import cPickle as pickle
 from distributed_event_log_utils import load_id_dictionary, collect_unique_user_event_pairs
-from user_partitioner import build_graph_from_csv, partition_graph, print_user_profiles
+from user_repo_graph_utils import build_graph_from_csv, partition_graph, print_user_profiles
 from distributed_event_log_utils import event_types
 
 '''

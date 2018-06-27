@@ -1,3 +1,16 @@
+#########################################################
+#### STANALONE INSTALLATION  (with single dash worke) ###
+#########################################################
+Install software by calling (do it only once).
+standalone_install.sh
+
+To run an experiment:
+1. start worker in separate terminal by calling
+python webdash/Dash2/core/dash_worker.py
+2. start the experiment by calling
+python webdash/Dash2/github/zk_github_state_experiment.py
+
+
 ####################################################################################
 #### CLUSTER INSTALLATION (via zookeeper_service.sh and dash_workers_service.sh) ###
 ####################################################################################

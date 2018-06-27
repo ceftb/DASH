@@ -29,14 +29,24 @@ class GraphBuilder:
                 self.graph.add_node(user_id, shared=0, isUser=1, r=1)
                 self.graph.nodes[user_id]["ef"] = [0] * len(event_types)
                 self.graph.nodes[user_id]["ef"][event_index] += 1
+                self.graph.nodes[user_id]["popularity"] = 0 # init popularity
+            if not self.graph.has_node(repo_id):
+                self.graph.add_node(repo_id, popularity=0)
 
             if self.graph.has_edge(repo_id, user_id):
                 self.graph.add_edge(repo_id, user_id, weight=self.graph.get_edge_data(repo_id, user_id)['weight'] + 1)
             else:
                 self.graph.add_edge(repo_id, user_id, weight= 1)
 
+            # popularity of repos
+            if event_type == "ForkEvent" or event_type == "WatchEvent":
+                self.graph.nodes[repo_id]["popularity"] += 1
 
-
+    def compute_users_popularity(self, creator2repos):
+        for user_id, own_repos in creator2repos.iteritems():
+            popularity = 0
+            for repo in own_repos:
+                self.graph.nodes[user_id]["popularity"] += self.graph.nodes[repo][popularity]
 
 
 class IdDictionaryStream:
@@ -55,6 +65,7 @@ class IdDictionaryStream:
         self.is_stream_open = True
         self.events_to_accept = event_filter
         self.user_creator_to_repos = {} # dictionary of lists
+        self.creator2repos = None
 
     def update_dictionary(self, original_user_id, original_repo_id):
         hash_user_id = hash(original_user_id)
@@ -86,24 +97,30 @@ class IdDictionaryStream:
         id_dict.write(str(int_id))
         id_dict.write("\n")
 
+    def getCreator2reposMap(self):
+        if self.creator2repos is None:
+            creator2repos = {}
+            for owner, repo_list in self.user_creator_to_repos.iteritems():
+                hash_user_id = hash(owner)
+                if hash_user_id in self.users:
+                    if self.users[hash_user_id] not in creator2repos:
+                        creator2repos[self.users[hash_user_id]] = []
+                    for repo in repo_list:
+                        hash_repo_id = hash(repo)
+                        if hash_repo_id in self.repos:
+                            creator2repos[self.users[hash_user_id]].append(self.repos[hash_repo_id])
+            self.creator2repos = creator2repos
+        return self.creator2repos
+
     def close(self):
         self.user_dictionary.close()
         self.repo_dictionary.close()
-        self.print_own_repos_to_file("owned_repos.pickle")
+        creator2repos = self.getCreator2reposMap()
+        self.print_own_repos_to_file("owned_repos.pickle", creator2repos)
         self.is_stream_open = False
 
     # convert ids to sequential int ids and write to file
-    def print_own_repos_to_file(self, owned_repos_file_name):
-        creator2repos = {}
-        for owner, repo_list in self.user_creator_to_repos.iteritems():
-            hash_user_id = hash(owner)
-            if hash_user_id in self.users:
-                if self.users[hash_user_id] not in creator2repos:
-                    creator2repos[self.users[hash_user_id]] = []
-                for repo in repo_list:
-                    hash_repo_id = hash(repo)
-                    if hash_repo_id in self.repos:
-                        creator2repos[self.users[hash_user_id]].append(self.repos[hash_repo_id])
+    def print_own_repos_to_file(self, owned_repos_file_name, creator2repos):
         owned_repos_file = open(owned_repos_file_name, "w")
         pickle.dump(creator2repos, owned_repos_file)
         owned_repos_file.close()
