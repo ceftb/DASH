@@ -37,7 +37,6 @@ class ISIMixin(GitUserMixin):
     def agentLoop(self, max_iterations=-1, disconnect_at_end=True):
         # If control passes to here, the decision on choosing a user has already been made.
         if self.skipS12:
-            repo_for_action = None
             # Pick a random event type.
             selected_event = numpy.random.choice(event_types, p=self.decision_data.event_probabilities)
             if selected_event == "CreateEvent":
@@ -45,7 +44,17 @@ class ISIMixin(GitUserMixin):
             elif selected_event == "ForkEvent":
                 self.fork_event()
             else:
-                self.hub.log_event(self.decision_data.id, repo_for_action, selected_event, None, self.hub.time)
+                selected_repo = None
+                if self.decision_data.embedding_probabilities[selected_event] is None:
+                    selected_repo = numpy.random.choice(self.decision_data.all_known_repos, p=self.decision_data.probabilities)
+                else:
+                    selected_repo = numpy.random.choice(
+                        self.decision_data.embedding_probabilities[selected_event]['ids'], p=self.decision_data.embedding_probabilities[selected_event]['prob'])
+                    if selected_repo is None:
+                        selected_repo = numpy.random.choice(self.decision_data.all_known_repos, p=self.decision_data.probabilities)
+                    if selected_repo == -1:  # embedding long tail, random choice.
+                        selected_repo = self.hub.pick_random_repo()
+                self.hub.log_event(self.decision_data.id, selected_repo, selected_event, None, self.hub.time)
                 self.decision_data.total_activity += 1
         else:
             return DASHAgent.agentLoop(self, max_iterations, disconnect_at_end)

@@ -54,7 +54,9 @@ class ZkGithubStateWorkProcessor(WorkProcessor):
     def populate_agents_collection(self, profile):
         decision_data = self.agent.create_new_decision_object(profile)
         self.agent.decision_data = decision_data
-        heappush(self.events_heap, (self.agent.next_event_time(self.start_time), decision_data.id))
+        first_event_time = self.agent.first_event_time(self.start_time)
+        if first_event_time is not None:
+            heappush(self.events_heap, (self.agent.next_event_time(self.start_time), decision_data.id))
         self.agents_decision_data[decision_data.id] = decision_data
 
     def run_one_iteration(self):

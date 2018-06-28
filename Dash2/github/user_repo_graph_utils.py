@@ -6,6 +6,7 @@ import json
 import metis
 import pickle
 from distributed_event_log_utils import event_types, event_types_indexes
+from datetime import datetime
 
 
 class GraphBuilder:
@@ -17,7 +18,7 @@ class GraphBuilder:
         self.graph = nx.Graph()
         self.events_to_accept = event_filter
 
-    def update_graph(self, repo_id, user_id, event_type, event_subtype=None):
+    def update_graph(self, repo_id, user_id, event_type, event_time, event_subtype=None):
         if self.events_to_accept is None or event_type in self.events_to_accept:
             if not self.graph.has_node(repo_id):
                 self.graph.add_node(repo_id, popularity=0, isUser=0)
@@ -31,6 +32,7 @@ class GraphBuilder:
                 self.graph.nodes[user_id]["ef"] = [0] * len(event_types)
                 self.graph.nodes[user_id]["ef"][event_index] += 1
                 self.graph.nodes[user_id]["popularity"] = 0 # init popularity
+            self.graph.nodes[user_id]["last_event_time"] = event_time
 
             if self.graph.has_edge(repo_id, user_id):
                 self.graph.add_edge(repo_id, user_id, weight=self.graph.get_edge_data(repo_id, user_id)['weight'] + 1)
@@ -192,6 +194,7 @@ def _print_profile(graph, user_node, fp, shared_repos, owned_repos=None):
     profile_object = {'id': user_node, 'r': graph.nodes[user_node]["r"], 'ef':graph.nodes[user_node]["ef"]}
     profile_object["own"] = owned_repos[user_node] if owned_repos is not None and user_node in owned_repos else []
     profile_object["all_repos"] = {}
+    profile_object["last_event_time"] = graph.nodes[user_node]["last_event_time"]
     for neighbour in graph.neighbors(user_node):
         edge_weight = graph.get_edge_data(user_node, neighbour)['weight']
         isSharedRepo = 2 if neighbour in shared_repos else 1
@@ -210,9 +213,14 @@ def build_graph_from_csv(csv_event_log_file, user_dict_file=None, repo_dict_file
         for row in datareader:
             if counter != 0:
                 event_type = row[1]
+                try:
+                    event_time = datetime.strptime(row[0], "%Y-%m-%d %H:%M:%S")
+                except:
+                    event_time = datetime.strptime(row[0], "%Y-%m-%dT%H:%M:%SZ")
+                event_time = time.mktime(event_time.timetuple())
                 if event_filter is None or event_type in event_filter:
                     user_id, repo_id = ids_dictionary_stream.update_dictionary(row[2], row[3])
-                    user_repo_graph_builder.update_graph(repo_id, user_id, event_type)
+                    user_repo_graph_builder.update_graph(repo_id, user_id, event_type, event_time)
             counter += 1
             if counter % 1000000 == 0:
                 print "line: " + str(counter)

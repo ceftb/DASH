@@ -45,6 +45,7 @@ class GitUserDecisionData(object):
         f_sum = float(sum(event_frequencies))
         self.event_probabilities = [event/f_sum for event in event_frequencies]
         self.embedding_probabilities = {ev: None for ev in event_types}
+        self.last_event_time = kwargs.get("event_rate", 0)
 
     def initialize_using_user_profile(self, profile, hub):
         """
@@ -79,7 +80,7 @@ class GitUserDecisionData(object):
         f_sum = float(sum(self.repo_id_to_freq.itervalues()))
         self.probabilities = [repo_fr / f_sum for repo_fr in self.repo_id_to_freq.itervalues()]
 
-        self.last_event_time = -1
+        self.last_event_time = profile["last_event_time"]
 
 
 class GitUserMixin(object):
@@ -250,6 +251,7 @@ goalRequirements UpdateOwnRepo
         next_event_time = self.decision_data.last_event_time + delta if self.decision_data.last_event_time != -1 else start_time
         while next_event_time < start_time:
             next_event_time += delta
+        return next_event_time
 
     def next_event_time(self, curr_time):
         delta = float(30 * 24 * 3600) / float(self.decision_data.event_rate)
