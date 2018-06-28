@@ -18,11 +18,13 @@ class ISIDecisionData(GitUserDecisionData):
         # intialize own_repos, not_own_repos
         own_repos = profile.pop("own", None)  # e.g. [234, 2344, 2312] # an array of integer repo ids
         self.owned_repos = own_repos if own_repos is not None else []
-
         self.not_own_repos = []
         for repo_id in self.repo_id_to_freq.iterkeys():
             if repo_id not in self.owned_repos:
                 self.not_own_repos.append(repo_id)
+
+        self.popularity = profile.pop("popularity", 0)
+
 
 
 # Not inheriting directly from GitUserAgent in case alt system 1 is desired
@@ -43,6 +45,8 @@ class ISIMixin(GitUserMixin):
                 self.create_event()
             elif selected_event == "ForkEvent":
                 self.fork_event()
+            elif selected_event == "WatchEvent":
+                self.watch_event()
             else:
                 selected_repo = None
                 if self.decision_data.embedding_probabilities[selected_event] is None:
@@ -61,16 +65,18 @@ class ISIMixin(GitUserMixin):
 
     def create_event(self):
         new_repo_id = self.hub._create_repo(self.id, (""))
-        # TBD:
         self.decision_data.owned_repos.append(new_repo_id)
         self.hub.log_event(self.decision_data.id, new_repo_id, "CreateEvent", None, self.hub.time)
 
     def fork_event(self):
-        repo_to_fork = random.choice(self.decision_data.not_own_repos) # parent repo
+        repo_to_fork = self.hub.pick_popular_repo_from_neighborhood(self.decision_data.id) # parent repo
         new_repo_id = self.hub._create_repo(self.id, (repo_to_fork))
-        # TBD:
         self.decision_data.owned_repos.append(new_repo_id)
         self.hub.log_event(self.decision_data.id, repo_to_fork, "ForkEvent", None, self.hub.time)
+
+    def watch_event(self):
+        repo_to_watch = self.hub.pick_popular_repo_from_neighborhood(self.decision_data.id)
+        self.hub.log_event(self.decision_data.id, repo_to_watch, "WatchEvent", None, self.hub.time)
 
 
 

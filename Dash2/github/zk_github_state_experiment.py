@@ -128,7 +128,7 @@ class ZkGithubStateTrial(Trial):
         for task_index in range(0, number_of_files, 1):
             log_file_name = str(self.exp_id) + "-" + str(self.trial_id) + "-" + str(task_index + 1) + "_event_log_file.txt"
             file_names.append(log_file_name)
-        merge_log_file(file_names , "tmp_output.csv", sort_chronologically=True)
+        merge_log_file(file_names, "tmp_output.csv", sort_chronologically=True)
         for log_file_name in file_names:
             os.remove(log_file_name)
         output_file_name = self.initial_state_file + "_trial_" + str(self.trial_id) + ".csv"

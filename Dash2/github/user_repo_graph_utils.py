@@ -47,8 +47,8 @@ class GraphBuilder:
         for user_id, own_repos in creator2repos.iteritems():
             popularity = 0
             for repo in own_repos:
-                self.graph.nodes[user_id]["popularity"] += self.graph.nodes[repo][popularity]
-
+                popularity += self.graph.nodes[repo]["popularity"]
+            self.graph.nodes[user_id]["popularity"] = popularity
 
 class IdDictionaryStream:
     """
@@ -83,7 +83,7 @@ class IdDictionaryStream:
         usr_repo = str(original_repo_id).split("/")
         if usr_repo[0] not in self.user_creator_to_repos:
             self.user_creator_to_repos[usr_repo[0]] = []
-        self.user_creator_to_repos[usr_repo[0]].append(usr_repo[1])
+        self.user_creator_to_repos[usr_repo[0]].append(original_repo_id)
 
         return int_user_id, int_repo_id
 
@@ -101,7 +101,7 @@ class IdDictionaryStream:
     def getCreator2reposMap(self):
         if self.creator2repos is None:
             creator2repos = {}
-            for owner, repo_list in self.user_creator_to_repos.iteritems():
+            for owner, repo_list in self.user_creator_to_repos.iteritems(): # owner, repo_list are string ids
                 hash_user_id = hash(owner)
                 if hash_user_id in self.users:
                     if self.users[hash_user_id] not in creator2repos:
@@ -183,16 +183,17 @@ def print_user_profiles(graph, users_filename, number_of_partitions, shared_repo
     for node in graph.nodes():
         if graph.nodes[node]['isUser'] == 1:
             fp = users_parts_file[graph.nodes[node]['partition']]['fp']
-            _print_profile(graph, node, fp, shared_repos, owned_repos)
+            _print_user_profile(graph, node, fp, shared_repos, owned_repos)
 
     for i in range(0, number_of_partitions, 1):
         fp = users_parts_file[i]['fp']
         fp.close()
 
 
-def _print_profile(graph, user_node, fp, shared_repos, owned_repos=None):
+def _print_user_profile(graph, user_node, fp, shared_repos, owned_repos=None):
     profile_object = {'id': user_node, 'r': graph.nodes[user_node]["r"], 'ef':graph.nodes[user_node]["ef"]}
     profile_object["own"] = owned_repos[user_node] if owned_repos is not None and user_node in owned_repos else []
+    profile_object["popularity"] = graph.nodes[user_node]["popularity"]
     profile_object["all_repos"] = {}
     profile_object["last_event_time"] = graph.nodes[user_node]["last_event_time"]
     for neighbour in graph.neighbors(user_node):
@@ -227,6 +228,7 @@ def build_graph_from_csv(csv_event_log_file, user_dict_file=None, repo_dict_file
         print counter
 
     csvfile.close()
+    user_repo_graph_builder.compute_users_popularity(ids_dictionary_stream.getCreator2reposMap())
     ids_dictionary_stream.close()
 
     return user_repo_graph_builder.graph, len(ids_dictionary_stream.users), len(ids_dictionary_stream.repos)

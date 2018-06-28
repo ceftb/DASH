@@ -80,6 +80,11 @@ class ZkRepoHub(GitRepoHub):
     def pick_random_repo(self):
         random.randint(IdDictionaryStream.MAGIC_NUMBER, self.repo_id_counter)
 
+    def pick_popular_repo_from_neighborhood(self, user_id):
+        # TBD
+        popular_repo_id = random.randint(IdDictionaryStream.MAGIC_NUMBER, self.repo_id_counter)
+        return  popular_repo_id
+
     def event_counter_callback (self, repo_id, curr_time):
         ZkRepoHub.sync_event_counter += 1
         if ZkRepoHub.sync_event_counter % 1000 == 0 and ZkRepoHub.sync_event_counter > 0:
