@@ -105,7 +105,13 @@ class ISIMixin(GitUserMixin):
 
     def create_new_event(self):
         new_repo_id = self.hub._create_repo(self.id, (""))
-        self.hub.graph.add_node(new_repo_id, shared=0, isU=0, pop=0) # TBD non zero popularity
+        popularity = 0
+        for own_repo in self.decision_data.owned_repos:
+            popularity += self.hub.graph.nodes[own_repo]["pop"]
+        popularity = popularity / len(self.decision_data.owned_repos)
+        if popularity == 0:
+            popularity = 1
+        self.hub.graph.add_node(new_repo_id, shared=0, isU=0, pop=popularity) # TBD non zero popularity
         self.hub.graph.add_edge(new_repo_id, self.decision_data.id, own=1, weight= 1)
 
         self.decision_data.owned_repos.append(new_repo_id)
