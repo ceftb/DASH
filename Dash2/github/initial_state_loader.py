@@ -35,12 +35,11 @@ def build_state_from_event_log(input_event_log, number_of_user_partitions=1, sta
     G, number_of_users, number_of_repos = build_graph_from_csv(input_event_log)
     print "User-repo graph constructed. Users ", number_of_users, ", repos ", number_of_repos, ", nodes ", len(G.nodes()), ", edges", len(G.edges())
 
-    shared_repos, shared_users = partition_graph(G, number_of_user_partitions)
-    print "shared repos ", len(shared_repos), ", shared users ", len(shared_users)
+    partition_graph(G, number_of_user_partitions)
+    #print "shared repos ", len(shared_repos), ", shared users ", len(shared_users)
 
     print "printing graph..."
-    print_user_profiles(G, input_event_log + "_users.json", number_of_user_partitions, shared_repos, owned_repos_file_name="./owned_repos.pickle")
-    os.remove("./owned_repos.pickle")
+    print_user_profiles(G, input_event_log + "_users.json", number_of_user_partitions)
 
     users_file = input_event_log + "_users.json"
     repos_file = input_event_log + "_repos.json"
@@ -229,12 +228,15 @@ def compute_probabilities(state_file, destination_dir="./probabilities/", probab
             start_time = time.time()
         return start_time
 
+    users_neighborhood_size = pickle.load(open("users_neighborhood_size.pickle", "rb"))
+
     for event_type, embedding_info in embeddings_data.iteritems():
         all_probabilities = {}
         calculator = EmbeddingCalculator(embedding_info["file_name"], embedding_info["dictionary"], UsimId2strId, strId2RsimId)
         start_time = time.time()
         if event2users is None:
             for index, agent_sim_id in enumerate(UsimId2strId.iterkeys()):
+                probability_vector_size = users_neighborhood_size[agent_sim_id] if agent_sim_id in users_neighborhood_size else 10
                 all_probabilities[agent_sim_id] = calculator.calculate_probabilities(agent_sim_id, probability_vector_size)
                 start_time = _time(index, start_time)
         else:
@@ -244,6 +246,7 @@ def compute_probabilities(state_file, destination_dir="./probabilities/", probab
             #print "min: ", min_index, ", max : ", max_index, " total agents: ", total_number_of_agents
             for index in range(min_index, max_index, 1):
                 user_id = event2users[event_type][index]
+                probability_vector_size = users_neighborhood_size[user_id] if user_id in users_neighborhood_size else 10
                 all_probabilities[user_id] = calculator.calculate_probabilities(user_id, probability_vector_size)
                 start_time = _time(index, start_time)
 

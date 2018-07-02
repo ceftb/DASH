@@ -80,7 +80,7 @@ class GitUserDecisionData(object):
         f_sum = float(sum(self.repo_id_to_freq.itervalues()))
         self.probabilities = [repo_fr / f_sum for repo_fr in self.repo_id_to_freq.itervalues()]
 
-        self.last_event_time = profile["last_event_time"]
+        self.last_event_time = profile["let"]
 
 
 class GitUserMixin(object):

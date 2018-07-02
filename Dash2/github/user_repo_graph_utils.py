@@ -21,34 +21,52 @@ class GraphBuilder:
     def update_graph(self, repo_id, user_id, event_type, event_time, event_subtype=None):
         if self.events_to_accept is None or event_type in self.events_to_accept:
             if not self.graph.has_node(repo_id):
-                self.graph.add_node(repo_id, popularity=0, isUser=0)
+                self.graph.add_node(repo_id, pop=0, isU=0)
 
             event_index = event_types_indexes[event_type]
             if self.graph.has_node(user_id):
                 self.graph.nodes[user_id]["r"] = self.graph.nodes[user_id]["r"] + 1
                 self.graph.nodes[user_id]["ef"][event_index] += 1
             else:
-                self.graph.add_node(user_id, shared=0, isUser=1, r=1)
+                self.graph.add_node(user_id, shared=0, isU=1, r=1)
                 self.graph.nodes[user_id]["ef"] = [0] * len(event_types)
                 self.graph.nodes[user_id]["ef"][event_index] += 1
-                self.graph.nodes[user_id]["popularity"] = 0 # init popularity
-            self.graph.nodes[user_id]["last_event_time"] = event_time
+                self.graph.nodes[user_id]["pop"] = 0 # init popularity
+            self.graph.nodes[user_id]["let"] = event_time
 
             if self.graph.has_edge(repo_id, user_id):
                 self.graph.add_edge(repo_id, user_id, weight=self.graph.get_edge_data(repo_id, user_id)['weight'] + 1)
             else:
-                self.graph.add_edge(repo_id, user_id, weight= 1)
+                self.graph.add_edge(repo_id, user_id, own=0, weight= 1)
+                self.graph.get_edge_data(repo_id, user_id)['ef'] = [0] * len(event_types)
+            self.graph.get_edge_data(repo_id, user_id)['ef'][event_index] += 1
 
             # popularity of repos
             if event_type == "ForkEvent" or event_type == "WatchEvent":
-                self.graph.nodes[repo_id]["popularity"] += 1
+                self.graph.nodes[repo_id]["pop"] += 1
 
     def compute_users_popularity(self, creator2repos):
         for user_id, own_repos in creator2repos.iteritems():
             popularity = 0
             for repo in own_repos:
-                popularity += self.graph.nodes[repo]["popularity"]
-            self.graph.nodes[user_id]["popularity"] = popularity
+                popularity += self.graph.nodes[repo]["pop"]
+                if not self.graph.has_edge(repo, user_id):
+                    self.graph.add_edge(repo, user_id, weight=0)
+                self.graph.get_edge_data(repo, user_id)['own'] = 1
+            self.graph.nodes[user_id]["pop"] = popularity
+
+    @staticmethod
+    def get_users_neighborhood_size(graph):
+        user_to_neighborhoos_size_map = {}
+        for node in graph.nodes:
+            if graph.nodes[node]["isU"] == 1:
+                neighbors = graph.neighbors(node)
+                neighbors_counter = 0
+                for _ in neighbors:
+                    neighbors_counter += 1
+                user_to_neighborhoos_size_map[node] = neighbors_counter
+        return  user_to_neighborhoos_size_map
+
 
 class IdDictionaryStream:
     """
@@ -116,95 +134,76 @@ class IdDictionaryStream:
     def close(self):
         self.user_dictionary.close()
         self.repo_dictionary.close()
-        creator2repos = self.getCreator2reposMap()
-        self.print_own_repos_to_file("owned_repos.pickle", creator2repos)
         self.is_stream_open = False
-
-    # convert ids to sequential int ids and write to file
-    def print_own_repos_to_file(self, owned_repos_file_name, creator2repos):
-        owned_repos_file = open(owned_repos_file_name, "w")
-        pickle.dump(creator2repos, owned_repos_file)
-        owned_repos_file.close()
-
 
 
 def partition_graph(graph, number_of_partitions):
     if number_of_partitions == 1:
         for node in graph.nodes():
-            graph.nodes[node]['partition'] = 0
-        return set(), set()
+            graph.nodes[node]['prt'] = 0
+            graph.nodes[node]['shrd'] = 0
+        return
 
     (edgecuts, parts) = metis.part_graph(graph, number_of_partitions)
 
     print "edgecuts ", edgecuts
     index_counter = 0
     for node in graph.nodes():
-        graph.nodes[node]['partition'] = parts[index_counter]
+        graph.nodes[node]['prt'] = parts[index_counter]
         index_counter += 1
+        graph.nodes[node]['shrd'] = 0
 
-    shared_repos = set()
-    shared_users = set()
     for u, v in graph.edges():
-        if graph.nodes[u]['partition'] != graph.nodes[v]['partition']:  # cut edge
-            if graph.nodes[u]['isUser'] == 0: # u in repos:
-                shared_repos.add(u)
-                graph.nodes[u]['shared'] = 1
+        if graph.nodes[u]['prt'] != graph.nodes[v]['prt']:  # cut edge
+            if graph.nodes[u]['isU'] == 0: # u in repos:
+                graph.nodes[u]['shrd'] = 1
 
-            if graph.nodes[v]['isUser'] == 0: # v in repos:
-                shared_repos.add(v)
-                graph.nodes[v]['shared'] = 1
+            if graph.nodes[v]['isU'] == 0: # v in repos:
+                graph.nodes[v]['shrd'] = 1
 
-            if graph.nodes[u]['isUser'] == 1: # u in users:
-                shared_users.add(u)
-                graph.nodes[u]['shared'] = 1
+            if graph.nodes[u]['isU'] == 1: # u in users:
+                graph.nodes[u]['shrd'] = 1
 
-            if graph.nodes[v]['isUser'] == 1: # v in users:
-                shared_users.add(v)
-                graph.nodes[v]['shared'] = 1
+            if graph.nodes[v]['isU'] == 1: # v in users:
+                graph.nodes[v]['shrd'] = 1
 
-    return shared_repos, shared_users
 
-def removeK2componnets(graph):
-    k2components = []
-    for component in nx.connected_components(graph):
-        if len(component) == 2:
-            k2components.append(component)
-    for component in k2components:
-        for node in component:
-            graph.remove_node(node)
-
-def print_user_profiles(graph, users_filename, number_of_partitions, shared_repos, owned_repos_file_name=None):
+def print_user_profiles(graph, users_filename, number_of_partitions):
     users_parts_file = {}
-    owned_repos = pickle.load(open(owned_repos_file_name, "r")) if owned_repos_file_name is not None else None
     for i in range(0, number_of_partitions, 1):
         fp = open(users_filename + "_" + str(i), 'w')
         users_parts_file[i] = {'fp':fp}
 
     for node in graph.nodes():
-        if graph.nodes[node]['isUser'] == 1:
-            fp = users_parts_file[graph.nodes[node]['partition']]['fp']
-            _print_user_profile(graph, node, fp, shared_repos, owned_repos)
+        if graph.nodes[node]['isU'] == 1:
+            fp = users_parts_file[graph.nodes[node]['prt']]['fp']
+            _print_user_profile(graph, node, fp)
 
     for i in range(0, number_of_partitions, 1):
         fp = users_parts_file[i]['fp']
         fp.close()
 
+    pickle.dump(graph, open("UR_graph.pickle", "wb"))
+    pickle.dump(GraphBuilder.get_users_neighborhood_size(graph), open("users_neighborhood_size.pickle", "wb"))
 
-def _print_user_profile(graph, user_node, fp, shared_repos, owned_repos=None):
+
+def _print_user_profile(graph, user_node, fp):
     profile_object = {'id': user_node, 'r': graph.nodes[user_node]["r"], 'ef':graph.nodes[user_node]["ef"]}
-    profile_object["own"] = owned_repos[user_node] if owned_repos is not None and user_node in owned_repos else []
-    profile_object["popularity"] = graph.nodes[user_node]["popularity"]
+    profile_object["own"] = [] #owned_repos[user_node] if owned_repos is not None and user_node in owned_repos else []
+    profile_object["pop"] = graph.nodes[user_node]["pop"]
     profile_object["all_repos"] = {}
-    profile_object["last_event_time"] = graph.nodes[user_node]["last_event_time"]
+    profile_object["let"] = graph.nodes[user_node]["let"]
     for neighbour in graph.neighbors(user_node):
         edge_weight = graph.get_edge_data(user_node, neighbour)['weight']
-        isSharedRepo = 2 if neighbour in shared_repos else 1
+        isOwnRepo = True if graph.get_edge_data(user_node, neighbour)['own'] == 1 else False
+        isSharedRepo = 2 if graph.nodes[neighbour]['shrd'] == 1 else 1 #isSharedRepo = 2 if neighbour in shared_repos else 1
         profile_object["all_repos"][neighbour] = {'f':edge_weight, 'c':isSharedRepo}
+        if isOwnRepo:
+            profile_object["own"].append(neighbour)
     fp.write(pickle.dumps(profile_object))
 
 
 def build_graph_from_csv(csv_event_log_file, user_dict_file=None, repo_dict_file=None, event_filter=None):
-    #["PushEvent", "IssueCommentEvent", "PullRequestEvent", "PullRequestReviewCommentEvent"]):
     user_repo_graph_builder = GraphBuilder(event_filter = event_filter)
     ids_dictionary_stream = IdDictionaryStream(csv_event_log_file + "_users_id_dict.csv", csv_event_log_file + "_repos_id_dict.csv", event_filter = event_filter)
 
@@ -214,6 +213,8 @@ def build_graph_from_csv(csv_event_log_file, user_dict_file=None, repo_dict_file
         for row in datareader:
             if counter != 0:
                 event_type = row[1]
+                if event_type == "CreateEvent" and len(row) == 5 and row[4] == "repo creation":
+                    event_type = "CreateEvent/new"
                 try:
                     event_time = datetime.strptime(row[0], "%Y-%m-%d %H:%M:%S")
                 except:
@@ -254,11 +255,11 @@ if __name__ == "__main__":
             G, users, repos = build_graph_from_csv(filename)
             print "User-repo graph constructed. Users ", len(users), ", repos ", len(repos), ", nodes ", len(G.nodes()), ", edges", len(G.edges())
 
-            shared_repos, shared_users = partition_graph(G, number_of_partitions)
-            print "shared repos ", len(shared_repos), ", shared users ", len(shared_users)
+            partition_graph(G, number_of_partitions)
+            #print "shared repos ", len(shared_repos), ", shared users ", len(shared_users)
 
             print "printing graph..."
-            print_user_profiles(G, filename, 10, shared_repos)
+            print_user_profiles(G, filename, 10)
 
             end_time = time.time()
             print "Time ", end_time - start_time, " sec."
@@ -268,11 +269,11 @@ if __name__ == "__main__":
 
             G, number_of_users, number_of_repos = build_graph_from_csv(filename)
             print "User-repo graph constructed. Users ", number_of_users, ", repos ", number_of_repos, ", nodes ", len(G.nodes()), ", edges", len(G.edges())
-            shared_repos, shared_users = partition_graph(G, number_of_partitions)
-            print "shared repos ", len(shared_repos), ", shared users ", len(shared_users)
+            partition_graph(G, number_of_partitions)
+            #print "shared repos ", len(shared_repos), ", shared users ", len(shared_users)
 
             print "printing graph..."
-            print_user_profiles(G, filename + "_users.json", number_of_partitions, shared_repos)
+            print_user_profiles(G, filename + "_users.json", number_of_partitions)
 
             users_file = filename + "_users.json"
             repos_file = filename + "_repos.json"

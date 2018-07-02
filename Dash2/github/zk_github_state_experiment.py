@@ -19,6 +19,8 @@ from Dash2.github.zk_repo_hub import ZkRepoHub
 from Dash2.github.distributed_event_log_utils import merge_log_file, trnaslate_user_and_repo_ids_in_event_log, event_types
 from iu_agent1 import IUDecisionData, IUGitUserAgent
 from git_isi_agent import ISIDecisionData, ISIGitUserAgent
+import pickle
+import networkx as nx
 
 
 # This is an example of experiment script
@@ -45,9 +47,9 @@ class ZkGithubStateWorkProcessor(WorkProcessor):
         # load embeddings probabilities, if such are specified in the initial state file
         populate_embedding_probabilities(self.agents_decision_data, self.initial_state_file)
 
+        # closing and reopening log file due to delays in loading the state (netwok fils system sometimes interrupts the file otherwise)
         self.log_file = open(self.task_full_id + '_event_log_file.txt', 'w')
         self.hub.log_file = self.log_file
-
         print "Agents instantiated: ", len(self.agents_decision_data)
 
     # Function takes a user profile and creates an agent decision data object.

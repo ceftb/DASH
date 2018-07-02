@@ -24,10 +24,14 @@ class ZkRepoHub(GitRepoHub):
         self.exp_id, self.trial_id, self.task_num = task_full_id.split("-")  # self.task_num by default is the same as node id
 
         self.all_repos = {}  # keyed by repo id, valued by repo object
-        self.repo_id_counter = 0
         self.log_file = log_file
         # global event clock
         self.time = start_time
+
+        self.repo_id_counter = 0
+        # for single process only
+        self.graph = None
+        self.topPopularRepos = None
 
     # call this method only for pre-existing repos
     def init_repo(self, repo_id, user_id=None, curr_time=0, is_node_shared=False, **kwargs):
@@ -78,12 +82,8 @@ class ZkRepoHub(GitRepoHub):
         return self.repo_id_counter
 
     def pick_random_repo(self):
+        #random.choice(self.all_repos) # revise
         random.randint(IdDictionaryStream.MAGIC_NUMBER, self.repo_id_counter)
-
-    def pick_popular_repo_from_neighborhood(self, user_id):
-        # TBD
-        popular_repo_id = random.randint(IdDictionaryStream.MAGIC_NUMBER, self.repo_id_counter)
-        return  popular_repo_id
 
     def event_counter_callback (self, repo_id, curr_time):
         ZkRepoHub.sync_event_counter += 1
