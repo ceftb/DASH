@@ -173,8 +173,9 @@ if __name__ == "__main__":
         #input_event_log = "./data_2016/jan_2016_events.csv"
         #input_event_log = "./data_two_weeks/two_weeks.csv"
         #input_event_log = "./data_4days/4days.csv"
-        input_event_log = "./2016/2016-01_01.csv"
+        #input_event_log = "./2016/2016-01_01.csv"
         #input_event_log = "./2017/20170701-20170816.csv"
+        input_event_log = "./dryrun2/dryrun_events_20170501-20170630.csv"
 
     if embedding_directory is not None and os.path.isdir(embedding_directory):
         embedding_files = {}
@@ -200,8 +201,8 @@ if __name__ == "__main__":
     # length of the simulation is determined by two parameters: max_iterations_per_worker and end max_time
     # max_iterations_per_worker - defines maximum number of events each dash worker can do
     # max_time - defines end time of the simulaition (event with time later than max_time will not be scheduled in the event queue)
-    number_of_days = 30
-    max_iterations_per_worker = number_of_days * 1000000 / number_of_hosts # assuming ~1M events per day
+    number_of_days = 62
+    max_iterations_per_worker = number_of_days * 1110000 / number_of_hosts # assuming ~1.11M events per day
 
     # experiment setup
     num_trials = 1
@@ -214,8 +215,8 @@ if __name__ == "__main__":
     ZkGithubStateTrial.parameters = [
         Parameter('prob_create_new_agent', default=0.5),
         Parameter('prob_agent_creates_new_repo', default=0.5),
-        Parameter('start_time', default=time.mktime(datetime.strptime('2016-02-01 00:00:00', "%Y-%m-%d %H:%M:%S").timetuple())),
-        Parameter('max_time', default=time.mktime(datetime.strptime('2016-02-28 23:59:59', "%Y-%m-%d %H:%M:%S").timetuple()))
+        Parameter('start_time', default=time.mktime(datetime.strptime('2017-07-01 00:00:00', "%Y-%m-%d %H:%M:%S").timetuple())),
+        Parameter('max_time', default=time.mktime(datetime.strptime('2017-08-31 23:59:59', "%Y-%m-%d %H:%M:%S").timetuple()))
     ]
     ZkGithubStateTrial.measures = [
         Measure('num_agents'),
