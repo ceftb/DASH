@@ -115,6 +115,7 @@ class ISIMixin(GitUserMixin):
 
         self.hub.graph.add_node(new_repo_id, shared=0, isU=0, pop=popularity) # TBD non zero popularity
         self.hub.graph.add_edge(new_repo_id, self.decision_data.id, own=1, weight= 1)
+        #print "New repo popularity ", self.hub.graph.nodes[new_repo_id]["pop"]
 
         self.decision_data.owned_repos.append(new_repo_id)
         self.hub.log_event(self.decision_data.id, new_repo_id, "CreateEvent", None, self.hub.time)
@@ -122,6 +123,18 @@ class ISIMixin(GitUserMixin):
     def fork_event(self):
         repo_to_fork = self._pick_popular_repo_from_neighborhood() # parent repo
         new_repo_id = self.hub._create_repo(self.id, (repo_to_fork))
+        popularity = 0
+        for own_repo in self.decision_data.owned_repos:
+            popularity += self.hub.graph.nodes[own_repo]["pop"]
+        if popularity == 0:
+            popularity = 1
+        else:
+            popularity = popularity / len(self.decision_data.owned_repos)
+
+        self.hub.graph.add_node(new_repo_id, shared=0, isU=0, pop=popularity) # TBD non zero popularity
+        self.hub.graph.add_edge(new_repo_id, self.decision_data.id, own=1, weight= 1)
+        #print "New repo popularity ", self.hub.graph.nodes[new_repo_id]["pop"]
+
         self.decision_data.owned_repos.append(new_repo_id)
         self.hub.log_event(self.decision_data.id, repo_to_fork, "ForkEvent", None, self.hub.time)
 
