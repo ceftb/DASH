@@ -213,7 +213,7 @@ def build_graph_from_csv(csv_event_log_file, user_dict_file=None, repo_dict_file
         for row in datareader:
             if counter != 0:
                 event_type = row[1]
-                if event_type == "CreateEvent" and len(row) == 5 and row[4] == "repo creation":
+                if event_type == "CreateEvent" and len(row) == 5 and row[4] == "repository":
                     event_type = "CreateEvent/new"
                 try:
                     event_time = datetime.strptime(row[0], "%Y-%m-%d %H:%M:%S")
