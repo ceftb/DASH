@@ -178,8 +178,9 @@ if __name__ == "__main__":
 
     if embedding_directory is not None and os.path.isdir(embedding_directory):
         embedding_files = {}
+        embedding_files_suffix = ""
         for event_type in event_types:
-            emb_file_path = embedding_directory + event_type + ".emb"
+            emb_file_path = embedding_directory + event_type + embedding_files_suffix + ".emb"
             if os.path.isfile(emb_file_path):
                 pickle_file_path = embedding_directory + event_type + "_nodeID_gf.pickle"
                 embedding_files[event_type] = {"file_name": emb_file_path, "dictionary": pickle_file_path}
