@@ -173,7 +173,7 @@ if __name__ == "__main__":
         #input_event_log = "./data_2016/jan_2016_events.csv"
         #input_event_log = "./data_two_weeks/two_weeks.csv"
         #input_event_log = "./data_4days/4days.csv"
-        #input_event_log = "./2016/2016-01_01.csv"
+        #input_event_log = "./2016/2016-01_01.csv
         #input_event_log = "./2017/20170701-20170816.csv"
         input_event_log = "./dryrun2/dryrun_events_20170501-20170630.csv"
 
@@ -183,9 +183,9 @@ if __name__ == "__main__":
         for event_type in event_types:
             emb_file_path = embedding_directory + event_type + embedding_files_suffix + ".emb"
             if os.path.isfile(emb_file_path):
-                pickle_file_path = embedding_directory + event_type + "_nodeID_gf.pickle"
+                pickle_file_path = embedding_directory + event_type + embedding_files_suffix + "_nodeID_gf.pickle"
                 embedding_files[event_type] = {"file_name": emb_file_path, "dictionary": pickle_file_path}
-                probabilities_file_path = embedding_directory + event_type + ".prob"
+                probabilities_file_path = embedding_directory + event_type + embedding_files_suffix + ".prob"
                 if os.path.isfile(probabilities_file_path):
                     embedding_files[event_type]["probabilities_file"] = probabilities_file_path
 
