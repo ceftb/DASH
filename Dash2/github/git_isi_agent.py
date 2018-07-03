@@ -136,10 +136,12 @@ class ISIMixin(GitUserMixin):
         #print "New repo popularity ", self.hub.graph.nodes[new_repo_id]["pop"]
 
         self.decision_data.owned_repos.append(new_repo_id)
+        self.hub.graph.nodes[repo_to_fork]["pop"] += 1
         self.hub.log_event(self.decision_data.id, repo_to_fork, "ForkEvent", None, self.hub.time)
 
     def watch_event_(self):
         repo_to_watch = self._pick_popular_repo_from_neighborhood()
+        self.hub.graph.nodes[repo_to_watch]["pop"] += 1
         self.hub.log_event(self.decision_data.id, repo_to_watch, "WatchEvent", None, self.hub.time)
 
     def _get_neighbors(self, neighbor_iterator):
