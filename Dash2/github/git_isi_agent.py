@@ -148,49 +148,37 @@ class ISIMixin(GitUserMixin):
 
 
     # TBD needs refactoring _pick_popular_repo_from_neighborhood()
-    def _random_walk_using_popularity(self, start_node, even_type_filter):
+    def _preferential_attachment_walk(self, start_node):
         """
-        returns one of the neighbors of a node based on popularity of the neighbors
+        returns one of the neighbors of a node based on popularity of the neighbors. If no neighbors found picks some
+        random popular repo
         :param start_node:
         :return:
         """
-        pass
+        neighbors = self._get_neighbors(self.hub.graph.neighbors(start_node))  # neighbors here are repos
+        if len(neighbors) <= 1:
+            popular_repo_id = random.choice(self.hub.topPopularRepos)
+            return popular_repo_id, False
+        popularity_of_neighbors = [self.hub.graph.nodes[v]["pop"] if v not in self.decision_data.owned_repos else 0 for v in neighbors]  # make owned repo popularity 0
+        sum_f = float(sum(popularity_of_neighbors))
+        popularity_of_neighbors = [float(v) / sum_f for v in popularity_of_neighbors] if sum_f != 0 else [1.0 / len(neighbors) for v in popularity_of_neighbors]
+        next_node = numpy.random.choice(neighbors, p=popularity_of_neighbors)
+
+        return next_node, True
 
     def _pick_popular_repo_from_neighborhood(self):
         if len(self.decision_data.not_own_repos) == 0:
             popular_repo_id = random.choice(self.hub.topPopularRepos)
-            return popular_repo_id
-
+            return popular_repo_id, True
         # step one: pick some other repo agent had interacted with
         popular_known_repo = numpy.random.choice(self.decision_data.not_own_repos, p=self.decision_data.probability_based_on_popularity_of_known_but_not_owned_repos)
-
-        # step two: chose some other user who also worked on this repo
-        neighbors = self._get_neighbors(self.hub.graph.neighbors(popular_known_repo)) # neighbors here are users
-        if len(neighbors) <= 1:
-            popular_repo_id = random.choice(self.hub.topPopularRepos)
-            return popular_repo_id
-        popularity_of_neighbors = [self.hub.graph.nodes[v]["pop"] if v != self.decision_data.id else 0 for v in neighbors] # make own popularity 0
-        sum_f = float(sum(popularity_of_neighbors))
-        if sum_f != 0:
-            popularity_of_neighbors = [float(v) / sum_f for v in popularity_of_neighbors]
-        else:
-            popularity_of_neighbors = [1.0 / len(neighbors) for v in popularity_of_neighbors]
-        popular_user_id = numpy.random.choice(neighbors, p=popularity_of_neighbors)
-
+        # step two: choose some other user who also worked on this repo
+        node_id, is_next = self._preferential_attachment_walk(popular_known_repo)
+        if not is_next:
+            return  node_id
         # step three selecting repo of a popular user
-        neighbors = self._get_neighbors(self.hub.graph.neighbors(popular_user_id))  # neighbors here are repos
-        if len(neighbors) <= 1:
-            popular_repo_id = random.choice(self.hub.topPopularRepos)
-            return popular_repo_id
-        popularity_of_neighbors = [self.hub.graph.nodes[v]["pop"] if v not in self.decision_data.owned_repos else 0 for v in neighbors]  # make owned repo popularity 0
-        sum_f = float(sum(popularity_of_neighbors))
-        if sum_f != 0:
-            popularity_of_neighbors = [float(v) / sum_f for v in popularity_of_neighbors]
-        else:
-            popularity_of_neighbors = [1.0 / len(neighbors) for v in popularity_of_neighbors]
-        popular_repo_id = numpy.random.choice(neighbors, p=popularity_of_neighbors)
-
-        return popular_repo_id
+        node_id, is_next = self._preferential_attachment_walk(popular_known_repo)
+        return node_id
 
 
 
