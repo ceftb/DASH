@@ -159,7 +159,7 @@ class ISIMixin(GitUserMixin):
         if len(neighbors) <= 1:
             popular_repo_id = random.choice(self.hub.topPopularRepos)
             return popular_repo_id, False
-        popularity_of_neighbors = [self.hub.graph.nodes[v]["pop"] if v not in self.decision_data.owned_repos else 0 for v in neighbors]  # make owned repo popularity 0
+        popularity_of_neighbors = [self.hub.graph.nodes[v]["pop"] for v in neighbors]
         sum_f = float(sum(popularity_of_neighbors))
         popularity_of_neighbors = [float(v) / sum_f for v in popularity_of_neighbors] if sum_f != 0 else [1.0 / len(neighbors) for v in popularity_of_neighbors]
         next_node = numpy.random.choice(neighbors, p=popularity_of_neighbors)
@@ -167,17 +167,16 @@ class ISIMixin(GitUserMixin):
         return next_node, True
 
     def _pick_popular_repo_from_neighborhood(self):
-        if len(self.decision_data.not_own_repos) == 0:
-            popular_repo_id = random.choice(self.hub.topPopularRepos)
-            return popular_repo_id, True
         # step one: pick some other repo agent had interacted with
-        popular_known_repo = numpy.random.choice(self.decision_data.not_own_repos, p=self.decision_data.probability_based_on_popularity_of_known_but_not_owned_repos)
+        node_id, is_next = self._preferential_attachment_walk(self.decision_data.id)
+        if not is_next:
+            return node_id
         # step two: choose some other user who also worked on this repo
-        node_id, is_next = self._preferential_attachment_walk(popular_known_repo)
+        node_id, is_next = self._preferential_attachment_walk(node_id)
         if not is_next:
             return  node_id
         # step three selecting repo of a popular user
-        node_id, is_next = self._preferential_attachment_walk(popular_known_repo)
+        node_id, is_next = self._preferential_attachment_walk(node_id)
         return node_id
 
 
