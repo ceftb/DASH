@@ -240,7 +240,8 @@ goalRequirements UpdateOwnRepo
                                                         p=self.decision_data.probabilities)
                 if selected_repo == -1: # embedding long tail, random choice.
                     selected_repo = self.hub.pick_random_repo()
-
+            if selected_event == "CreateEvent/new":
+                selected_event = "CreateEvent"
             self.hub.log_event(self.decision_data.id, selected_repo, selected_event, None, self.hub.time)
             self.decision_data.total_activity += 1
         else:
