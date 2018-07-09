@@ -45,7 +45,12 @@ class GraphBuilder:
             if event_type == "ForkEvent" or event_type == "WatchEvent":
                 self.graph.nodes[repo_id]["pop"] += 1
 
-    def compute_users_popularity(self, creator2repos):
+    def compute_users_popularity_and_event_rate(self, creator2repos, number_of_months):
+        '''
+        Computation of user popularity is done after the whole graph is constructed, the same is true for event rate.
+        :param creator2repos:
+        :return:
+        '''
         for user_id, own_repos in creator2repos.iteritems():
             popularity = 0
             for repo in own_repos:
@@ -54,6 +59,7 @@ class GraphBuilder:
                     self.graph.add_edge(repo, user_id, weight=0)
                 self.graph.get_edge_data(repo, user_id)['own'] = 1
             self.graph.nodes[user_id]["pop"] = popularity
+            self.graph.nodes[user_id]["r"] /= float(number_of_months)
 
     @staticmethod
     def get_users_neighborhood_size(graph):
@@ -229,7 +235,7 @@ def build_graph_from_csv(csv_event_log_file, user_dict_file=None, repo_dict_file
         print counter
 
     csvfile.close()
-    user_repo_graph_builder.compute_users_popularity(ids_dictionary_stream.getCreator2reposMap())
+    user_repo_graph_builder.compute_users_popularity_and_event_rate(ids_dictionary_stream.getCreator2reposMap())
     ids_dictionary_stream.close()
 
     return user_repo_graph_builder.graph, len(ids_dictionary_stream.users), len(ids_dictionary_stream.repos)

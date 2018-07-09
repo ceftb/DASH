@@ -23,7 +23,8 @@ import pickle
 import networkx as nx
 
 
-# This is an example of experiment script
+agent_class_name = "GitUserAgent"
+agent_module_name = "Dash2.github.git_user_agent"
 
 # Work processor performs simulation as individual process (it is a DashWorker)
 class ZkGithubStateWorkProcessor(WorkProcessor):
@@ -38,7 +39,12 @@ class ZkGithubStateWorkProcessor(WorkProcessor):
         self.hub = ZkRepoHub(self.zk, self.task_full_id, 0, log_file=self.log_file)
         #self.agent = GitUserAgent(useInternalHub=True, hub=self.hub, skipS12=True, trace_client=False, traceLoop=False, trace_github=False)
         #self.agent = IUGitUserAgent(useInternalHub=True, hub=self.hub, skipS12=True, trace_client=False, traceLoop=False, trace_github=False)
-        self.agent = ISIGitUserAgent(useInternalHub=True, hub=self.hub, skipS12=True, trace_client=False, traceLoop=False, trace_github=False)
+        #self.agent = ISIGitUserAgent(useInternalHub=True, hub=self.hub, skipS12=True, trace_client=False, traceLoop=False, trace_github=False)
+
+        mod = __import__(agent_module_name, fromlist=[agent_class_name])
+        cls = getattr(mod, agent_class_name)
+
+        self.agent =cls(useInternalHub=True, hub=self.hub, skipS12=True, trace_client=False, traceLoop=False, trace_github=False)
         self.log_file.close()
 
         if self.users_file is not None and self.users_file != "":
@@ -147,6 +153,7 @@ if __name__ == "__main__":
     input_event_log = None
     embedding_directory = None #"./embeddings/";
     embedding_files = None
+    '''
     if len(sys.argv) == 1:
         pass
     elif len(sys.argv) == 2:
@@ -165,6 +172,13 @@ if __name__ == "__main__":
         embedding_directory = sys.argv[4]
     else:
         print 'incorrect arguments: ', sys.argv
+    '''
+    event_log_file_name = sys.argv[1]
+    number_of_month_in_event_log = int(sys.argv[2])
+    number_of_days_in_simulation = int(sys.argv[3])
+    embedding_directory = sys.argv[4] # None if embedding is not used
+    agent_class_name = sys.argv[5] # "GitUserAgent"
+    agent_module_name = sys.argv[6] # "Dash2.github.git_user_agent"
 
     if input_event_log is None:
         #input event log and output event log files names
@@ -175,7 +189,7 @@ if __name__ == "__main__":
         #input_event_log = "./data_4days/4days.csv"
         #input_event_log = "./2016/2016-01_01.csv
         #input_event_log = "./2017/20170701-20170816.csv"
-        input_event_log = "./dryrun2/dryrun_events_20170501-20170630.csv"
+        input_event_log = event_log_file_name #"./dryrun2/dryrun_events_20170501-20170630.csv"
 
     if embedding_directory is not None and os.path.isdir(embedding_directory):
         embedding_files = {}
@@ -201,7 +215,7 @@ if __name__ == "__main__":
     # length of the simulation is determined by two parameters: max_iterations_per_worker and end max_time
     # max_iterations_per_worker - defines maximum number of events each dash worker can do
     # max_time - defines end time of the simulaition (event with time later than max_time will not be scheduled in the event queue)
-    number_of_days = 62
+    number_of_days =  number_of_days_in_simulation #62
     max_iterations_per_worker = number_of_days * 1110000 / number_of_hosts # assuming ~1.11M events per day
 
     # experiment setup
