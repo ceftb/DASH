@@ -209,7 +209,7 @@ def _print_user_profile(graph, user_node, fp):
     fp.write(pickle.dumps(profile_object))
 
 
-def build_graph_from_csv(csv_event_log_file, user_dict_file=None, repo_dict_file=None, event_filter=None):
+def build_graph_from_csv(csv_event_log_file, number_of_months, event_filter=None):
     user_repo_graph_builder = GraphBuilder(event_filter = event_filter)
     ids_dictionary_stream = IdDictionaryStream(csv_event_log_file + "_users_id_dict.csv", csv_event_log_file + "_repos_id_dict.csv", event_filter = event_filter)
 
@@ -235,7 +235,7 @@ def build_graph_from_csv(csv_event_log_file, user_dict_file=None, repo_dict_file
         print counter
 
     csvfile.close()
-    user_repo_graph_builder.compute_users_popularity_and_event_rate(ids_dictionary_stream.getCreator2reposMap())
+    user_repo_graph_builder.compute_users_popularity_and_event_rate(ids_dictionary_stream.getCreator2reposMap(), number_of_months)
     ids_dictionary_stream.close()
 
     return user_repo_graph_builder.graph, len(ids_dictionary_stream.users), len(ids_dictionary_stream.repos)

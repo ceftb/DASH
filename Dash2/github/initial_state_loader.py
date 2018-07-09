@@ -31,8 +31,8 @@ profiles file structure (used for both users and repos - relationship is symmetr
 # "ef" - event frequencies
 '''
 
-def build_state_from_event_log(input_event_log, number_of_user_partitions=1, state_file_name=None, embedding_files=None):
-    G, number_of_users, number_of_repos = build_graph_from_csv(input_event_log)
+def build_state_from_event_log(input_event_log, number_of_user_partitions=1, state_file_name=None, embedding_files=None, number_of_months=1):
+    G, number_of_users, number_of_repos = build_graph_from_csv(input_event_log, number_of_months)
     print "User-repo graph constructed. Users ", number_of_users, ", repos ", number_of_repos, ", nodes ", len(G.nodes()), ", edges", len(G.edges())
 
     partition_graph(G, number_of_user_partitions)

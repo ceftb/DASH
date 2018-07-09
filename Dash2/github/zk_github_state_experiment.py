@@ -209,7 +209,7 @@ if __name__ == "__main__":
     initial_state_file_name = input_event_log + "_state.json"
     if not os.path.isfile(initial_state_file_name):
         print initial_state_file_name + " file is not present, creating one. May take a while, please wait ..."
-        build_state_from_event_log(input_event_log, number_of_hosts, initial_state_file_name, embedding_files=embedding_files)
+        build_state_from_event_log(input_event_log, number_of_hosts, initial_state_file_name, embedding_files=embedding_files, number_of_months=number_of_month_in_event_log)
         print str(initial_state_file_name) + " file created."
 
     # length of the simulation is determined by two parameters: max_iterations_per_worker and end max_time
