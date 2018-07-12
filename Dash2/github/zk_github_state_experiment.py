@@ -23,9 +23,6 @@ import pickle
 import networkx as nx
 
 
-agent_class_name = "GitUserAgent"
-agent_module_name = "Dash2.github.git_user_agent"
-
 # Work processor performs simulation as individual process (it is a DashWorker)
 class ZkGithubStateWorkProcessor(WorkProcessor):
 
@@ -33,6 +30,8 @@ class ZkGithubStateWorkProcessor(WorkProcessor):
     module_name = "Dash2.github.zk_github_state_experiment"
 
     def initialize(self):
+
+
         self.agents_decision_data = {}
         self.events_heap = []
         self.event_counter = 0
@@ -41,17 +40,18 @@ class ZkGithubStateWorkProcessor(WorkProcessor):
         #self.agent = IUGitUserAgent(useInternalHub=True, hub=self.hub, skipS12=True, trace_client=False, traceLoop=False, trace_github=False)
         #self.agent = ISIGitUserAgent(useInternalHub=True, hub=self.hub, skipS12=True, trace_client=False, traceLoop=False, trace_github=False)
 
-        mod = __import__(agent_module_name, fromlist=[agent_class_name])
-        cls = getattr(mod, agent_class_name)
+        mod = __import__(self.agent_module_name, fromlist=[self.agent_class_name])
+        cls = getattr(mod, self.agent_class_name)
 
         self.agent =cls(useInternalHub=True, hub=self.hub, skipS12=True, trace_client=False, traceLoop=False, trace_github=False)
         self.log_file.close()
 
+        self.hub.graph_file_path = self.UR_graph_path
         if self.users_file is not None and self.users_file != "":
             load_profiles(self.users_file, self.populate_agents_collection)
 
         # load embeddings probabilities, if such are specified in the initial state file
-        populate_embedding_probabilities(self.agents_decision_data, self.initial_state_file)
+        populate_embedding_probabilities(self.agents_decision_data, self.embedding_path)
 
         # closing and reopening log file due to delays in loading the state (netwok fils system sometimes interrupts the file otherwise)
         self.log_file = open(self.task_full_id + '_event_log_file.txt', 'w')
@@ -121,7 +121,7 @@ class ZkGithubStateTrial(Trial):
         _, _, task_num = task_full_id.split("-")
         self.init_task_param("initial_state_file", self.initial_state_file, data)
         self.init_task_param("users_file", self.users_file + "_" + str(int(task_num) - 1), data)
-
+        self.init_task_param("UR_graph_path", read_state_file(self.initial_state_file)["UR_graph_path"], data)
 
     # partial_dependent is a dictionary of dependent vars
     def append_partial_results(self, partial_dependent):
@@ -150,66 +150,21 @@ class ZkGithubStateTrial(Trial):
 if __name__ == "__main__":
     zk_hosts = '127.0.0.1:2181'
     number_of_hosts = 1
-    input_event_log = None
-    embedding_directory = None #"./embeddings/";
-    embedding_files = None
-    '''
-    if len(sys.argv) == 1:
-        pass
-    elif len(sys.argv) == 2:
-        number_of_hosts = int(sys.argv[1])
-    elif len(sys.argv) == 3:
-        zk_hosts = sys.argv[1]
-        number_of_hosts = int(sys.argv[2])
-    elif len(sys.argv) == 4:
-        zk_hosts = sys.argv[1]
-        number_of_hosts = int(sys.argv[2])
-        input_event_log = sys.argv[3]
-    elif len(sys.argv) == 5:
-        zk_hosts = sys.argv[1]
-        number_of_hosts = int(sys.argv[2])
-        input_event_log = sys.argv[3]
-        embedding_directory = sys.argv[4]
-    else:
-        print 'incorrect arguments: ', sys.argv
-    '''
-    event_log_file_name = sys.argv[1]
+    input_event_log = sys.argv[1] #"./dryrun2/dryrun_events_20170501-20170630.csv"
     number_of_month_in_event_log = int(sys.argv[2])
     number_of_days_in_simulation = int(sys.argv[3])
-    embedding_directory = sys.argv[4] # None if embedding is not used
+    embedding_directory = sys.argv[4] if sys.argv[4] != "None" else None # None if embedding is not used. # must have '/' in the end
     agent_class_name = sys.argv[5] # "GitUserAgent"
     agent_module_name = sys.argv[6] # "Dash2.github.git_user_agent"
-
-    if input_event_log is None:
-        #input event log and output event log files names
-        #input_event_log = "./data_jan_2017/one_month.csv"
-        #input_event_log = "./data_sample/data_sample.csv"
-        #input_event_log = "./data_2016/jan_2016_events.csv"
-        #input_event_log = "./data_two_weeks/two_weeks.csv"
-        #input_event_log = "./data_4days/4days.csv"
-        #input_event_log = "./2016/2016-01_01.csv
-        #input_event_log = "./2017/20170701-20170816.csv"
-        input_event_log = event_log_file_name #"./dryrun2/dryrun_events_20170501-20170630.csv"
-
-    if embedding_directory is not None and os.path.isdir(embedding_directory):
-        embedding_files = {}
-        embedding_files_suffix = ""
-        for event_type in event_types:
-            emb_file_path = embedding_directory + event_type + embedding_files_suffix + ".emb"
-            if os.path.isfile(emb_file_path):
-                pickle_file_path = embedding_directory + event_type + embedding_files_suffix + "_nodeID_gf.pickle"
-                embedding_files[event_type] = {"file_name": emb_file_path, "dictionary": pickle_file_path}
-                probabilities_file_path = embedding_directory + event_type + embedding_files_suffix + ".prob"
-                if os.path.isfile(probabilities_file_path):
-                    embedding_files[event_type]["probabilities_file"] = probabilities_file_path
-
+    start_date = sys.argv[7]
+    end_date = sys.argv[8]
 
     # if state file is not present, then create it. State file is created from input event log.
     # Users in the initial state are partitioned (number of hosts is the number of partitions)
     initial_state_file_name = input_event_log + "_state.json"
     if not os.path.isfile(initial_state_file_name):
         print initial_state_file_name + " file is not present, creating one. May take a while, please wait ..."
-        build_state_from_event_log(input_event_log, number_of_hosts, initial_state_file_name, embedding_files=embedding_files, number_of_months=number_of_month_in_event_log)
+        build_state_from_event_log(input_event_log, number_of_hosts, initial_state_file_name, number_of_months=number_of_month_in_event_log)
         print str(initial_state_file_name) + " file created."
 
     # length of the simulation is determined by two parameters: max_iterations_per_worker and end max_time
@@ -229,8 +184,11 @@ if __name__ == "__main__":
     ZkGithubStateTrial.parameters = [
         Parameter('prob_create_new_agent', default=0.5),
         Parameter('prob_agent_creates_new_repo', default=0.5),
-        Parameter('start_time', default=time.mktime(datetime.strptime('2017-07-01 00:00:00', "%Y-%m-%d %H:%M:%S").timetuple())),
-        Parameter('max_time', default=time.mktime(datetime.strptime('2017-08-31 23:59:59', "%Y-%m-%d %H:%M:%S").timetuple()))
+        Parameter('start_time', default=time.mktime(datetime.strptime(str(start_date) + ' 00:00:00', "%Y-%m-%d %H:%M:%S").timetuple())),
+        Parameter('max_time', default=time.mktime(datetime.strptime(str(end_date) + ' 23:59:59', "%Y-%m-%d %H:%M:%S").timetuple())),
+        Parameter('agent_class_name', default=agent_class_name),
+        Parameter('agent_module_name', default=agent_module_name),
+        Parameter('embedding_path', default=embedding_directory)
     ]
     ZkGithubStateTrial.measures = [
         Measure('num_agents'),

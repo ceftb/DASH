@@ -189,8 +189,11 @@ def print_user_profiles(graph, users_filename, number_of_partitions):
         fp = users_parts_file[i]['fp']
         fp.close()
 
-    pickle.dump(graph, open("UR_graph.pickle", "wb"))
-    pickle.dump(GraphBuilder.get_users_neighborhood_size(graph), open("users_neighborhood_size.pickle", "wb"))
+def print_graph(G, file_name):
+    pickle.dump(G, open(file_name, "wb"))
+
+def print_users_neighborhood_sizes(G, file_name):
+    pickle.dump(GraphBuilder.get_users_neighborhood_size(G), open(file_name, "wb"))
 
 
 def _print_user_profile(graph, user_node, fp):
@@ -217,7 +220,7 @@ def build_graph_from_csv(csv_event_log_file, number_of_months, event_filter=None
         datareader = csv.reader(csvfile)
         counter = 0
         for row in datareader:
-            if counter != 0:
+            if row[0] != "timestamp":
                 event_type = row[1]
                 if event_type == "CreateEvent" and len(row) == 5 and row[4] == "repository":
                     event_type = "CreateEvent/new"

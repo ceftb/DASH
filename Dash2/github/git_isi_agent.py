@@ -44,7 +44,7 @@ class ISIDecisionData(GitUserDecisionData):
         self.popularity = profile.pop("pop", 0)
 
         if hub.graph == None:
-            hub.graph = pickle.load(open("UR_graph.pickle", "rb"))
+            hub.graph = pickle.load(open(hub.graph_file_path, "rb"))
         if len(self.not_own_repos) != 0:
             sum_f = float(sum([hub.graph.nodes[k]["pop"] for k in self.not_own_repos]))
             if sum_f != 0:
