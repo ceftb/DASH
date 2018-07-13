@@ -44,7 +44,9 @@ class ZkGithubStateWorkProcessor(WorkProcessor):
         cls = getattr(mod, self.agent_class_name)
 
         self.agent =cls(useInternalHub=True, hub=self.hub, skipS12=True, trace_client=False, traceLoop=False, trace_github=False)
+        # close and remove event log file, which was create by __init__(), we need a different name and we need to open after state is loaded.
         self.log_file.close()
+        os.remove(self.task_full_id + '_event_log_file.txt')
 
         self.hub.graph_file_path = self.UR_graph_path
         if self.users_file is not None and self.users_file != "":
@@ -54,7 +56,7 @@ class ZkGithubStateWorkProcessor(WorkProcessor):
         populate_embedding_probabilities(self.agents_decision_data, self.embedding_path)
 
         # closing and reopening log file due to delays in loading the state (netwok fils system sometimes interrupts the file otherwise)
-        self.log_file = open(self.task_full_id + '_event_log_file.txt', 'w')
+        self.log_file = open(self.output_file_name + self.task_full_id + '_event_log_file.txt', 'w')
         self.hub.log_file = self.log_file
         self.hub.agents_decision_data = self.agents_decision_data # will not work for distributed version
         print "Agents instantiated: ", len(self.agents_decision_data)
@@ -135,17 +137,18 @@ class ZkGithubStateTrial(Trial):
         file_names = []
         number_of_files = self.number_of_hosts
         for task_index in range(0, number_of_files, 1):
-            log_file_name = str(self.exp_id) + "-" + str(self.trial_id) + "-" + str(task_index + 1) + "_event_log_file.txt"
+            log_file_name = self.output_file_name + str(self.exp_id) + "-" + str(self.trial_id) + "-" + str(task_index + 1) + "_event_log_file.txt"
             file_names.append(log_file_name)
-        merge_log_file(file_names, "tmp_output.csv", sort_chronologically=True)
+        tmp_file_name = self.output_file_name + "tmp_output.csv"
+        merge_log_file(file_names, tmp_file_name, sort_chronologically=True)
         for log_file_name in file_names:
             os.remove(log_file_name)
         output_file_name = self.output_file_name + "_trial_" + str(self.trial_id) + ".csv"
-        trnaslate_user_and_repo_ids_in_event_log(even_log_file="tmp_output.csv",
+        trnaslate_user_and_repo_ids_in_event_log(even_log_file=tmp_file_name,
                                                  output_file_name=output_file_name,
                                                  users_ids_file=self.users_ids,
                                                  repos_ids_file=self.repos_ids)
-        os.remove("tmp_output.csv")
+        os.remove(tmp_file_name)
 
 
 if __name__ == "__main__":
