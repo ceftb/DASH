@@ -84,7 +84,7 @@ class IUMixin(GitUserMixin):
             if repo_for_action is not None:  # Otherwise, a create or fork action was already taken and total_activity was incremented
                 # Pick a random event type. In later versions the probabilities will change based on the kind of repo
                 # But for now uses the same probabilities as used in the original DASH model
-                selected_event = numpy.random.choice(IUDecisionData.event_types_no_create_fork, p=self.decision_data.event_probabilities)
+                selected_event = numpy.random.choice(IUDecisionData.event_types_no_create_fork, replace=False, p=self.decision_data.event_probabilities)
                 self.hub.log_event(self.decision_data.id, repo_for_action, selected_event, None, self.hub.time)
                 self.decision_data.total_activity += 1
         else:
@@ -112,7 +112,7 @@ class IUMixin(GitUserMixin):
             if repo_for_action is not None:  # Otherwise, a create or fork action was already taken and total_activity was incremented
                 # Pick a random event type. In later versions the probabilities will change based on the kind of repo
                 # But for now uses the same probabilities as used in the original DASH model
-                selected_event = numpy.random.choice(IUDecisionData.event_types_no_create_fork, p=self.decision_data.event_probabilities)
+                selected_event = numpy.random.choice(IUDecisionData.event_types_no_create_fork, replace=False, p=self.decision_data.event_probabilities)
                 self.hub.log_event(self.decision_data.id, repo_for_action, selected_event, None, self.hub.time)
                 self.decision_data.total_activity += 1
 
@@ -125,7 +125,7 @@ class IUMixin(GitUserMixin):
 
     def watch_repo(self):
         # IU: Pick among all owners by preferential attachment (expensive!)
-        owner_id = numpy.random.choice(self.hub.userIdAndPopularity["ids"], p=self.hub.userIdAndPopularity["probability"])
+        owner_id = numpy.random.choice(self.hub.userIdAndPopularity["ids"], replace=False, p=self.hub.userIdAndPopularity["probability"])
         owner = self.hub.agents_decision_data[owner_id] # 'owner' is a decision_data object
         repo_id = random.choice(owner.own_repos)
         self.decision_data.not_own_repos.append(repo_id)
@@ -140,7 +140,7 @@ class IUMixin(GitUserMixin):
         if len(self.decision_data.not_own_repos) > 0:
             repo_to_fork = random.choice(self.decision_data.not_own_repos) # parent repo
         else:
-            owner_id = numpy.random.choice(self.hub.userIdAndPopularity["ids"], p=self.hub.userIdAndPopularity["probability"])
+            owner_id = numpy.random.choice(self.hub.userIdAndPopularity["ids"], replace=False, p=self.hub.userIdAndPopularity["probability"])
             owner = self.hub.agents_decision_data[owner_id]  # 'owner' is a decision_data object
             repo_to_fork = random.choice(owner.own_repos)
 

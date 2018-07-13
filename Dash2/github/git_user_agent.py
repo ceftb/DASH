@@ -229,15 +229,15 @@ goalRequirements UpdateOwnRepo
         This a test agentLoop that can skip System 1 and System 2 and picks repo and event based on frequencies.
         """
         if self.skipS12:
-            selected_event = numpy.random.choice(event_types, p=self.decision_data.event_probabilities)
+            selected_event = numpy.random.choice(event_types, replace=False, p=self.decision_data.event_probabilities)
             if self.decision_data.embedding_probabilities[selected_event] is None:
-                selected_repo = numpy.random.choice(self.decision_data.all_known_repos, p=self.decision_data.probabilities)
+                selected_repo = numpy.random.choice(self.decision_data.all_known_repos, replace=False, p=self.decision_data.probabilities)
             else:
                 selected_repo = numpy.random.choice(self.decision_data.embedding_probabilities[selected_event]['ids'],
-                                                    p=self.decision_data.embedding_probabilities[selected_event]['prob'])
+                                                    replace=False, p=self.decision_data.embedding_probabilities[selected_event]['prob'])
                 if selected_repo is None:
                     selected_repo = numpy.random.choice(self.decision_data.all_known_repos,
-                                                        p=self.decision_data.probabilities)
+                                                        replace=False, p=self.decision_data.probabilities)
                 if selected_repo == -1: # embedding long tail, random choice.
                     selected_repo = self.hub.pick_random_repo()
             if selected_event == "CreateEvent/new":
@@ -337,7 +337,7 @@ goalRequirements UpdateOwnRepo
                 sum += fr
             for fr in self.decision_data.repo_id_to_freq.itervalues():
                 self.decision_data.probabilities.append(fr / sum)
-        selected_repo = numpy.random.choice(numpy.arange(1, len(self.decision_data.repo_id_to_freq)+1), p=self.decision_data.probabilities)
+        selected_repo = numpy.random.choice(numpy.arange(1, len(self.decision_data.repo_id_to_freq)+1), replace=False, p=self.decision_data.probabilities)
         return [{repo_name_variable: random.choice(self.decision_data.repo_id_to_freq.keys()) }]
 
     def pick_random_issue_comment(self, (goal, issue_comment)):

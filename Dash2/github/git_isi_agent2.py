@@ -59,7 +59,7 @@ class ISI2Mixin(GitUserMixin):
     def agentLoop(self, max_iterations=-1, disconnect_at_end=True):
         # If control passes to here, the decision on choosing a user has already been made.
         if self.skipS12:
-            pair = numpy.random.choice(self.decision_data.event_repo_pairs, p=self.decision_data.event_repo_probabilities)
+            pair = numpy.random.choice(self.decision_data.event_repo_pairs, replace=False, p=self.decision_data.event_repo_probabilities)
             selected_event = event_types[pair.event_index]
             selected_repo = pair.repo_id
 

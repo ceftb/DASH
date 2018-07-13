@@ -80,7 +80,7 @@ class ISIMixin(GitUserMixin):
         # If control passes to here, the decision on choosing a user has already been made.
         if self.skipS12:
             # Pick a random event type.
-            selected_event = numpy.random.choice(event_types, p=self.decision_data.event_probabilities)
+            selected_event = numpy.random.choice(event_types, replace=False, p=self.decision_data.event_probabilities)
             if selected_event == "CreateEvent/new":
                 self.create_new_event()
             elif selected_event == "ForkEvent":
@@ -90,12 +90,12 @@ class ISIMixin(GitUserMixin):
             else:
                 selected_repo = None
                 if self.decision_data.embedding_probabilities[selected_event] is None:
-                    selected_repo = numpy.random.choice(self.decision_data.all_known_repos, p=self.decision_data.probabilities)
+                    selected_repo = numpy.random.choice(self.decision_data.all_known_repos, replace=False, p=self.decision_data.probabilities)
                 else:
                     selected_repo = numpy.random.choice(
-                        self.decision_data.embedding_probabilities[selected_event]['ids'], p=self.decision_data.embedding_probabilities[selected_event]['prob'])
+                        self.decision_data.embedding_probabilities[selected_event]['ids'], replace=False, p=self.decision_data.embedding_probabilities[selected_event]['prob'])
                     if selected_repo is None:
-                        selected_repo = numpy.random.choice(self.decision_data.all_known_repos, p=self.decision_data.probabilities)
+                        selected_repo = numpy.random.choice(self.decision_data.all_known_repos, replace=False, p=self.decision_data.probabilities)
                     if selected_repo == -1:  # embedding long tail, random choice.
                         selected_repo = random.choice(self.hub.topPopularRepos) #self.hub.pick_random_repo()
                 self.hub.log_event(self.decision_data.id, selected_repo, selected_event, None, self.hub.time)
@@ -164,7 +164,7 @@ class ISIMixin(GitUserMixin):
         popularity_of_neighbors = [self.hub.graph.nodes[v]["pop"] for v in neighbors]
         sum_f = float(sum(popularity_of_neighbors))
         popularity_of_neighbors = [float(v) / sum_f for v in popularity_of_neighbors] if sum_f != 0 else [1.0 / len(neighbors) for v in popularity_of_neighbors]
-        next_node = numpy.random.choice(neighbors, p=popularity_of_neighbors)
+        next_node = numpy.random.choice(neighbors, replace=False, p=popularity_of_neighbors)
 
         return next_node, True
 
