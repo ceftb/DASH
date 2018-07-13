@@ -32,6 +32,8 @@ class GraphBuilder:
                 self.graph.nodes[user_id]["ef"] = [0] * len(event_types)
                 self.graph.nodes[user_id]["ef"][event_index] += 1
                 self.graph.nodes[user_id]["pop"] = 0 # init popularity
+                # event-repo pair frequencies:
+                self.graph.nodes[user_id]["e_r"] = {}
             self.graph.nodes[user_id]["let"] = event_time
 
             if self.graph.has_edge(repo_id, user_id):
@@ -40,6 +42,11 @@ class GraphBuilder:
                 self.graph.add_edge(repo_id, user_id, own=0, weight= 1)
                 self.graph.get_edge_data(repo_id, user_id)['ef'] = [0] * len(event_types)
             self.graph.get_edge_data(repo_id, user_id)['ef'][event_index] += 1
+            # event-repo pair frequencies:
+            event_repo_pair = (event_index, repo_id)
+            if event_repo_pair not in self.graph.nodes[user_id]["e_r"]:
+                self.graph.nodes[user_id]["e_r"][event_repo_pair] = 0
+            self.graph.nodes[user_id]["e_r"][event_repo_pair] += 1
 
             # popularity of repos
             if event_type == "ForkEvent" or event_type == "WatchEvent":
@@ -202,6 +209,11 @@ def _print_user_profile(graph, user_node, fp):
     profile_object["pop"] = graph.nodes[user_node]["pop"]
     profile_object["all_repos"] = {}
     profile_object["let"] = graph.nodes[user_node]["let"]
+    profile_object["erp"] = []
+    profile_object["erf"] = []
+    for event_repo_pair, freq in graph.nodes[user_node]["e_r"].iteritems():
+        profile_object["erp"].append(event_repo_pair)
+        profile_object["erf"].append(freq)
     for neighbour in graph.neighbors(user_node):
         edge_weight = graph.get_edge_data(user_node, neighbour)['weight']
         isOwnRepo = True if graph.get_edge_data(user_node, neighbour)['own'] == 1 else False

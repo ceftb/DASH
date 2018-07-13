@@ -140,7 +140,7 @@ class ZkGithubStateTrial(Trial):
         merge_log_file(file_names, "tmp_output.csv", sort_chronologically=True)
         for log_file_name in file_names:
             os.remove(log_file_name)
-        output_file_name = self.initial_state_file + "_trial_" + str(self.trial_id) + ".csv"
+        output_file_name = self.output_file_name + "_trial_" + str(self.trial_id) + ".csv"
         trnaslate_user_and_repo_ids_in_event_log(even_log_file="tmp_output.csv",
                                                  output_file_name=output_file_name,
                                                  users_ids_file=self.users_ids,
@@ -159,6 +159,7 @@ if __name__ == "__main__":
     agent_module_name = sys.argv[6] # "Dash2.github.git_user_agent"
     start_date = sys.argv[7]
     end_date = sys.argv[8]
+    output_file_name = sys.argv[9]
 
     # if state file is not present, then create it. State file is created from input event log.
     # Users in the initial state are partitioned (number of hosts is the number of partitions)
@@ -189,7 +190,8 @@ if __name__ == "__main__":
         Parameter('max_time', default=time.mktime(datetime.strptime(str(end_date) + ' 23:59:59', "%Y-%m-%d %H:%M:%S").timetuple())),
         Parameter('agent_class_name', default=agent_class_name),
         Parameter('agent_module_name', default=agent_module_name),
-        Parameter('embedding_path', default=embedding_directory)
+        Parameter('embedding_path', default=embedding_directory),
+        Parameter('output_file_name', default=output_file_name)
     ]
     ZkGithubStateTrial.measures = [
         Measure('num_agents'),
