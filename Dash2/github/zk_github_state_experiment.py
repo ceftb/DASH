@@ -56,6 +56,7 @@ class ZkGithubStateWorkProcessor(WorkProcessor):
         # closing and reopening log file due to delays in loading the state (netwok fils system sometimes interrupts the file otherwise)
         self.log_file = open(self.task_full_id + '_event_log_file.txt', 'w')
         self.hub.log_file = self.log_file
+        self.hub.agents_decision_data = self.agents_decision_data # will not work for distributed version
         print "Agents instantiated: ", len(self.agents_decision_data)
 
     # Function takes a user profile and creates an agent decision data object.
@@ -151,9 +152,9 @@ if __name__ == "__main__":
     zk_hosts = '127.0.0.1:2181'
     number_of_hosts = 1
     input_event_log = sys.argv[1] #"./dryrun2/dryrun_events_20170501-20170630.csv"
-    number_of_month_in_event_log = int(sys.argv[2])
+    number_of_month_in_event_log = float(sys.argv[2])
     number_of_days_in_simulation = int(sys.argv[3])
-    embedding_directory = sys.argv[4] if sys.argv[4] != "None" else None # None if embedding is not used. # must have '/' in the end
+    embedding_directory = sys.argv[4] if sys.argv[4] != "None" else "" # None if embedding is not used. # must have '/' in the end
     agent_class_name = sys.argv[5] # "GitUserAgent"
     agent_module_name = sys.argv[6] # "Dash2.github.git_user_agent"
     start_date = sys.argv[7]

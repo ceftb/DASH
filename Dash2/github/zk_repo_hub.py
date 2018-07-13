@@ -32,6 +32,7 @@ class ZkRepoHub(GitRepoHub):
         # for single process only
         self.graph = None
         self.topPopularRepos = None
+        self.userIdAndPopularity = None
 
     # call this method only for pre-existing repos
     def init_repo(self, repo_id, user_id=None, curr_time=0, is_node_shared=False, **kwargs):

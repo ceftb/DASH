@@ -34,7 +34,7 @@ class GitUserDecisionData(object):
         self.name_to_repo_id = {} # {name_h : ght_id_h} Contains all repos known by the agent
         self.outgoing_requests = {}  # keyed tuple of (head_name, base_name, request_id) valued by state
 
-        self.owned_repos = []
+        self.own_repos = []
         self.not_own_repos = []
         self.repo_id_to_freq = {}
         self.all_known_repos = []
