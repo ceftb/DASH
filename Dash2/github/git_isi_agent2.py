@@ -63,7 +63,7 @@ class ISI2Mixin(GitUserMixin):
             selected_event = event_types[pair.event_index]
             selected_repo = pair.repo_id
 
-            if selected_event == "CreateEvent/new":
+            if pair.event_index == 14: #selected_event == "CreateEvent/new":
                 selected_event = "CreateEvent"
             self.hub.log_event(self.decision_data.id, selected_repo, selected_event, None, self.hub.time)
             self.decision_data.total_activity += 1
