@@ -1,9 +1,6 @@
 from Dash2.core.dash import DASHAgent
 from git_user_agent import GitUserMixin, GitUserDecisionData
-import random
-import numpy
-from distributed_event_log_utils import event_types, event_types_indexes
-import pickle
+from distributed_event_log_utils import event_types, event_types_indexes, sort_data_and_prob_to_cumulative_array, random_pick_sorted
 
 class EventRepoPair:
     def __init__(self, event_index, repo_id):
@@ -46,7 +43,8 @@ class ISI2DecisionData(GitUserDecisionData):
         self.event_repo_probabilities = profile["erf"]
         sum_ = sum(self.event_repo_probabilities)
         self.event_repo_probabilities = [float(v) / float(sum_) for v in self.event_repo_probabilities]
-
+        # sort:
+        self.event_repo_pairs, self.event_repo_probabilities = sort_data_and_prob_to_cumulative_array(self.event_repo_pairs, self.event_repo_probabilities)
 
 class ISI2Mixin(GitUserMixin):
 
@@ -59,7 +57,7 @@ class ISI2Mixin(GitUserMixin):
     def agentLoop(self, max_iterations=-1, disconnect_at_end=True):
         # If control passes to here, the decision on choosing a user has already been made.
         if self.skipS12:
-            pair = numpy.random.choice(self.decision_data.event_repo_pairs, replace=False, p=self.decision_data.event_repo_probabilities)
+            pair = random_pick_sorted(self.decision_data.event_repo_pairs, self.decision_data.event_repo_probabilities)
             selected_event = event_types[pair.event_index]
             selected_repo = pair.repo_id
 

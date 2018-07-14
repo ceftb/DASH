@@ -1,7 +1,10 @@
 import sys; sys.path.extend(['../../'])
 import csv
-import pickle
 from datetime import datetime
+import random
+import numpy
+import time
+import bisect
 
 event_types = ["CreateEvent", "DeleteEvent", "PullRequestEvent", "PullRequestReviewCommentEvent", "IssuesEvent",
                "IssueCommentEvent", "PushEvent", "CommitCommentEvent","WatchEvent", "ForkEvent", "GollumEvent",
@@ -201,8 +204,73 @@ def collect_unique_user_event_pairs(even_log_file, UstrId2UsimId=None):
         event2users = {k : [] for k in event_types}
         for user, event in unique_events:
             event2users[event].append(UstrId2UsimId[user])
-        return  event2users
+        return event2users
+
+
+def random_pick_sorted(sorted_data, cumulative_sorted_prob):
+    x = random.uniform(0, 1)
+    index = bisect.bisect(cumulative_sorted_prob, x)
+    if index >= len(sorted_data):
+        index -= 1
+    return sorted_data[index]
+
+
+def sort_data_and_prob_to_cumulative_array(data, probabilities):
+    # sort probabilities and zip with data
+    sorted_prob = [(k, v) for k, v in zip(probabilities, data)]
+    sorted_prob = sorted(sorted_prob, key=lambda tup: tup[0], reverse=True)
+    sorted_data = [v for k, v in sorted_prob]
+    sorted_prob = [k for k, v in sorted_prob]
+    # make probabilities cumulative
+    prob_sum = 0.0
+    max_index = len(sorted_prob)
+    for index in range(0, max_index, 1):
+        prob_sum += sorted_prob[index]
+        sorted_prob[index] = prob_sum
+
+    return sorted_data, sorted_prob
+
+
+def random_pick_numpy(objects_to_pick, probabilities):
+    res = numpy.random.choice(objects_to_pick, replace=False, p=probabilities)
+    return res
+
+def test_random_pick():
+    data = []
+    probabilities = []
+    number_of_items = 5
+    number_of_iterations_in_test = 1000000
+
+    prob_sum = 0.0
+    for index in range(0, number_of_items, 1):
+        data.append(random.uniform(0, 1))
+        probabilities.append(random.uniform(0, 1))
+        prob_sum += probabilities[index]
+    probabilities = [k / prob_sum for k in probabilities]
+
+    # sort probabilities zip with data
+    sorted_data, sorted_prob = sort_data_and_prob_to_cumulative_array(data, probabilities)
+
+    ##########
+
+    start_time = time.time()
+    for index in range(0, number_of_iterations_in_test, 1):
+        random_pick_sorted(sorted_data, sorted_prob)
+        if index % 10000 == 0:
+            print "iteration: ", index
+    end_time = time.time()
+    print "Time (random_pick_sorted): ", end_time - start_time
+
+    start_time = time.time()
+    for index in range(0, number_of_iterations_in_test, 1):
+        random_pick_numpy(data, probabilities)
+        if index % 10000 == 0:
+            print "iteration: ", index
+
+    end_time = time.time()
+    print "Time (random_pick_numpy): ", end_time - start_time
 
 
 if __name__ == "__main__":
-    collect_unique_user_event_pairs(sys.argv[1])
+    #collect_unique_user_event_pairs(sys.argv[1])
+    test_random_pick()
