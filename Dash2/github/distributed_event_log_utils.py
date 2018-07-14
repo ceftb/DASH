@@ -15,6 +15,8 @@ event_types_indexes = {"CreateEvent":0, "DeleteEvent":1, "PullRequestEvent":2, "
 
 
 def merge_log_file(file_names, output_file_name, header_line=None, sort_chronologically=False):
+    if len(file_names) == 1: # no need to merege or to sort
+        pass
     if sort_chronologically:
         output_file = open(output_file_name, 'w')
         if header_line is not None:
@@ -213,6 +215,18 @@ def random_pick_sorted(sorted_data, cumulative_sorted_prob):
     if index >= len(sorted_data):
         index -= 1
     return sorted_data[index]
+
+
+def random_pick_notsorted(data, prob):
+    x = random.uniform(0, 1)
+    cumulative_probability = 0.0
+    res = None
+    for item, item_probability in zip(data, prob):
+        cumulative_probability += item_probability
+        if x < cumulative_probability:
+            res = item
+            break
+    return res
 
 
 def sort_data_and_prob_to_cumulative_array(data, probabilities):

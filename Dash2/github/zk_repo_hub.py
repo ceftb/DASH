@@ -5,6 +5,7 @@ from Dash2.github.git_repo_hub import GitRepoHub
 import datetime
 import random
 from user_repo_graph_utils import IdDictionaryStream
+from distributed_event_log_utils import random_pick_sorted
 
 # Zookeeper repository hub
 class ZkRepoHub(GitRepoHub):
@@ -43,6 +44,8 @@ class ZkRepoHub(GitRepoHub):
         else:
              pass # update repo properties here if needed
 
+    def finalize_statistics(self):
+        random_pick_sorted(self.userIdAndPopularity["ids"], self.userIdAndPopularity["probability"])
 
     # global event clock
     def set_curr_time(self, curr_time):

@@ -59,6 +59,7 @@ class ZkGithubStateWorkProcessor(WorkProcessor):
         self.log_file = open(self.output_file_name + self.task_full_id + '_event_log_file.txt', 'w')
         self.hub.log_file = self.log_file
         self.hub.agents_decision_data = self.agents_decision_data # will not work for distributed version
+        self.hub.finalize_statistics()
         print "Agents instantiated: ", len(self.agents_decision_data)
 
     # Function takes a user profile and creates an agent decision data object.
@@ -140,9 +141,14 @@ class ZkGithubStateTrial(Trial):
             log_file_name = self.output_file_name + str(self.exp_id) + "-" + str(self.trial_id) + "-" + str(task_index + 1) + "_event_log_file.txt"
             file_names.append(log_file_name)
         tmp_file_name = self.output_file_name + "tmp_output.csv"
-        merge_log_file(file_names, tmp_file_name, sort_chronologically=True)
-        for log_file_name in file_names:
-            os.remove(log_file_name)
+
+        if number_of_files == 1:
+            os.rename(file_names[0], tmp_file_name)
+        else:
+            merge_log_file(file_names, tmp_file_name, sort_chronologically=True)
+            for log_file_name in file_names:
+                os.remove(log_file_name)
+
         output_file_name = self.output_file_name + "_trial_" + str(self.trial_id) + ".csv"
         trnaslate_user_and_repo_ids_in_event_log(even_log_file=tmp_file_name,
                                                  output_file_name=output_file_name,
