@@ -210,6 +210,9 @@ def collect_unique_user_event_pairs(even_log_file, UstrId2UsimId=None):
 
 
 def random_pick_sorted(sorted_data, cumulative_sorted_prob):
+    if sorted_data is None or cumulative_sorted_prob is None:
+        raise ValueError('Data and probabilities should not be None objects')
+
     x = random.uniform(0, 1)
     index = bisect.bisect(cumulative_sorted_prob, x)
     if index >= len(sorted_data):
@@ -218,6 +221,9 @@ def random_pick_sorted(sorted_data, cumulative_sorted_prob):
 
 
 def random_pick_notsorted(data, prob):
+    if data is None or prob is None:
+        raise ValueError('Data and probabilities should not be None objects')
+
     x = random.uniform(0, 1)
     cumulative_probability = 0.0
     res = None
@@ -231,6 +237,9 @@ def random_pick_notsorted(data, prob):
 
 def sort_data_and_prob_to_cumulative_array(data, probabilities):
     # sort probabilities and zip with data
+    if data is None or probabilities is None:
+        raise ValueError('Data and probabilities should not be None objects')
+
     sorted_prob = [(k, v) for k, v in zip(probabilities, data)]
     sorted_prob = sorted(sorted_prob, key=lambda tup: tup[0], reverse=True)
     sorted_data = [v for k, v in sorted_prob]

@@ -45,7 +45,8 @@ class ZkRepoHub(GitRepoHub):
              pass # update repo properties here if needed
 
     def finalize_statistics(self):
-        random_pick_sorted(self.userIdAndPopularity["ids"], self.userIdAndPopularity["probability"])
+        if self.userIdAndPopularity is not None:
+            random_pick_sorted(self.userIdAndPopularity["ids"], self.userIdAndPopularity["probability"])
 
     # global event clock
     def set_curr_time(self, curr_time):

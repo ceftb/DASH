@@ -148,8 +148,6 @@ class ISIMixin(GitUserMixin):
         neighbors = [_id for _id in neighbor_iterator]
         return neighbors
 
-
-    # TBD needs refactoring _pick_popular_repo_from_neighborhood()
     def _preferential_attachment_walk(self, start_node):
         """
         returns one of the neighbors of a node based on popularity of the neighbors. If no neighbors found picks some
