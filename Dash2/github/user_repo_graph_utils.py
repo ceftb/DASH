@@ -17,18 +17,28 @@ class GraphBuilder:
     def __init__(self, event_filter=None):
         self.graph = nx.Graph()
         self.events_to_accept = event_filter
+        self._time_of_the_first_event = -1
 
     def update_graph(self, repo_id, user_id, event_type, event_time, event_subtype=None):
+        if self._time_of_the_first_event == -1:
+            self._time_of_the_first_event = event_time
         if self.events_to_accept is None or event_type in self.events_to_accept:
             if not self.graph.has_node(repo_id):
                 self.graph.add_node(repo_id, pop=0, isU=0)
 
             event_index = event_types_indexes[event_type]
             if self.graph.has_node(user_id):
-                self.graph.nodes[user_id]["r"] = self.graph.nodes[user_id]["r"] + 1
+                if (event_time - self._time_of_the_first_event) <= 2592000: # one months (sec)
+                    self.graph.nodes[user_id]["r"] = float(self.graph.nodes[user_id]["r"]) * 1.0
+                else:
+                    self.graph.nodes[user_id]["r"] = float(self.graph.nodes[user_id]["r"]) * 2.0
                 self.graph.nodes[user_id]["ef"][event_index] += 1
             else:
-                self.graph.add_node(user_id, shared=0, isU=1, r=1)
+                self.graph.add_node(user_id, shared=0, isU=1)
+                if (event_time - self._time_of_the_first_event) <= 2592000: # one months (sec)
+                    self.graph.nodes[user_id]["r"] = 1.0
+                else:
+                    self.graph.nodes[user_id]["r"] = 2.0
                 self.graph.nodes[user_id]["ef"] = [0] * len(event_types)
                 self.graph.nodes[user_id]["ef"][event_index] += 1
                 self.graph.nodes[user_id]["pop"] = 0 # init popularity
@@ -66,7 +76,7 @@ class GraphBuilder:
                     self.graph.add_edge(repo, user_id, weight=0)
                 self.graph.get_edge_data(repo, user_id)['own'] = 1
             self.graph.nodes[user_id]["pop"] = popularity
-            self.graph.nodes[user_id]["r"] /= float(number_of_months)
+            self.graph.nodes[user_id]["r"] /= 3.0 #float(number_of_months)
 
     @staticmethod
     def get_users_neighborhood_size(graph):

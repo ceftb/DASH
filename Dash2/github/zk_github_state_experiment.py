@@ -144,6 +144,7 @@ class ZkGithubStateTrial(Trial):
 
         if number_of_files == 1:
             os.rename(file_names[0], tmp_file_name)
+            print "renamed ", file_names[0], " -> ", tmp_file_name
         else:
             merge_log_file(file_names, tmp_file_name, sort_chronologically=True)
             for log_file_name in file_names:
