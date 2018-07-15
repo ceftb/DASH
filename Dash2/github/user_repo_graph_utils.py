@@ -30,9 +30,9 @@ class GraphBuilder:
             if self.graph.has_node(user_id):
                 #self.graph.nodes[user_id]["r"] += 1.0
                 if (event_time - self._time_of_the_first_event) <= 2592000: # one months (sec)
-                    self.graph.nodes[user_id]["r"] = float(self.graph.nodes[user_id]["r"]) * 1.0
+                    self.graph.nodes[user_id]["r"] += 1.0
                 else:
-                    self.graph.nodes[user_id]["r"] = float(self.graph.nodes[user_id]["r"]) * 2.0
+                    self.graph.nodes[user_id]["r"] += 2.0
                 self.graph.nodes[user_id]["ef"][event_index] += 1
             else:
                 self.graph.add_node(user_id, shared=0, isU=1)
