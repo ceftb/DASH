@@ -34,6 +34,7 @@ class ZkRepoHub(GitRepoHub):
         self.graph = None
         self.topPopularRepos = None
         self.userIdAndPopularity = None
+        self.aggregated_statistic = {}
 
     # call this method only for pre-existing repos
     def init_repo(self, repo_id, user_id=None, curr_time=0, is_node_shared=False, **kwargs):
@@ -47,8 +48,12 @@ class ZkRepoHub(GitRepoHub):
     def finalize_statistics(self):
         if self.userIdAndPopularity is not None:
             random_pick_sorted(self.userIdAndPopularity["ids"], self.userIdAndPopularity["probability"])
+        for var_data in self.aggregated_statistic.itervalues():
+            aggregation_function = var_data["func"]
+            if aggregation_function is not None:
+                aggregation_function(var_data, self.aggregated_statistic, isFinalUpdate=True)
 
-    # global event clock
+            # global event clock
     def set_curr_time(self, curr_time):
         self.time = curr_time
 

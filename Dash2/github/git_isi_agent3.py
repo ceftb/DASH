@@ -8,7 +8,7 @@ class EventRepoPair:
         self.repo_id = repo_id
 
 # Similar to GitUserDecisionData, encapsulates any agent-specific data to minimize creation of DASHAgent objects
-class ISI2DecisionData(GitUserDecisionData):
+class ISI3DecisionData(GitUserDecisionData):
 
     def initialize_using_user_profile(self, profile, hub):
 
@@ -46,10 +46,45 @@ class ISI2DecisionData(GitUserDecisionData):
         # sort:
         self.event_repo_pairs, self.event_repo_probabilities = sort_data_and_prob_to_cumulative_array(self.event_repo_pairs, self.event_repo_probabilities)
 
-class ISI2Mixin(GitUserMixin):
+        self.is_new_id = False
+
+        # statistics:
+        if "n_users" not in hub.aggregated_statistic:
+            def count_repos(var_data, aggregated_statistic, isFinalUpdate=False):
+                if not isFinalUpdate:
+                    var_data["val"] += 1
+            hub.aggregated_statistic["n_users"] = {"val": 0, "func": count_repos}
+        else:
+            hub.aggregated_statistic["n_users"]["func"](hub.aggregated_statistic["n_users"], hub.aggregated_statistic)
+
+        if "n_new_users" not in hub.aggregated_statistic:
+            def count_repos(var_data, aggregated_statistic, isFinalUpdate=False, number_of_repos = None, event_rate = None):
+                if isFinalUpdate:
+                    #total_number_of_users = aggregated_statistic["n_users"]["val"]
+                    print "number of new users", var_data["val"]
+                else:
+                    if event_rate <= 1:
+                        var_data["val"] += 1
+            hub.aggregated_statistic["n_new_users"] = {"val": 0, "func": count_repos}
+        else:
+            hub.aggregated_statistic["n_new_users"]["func"](hub.aggregated_statistic["n_new_users"],
+                                                            hub.aggregated_statistic, False, len(self.all_known_repos),
+                                                            self.event_rate)
+
+        if "p_new_users" not in hub.aggregated_statistic:
+            def count_repos(var_data, aggregated_statistic, isFinalUpdate=False):
+                if isFinalUpdate:
+                    total_number_of_users = aggregated_statistic["n_users"]["val"]
+                    total_number_of_new_users = aggregated_statistic["n_new_users"]["val"]
+                    var_data["val"] = float(total_number_of_new_users) / float (total_number_of_users)
+                    print "percent of new users", var_data["val"]
+            hub.aggregated_statistic["p_new_users"] = {"val": 0, "func": count_repos}
+
+
+class ISI3Mixin(GitUserMixin):
 
     def _new_empty_decision_object(self):
-        return ISI2DecisionData()
+        return ISI3DecisionData()
 
     def __init__(self, **kwargs):
         GitUserMixin.__init__(self, **kwargs)
@@ -57,6 +92,10 @@ class ISI2Mixin(GitUserMixin):
     def agentLoop(self, max_iterations=-1, disconnect_at_end=True):
         # If control passes to here, the decision on choosing a user has already been made.
         if self.skipS12:
+            if not self.decision_data.is_new_id and self.decision_data.event_rate <= 1:
+                self.decision_data.is_new_id = True
+                self.decision_data.id += 10000000
+
             pair = random_pick_sorted(self.decision_data.event_repo_pairs, self.decision_data.event_repo_probabilities)
             selected_event = event_types[pair.event_index]
             selected_repo = pair.repo_id
@@ -69,7 +108,7 @@ class ISI2Mixin(GitUserMixin):
             return DASHAgent.agentLoop(self, max_iterations, disconnect_at_end)
 
 
-class ISI2GitUserAgent(ISI2Mixin, DASHAgent):
+class ISI3GitUserAgent(ISI3Mixin, DASHAgent):
     def __init__(self, **kwargs):
         DASHAgent.__init__(self)
         GitUserMixin.__init__(self, **kwargs)

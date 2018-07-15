@@ -33,12 +33,12 @@ class ISIDecisionData(GitUserDecisionData):
 
         # intialize own_repos, not_own_repos
         own_repos = profile.pop("own", None)  # e.g. [234, 2344, 2312] # an array of integer repo ids
-        self.owned_repos = own_repos if own_repos is not None else []
+        self.own_repos = own_repos if own_repos is not None else []
         self.not_own_repos = []
         for repo_id in self.repo_id_to_freq.iterkeys():
             if hub.repo_id_counter < repo_id:
                 hub.repo_id_counter = repo_id
-            if repo_id not in self.owned_repos:
+            if repo_id not in self.own_repos:
                 self.not_own_repos.append(repo_id)
 
         self.popularity = profile.pop("pop", 0)
@@ -106,36 +106,36 @@ class ISIMixin(GitUserMixin):
     def create_new_event(self):
         new_repo_id = self.hub._create_repo(self.id, (""))
         popularity = 0
-        for own_repo in self.decision_data.owned_repos:
+        for own_repo in self.decision_data.own_repos:
             popularity += self.hub.graph.nodes[own_repo]["pop"]
         if popularity == 0:
             popularity = 1
         else:
-            popularity = popularity / len(self.decision_data.owned_repos)
+            popularity = popularity / len(self.decision_data.own_repos)
 
         self.hub.graph.add_node(new_repo_id, shared=0, isU=0, pop=popularity) # TBD non zero popularity
         self.hub.graph.add_edge(new_repo_id, self.decision_data.id, own=1, weight= 1)
         #print "New repo popularity ", self.hub.graph.nodes[new_repo_id]["pop"]
 
-        self.decision_data.owned_repos.append(new_repo_id)
+        self.decision_data.own_repos.append(new_repo_id)
         self.hub.log_event(self.decision_data.id, new_repo_id, "CreateEvent", None, self.hub.time)
 
     def fork_event(self):
         repo_to_fork = self._pick_popular_repo_from_neighborhood() # parent repo
         new_repo_id = self.hub._create_repo(self.id, (repo_to_fork))
         popularity = 0
-        for own_repo in self.decision_data.owned_repos:
+        for own_repo in self.decision_data.own_repos:
             popularity += self.hub.graph.nodes[own_repo]["pop"]
         if popularity == 0:
             popularity = 1
         else:
-            popularity = popularity / len(self.decision_data.owned_repos)
+            popularity = popularity / len(self.decision_data.own_repos)
 
         self.hub.graph.add_node(new_repo_id, shared=0, isU=0, pop=popularity) # TBD non zero popularity
         self.hub.graph.add_edge(new_repo_id, self.decision_data.id, own=1, weight= 1)
         #print "New repo popularity ", self.hub.graph.nodes[new_repo_id]["pop"]
 
-        self.decision_data.owned_repos.append(new_repo_id)
+        self.decision_data.own_repos.append(new_repo_id)
         self.hub.graph.nodes[repo_to_fork]["pop"] += 1
         self.hub.log_event(self.decision_data.id, repo_to_fork, "ForkEvent", None, self.hub.time)
 
