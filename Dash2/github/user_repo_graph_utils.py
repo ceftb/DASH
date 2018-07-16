@@ -13,13 +13,14 @@ class GraphBuilder:
     """
     A class that creates user-repo graph from list events
     """
+    length_of_training_data = 2592000.0 # in secs
 
     def __init__(self, event_filter=None):
         self.graph = nx.Graph()
         self.events_to_accept = event_filter
         self._time_of_the_first_event = -1
 
-    def update_graph(self, repo_id, user_id, event_type, event_time, event_subtype=None):
+    def update_graph(self, repo_id, user_id, event_type, event_time, event_subtype=None, training_data_weight=1.0, initial_condition_data_weight=1.0):
         if self._time_of_the_first_event == -1:
             self._time_of_the_first_event = event_time
         if self.events_to_accept is None or event_type in self.events_to_accept:
@@ -29,18 +30,18 @@ class GraphBuilder:
             event_index = event_types_indexes[event_type]
             if self.graph.has_node(user_id):
                 #self.graph.nodes[user_id]["r"] += 1.0
-                if (event_time - self._time_of_the_first_event) <= 2592000: # one months (sec)
-                    self.graph.nodes[user_id]["r"] += 1.0
+                if (event_time - self._time_of_the_first_event) <= self.length_of_training_data: # one months (sec)
+                    self.graph.nodes[user_id]["r"] += training_data_weight#1.0
                 else:
-                    self.graph.nodes[user_id]["r"] += 2.0
+                    self.graph.nodes[user_id]["r"] += initial_condition_data_weight #2.0
                 self.graph.nodes[user_id]["ef"][event_index] += 1
             else:
                 self.graph.add_node(user_id, shared=0, isU=1)
                 #self.graph.nodes[user_id]["r"] = 1.0
-                if (event_time - self._time_of_the_first_event) <= 2592000: # one months (sec)
-                    self.graph.nodes[user_id]["r"] = 1.0
+                if (event_time - self._time_of_the_first_event) <= self.length_of_training_data: # one months (sec)
+                    self.graph.nodes[user_id]["r"] = training_data_weight #1.0
                 else:
-                    self.graph.nodes[user_id]["r"] = 2.0
+                    self.graph.nodes[user_id]["r"] = initial_condition_data_weight #2.0
                 self.graph.nodes[user_id]["ef"] = [0] * len(event_types)
                 self.graph.nodes[user_id]["ef"][event_index] += 1
                 self.graph.nodes[user_id]["pop"] = 0 # init popularity
@@ -60,16 +61,16 @@ class GraphBuilder:
                 self.graph.nodes[user_id]["e_r"][event_repo_pair] = 0.0
 
             #self.graph.nodes[user_id]["e_r"][event_repo_pair] += 1.0
-            if (event_time - self._time_of_the_first_event) <= 2592000:  # one months (sec)
-                self.graph.nodes[user_id]["e_r"][event_repo_pair] += 1.0
+            if (event_time - self._time_of_the_first_event) <= self.length_of_training_data:  # one months (sec)
+                self.graph.nodes[user_id]["e_r"][event_repo_pair] += training_data_weight #1.0
             else:
-                self.graph.nodes[user_id]["e_r"][event_repo_pair] += 2.0
+                self.graph.nodes[user_id]["e_r"][event_repo_pair] += initial_condition_data_weight #2.0
 
             # popularity of repos
             if event_type == "ForkEvent" or event_type == "WatchEvent":
                 self.graph.nodes[repo_id]["pop"] += 1
 
-    def compute_users_popularity_and_event_rate(self, creator2repos, number_of_months):
+    def compute_users_popularity_and_event_rate(self, creator2repos, number_of_months, training_data_weight=1.0, initial_condition_data_weight=1.0):
         '''
         Computation of user popularity is done after the whole graph is constructed, the same is true for event rate.
         :param creator2repos:
@@ -83,7 +84,8 @@ class GraphBuilder:
                     self.graph.add_edge(repo, user_id, weight=0)
                 self.graph.get_edge_data(repo, user_id)['own'] = 1
             self.graph.nodes[user_id]["pop"] = popularity
-            self.graph.nodes[user_id]["r"] /= 3.0 #float(number_of_months)
+            self.graph.nodes[user_id]["r"] *= 2.0 / (float(number_of_months) * (float(training_data_weight)
+                                                                                + float(initial_condition_data_weight))) #3.0 #float(number_of_months)
 
     @staticmethod
     def get_users_neighborhood_size(graph):
@@ -241,7 +243,7 @@ def _print_user_profile(graph, user_node, fp):
     fp.write(pickle.dumps(profile_object))
 
 
-def build_graph_from_csv(csv_event_log_file, number_of_months, event_filter=None):
+def build_graph_from_csv(csv_event_log_file, number_of_months, event_filter=None, training_data_weight=1.0, initial_condition_data_weight=1.0):
     user_repo_graph_builder = GraphBuilder(event_filter = event_filter)
     ids_dictionary_stream = IdDictionaryStream(csv_event_log_file + "_users_id_dict.csv", csv_event_log_file + "_repos_id_dict.csv", event_filter = event_filter)
 
@@ -260,14 +262,18 @@ def build_graph_from_csv(csv_event_log_file, number_of_months, event_filter=None
                 event_time = time.mktime(event_time.timetuple())
                 if event_filter is None or event_type in event_filter:
                     user_id, repo_id = ids_dictionary_stream.update_dictionary(row[2], row[3])
-                    user_repo_graph_builder.update_graph(repo_id, user_id, event_type, event_time)
+                    user_repo_graph_builder.update_graph(repo_id, user_id, event_type, event_time,
+                                                         training_data_weight=training_data_weight,
+                                                         initial_condition_data_weight=initial_condition_data_weight)
             counter += 1
             if counter % 1000000 == 0:
                 print "line: " + str(counter)
         print counter
 
     csvfile.close()
-    user_repo_graph_builder.compute_users_popularity_and_event_rate(ids_dictionary_stream.getCreator2reposMap(), number_of_months)
+    user_repo_graph_builder.compute_users_popularity_and_event_rate(ids_dictionary_stream.getCreator2reposMap(), number_of_months,
+                                                         training_data_weight=training_data_weight,
+                                                         initial_condition_data_weight=initial_condition_data_weight)
     ids_dictionary_stream.close()
 
     return user_repo_graph_builder.graph, len(ids_dictionary_stream.users), len(ids_dictionary_stream.repos)

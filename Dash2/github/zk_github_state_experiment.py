@@ -171,12 +171,21 @@ if __name__ == "__main__":
     end_date = sys.argv[8]
     output_file_name = sys.argv[9]
 
+    training_data_weight = 1.0
+    initial_condition_data_weight = 1.0
+    if len(sys.argv) == 12:
+        training_data_weight = float(sys.argv[10])
+        initial_condition_data_weight = float(sys.argv[11])
+
     # if state file is not present, then create it. State file is created from input event log.
     # Users in the initial state are partitioned (number of hosts is the number of partitions)
     initial_state_file_name = input_event_log + "_state.json"
     if not os.path.isfile(initial_state_file_name):
         print initial_state_file_name + " file is not present, creating one. May take a while, please wait ..."
-        build_state_from_event_log(input_event_log, number_of_hosts, initial_state_file_name, number_of_months=number_of_month_in_event_log)
+        build_state_from_event_log(input_event_log, number_of_hosts, initial_state_file_name,
+                                   number_of_months=number_of_month_in_event_log,
+                                   training_data_weight=training_data_weight,
+                                   initial_condition_data_weight=initial_condition_data_weight)
         print str(initial_state_file_name) + " file created."
 
     # length of the simulation is determined by two parameters: max_iterations_per_worker and end max_time
