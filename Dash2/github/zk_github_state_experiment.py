@@ -53,7 +53,7 @@ class ZkGithubStateWorkProcessor(WorkProcessor):
             load_profiles(self.users_file, self.populate_agents_collection)
 
         # load embeddings probabilities, if such are specified in the initial state file
-        populate_embedding_probabilities(self.agents_decision_data, self.embedding_path)
+        populate_embedding_probabilities(self.agents_decision_data, self.embedding_path, truncation_coef=self.truncation_coef)
 
         # closing and reopening log file due to delays in loading the state (netwok fils system sometimes interrupts the file otherwise)
         self.log_file = open(self.output_file_name + self.task_full_id + '_event_log_file.txt', 'w')
@@ -170,12 +170,20 @@ if __name__ == "__main__":
     start_date = sys.argv[7]
     end_date = sys.argv[8]
     output_file_name = sys.argv[9]
-
     training_data_weight = 1.0
     initial_condition_data_weight = 1.0
-    if len(sys.argv) == 12:
-        training_data_weight = float(sys.argv[10])
-        initial_condition_data_weight = float(sys.argv[11])
+    truncation_coef = 1.0
+
+    if embedding_directory != "":
+        truncation_coef = sys.argv[10]
+        if len(sys.argv) == 13:
+            training_data_weight = float(sys.argv[11])
+            initial_condition_data_weight = float(sys.argv[12])
+    else:
+        if len(sys.argv) == 12:
+            training_data_weight = float(sys.argv[10])
+            initial_condition_data_weight = float(sys.argv[11])
+
 
     # if state file is not present, then create it. State file is created from input event log.
     # Users in the initial state are partitioned (number of hosts is the number of partitions)
@@ -210,7 +218,8 @@ if __name__ == "__main__":
         Parameter('agent_class_name', default=agent_class_name),
         Parameter('agent_module_name', default=agent_module_name),
         Parameter('embedding_path', default=embedding_directory),
-        Parameter('output_file_name', default=output_file_name)
+        Parameter('output_file_name', default=output_file_name),
+        Parameter('truncation_coef', default=truncation_coef)
     ]
     ZkGithubStateTrial.measures = [
         Measure('num_agents'),

@@ -199,7 +199,7 @@ class EmbeddingCalculator(object):
 Populates agent's decision data objects with repo probabilities. Probabilities either loaded from a .prob file 
 (precomputed values of probability vectors) or from embedding files.
 '''
-def populate_embedding_probabilities(agents_decision_data, embedding_path):
+def populate_embedding_probabilities(agents_decision_data, embedding_path, truncation_coef = 1.0):
     for event_type in event_types:
         prob_file_path = str(embedding_path) + event_type + ".prob"
         if os.path.isfile(prob_file_path):
@@ -209,6 +209,13 @@ def populate_embedding_probabilities(agents_decision_data, embedding_path):
             for _, decision_data in agents_decision_data.iteritems():
                 if decision_data.id in probabilities:
                     decision_data.embedding_probabilities[event_type] = probabilities[decision_data.id]
+                    # truncate vector
+                    new_prob_vect_len = int(float(len(decision_data.embedding_probabilities[event_type]["ids"])) * float(truncation_coef))
+                    if truncation_coef != 1.0 and new_prob_vect_len > 2.0:
+                        decision_data.embedding_probabilities[event_type]["ids"] = decision_data.embedding_probabilities[event_type]["ids"][:new_prob_vect_len + 1]
+                        decision_data.embedding_probabilities[event_type]["prob"] = decision_data.embedding_probabilities[event_type]["prob"][:new_prob_vect_len + 1]
+                        norm = np.linalg.norm(decision_data.embedding_probabilities[event_type]["prob"], ord=1)
+                        decision_data.embedding_probabilities[event_type]["prob"] = decision_data.embedding_probabilities[event_type]["prob"] / norm
 
 ''' 
 creates probability files (.prob files). Probabilities are computed from graph embedding.
@@ -249,7 +256,7 @@ def compute_probabilities(state_file, embedding_path, users_batch_number=1, tota
                 #print "min: ", min_index, ", max : ", max_index, " total agents: ", total_number_of_agents
                 for index in range(min_index, max_index, 1):
                     user_id = event2users[event_type][index]
-                    probability_vector_size = users_neighborhood_size[user_id] if user_id in users_neighborhood_size else 10
+                    probability_vector_size = 2 * users_neighborhood_size[user_id] if user_id in users_neighborhood_size else 10
                     all_probabilities[user_id] = calculator.calculate_probabilities(user_id, probability_vector_size)
                     start_time = _time(index, start_time)
 
