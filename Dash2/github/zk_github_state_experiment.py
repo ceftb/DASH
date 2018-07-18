@@ -1,6 +1,7 @@
 import sys; sys.path.extend(['../../'])
 import os.path
 import time
+import csv
 import random
 from datetime import datetime
 from heapq import heappush, heappop
@@ -16,7 +17,7 @@ from Dash2.github.git_user_agent import GitUserAgent, GitUserDecisionData
 from Dash2.github.initial_state_loader import build_state_from_event_log, read_state_file, load_profiles, \
     populate_embedding_probabilities, populate_event_rate
 from Dash2.github.zk_repo_hub import ZkRepoHub
-from Dash2.github.distributed_event_log_utils import merge_log_file, trnaslate_user_and_repo_ids_in_event_log, event_types
+from Dash2.github.distributed_event_log_utils import merge_log_file, trnaslate_user_and_repo_ids_in_event_log, coin_types
 from iu_agent1 import IUDecisionData, IUGitUserAgent
 from git_isi_agent import ISIDecisionData, ISIGitUserAgent
 import pickle
@@ -60,6 +61,7 @@ class ZkGithubStateWorkProcessor(WorkProcessor):
         self.hub.log_file = self.log_file
         self.hub.agents_decision_data = self.agents_decision_data # will not work for distributed version
         self.hub.finalize_statistics()
+        self.load_pricing_data()
         print "Agents instantiated: ", len(self.agents_decision_data)
 
     # Function takes a user profile and creates an agent decision data object.
@@ -67,20 +69,54 @@ class ZkGithubStateWorkProcessor(WorkProcessor):
         decision_data = self.agent.create_new_decision_object(profile)
         self.agent.decision_data = decision_data
         first_event_time = self.agent.first_event_time(self.start_time)
-        if first_event_time is not None:
-            heappush(self.events_heap, (self.agent.next_event_time(self.start_time), decision_data.id))
+        if first_event_time is not None and first_event_time < self.max_time:
+            heappush(self.events_heap, (first_event_time, decision_data.id))
         self.agents_decision_data[decision_data.id] = decision_data
+
+    def load_pricing_data(self):
+        if self.pricing_data_path != "":
+            for coin in coin_types:
+                self.hub.prices[coin] = self._read_prices(self.pricing_data_path + coin + "_prices.csv")
+
+            input_file = open("./alphas_intercepts.csv", 'r')
+            datareader = csv.reader(input_file)
+            for row in datareader:
+                # CoinType,EventType,alpha,intercept
+                if row[0] != "CoinType":
+                    coin_type = row[0]
+                    event_type = row[1]
+                    alpha = float(row[2])
+                    intercept = float(row[3])
+                    self.hub.price_regression[event_type][coin_type]["alpha"] = alpha
+                    self.hub.price_regression[event_type][coin_type]["intercept"] = intercept
+
+    def _read_prices(self, path):
+        prices = {}
+        input_file = open(path, 'r')
+
+        datareader = csv.reader(input_file)
+        for row in datareader:
+            #,close,high,low,open,time,volumefrom,volumeto,timestamp
+            if row[0] != "":
+                close = float(row[1])
+                high = float(row[2])
+                low = float(row[3])
+                open_ = float(row[4])
+                time_in_days = int(row[5]) / 86400 # number of days from the beginning of time
+                prices[time_in_days] = (close, high, low, open_)
+        return prices
 
     def run_one_iteration(self):
         event_time, agent_id = heappop(self.events_heap)
-        decision_data = self.agents_decision_data[int(agent_id)]
-        self.hub.set_curr_time(event_time)
-        self.agent.decision_data = decision_data
-        self.agent.agentLoop(max_iterations=1, disconnect_at_end=False)
-        next_event_time = self.agent.next_event_time(event_time)
-        if next_event_time < self.max_time:
-            heappush(self.events_heap, (next_event_time, agent_id))
-        self.event_counter += 1
+        if event_time <= self.max_time:
+            decision_data = self.agents_decision_data[int(agent_id)]
+            self.hub.set_curr_time(event_time)
+            self.agent.decision_data = decision_data
+            self.agent.agentLoop(max_iterations=1, disconnect_at_end=False)
+            next_event_time = self.agent.next_event_time(event_time)
+            if next_event_time < self.max_time:
+                heappush(self.events_heap, (next_event_time, agent_id))
+            self.event_counter += 1
 
     def should_stop(self):
         if self.max_iterations > 0 and self.iteration >= self.max_iterations:
@@ -174,15 +210,9 @@ if __name__ == "__main__":
     initial_condition_data_weight = 1.0
     truncation_coef = 1.0
 
-    if embedding_directory != "":
-        truncation_coef = sys.argv[10]
-        if len(sys.argv) == 13:
-            training_data_weight = float(sys.argv[11])
-            initial_condition_data_weight = float(sys.argv[12])
-    else:
-        if len(sys.argv) == 12:
-            training_data_weight = float(sys.argv[10])
-            initial_condition_data_weight = float(sys.argv[11])
+    pricing_data_path = ""
+    if len(sys.argv) == 11:
+        pricing_data_path = sys.argv[10] # must have '/' in the end
 
 
     # if state file is not present, then create it. State file is created from input event log.
@@ -219,7 +249,8 @@ if __name__ == "__main__":
         Parameter('agent_module_name', default=agent_module_name),
         Parameter('embedding_path', default=embedding_directory),
         Parameter('output_file_name', default=output_file_name),
-        Parameter('truncation_coef', default=truncation_coef)
+        Parameter('truncation_coef', default=truncation_coef),
+        Parameter('pricing_data_path', default=pricing_data_path)
     ]
     ZkGithubStateTrial.measures = [
         Measure('num_agents'),

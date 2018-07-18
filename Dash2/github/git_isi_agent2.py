@@ -1,6 +1,8 @@
 from Dash2.core.dash import DASHAgent
 from git_user_agent import GitUserMixin, GitUserDecisionData
-from distributed_event_log_utils import event_types, event_types_indexes, sort_data_and_prob_to_cumulative_array, random_pick_sorted
+from distributed_event_log_utils import event_types, event_types_indexes, sort_data_and_prob_to_cumulative_array, \
+    random_pick_notsorted, coin_types
+from user_repo_graph_utils import IdDictionaryStream
 
 class EventRepoPair:
     def __init__(self, event_index, repo_id):
@@ -43,8 +45,7 @@ class ISI2DecisionData(GitUserDecisionData):
         self.event_repo_probabilities = profile["erf"]
         sum_ = sum(self.event_repo_probabilities)
         self.event_repo_probabilities = [float(v) / float(sum_) for v in self.event_repo_probabilities]
-        # sort:
-        self.event_repo_pairs, self.event_repo_probabilities = sort_data_and_prob_to_cumulative_array(self.event_repo_pairs, self.event_repo_probabilities)
+
 
 class ISI2Mixin(GitUserMixin):
 
@@ -57,7 +58,9 @@ class ISI2Mixin(GitUserMixin):
     def agentLoop(self, max_iterations=-1, disconnect_at_end=True):
         # If control passes to here, the decision on choosing a user has already been made.
         if self.skipS12:
-            pair = random_pick_sorted(self.decision_data.event_repo_pairs, self.decision_data.event_repo_probabilities)
+            if len(self.hub.prices) != 0:
+                new_weight_sum = self.update_weights(self.hub.time, self.decision_data.event_repo_pairs, self.decision_data.event_repo_probabilities)
+            pair = random_pick_notsorted(self.decision_data.event_repo_pairs, self.decision_data.event_repo_probabilities, max_val=new_weight_sum)
             selected_event = event_types[pair.event_index]
             selected_repo = pair.repo_id
 
@@ -68,6 +71,37 @@ class ISI2Mixin(GitUserMixin):
         else:
             return DASHAgent.agentLoop(self, max_iterations, disconnect_at_end)
 
+    def update_weights(self, time, event_repo_pairs, event_repo_probabilities):
+        event_repo_pairs_with_coins = self.find_event_repo_pair(event_repo_pairs)
+        for event, repo, index in event_repo_pairs_with_coins:
+            event_repo_probabilities[index] = self.compute_new_probability(time, event_repo_probabilities[index], event, coin_types[repo - IdDictionaryStream.MAGIC_NUMBER - 1])
+        if len(event_repo_pairs_with_coins) > 0:
+            new_sum = sum(event_repo_probabilities)
+            return new_sum
+        else:
+            return 1.0
+
+    def compute_new_probability(self, time, past_probability, event_type, coin_type):
+        time_in_days = int(time / (86400))
+        current_price = self.hub.prices[coin_type][time_in_days][0]
+        past_price = self.hub.prices[coin_type][time_in_days - 3][0]
+        alpha = self.hub.price_regression[event_type][coin_type]["alpha"]
+        intercept = self.hub.price_regression[event_type][coin_type]["intercept"]
+        multiplier = (alpha * current_price + intercept) / (alpha * past_price + intercept)
+        new_probability = past_probability * multiplier
+        return new_probability
+
+    def find_event_repo_pair(self, event_repo_pairs):
+        result = []
+        index = 0
+        for pair in event_repo_pairs:
+            event = event_types[pair.event_index]
+            repo = pair.repo_id
+            if event == "WatchEvent" or event == "ForkEvent":
+                if repo in [IdDictionaryStream.MAGIC_NUMBER + 1, IdDictionaryStream.MAGIC_NUMBER + 2, IdDictionaryStream.MAGIC_NUMBER + 3]:
+                    result.append((event, repo, index))
+            index += 1
+        return result
 
 class ISI2GitUserAgent(ISI2Mixin, DASHAgent):
     def __init__(self, **kwargs):

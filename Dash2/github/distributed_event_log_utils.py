@@ -12,7 +12,7 @@ event_types = ["CreateEvent", "DeleteEvent", "PullRequestEvent", "PullRequestRev
 event_types_indexes = {"CreateEvent":0, "DeleteEvent":1, "PullRequestEvent":2, "PullRequestReviewCommentEvent":3,
                        "IssuesEvent":4, "IssueCommentEvent":5, "PushEvent":6, "CommitCommentEvent":7, "WatchEvent":8,
                        "ForkEvent":9, "GollumEvent":10, "PublicEvent":11, "ReleaseEvent":12, "MemberEvent":13, "CreateEvent/new": 14}
-
+coin_types = ["BTC", "ETH", "XMR"]
 
 def merge_log_file(file_names, output_file_name, header_line=None, sort_chronologically=False):
     if len(file_names) == 1: # no need to merege or to sort
@@ -220,11 +220,11 @@ def random_pick_sorted(sorted_data, cumulative_sorted_prob):
     return sorted_data[index]
 
 
-def random_pick_notsorted(data, prob):
+def random_pick_notsorted(data, prob, max_val=1.0):
     if data is None or prob is None:
         raise ValueError('Data and probabilities should not be None objects')
 
-    x = random.uniform(0, 1)
+    x = random.uniform(0, max_val)
     cumulative_probability = 0.0
     res = None
     for item, item_probability in zip(data, prob):

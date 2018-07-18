@@ -5,7 +5,7 @@ from Dash2.github.git_repo_hub import GitRepoHub
 import datetime
 import random
 from user_repo_graph_utils import IdDictionaryStream
-from distributed_event_log_utils import random_pick_sorted
+from distributed_event_log_utils import random_pick_sorted, coin_types
 
 # Zookeeper repository hub
 class ZkRepoHub(GitRepoHub):
@@ -35,6 +35,9 @@ class ZkRepoHub(GitRepoHub):
         self.topPopularRepos = None
         self.userIdAndPopularity = None
         self.aggregated_statistic = {}
+        self.prices = {}
+        self.price_regression = {"WatchEvent" : {coin_type: {"alpha": None, "intercept":None} for coin_type in coin_types},
+                                 "ForkEvent" : {coin_type: {"alpha": None, "intercept":None} for coin_type in coin_types}}
 
     # call this method only for pre-existing repos
     def init_repo(self, repo_id, user_id=None, curr_time=0, is_node_shared=False, **kwargs):

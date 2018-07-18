@@ -247,6 +247,11 @@ def build_graph_from_csv(csv_event_log_file, number_of_months, event_filter=None
     user_repo_graph_builder = GraphBuilder(event_filter = event_filter)
     ids_dictionary_stream = IdDictionaryStream(csv_event_log_file + "_users_id_dict.csv", csv_event_log_file + "_repos_id_dict.csv", event_filter = event_filter)
 
+    # for bonus challenge fixe ids of three coin repositories. Bitcoin repo will have id IdDictionaryStream.MAGIC_NUMBER + 1, Eth IdDictionaryStream.MAGIC_NUMBER + 2, Monero IdDictionaryStream.MAGIC_NUMBER + 3
+    ids_dictionary_stream.update_dictionary("DFO9eL5jdbRR11KboYS9lw", "zVseSUfjBEdseIzUdPtXmg/zVseSUfjBEdseIzUdPtXmg") # bitcoin
+    ids_dictionary_stream.update_dictionary("DFO9eL5jdbRR11KboYS9lw", "GHiveXQT9MT3otetyX0Z6g/odj4RWe-L2Ws-XfD_9fnnQ") # Ethereum
+    ids_dictionary_stream.update_dictionary("DFO9eL5jdbRR11KboYS9lw", "forJp2mkMtyATrv4qKYIwg/xzhGbWUGGLgsDOwz2UeLUw") # Monero
+
     with open(csv_event_log_file, "rb") as csvfile:
         datareader = csv.reader(csvfile)
         counter = 0
