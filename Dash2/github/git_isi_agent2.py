@@ -60,6 +60,8 @@ class ISI2Mixin(GitUserMixin):
         if self.skipS12:
             if len(self.hub.prices) != 0:
                 new_weight_sum = self.update_weights(self.hub.time, self.decision_data.event_repo_pairs, self.decision_data.event_repo_probabilities)
+            else:
+                new_weight_sum = 1.0
             pair = random_pick_notsorted(self.decision_data.event_repo_pairs, self.decision_data.event_repo_probabilities, max_val=new_weight_sum)
             selected_event = event_types[pair.event_index]
             selected_repo = pair.repo_id
