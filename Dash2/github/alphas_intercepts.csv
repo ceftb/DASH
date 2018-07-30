@@ -1,0 +1,7 @@
+CoinType,EventType,alpha,intercept
+BTC,WatchEvent,0.0105,3.335
+BTC,ForkEvent,0.0039,2.7937
+XMR,WatchEvent,-0.0009,0.2547
+XMR,ForkEvent,-0.0006,0.158
+ETH,WatchEvent,0.0659,0.4301
+ETH,ForkEvent,0.0136,0.1146
