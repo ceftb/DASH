@@ -66,28 +66,25 @@ class IUMixin(GitUserMixin):
         GitUserMixin.__init__(self, **kwargs)
 
     # An earlier version, circa June 19 18
-    def agentLoop_old(self, max_iterations=-1, disconnect_at_end=True):
+    def customAgentLoop(self):
         # If control passes to here, the decision on choosing a user has already been made.
         repo_for_action = None
-        if self.skipS12:
-            choice = random.uniform(0, 1)
-            if choice < IUMixin.p_create_repo:
-                self.create_event()  # Will pick a name and add it to decision_data.own_repos
-            elif choice < IUMixin.p_create_repo + IUMixin.p_fork:
-                self.fork_event()  # NOT YET IMPLEMENTED in GitUserAgent. Needs to update decision_data.forked_repos
-            elif len(self.decision_data.own_repos) > 0 and choice < IUMixin.p_create_repo + IUMixin.p_fork + IUMixin.p_own_repo + IUMixin.p_own_fork: # own repos
-                repo_for_action = random.choice(self.decision_data.own_repos)
-            else:  # other repos
-                repo_for_action = random.choice(self.decision_data.not_own_repos)
+        choice = random.uniform(0, 1)
+        if choice < IUMixin.p_create_repo:
+            self.create_event()  # Will pick a name and add it to decision_data.own_repos
+        elif choice < IUMixin.p_create_repo + IUMixin.p_fork:
+            self.fork_event()  # NOT YET IMPLEMENTED in GitUserAgent. Needs to update decision_data.forked_repos
+        elif len(self.decision_data.own_repos) > 0 and choice < IUMixin.p_create_repo + IUMixin.p_fork + IUMixin.p_own_repo + IUMixin.p_own_fork: # own repos
+            repo_for_action = random.choice(self.decision_data.own_repos)
+        else:  # other repos
+            repo_for_action = random.choice(self.decision_data.not_own_repos)
 
-            if repo_for_action is not None:  # Otherwise, a create or fork action was already taken and total_activity was incremented
-                # Pick a random event type. In later versions the probabilities will change based on the kind of repo
-                # But for now uses the same probabilities as used in the original DASH model
-                selected_event = random_pick_notsorted(IUDecisionData.event_types_no_create_fork, self.decision_data.event_probabilities)
-                self.hub.log_event(self.decision_data.id, repo_for_action, selected_event, None, self.hub.time)
-                self.decision_data.total_activity += 1
-        else:
-            return DASHAgent.agentLoop(self, max_iterations, disconnect_at_end)
+        if repo_for_action is not None:  # Otherwise, a create or fork action was already taken and total_activity was incremented
+            # Pick a random event type. In later versions the probabilities will change based on the kind of repo
+            # But for now uses the same probabilities as used in the original DASH model
+            selected_event = random_pick_notsorted(IUDecisionData.event_types_no_create_fork, self.decision_data.event_probabilities)
+            self.hub.log_event(self.decision_data.id, repo_for_action, selected_event, None, self.hub.time)
+            self.decision_data.total_activity += 1
 
     # Approximation of the detailed model June 26 18
     def agentLoop(self, max_iterations=-1, disconnect_at_end=True):

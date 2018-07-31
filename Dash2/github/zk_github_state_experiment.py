@@ -1,27 +1,19 @@
 import sys; sys.path.extend(['../../'])
 import os.path
 import time
-import random
 from datetime import datetime
 from heapq import heappush, heappop
 from Dash2.core.parameter import Range
 from Dash2.core.measure import Measure
-from Dash2.core.parameter import Uniform
 from Dash2.core.parameter import Parameter
 from Dash2.core.trial import Trial
 from Dash2.core.experiment import Experiment
 from Dash2.core.dash_controller import DashController
 from Dash2.core.work_processor import WorkProcessor
-from Dash2.github.git_user_agent import GitUserAgent, GitUserDecisionData
 from Dash2.github.initial_state_loader import build_state_from_event_log, read_state_file, load_profiles, \
     populate_embedding_probabilities, populate_event_rate
 from Dash2.github.zk_repo_hub import ZkRepoHub
 from Dash2.github.distributed_event_log_utils import merge_log_file, trnaslate_user_and_repo_ids_in_event_log, event_types
-from iu_agent1 import IUDecisionData, IUGitUserAgent
-from git_isi_agent import ISIDecisionData, ISIGitUserAgent
-import pickle
-import networkx as nx
-
 
 # Work processor performs simulation as individual process (it is a DashWorker)
 class ZkGithubStateWorkProcessor(WorkProcessor):
@@ -36,9 +28,6 @@ class ZkGithubStateWorkProcessor(WorkProcessor):
         self.events_heap = []
         self.event_counter = 0
         self.hub = ZkRepoHub(self.zk, self.task_full_id, 0, log_file=self.log_file)
-        #self.agent = GitUserAgent(useInternalHub=True, hub=self.hub, skipS12=True, trace_client=False, traceLoop=False, trace_github=False)
-        #self.agent = IUGitUserAgent(useInternalHub=True, hub=self.hub, skipS12=True, trace_client=False, traceLoop=False, trace_github=False)
-        #self.agent = ISIGitUserAgent(useInternalHub=True, hub=self.hub, skipS12=True, trace_client=False, traceLoop=False, trace_github=False)
 
         mod = __import__(self.agent_module_name, fromlist=[self.agent_class_name])
         cls = getattr(mod, self.agent_class_name)

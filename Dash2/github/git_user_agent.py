@@ -131,7 +131,6 @@ goalRequirements UpdateOwnRepo
         else:
           self.use_system2(self.system2_proxy)
 
-        self.skipS12 = kwargs.get("skipS12", False)
         # Registration
         self.useInternalHub = kwargs.get("useInternalHub")
         self.hub = kwargs.get("hub")
@@ -224,26 +223,20 @@ goalRequirements UpdateOwnRepo
             ('member_event', self.member_event),
             ('public_event', self.public_event)])
 
-    def agentLoop(self, max_iterations=-1, disconnect_at_end=True):
-        """
-        This a test agentLoop that can skip System 1 and System 2 and picks repo and event based on frequencies.
-        """
-        if self.skipS12:
-            selected_event = random_pick_notsorted(event_types, self.decision_data.event_probabilities)
-            if self.decision_data.embedding_probabilities[selected_event] is None:
-                selected_repo = random_pick_notsorted(self.decision_data.all_known_repos, self.decision_data.probabilities)
-            else:
-                selected_repo = random_pick_notsorted(self.decision_data.embedding_probabilities[selected_event]['ids'], self.decision_data.embedding_probabilities[selected_event]['prob'])
-                if selected_repo is None:
-                    selected_repo = random_pick_notsorted(self.decision_data.all_known_repos, self.decision_data.probabilities)
-                if selected_repo == -1: # embedding long tail, random choice.
-                    selected_repo = self.hub.pick_random_repo()
-            if selected_event == "CreateEvent/new":
-                selected_event = "CreateEvent"
-            self.hub.log_event(self.decision_data.id, selected_repo, selected_event, None, self.hub.time)
-            self.decision_data.total_activity += 1
+    def customAgentLoop(self):
+        selected_event = random_pick_notsorted(event_types, self.decision_data.event_probabilities)
+        if self.decision_data.embedding_probabilities[selected_event] is None:
+            selected_repo = random_pick_notsorted(self.decision_data.all_known_repos, self.decision_data.probabilities)
         else:
-            return DASHAgent.agentLoop(self, max_iterations, disconnect_at_end)
+            selected_repo = random_pick_notsorted(self.decision_data.embedding_probabilities[selected_event]['ids'], self.decision_data.embedding_probabilities[selected_event]['prob'])
+            if selected_repo is None:
+                selected_repo = random_pick_notsorted(self.decision_data.all_known_repos, self.decision_data.probabilities)
+            if selected_repo == -1: # embedding long tail, random choice.
+                selected_repo = self.hub.pick_random_repo()
+        if selected_event == "CreateEvent/new":
+            selected_event = "CreateEvent"
+        self.hub.log_event(self.decision_data.id, selected_repo, selected_event, None, self.hub.time)
+        self.decision_data.total_activity += 1
 
     def first_event_time(self, start_time):
         delta = float(30 * 24 * 3600) / float(self.decision_data.event_rate)
@@ -365,7 +358,7 @@ goalRequirements UpdateOwnRepo
         status, repo_id = self.sendAction("create_repo_event", [repo_info])
         if self.trace_github:
             print 'create repo result:', status, repo_id, 'for', repo_info
-        self.decision_data.owned_repos.append(repo_id) #update({repo_id: repo_info['name_h']})
+        self.decision_data.own_repos.append(repo_id) #update({repo_id: repo_info['name_h']})
         self.decision_data.name_to_repo_id[repo_info['name_h']] = repo_id
         self.decision_data.total_activity += 1
         # Binds the name of the repo if it was not bound before this call

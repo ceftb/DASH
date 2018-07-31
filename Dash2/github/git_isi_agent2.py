@@ -54,19 +54,16 @@ class ISI2Mixin(GitUserMixin):
     def __init__(self, **kwargs):
         GitUserMixin.__init__(self, **kwargs)
 
-    def agentLoop(self, max_iterations=-1, disconnect_at_end=True):
+    def customAgentLoop(self):
         # If control passes to here, the decision on choosing a user has already been made.
-        if self.skipS12:
-            pair = random_pick_sorted(self.decision_data.event_repo_pairs, self.decision_data.event_repo_probabilities)
-            selected_event = event_types[pair.event_index]
-            selected_repo = pair.repo_id
+        pair = random_pick_sorted(self.decision_data.event_repo_pairs, self.decision_data.event_repo_probabilities)
+        selected_event = event_types[pair.event_index]
+        selected_repo = pair.repo_id
 
-            if pair.event_index == 14: #selected_event == "CreateEvent/new":
-                selected_event = "CreateEvent"
-            self.hub.log_event(self.decision_data.id, selected_repo, selected_event, None, self.hub.time)
-            self.decision_data.total_activity += 1
-        else:
-            return DASHAgent.agentLoop(self, max_iterations, disconnect_at_end)
+        if pair.event_index == 14: #selected_event == "CreateEvent/new":
+            selected_event = "CreateEvent"
+        self.hub.log_event(self.decision_data.id, selected_repo, selected_event, None, self.hub.time)
+        self.decision_data.total_activity += 1
 
 
 class ISI2GitUserAgent(ISI2Mixin, DASHAgent):

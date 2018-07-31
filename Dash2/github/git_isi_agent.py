@@ -76,32 +76,29 @@ class ISIMixin(GitUserMixin):
     def __init__(self, **kwargs):
         GitUserMixin.__init__(self, **kwargs)
 
-    def agentLoop(self, max_iterations=-1, disconnect_at_end=True):
+    def customAgentLoop(self):
         # If control passes to here, the decision on choosing a user has already been made.
-        if self.skipS12:
-            # Pick a random event type.
-            selected_event = random_pick_notsorted(event_types, self.decision_data.event_probabilities)
-            if selected_event == "CreateEvent/new":
-                self.create_new_event()
-            elif selected_event == "ForkEvent":
-                self.fork_event()
-            elif selected_event == "WatchEvent":
-                self.watch_event_()
-            else:
-                selected_repo = None
-                if self.decision_data.embedding_probabilities[selected_event] is None:
-                    selected_repo = random_pick_notsorted(self.decision_data.all_known_repos, self.decision_data.probabilities)
-                else:
-                    selected_repo = random_pick_notsorted(
-                        self.decision_data.embedding_probabilities[selected_event]['ids'], self.decision_data.embedding_probabilities[selected_event]['prob'])
-                    if selected_repo is None:
-                        selected_repo = random_pick_notsorted(self.decision_data.all_known_repos, self.decision_data.probabilities)
-                    if selected_repo == -1:  # embedding long tail, random choice.
-                        selected_repo = random.choice(self.hub.topPopularRepos) #self.hub.pick_random_repo()
-                self.hub.log_event(self.decision_data.id, selected_repo, selected_event, None, self.hub.time)
-                self.decision_data.total_activity += 1
+        # Pick a random event type.
+        selected_event = random_pick_notsorted(event_types, self.decision_data.event_probabilities)
+        if selected_event == "CreateEvent/new":
+            self.create_new_event()
+        elif selected_event == "ForkEvent":
+            self.fork_event()
+        elif selected_event == "WatchEvent":
+            self.watch_event_()
         else:
-            return DASHAgent.agentLoop(self, max_iterations, disconnect_at_end)
+            selected_repo = None
+            if self.decision_data.embedding_probabilities[selected_event] is None:
+                selected_repo = random_pick_notsorted(self.decision_data.all_known_repos, self.decision_data.probabilities)
+            else:
+                selected_repo = random_pick_notsorted(
+                    self.decision_data.embedding_probabilities[selected_event]['ids'], self.decision_data.embedding_probabilities[selected_event]['prob'])
+                if selected_repo is None:
+                    selected_repo = random_pick_notsorted(self.decision_data.all_known_repos, self.decision_data.probabilities)
+                if selected_repo == -1:  # embedding long tail, random choice.
+                    selected_repo = random.choice(self.hub.topPopularRepos) #self.hub.pick_random_repo()
+            self.hub.log_event(self.decision_data.id, selected_repo, selected_event, None, self.hub.time)
+            self.decision_data.total_activity += 1
 
     def create_new_event(self):
         new_repo_id = self.hub._create_repo(self.id, (""))

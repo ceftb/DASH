@@ -22,6 +22,9 @@ class DASHAction(object):
         self.traceUpdate = False
         self.traceAction = False
         self.traceLoop = True
+        self.customAgentLoop = None # can define a custom step(s) for agent's loop. This is None be default, but
+        # it can be defined in subclasses. customAgentLoop is called instead of agentLoop with S1 and S2, and depending
+        # on the returned value (True or False) customAgentLoop can return control to S1 and S2 in this class.
         # Although 'forget' is defined in system2, it is assigned primitive here because
         # that module is compiled first
         self.primitiveActions([('forget', self.forget), ['sleep', self.sleep]])
@@ -32,25 +35,32 @@ class DASHAction(object):
             setattr(self, p.name, p.distribution.sample() if p.default is None else p.default)
 
     # This is in the java part in the old agent
+    #
     def agentLoop(self, max_iterations=-1, disconnect_at_end=True):
-        # self.spreading_activation()
-        self.system1_update()
-        next_action = self.choose_action()
-        iteration = 0
-        while next_action is not None and (max_iterations < 0 or iteration < max_iterations):
-            if self.traceAction:
-                print(self.id, "next action is", next_action)
-            result = self.performAction(next_action)
-            self.update_beliefs(result, next_action)
-            #self.spreading_activation()
+        next_action = None
+        isS12LoopEnabled = True
+        if self.customAgentLoop is not None: # If it is not None, it defines a custom step for agent's loop. Depending
+        # on the returned value (isS12LoopEnabled), customAgentLoop can return control to S1 and S2 in this class.
+            isS12LoopEnabled = self.customAgentLoop()
+        if isS12LoopEnabled is None or isS12LoopEnabled is True:
+            # self.spreading_activation()
             self.system1_update()
             next_action = self.choose_action()
-            self.system1_step()
-            iteration += 1
-        if self.traceLoop and next_action is None:
-            print("Exiting simulation: no action chosen")
-        elif self.traceLoop and 0 <= max_iterations <= iteration:
-            print("Exiting simulation: finished finite agent cycles:", iteration, "of max", max_iterations)
+            iteration = 0
+            while next_action is not None and (max_iterations < 0 or iteration < max_iterations):
+                if self.traceAction:
+                    print(self.id, "next action is", next_action)
+                result = self.performAction(next_action)
+                self.update_beliefs(result, next_action)
+                #self.spreading_activation()
+                self.system1_update()
+                next_action = self.choose_action()
+                self.system1_step()
+                iteration += 1
+            if self.traceLoop and next_action is None:
+                print("Exiting simulation: no action chosen")
+            elif self.traceLoop and 0 <= max_iterations <= iteration:
+                print("Exiting simulation: finished finite agent cycles:", iteration, "of max", max_iterations)
         if disconnect_at_end:
             self.disconnect()
         # return the action chosen so the caller can tell if there is more for the agent to do
