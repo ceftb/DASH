@@ -5,7 +5,9 @@ import time
 import numpy as np
 import cPickle as pickle
 from distributed_event_log_utils import load_id_dictionary, collect_unique_user_event_pairs
-from user_repo_graph_utils import build_graph_from_csv, partition_graph, print_user_profiles, print_graph, print_users_neighborhood_sizes
+from user_repo_graph_utils import build_graph_from_csv, partition_graph, print_user_profiles, print_graph,\
+print_users_neighborhood_sizes, pick_random_seeds, subsample
+
 from distributed_event_log_utils import event_types
 
 '''
@@ -32,12 +34,17 @@ profiles file structure (used for both users and repos - relationship is symmetr
 '''
 
 def build_state_from_event_log(input_event_log, number_of_user_partitions=1, state_file_name=None, embedding_files=None,
-                               number_of_months=1, training_data_weight=1.0, initial_condition_data_weight=1.0):
+                               number_of_months=1, training_data_weight=1.0, initial_condition_data_weight=1.0, graph_updater=None):
     G, number_of_users, number_of_repos = build_graph_from_csv(input_event_log, number_of_months,
                                                                event_filter=None,
                                                                training_data_weight=training_data_weight,
                                                                initial_condition_data_weight=initial_condition_data_weight)
     print "User-repo graph constructed. Users ", number_of_users, ", repos ", number_of_repos, ", nodes ", len(G.nodes()), ", edges", len(G.edges())
+
+    if graph_updater is not None:
+        print "Updating graph ..."
+        G = graph_updater.update(G, number_of_users)
+        print "Updated graph has ", len(G.nodes), "nodes and ", len(G.edges), " edges."
 
     partition_graph(G, number_of_user_partitions)
     #print "shared repos ", len(shared_repos), ", shared users ", len(shared_users)
@@ -53,9 +60,6 @@ def build_state_from_event_log(input_event_log, number_of_user_partitions=1, sta
     repos_file = input_event_log + "_repos.json"
     users_ids = input_event_log + "_users_id_dict.csv"
     repos_ids = input_event_log + "_repos_id_dict.csv"
-
-    if embedding_files is None or len(embedding_files) == 0:
-        embedding_files = ""
 
     state_file_content = {"meta":
         {
@@ -91,8 +95,20 @@ def load_profiles(filename, profile_handler):
                 break
         f.close()
 
+class GraphUpdater(object):
+
+    def __init__(self, max_depth, max_number_of_user_nodes, number_of_neighborhoods):
+        self.max_depth = max_depth if max_depth % 2 == 1 else max_depth + 1 # must be odd number
+        self.max_number_of_user_nodes = max_number_of_user_nodes
+        self.number_of_neighborhoods = number_of_neighborhoods
+
+    def update(self, G, number_of_users):
+        neighborhood_start_nodes = pick_random_seeds(G, self.number_of_neighborhoods, number_of_users)
+        sub_sample_G = subsample(G, self.max_depth, self.max_number_of_user_nodes, neighborhood_start_nodes)
+        return sub_sample_G
+
 '''
-This class keeps embedding matrices fro users and repos. 
+This class keeps embedding mgatrices fro users and repos. 
 It allows to compute probabilities of using repos for a given user id.
 '''
 class EmbeddingCalculator(object):

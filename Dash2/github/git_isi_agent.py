@@ -100,6 +100,8 @@ class ISIMixin(GitUserMixin):
             self.hub.log_event(self.decision_data.id, selected_repo, selected_event, None, self.hub.time)
             self.decision_data.total_activity += 1
 
+        return False
+
     def create_new_event(self):
         new_repo_id = self.hub._create_repo(self.id, (""))
         popularity = 0

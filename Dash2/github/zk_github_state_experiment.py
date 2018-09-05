@@ -11,7 +11,7 @@ from Dash2.core.experiment import Experiment
 from Dash2.core.dash_controller import DashController
 from Dash2.core.work_processor import WorkProcessor
 from Dash2.github.initial_state_loader import build_state_from_event_log, read_state_file, load_profiles, \
-    populate_embedding_probabilities, populate_event_rate
+    populate_embedding_probabilities, populate_event_rate, GraphUpdater
 from Dash2.github.zk_repo_hub import ZkRepoHub
 from Dash2.github.distributed_event_log_utils import merge_log_file, trnaslate_user_and_repo_ids_in_event_log, event_types
 
@@ -177,12 +177,14 @@ if __name__ == "__main__":
     # if state file is not present, then create it. State file is created from input event log.
     # Users in the initial state are partitioned (number of hosts is the number of partitions)
     initial_state_file_name = input_event_log + "_state.json"
+    graph_updater = GraphUpdater(max_depth=100, max_number_of_user_nodes=100000, number_of_neighborhoods=10)
     if not os.path.isfile(initial_state_file_name):
         print initial_state_file_name + " file is not present, creating one. May take a while, please wait ..."
         build_state_from_event_log(input_event_log, number_of_hosts, initial_state_file_name,
                                    number_of_months=number_of_month_in_event_log,
                                    training_data_weight=training_data_weight,
-                                   initial_condition_data_weight=initial_condition_data_weight)
+                                   initial_condition_data_weight=initial_condition_data_weight,
+                                   graph_updater=graph_updater)
         print str(initial_state_file_name) + " file created."
 
     # length of the simulation is determined by two parameters: max_iterations_per_worker and end max_time

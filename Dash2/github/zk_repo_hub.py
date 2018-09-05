@@ -92,8 +92,8 @@ class ZkRepoHub(GitRepoHub):
         return self.repo_id_counter
 
     def pick_random_repo(self):
-        #random.choice(self.all_repos) # revise
-        random.randint(IdDictionaryStream.MAGIC_NUMBER, self.repo_id_counter)
+        #random.randint(IdDictionaryStream.MAGIC_NUMBER, self.repo_id_counter)
+        random.choice(list(self.self.all_repos.iterkeys()))
 
     def event_counter_callback (self, repo_id, curr_time):
         ZkRepoHub.sync_event_counter += 1

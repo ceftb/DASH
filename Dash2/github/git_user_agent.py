@@ -237,6 +237,7 @@ goalRequirements UpdateOwnRepo
             selected_event = "CreateEvent"
         self.hub.log_event(self.decision_data.id, selected_repo, selected_event, None, self.hub.time)
         self.decision_data.total_activity += 1
+        return False
 
     def first_event_time(self, start_time):
         delta = float(30 * 24 * 3600) / float(self.decision_data.event_rate)

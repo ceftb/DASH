@@ -7,6 +7,7 @@ import metis
 import pickle
 from distributed_event_log_utils import event_types, event_types_indexes
 from datetime import datetime
+import random
 
 
 class GraphBuilder:
@@ -277,6 +278,48 @@ def build_graph_from_csv(csv_event_log_file, number_of_months, event_filter=None
     ids_dictionary_stream.close()
 
     return user_repo_graph_builder.graph, len(ids_dictionary_stream.users), len(ids_dictionary_stream.repos)
+
+def pick_random_seeds(G, number_of_nodes, number_of_users):
+    #G = nx.Graph() # remove this
+    seed_list = []
+    for k in range(0, number_of_nodes):
+        node_index = random.randint(0, number_of_users - 1) # all user nodes in G are int values, otherwise it is not going to work
+        seed_list.append(node_index)
+    return seed_list
+
+def subsample(G, max_depth, max_number_of_user_nodes, seed_nodes=[]):
+    """
+    Returns a sub-graph of G. Sub-graph is composed from neighborhoods. Each neighborhood is built as DFS path starting
+    from a seed.
+    :param G:
+    :param max_depth:
+    :param max_number_of_user_nodes:
+    :param seed_nodes:
+    :return:
+    """
+
+    sub_sample_G = nx.Graph()    #G = nx.Graph()
+    user_nodes = set()
+    for node_index in seed_nodes:
+        component = set()
+        for u, v in nx.dfs_edges(G, node_index, max_depth):
+            edge_data = G.get_edge_data(u, v)
+            sub_sample_G.add_edge(u, v, **edge_data)
+            u_node_data = G.nodes[u]
+            v_node_data = G.nodes[v]
+            sub_sample_G.add_node(u, **u_node_data)
+            sub_sample_G.add_node(v, **v_node_data)
+            if u_node_data["isU"] == 1:
+                component.add(u)
+            if v_node_data["isU"] == 1:
+                component.add(v)
+            if len(user_nodes) + len(component) > max_number_of_user_nodes:
+                break
+        user_nodes.update(component)
+        if len(user_nodes) > max_number_of_user_nodes:
+            break
+    print "Users in updated graph ", len(user_nodes)
+    return sub_sample_G
 
 if __name__ == "__main__":
     if len(sys.argv) == 3:

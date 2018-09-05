@@ -104,6 +104,8 @@ class ISI3Mixin(GitUserMixin):
         self.hub.log_event(self.decision_data.id, selected_repo, selected_event, None, self.hub.time)
         self.decision_data.total_activity += 1
 
+        return False
+
 class ISI3GitUserAgent(ISI3Mixin, DASHAgent):
     def __init__(self, **kwargs):
         DASHAgent.__init__(self)
