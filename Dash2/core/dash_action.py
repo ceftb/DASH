@@ -22,7 +22,7 @@ class DASHAction(object):
         self.traceUpdate = False
         self.traceAction = False
         self.traceLoop = True
-        self.customAgentLoop = None # can define a custom step(s) for agent's loop. This is None be default, but
+        #self.customAgentLoop = None # can define a custom step(s) for agent's loop. This is None be default, but
         # it can be defined in subclasses. customAgentLoop is called instead of agentLoop with S1 and S2, and depending
         # on the returned value (True or False) customAgentLoop can return control to S1 and S2 in this class.
         # Although 'forget' is defined in system2, it is assigned primitive here because
@@ -39,7 +39,8 @@ class DASHAction(object):
     def agentLoop(self, max_iterations=-1, disconnect_at_end=True):
         next_action = None
         isS12LoopEnabled = True
-        if self.customAgentLoop is not None: # If it is not None, it defines a custom step for agent's loop. Depending
+        op = getattr(self, 'customAgentLoop', None)
+        if op is not None:# If it is not None, it defines a custom step for agent's loop. Depending
         # on the returned value (isS12LoopEnabled), customAgentLoop can return control to S1 and S2 in this class.
             isS12LoopEnabled = self.customAgentLoop()
         if isS12LoopEnabled is None or isS12LoopEnabled is True:
