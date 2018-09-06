@@ -6,7 +6,7 @@ import numpy as np
 import cPickle as pickle
 from distributed_event_log_utils import load_id_dictionary, collect_unique_user_event_pairs
 from user_repo_graph_utils import build_graph_from_csv, partition_graph, print_user_profiles, print_graph,\
-print_users_neighborhood_sizes, pick_random_seeds, subsample
+print_users_neighborhood_sizes, subsample
 
 from distributed_event_log_utils import event_types
 
@@ -35,51 +35,57 @@ profiles file structure (used for both users and repos - relationship is symmetr
 
 def build_state_from_event_log(input_event_log, number_of_user_partitions=1, state_file_name=None, embedding_files=None,
                                number_of_months=1, training_data_weight=1.0, initial_condition_data_weight=1.0, graph_updater=None):
-    G, number_of_users, number_of_repos = build_graph_from_csv(input_event_log, number_of_months,
-                                                               event_filter=None,
-                                                               training_data_weight=training_data_weight,
-                                                               initial_condition_data_weight=initial_condition_data_weight)
-    print "User-repo graph constructed. Users ", number_of_users, ", repos ", number_of_repos, ", nodes ", len(G.nodes()), ", edges", len(G.edges())
+    for k in range(0, 10):
+        G, number_of_users, number_of_repos = build_graph_from_csv(input_event_log, number_of_months,
+                                                                   event_filter=None,
+                                                                   training_data_weight=training_data_weight,
+                                                                   initial_condition_data_weight=initial_condition_data_weight)
+        print "User-repo graph constructed. Users ", number_of_users, ", repos ", number_of_repos, ", nodes ", len(G.nodes()), ", edges", len(G.edges())
 
-    if graph_updater is not None:
-        print "Updating graph ..."
-        G = graph_updater.update(G, number_of_users)
-        print "Updated graph has ", len(G.nodes), "nodes and ", len(G.edges), " edges."
+        input_event_log = input_event_log + str(k)
+        if graph_updater is not None:
+            print "Updating graph ..."
+            G = graph_updater.update(G, number_of_users)
+            print "Updated graph has ", len(G.nodes), "nodes and ", len(G.edges), " edges."
 
-    partition_graph(G, number_of_user_partitions)
-    #print "shared repos ", len(shared_repos), ", shared users ", len(shared_users)
 
-    print "printing graph..."
-    print_user_profiles(G, input_event_log + "_users.json", number_of_user_partitions)
-    graph_file_name = input_event_log + "_UR_graph.pickle"
-    print_graph(G, graph_file_name)
-    users_neighborhood_sizes_file = input_event_log + "_users_neighborhood_sizes.pickle"
-    print_users_neighborhood_sizes(G, users_neighborhood_sizes_file)
+        partition_graph(G, number_of_user_partitions)
+        #print "shared repos ", len(shared_repos), ", shared users ", len(shared_users)
 
-    users_file = input_event_log + "_users.json"
-    repos_file = input_event_log + "_repos.json"
-    users_ids = input_event_log + "_users_id_dict.csv"
-    repos_ids = input_event_log + "_repos_id_dict.csv"
+        print "printing graph..."
+        print_user_profiles(G, input_event_log + "_users.json", number_of_user_partitions)
+        graph_file_name = input_event_log + "_UR_graph.pickle"
+        print_graph(G, graph_file_name)
+        users_neighborhood_sizes_file = input_event_log + "_users_neighborhood_sizes.pickle"
+        print_users_neighborhood_sizes(G, users_neighborhood_sizes_file)
 
-    state_file_content = {"meta":
-        {
-            "number_of_users": number_of_users,
-            "number_of_repos": number_of_repos,
-            "users_file": users_file,
-            "repos_file": repos_file,
-            "users_ids": users_ids,
-            "repos_ids": repos_ids,
-            "number_of_partitions": number_of_user_partitions,
-            "event_rate_model_file": "",
-            "UR_graph_path": graph_file_name,
-            "users_neighborhood_sizes_file": users_neighborhood_sizes_file
+        users_file = input_event_log + "_users.json"
+        repos_file = input_event_log + "_repos.json"
+        users_ids = input_event_log + "_users_id_dict.csv"
+        repos_ids = input_event_log + "_repos_id_dict.csv"
+
+        state_file_content = {"meta":
+            {
+                "number_of_users": number_of_users,
+                "number_of_repos": number_of_repos,
+                "users_file": users_file,
+                "repos_file": repos_file,
+                "users_ids": users_ids,
+                "repos_ids": repos_ids,
+                "number_of_partitions": number_of_user_partitions,
+                "event_rate_model_file": "",
+                "UR_graph_path": graph_file_name,
+                "users_neighborhood_sizes_file": users_neighborhood_sizes_file
+            }
         }
-    }
-    state_file_name = input_event_log + "_state.json" if state_file_name is None else state_file_name
-    state_file = open(state_file_name, 'w')
-    state_file.write(json.dumps(state_file_content))
-    state_file.close()
-    return state_file_content["meta"]
+        state_file_name = input_event_log + "_state.json" if state_file_name is None else state_file_name
+        state_file = open(state_file_name, 'w')
+        state_file.write(json.dumps(state_file_content))
+        state_file.close()
+
+        input_event_log = input_event_log[0:(len(input_event_log) - 1)]
+
+    return None
 
 def read_state_file(filename):
     raw_data = json.load(open(filename))
@@ -103,8 +109,10 @@ class GraphUpdater(object):
         self.number_of_neighborhoods = number_of_neighborhoods
 
     def update(self, G, number_of_users):
-        neighborhood_start_nodes = pick_random_seeds(G, self.number_of_neighborhoods, number_of_users)
-        sub_sample_G = subsample(G, self.max_depth, self.max_number_of_user_nodes, neighborhood_start_nodes)
+        #neighborhood_start_nodes = pick_random_seeds(G, self.number_of_neighborhoods, number_of_users)
+        sub_sample_G = subsample(G, self.max_depth, self.max_number_of_user_nodes,
+                                 number_of_start_nodes=self.number_of_neighborhoods,
+                                 number_of_users=number_of_users)
         return sub_sample_G
 
 '''

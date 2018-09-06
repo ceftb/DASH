@@ -177,7 +177,7 @@ if __name__ == "__main__":
     # if state file is not present, then create it. State file is created from input event log.
     # Users in the initial state are partitioned (number of hosts is the number of partitions)
     initial_state_file_name = input_event_log + "_state.json"
-    graph_updater = GraphUpdater(max_depth=100, max_number_of_user_nodes=100000, number_of_neighborhoods=10)
+    graph_updater = GraphUpdater(max_depth=100, max_number_of_user_nodes=100000, number_of_neighborhoods=100)
     if not os.path.isfile(initial_state_file_name):
         print initial_state_file_name + " file is not present, creating one. May take a while, please wait ..."
         build_state_from_event_log(input_event_log, number_of_hosts, initial_state_file_name,
