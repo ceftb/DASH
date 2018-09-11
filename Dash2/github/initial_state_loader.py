@@ -34,20 +34,20 @@ profiles file structure (used for both users and repos - relationship is symmetr
 '''
 
 def build_state_from_event_log(input_event_log, number_of_user_partitions=1, state_file_name=None, embedding_files=None,
-                               number_of_months=1, training_data_weight=1.0, initial_condition_data_weight=1.0, graph_updater=None):
-    for k in range(0, 10):
-        G, number_of_users, number_of_repos = build_graph_from_csv(input_event_log, number_of_months,
+                               training_data_weight=1.0, initial_condition_data_weight=1.0, graph_updater=None):
+    graph, number_of_users, number_of_repos = build_graph_from_csv(input_event_log,
                                                                    event_filter=None,
                                                                    training_data_weight=training_data_weight,
                                                                    initial_condition_data_weight=initial_condition_data_weight)
-        print "User-repo graph constructed. Users ", number_of_users, ", repos ", number_of_repos, ", nodes ", len(G.nodes()), ", edges", len(G.edges())
+    print "User-repo graph constructed. Users ", number_of_users, ", repos ", number_of_repos, ", nodes ", len(graph.nodes()), ", edges", len(graph.edges())
 
-        input_event_log = input_event_log + str(k)
-        if graph_updater is not None:
-            print "Updating graph ..."
-            G = graph_updater.update(G, number_of_users)
-            print "Updated graph has ", len(G.nodes), "nodes and ", len(G.edges), " edges."
-
+    number_of_graph_samples = graph_updater.number_of_graph_samples if graph_updater is not None else 1
+    for k in range(0, number_of_graph_samples):
+        if number_of_graph_samples > 1:
+            input_event_log = input_event_log + str(k)
+        print "Updating graph ..."
+        G = graph_updater.update(graph, number_of_users) if graph_updater is not None else graph
+        print "Updated graph has ", len(G.nodes), "nodes and ", len(G.edges), " edges."
 
         partition_graph(G, number_of_user_partitions)
         #print "shared repos ", len(shared_repos), ", shared users ", len(shared_users)
@@ -83,7 +83,7 @@ def build_state_from_event_log(input_event_log, number_of_user_partitions=1, sta
         state_file.write(json.dumps(state_file_content))
         state_file.close()
 
-        input_event_log = input_event_log[0:(len(input_event_log) - 1)]
+        input_event_log = input_event_log[0:(len(input_event_log) - 1)] if number_of_graph_samples > 1 else input_event_log
 
     return None
 
@@ -103,16 +103,17 @@ def load_profiles(filename, profile_handler):
 
 class GraphUpdater(object):
 
-    def __init__(self, max_depth, max_number_of_user_nodes, number_of_neighborhoods):
+    def __init__(self, max_depth, max_number_of_user_nodes, number_of_neighborhoods, number_of_graph_samples):
         self.max_depth = max_depth if max_depth % 2 == 1 else max_depth + 1 # must be odd number
         self.max_number_of_user_nodes = max_number_of_user_nodes
         self.number_of_neighborhoods = number_of_neighborhoods
+        self.number_of_graph_samples = number_of_graph_samples
 
-    def update(self, G, number_of_users):
+    def update(self, G, number_of_users_in_G):
         #neighborhood_start_nodes = pick_random_seeds(G, self.number_of_neighborhoods, number_of_users)
         sub_sample_G = subsample(G, self.max_depth, self.max_number_of_user_nodes,
                                  number_of_start_nodes=self.number_of_neighborhoods,
-                                 number_of_users=number_of_users)
+                                 number_of_users_in_G=number_of_users_in_G)
         return sub_sample_G
 
 '''

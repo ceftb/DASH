@@ -1,14 +1,44 @@
 #########################################################
 #### STANDALONE INSTALLATION  (with single dash worker)##
 #########################################################
-Install software by calling (do it only once).
-webdash/Dash2/github/standalone_install.sh
+To install Zookeeper and other external dependencies on Ubuntu, you need to clone some repos first and update the
+following variables in webdash/Dash2/github/standalone_install.sh :
 
-To run an experiment:
+    ########## installation configuration ##########
+    ################################################
+    # A local path where kazoo is cloned (git clone https://github.com/python-zk/kazoo.git  )
+    KAZOO_CLONE=/users/tregubov/projects/kazoo
+
+    # A local path where ijson is cloned (git clone https://github.com/isagalaev/ijson.git  )
+    IJSON_CLONE=/users/tregubov/projects/ijson
+
+    # A local path where ijson is cloned (git clone https://github.com/networkx/networkx.git  )
+    NETWORKX_CLONE=/users/tregubov/projects/networkx
+
+    # A local path where METIS for python wrapper is cloned ( sudo apt install mercurial ; hg clone https://bitbucket.org/kw/metis-python/src )
+    METIS_CLONE=/users/tregubov/projects/metis/src
+
+    # A local path where numpy is cloned
+    NUMPY_CLONE=/users/tregubov/projects/numpy
+
+    # A local path where webdash is cloned (git clone https://github.com/cuts/webdash.git  )
+    WEBDASH_CLONE=/users/tregubov/projects/webdash
+
+    # Place for temporary files. Must have write access.
+    TMP_DIR=.
+
+Then install software by calling (do it only once). It will require sudo
+bash webdash/Dash2/github/standalone_install.sh
+
+To run an experiment to go webdash/Dash2/github/ directory and then:
 1. start worker in separate terminal by calling
-python webdash/Dash2/core/dash_worker.py
+python ../core/dash_worker.py
 2. start the experiment by calling
-python webdash/Dash2/github/zk_github_state_experiment.py
+python zk_github_state_experiment.py <input_initial_condition_events.csv> None <Agent_class_name> <Path_to_agent_class> <Start_date> <End_date> <name_of_output_events.csv>
+For example:
+python zk_github_state_experiment.py ./data_sample/data_sample.csv None ISI2GitUserAgent Dash2.github.git_isi_agent2 2017-08-01 2017-08-11 ./data_sample/simulation_output
+
+'None' here is reserved for embedding files.
 
 
 ####################################################################################

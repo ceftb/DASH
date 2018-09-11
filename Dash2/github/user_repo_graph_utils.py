@@ -244,13 +244,16 @@ def _print_user_profile(graph, user_node, fp):
     fp.write(pickle.dumps(profile_object))
 
 
-def build_graph_from_csv(csv_event_log_file, number_of_months, event_filter=None, training_data_weight=1.0, initial_condition_data_weight=1.0):
+def build_graph_from_csv(csv_event_log_file, event_filter=None, training_data_weight=1.0, initial_condition_data_weight=1.0):
     user_repo_graph_builder = GraphBuilder(event_filter = event_filter)
     ids_dictionary_stream = IdDictionaryStream(csv_event_log_file + "_users_id_dict.csv", csv_event_log_file + "_repos_id_dict.csv", event_filter = event_filter)
+
 
     with open(csv_event_log_file, "rb") as csvfile:
         datareader = csv.reader(csvfile)
         counter = 0
+        training_data_start_date = None
+        training_data_end_date = None
         for row in datareader:
             if row[0] != "timestamp":
                 event_type = row[1]
@@ -261,6 +264,9 @@ def build_graph_from_csv(csv_event_log_file, number_of_months, event_filter=None
                 except:
                     event_time = datetime.strptime(row[0], "%Y-%m-%dT%H:%M:%SZ")
                 event_time = time.mktime(event_time.timetuple())
+                if training_data_start_date is None:
+                    training_data_start_date = event_time
+                training_data_end_date = event_time
                 if event_filter is None or event_type in event_filter:
                     user_id, repo_id = ids_dictionary_stream.update_dictionary(row[2], row[3])
                     user_repo_graph_builder.update_graph(repo_id, user_id, event_type, event_time,
@@ -271,6 +277,7 @@ def build_graph_from_csv(csv_event_log_file, number_of_months, event_filter=None
                 print "line: " + str(counter)
         print counter
 
+    number_of_months = float((training_data_end_date - training_data_start_date) / (3600.0 * 24.0 * 30.0))
     csvfile.close()
     user_repo_graph_builder.compute_users_popularity_and_event_rate(ids_dictionary_stream.getCreator2reposMap(), number_of_months,
                                                          training_data_weight=training_data_weight,
@@ -279,7 +286,7 @@ def build_graph_from_csv(csv_event_log_file, number_of_months, event_filter=None
 
     return user_repo_graph_builder.graph, len(ids_dictionary_stream.users), len(ids_dictionary_stream.repos)
 
-def subsample(G, max_depth, max_number_of_user_nodes, number_of_start_nodes, number_of_users):
+def subsample(G, max_depth, max_number_of_user_nodes, number_of_start_nodes, number_of_users_in_G):
     """
     Returns a sub-graph of G. Sub-graph is composed from neighborhoods. Each neighborhood is built as DFS path starting
     from a seed.
@@ -288,7 +295,7 @@ def subsample(G, max_depth, max_number_of_user_nodes, number_of_start_nodes, num
     user_nodes = set()
     number_of_components = 0
     for iter_index in range(0, number_of_start_nodes):
-        node_index = random.randint(0, number_of_users - 1)
+        node_index = random.randint(0, number_of_users_in_G - 1)
         for u, v in nx.dfs_edges(G, node_index, max_depth):
             edge_data = G.get_edge_data(u, v)
             sub_sample_G.add_edge(u, v, **edge_data)

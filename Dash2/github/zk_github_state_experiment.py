@@ -150,41 +150,38 @@ class ZkGithubStateTrial(Trial):
 if __name__ == "__main__":
     zk_hosts = '127.0.0.1:2181'
     number_of_hosts = 1
-    input_event_log = sys.argv[1] #"./dryrun2/dryrun_events_20170501-20170630.csv"
-    number_of_month_in_event_log = float(sys.argv[2])
-    number_of_days_in_simulation = int(sys.argv[3])
-    embedding_directory = sys.argv[4] if sys.argv[4] != "None" else "" # None if embedding is not used. # must have '/' in the end
-    agent_class_name = sys.argv[5] # "GitUserAgent"
-    agent_module_name = sys.argv[6] # "Dash2.github.git_user_agent"
-    start_date = sys.argv[7]
-    end_date = sys.argv[8]
-    output_file_name = sys.argv[9]
+    input_event_log = sys.argv[1]
+    embedding_directory = sys.argv[2] if sys.argv[2] != "None" else "" # None if embedding is not used. # must have '/' in the end
+    agent_class_name = sys.argv[3] # "GitUserAgent"
+    agent_module_name = sys.argv[4] # "Dash2.github.git_user_agent"
+    start_date = sys.argv[5]
+    end_date = sys.argv[6]
+    number_of_days_in_simulation = 1.0 + float((time.mktime(datetime.strptime(str(end_date) + ' 00:00:00', "%Y-%m-%d %H:%M:%S").timetuple())
+                                        - time.mktime(datetime.strptime(str(start_date) + ' 00:00:00', "%Y-%m-%d %H:%M:%S").timetuple())) / (3600.0 * 24.0))
+    output_file_name = sys.argv[7]
     training_data_weight = 1.0
     initial_condition_data_weight = 1.0
     truncation_coef = 1.0
 
     if embedding_directory != "":
-        truncation_coef = sys.argv[10]
-        if len(sys.argv) == 13:
-            training_data_weight = float(sys.argv[11])
-            initial_condition_data_weight = float(sys.argv[12])
+        truncation_coef = sys.argv[8]
+        if len(sys.argv) == 11:
+            training_data_weight = float(sys.argv[9])
+            initial_condition_data_weight = float(sys.argv[10])
     else:
-        if len(sys.argv) == 12:
-            training_data_weight = float(sys.argv[10])
-            initial_condition_data_weight = float(sys.argv[11])
-
+        if len(sys.argv) == 10:
+            training_data_weight = float(sys.argv[8])
+            initial_condition_data_weight = float(sys.argv[9])
 
     # if state file is not present, then create it. State file is created from input event log.
     # Users in the initial state are partitioned (number of hosts is the number of partitions)
     initial_state_file_name = input_event_log + "_state.json"
-    graph_updater = GraphUpdater(max_depth=100, max_number_of_user_nodes=100000, number_of_neighborhoods=100)
+    graph_updater = None #GraphUpdater(max_depth=100, max_number_of_user_nodes=100000, number_of_neighborhoods=100, number_of_graph_samples=2)
     if not os.path.isfile(initial_state_file_name):
         print initial_state_file_name + " file is not present, creating one. May take a while, please wait ..."
         build_state_from_event_log(input_event_log, number_of_hosts, initial_state_file_name,
-                                   number_of_months=number_of_month_in_event_log,
                                    training_data_weight=training_data_weight,
-                                   initial_condition_data_weight=initial_condition_data_weight,
-                                   graph_updater=graph_updater)
+                                   initial_condition_data_weight=initial_condition_data_weight)
         print str(initial_state_file_name) + " file created."
 
     # length of the simulation is determined by two parameters: max_iterations_per_worker and end max_time
@@ -220,11 +217,27 @@ if __name__ == "__main__":
 
     # ExperimentController is a until class that provides command line interface to run the experiment on clusters
     controller = DashController(zk_hosts=zk_hosts, number_of_hosts=number_of_hosts)
-    exp = Experiment(trial_class=ZkGithubStateTrial,
-                     work_processor_class=ZkGithubStateWorkProcessor,
-                     number_of_hosts=number_of_hosts,
-                     independent=independent,
-                     exp_data=experiment_data,
-                     num_trials=num_trials)
-    results = controller.run(experiment=exp, run_data={}, start_right_away=False)
+
+    if graph_updater is None:
+        exp = Experiment(trial_class=ZkGithubStateTrial,
+                         work_processor_class=ZkGithubStateWorkProcessor,
+                         number_of_hosts=number_of_hosts,
+                         independent=independent,
+                         exp_data=experiment_data,
+                         num_trials=num_trials)
+        results = controller.run(experiment=exp, run_data={}, start_right_away=False)
+    else:
+        # FIXME: this will be refactored. It should be part of the Trial class.
+        for sample in range(0, graph_updater.number_of_graph_samples):
+            experiment_data["initial_state_file"] = initial_state_file_name + str(sample)
+            ZkGithubStateTrial.parameters[7] = Parameter('output_file_name', default=output_file_name + str(sample))
+
+            exp = Experiment(trial_class=ZkGithubStateTrial,
+                             work_processor_class=ZkGithubStateWorkProcessor,
+                             number_of_hosts=number_of_hosts,
+                             independent=independent,
+                             exp_data=experiment_data,
+                             num_trials=num_trials)
+            results = controller.run(experiment=exp, run_data={}, start_right_away=True)
+
 
