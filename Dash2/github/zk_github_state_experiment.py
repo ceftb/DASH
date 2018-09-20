@@ -1,5 +1,7 @@
 import sys; sys.path.extend(['../../'])
 import os.path
+import os
+import psutil
 import time
 from datetime import datetime
 from heapq import heappush, heappop
@@ -27,6 +29,7 @@ class ZkGithubStateWorkProcessor(WorkProcessor):
         self.agents_decision_data = {}
         self.events_heap = []
         self.event_counter = 0
+        self.task_start_time = time.time()
         self.hub = ZkRepoHub(self.zk, self.task_full_id, 0, log_file=self.log_file)
 
         mod = __import__(self.agent_module_name, fromlist=[self.agent_class_name])
@@ -49,6 +52,7 @@ class ZkGithubStateWorkProcessor(WorkProcessor):
         self.hub.log_file = self.log_file
         self.hub.agents_decision_data = self.agents_decision_data # will not work for distributed version
         self.hub.finalize_statistics()
+        self.hub.mamory_usage = self._get_current_memory_usage()
         print "Agents instantiated: ", len(self.agents_decision_data)
 
     # Function takes a user profile and creates an agent decision data object.
@@ -74,17 +78,27 @@ class ZkGithubStateWorkProcessor(WorkProcessor):
     def should_stop(self):
         if self.max_iterations > 0 and self.iteration >= self.max_iterations:
             print 'reached end of iterations for trial'
+            self.hub.memory_usage = self._get_current_memory_usage()
             return True
         if len(self.events_heap) == 0:
             print 'reached end of event queue, no more events'
+            self.hub.memory_usage = self._get_current_memory_usage()
             return True
         return False
+
+    def _get_current_memory_usage(self):
+        pid = os.getpid()
+        py = psutil.Process(pid)
+        memory_use = float(py.memory_info()[0]) / (1024.0 * 1024.0 * 1024.0) # in GB
+        return memory_use
 
     def get_dependent_vars(self):
         return {"num_agents": len(self.agents),
                 "num_repos": sum([len(a.name_to_repo_id) for a in self.agents_decision_data.viewvalues()]),
                 "total_agent_activity": sum([a.total_activity for a in self.agents_decision_data.viewvalues()]),
-                "number_of_cross_process_communications": self.hub.sync_event_counter
+                "number_of_cross_process_communications": self.hub.sync_event_counter,
+                "memory_usage": self.hub.memory_usage,
+                "runtime": time.time() - self.task_start_time
                 }
 
 
@@ -121,7 +135,7 @@ class ZkGithubStateTrial(Trial):
         for measure in self.measures:
             if not (measure.name in self.results):
                 self.results[measure.name] = 0
-            self.results[measure.name] += int(partial_dependent[measure.name])
+            self.results[measure.name] += float(partial_dependent[measure.name])
 
     def process_after_run(self):  # merge log files from all workers
         file_names = []
@@ -146,6 +160,24 @@ class ZkGithubStateTrial(Trial):
                                                  repos_ids_file=self.repos_ids)
         os.remove(tmp_file_name)
 
+        # print dependent vars (e.g. runtime and memory)
+        dep_vars_file_name = self.output_file_name + "_trial_" + str(self.trial_id) + ".txt"
+        dep_vars_file = open(dep_vars_file_name , 'w')
+        for measure in self.measures:
+            dep_vars_file.write(measure.name)
+            dep_vars_file.write(":")
+            dep_vars_file.write(str(self.results[measure.name]))
+            dep_vars_file.write("\n")
+        dep_vars_file.close()
+        #all_exp_dep_vars.csv
+        dep_vars_file = open(str(self.output_file_name)[:-3] + "_all_exp_dep_vars.csv", 'a')
+        dep_vars_file.write(str(self.exp_id))
+        dep_vars_file.write(",")
+        for measure in self.measures:
+            dep_vars_file.write(str(self.results[measure.name]))
+            dep_vars_file.write(",")
+        dep_vars_file.write("0\n")
+        dep_vars_file.close()
 
 if __name__ == "__main__":
     zk_hosts = '127.0.0.1:2181'
@@ -176,7 +208,7 @@ if __name__ == "__main__":
     # if state file is not present, then create it. State file is created from input event log.
     # Users in the initial state are partitioned (number of hosts is the number of partitions)
     initial_state_file_name = input_event_log + "_state.json"
-    graph_updater = None #GraphUpdater(max_depth=100, max_number_of_user_nodes=100000, number_of_neighborhoods=100, number_of_graph_samples=2)
+    graph_updater = None
     if not os.path.isfile(initial_state_file_name):
         print initial_state_file_name + " file is not present, creating one. May take a while, please wait ..."
         build_state_from_event_log(input_event_log, number_of_hosts, initial_state_file_name,
@@ -213,7 +245,10 @@ if __name__ == "__main__":
         Measure('num_agents'),
         Measure('num_repos'),
         Measure('total_agent_activity'),
-        Measure('number_of_cross_process_communications')]
+        Measure('number_of_cross_process_communications'),
+        Measure('memory_usage'),
+        Measure('runtime')
+    ]
 
     # ExperimentController is a until class that provides command line interface to run the experiment on clusters
     controller = DashController(zk_hosts=zk_hosts, number_of_hosts=number_of_hosts)
@@ -227,17 +262,4 @@ if __name__ == "__main__":
                          num_trials=num_trials)
         results = controller.run(experiment=exp, run_data={}, start_right_away=False)
     else:
-        # FIXME: this will be refactored. It should be part of the Trial class.
-        for sample in range(0, graph_updater.number_of_graph_samples):
-            experiment_data["initial_state_file"] = initial_state_file_name + str(sample)
-            ZkGithubStateTrial.parameters[7] = Parameter('output_file_name', default=output_file_name + str(sample))
-
-            exp = Experiment(trial_class=ZkGithubStateTrial,
-                             work_processor_class=ZkGithubStateWorkProcessor,
-                             number_of_hosts=number_of_hosts,
-                             independent=independent,
-                             exp_data=experiment_data,
-                             num_trials=num_trials)
-            results = controller.run(experiment=exp, run_data={}, start_right_away=True)
-
-
+        print "Non None graph_updater is not supported here"

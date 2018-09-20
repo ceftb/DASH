@@ -39,6 +39,7 @@ def build_state_from_event_log(input_event_log, number_of_user_partitions=1, sta
                                                                    event_filter=None,
                                                                    training_data_weight=training_data_weight,
                                                                    initial_condition_data_weight=initial_condition_data_weight)
+    original_input_event_log = input_event_log
     print "User-repo graph constructed. Users ", number_of_users, ", repos ", number_of_repos, ", nodes ", len(graph.nodes()), ", edges", len(graph.edges())
 
     number_of_graph_samples = graph_updater.number_of_graph_samples if graph_updater is not None else 1
@@ -46,7 +47,12 @@ def build_state_from_event_log(input_event_log, number_of_user_partitions=1, sta
         if number_of_graph_samples > 1:
             input_event_log = input_event_log + str(k)
         print "Updating graph ..."
-        G = graph_updater.update(graph, number_of_users) if graph_updater is not None else graph
+        if graph_updater is not None:
+            G = graph_updater.update(graph, number_of_users)
+            number_of_users = graph_updater.max_number_of_user_nodes
+            number_of_repos = len(G.nodes) - graph_updater.max_number_of_user_nodes
+        else:
+            G = graph
         print "Updated graph has ", len(G.nodes), "nodes and ", len(G.edges), " edges."
 
         partition_graph(G, number_of_user_partitions)
@@ -61,8 +67,10 @@ def build_state_from_event_log(input_event_log, number_of_user_partitions=1, sta
 
         users_file = input_event_log + "_users.json"
         repos_file = input_event_log + "_repos.json"
-        users_ids = input_event_log + "_users_id_dict.csv"
-        repos_ids = input_event_log + "_repos_id_dict.csv"
+        users_ids = original_input_event_log + "_users_id_dict.csv" if number_of_graph_samples > 1\
+            else input_event_log + "_users_id_dict.csv"
+        repos_ids = original_input_event_log + "_repos_id_dict.csv" if number_of_graph_samples > 1 \
+            else input_event_log + "_repos_id_dict.csv"
 
         state_file_content = {"meta":
             {
@@ -78,12 +86,12 @@ def build_state_from_event_log(input_event_log, number_of_user_partitions=1, sta
                 "users_neighborhood_sizes_file": users_neighborhood_sizes_file
             }
         }
-        state_file_name = input_event_log + "_state.json" if state_file_name is None else state_file_name
+        state_file_name = input_event_log + "_state.json"
         state_file = open(state_file_name, 'w')
         state_file.write(json.dumps(state_file_content))
         state_file.close()
 
-        input_event_log = input_event_log[0:(len(input_event_log) - 1)] if number_of_graph_samples > 1 else input_event_log
+        input_event_log = original_input_event_log if number_of_graph_samples > 1 else input_event_log
 
     return None
 

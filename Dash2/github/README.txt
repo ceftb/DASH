@@ -22,6 +22,9 @@ following variables in webdash/Dash2/github/standalone_install.sh :
     NUMPY_CLONE=/users/tregubov/projects/numpy
 
     # A local path where webdash is cloned (git clone https://github.com/cuts/webdash.git  )
+    PSUTILS_CLONE=/users/tregubov/projects/psutils
+
+    # A local path where webdash is cloned (git clone https://github.com/cuts/webdash.git  )
     WEBDASH_CLONE=/users/tregubov/projects/webdash
 
     # Place for temporary files. Must have write access.

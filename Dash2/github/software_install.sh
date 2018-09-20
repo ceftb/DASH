@@ -10,7 +10,7 @@ function install_on_all_nodes {
 	for ID in `seq 1 $NUMBER_OF_NODES`;
 		do
 			echo 'Installing software packages on node ' ${DASH_NODES[$ID-1]}
-			ssh ${DASH_NODES[$ID-1]} "tmux new-session -d bash $WEBDASH_CLONE/Dash2/github/software_install.sh $ID $KAZOO_CLONE $TMP_DIR $IJSON_CLONE $NETWORKX_CLONE $METIS_CLONE $NUMPY_CLONE"
+			ssh ${DASH_NODES[$ID-1]} "tmux new-session -d bash $WEBDASH_CLONE/Dash2/github/software_install.sh $ID $KAZOO_CLONE $TMP_DIR $IJSON_CLONE $NETWORKX_CLONE $METIS_CLONE $NUMPY_CLONE $PSUTILS_CLONE"
 		done
 	
 	echo "Software installation started on all nodes"
@@ -24,6 +24,7 @@ function install_on_single_instance {
 	NETWORKX_CLONE=$5
 	METIS_CLONE=$6
 	NUMPY_CLONE=$7
+	PSUTILS_CLONE=$8
 
 	echo "installing python-numpy python-scipy ..."
 	sudo apt-get install python-numpy python-scipy --yes
@@ -54,6 +55,13 @@ function install_on_single_instance {
 	cd $TMP_DIR/networkx_clone_$CURR_NODE_ID
 	sudo python setup.py install  2>> $TMP_DIR/networkx_report_$CURR_NODE_ID.txt 1>> $TMP_DIR/networkx_report_$CURR_NODE_ID.txt
 	sudo rm -Rf $TMP_DIR/networkx_clone_$CURR_NODE_ID
+
+    # install psutils from $NETWORKX_CLONE ( https://github.com/networkx/networkx.git )
+    cp -R $PSUTILS_CLONE $TMP_DIR/psutils_clone_$CURR_NODE_ID
+	cd $TMP_DIR/psutils_clone_$CURR_NODE_ID
+	sudo python setup.py install  2>> $TMP_DIR/psutils_report_$CURR_NODE_ID.txt 1>> $TMP_DIR/psutils_report_$CURR_NODE_ID.txt
+	sudo rm -Rf $TMP_DIR/psutils_clone_$CURR_NODE_ID
+
 
     # install METIS
 	sudo apt-get install graphviz graphviz-dev pkg-config metis --yes
@@ -109,7 +117,7 @@ else
     if [ "$#" -eq 1 ]; then
         run_external_script_on_all_nodes $1
     else
-        install_on_single_instance $1 $2 $3 $4 $5 $6 $7
+        install_on_single_instance $1 $2 $3 $4 $5 $6 $7 $8
     fi
 fi
 

@@ -41,14 +41,13 @@ if __name__ == "__main__":
 
     # if state file is not present, then create it. State file is created from input event log.
     # Users in the initial state are partitioned (number of hosts is the number of partitions)
-    initial_state_file_name = input_event_log + "_state.json"
-    graph_updater = None #GraphUpdater(max_depth=100, max_number_of_user_nodes=100000, number_of_neighborhoods=100, number_of_graph_samples=2)
-    if not os.path.isfile(initial_state_file_name):
-        print initial_state_file_name + " file is not present, creating one. May take a while, please wait ..."
-        build_state_from_event_log(input_event_log, number_of_hosts, initial_state_file_name,
-                                   training_data_weight=training_data_weight,
-                                   initial_condition_data_weight=initial_condition_data_weight)
-        print str(initial_state_file_name) + " file created."
+    graph_updater = GraphUpdater(max_depth=100, max_number_of_user_nodes=100000, number_of_neighborhoods=100, number_of_graph_samples=2)
+    print "Creating initial state files. May take a while, please wait ..."
+    build_state_from_event_log(input_event_log, number_of_hosts, None,
+                               training_data_weight=training_data_weight,
+                               initial_condition_data_weight=initial_condition_data_weight,
+                               graph_updater=graph_updater)
+    print "Initial state files created."
 
     # length of the simulation is determined by two parameters: max_iterations_per_worker and end max_time
     # max_iterations_per_worker - defines maximum number of events each dash worker can do
@@ -61,7 +60,8 @@ if __name__ == "__main__":
     independent = ['prob_create_new_agent', Range(0.0, 0.1, 0.1)]
     experiment_data = {
         'max_iterations': max_iterations_per_worker,
-        'initial_state_file': initial_state_file_name}
+        'initial_state_file': input_event_log + "_state.json"
+    }
 
     # Trial parameters and measures
     ZkGithubStateTrial.parameters = [
@@ -79,7 +79,10 @@ if __name__ == "__main__":
         Measure('num_agents'),
         Measure('num_repos'),
         Measure('total_agent_activity'),
-        Measure('number_of_cross_process_communications')]
+        Measure('number_of_cross_process_communications'),
+        Measure('memory_usage'),
+        Measure('runtime')
+    ]
 
     # ExperimentController is a until class that provides command line interface to run the experiment on clusters
     controller = DashController(zk_hosts=zk_hosts, number_of_hosts=number_of_hosts)
@@ -93,9 +96,8 @@ if __name__ == "__main__":
                          num_trials=num_trials)
         results = controller.run(experiment=exp, run_data={}, start_right_away=False)
     else:
-        # FIXME: this will be refactored. It should be part of the Trial class.
         for sample in range(0, graph_updater.number_of_graph_samples):
-            experiment_data["initial_state_file"] = initial_state_file_name + str(sample)
+            experiment_data["initial_state_file"] = input_event_log + str(sample) + "_state.json"
             ZkGithubStateTrial.parameters[7] = Parameter('output_file_name', default=output_file_name + str(sample))
 
             exp = Experiment(trial_class=ZkGithubStateTrial,
@@ -104,5 +106,9 @@ if __name__ == "__main__":
                              independent=independent,
                              exp_data=experiment_data,
                              num_trials=num_trials)
-            results = controller.run(experiment=exp, run_data={}, start_right_away=True)
+            if sample != graph_updater.number_of_graph_samples - 1:
+                results = controller.run(experiment=exp, run_data={}, start_right_away=True, continue_right_away=True)
+            else:
+                results = controller.run(experiment=exp, run_data={}, start_right_away=True, continue_right_away=False)
+
 

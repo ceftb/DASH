@@ -304,15 +304,16 @@ def subsample(G, max_depth, max_number_of_user_nodes, number_of_start_nodes, num
             sub_sample_G.add_node(u, **u_node_data)
             sub_sample_G.add_node(v, **v_node_data)
             if u_node_data["isU"] == 1:
-                user_nodes.add(u)
+                user_nodes.add(int(u))
             if v_node_data["isU"] == 1:
-                user_nodes.add(v)
-            if len(user_nodes) > max_number_of_user_nodes:
+                user_nodes.add(int(v))
+            if len(user_nodes) > max_number_of_user_nodes - 1:
                 break
         number_of_components += 1
-        if len(user_nodes) > max_number_of_user_nodes:
+        if len(user_nodes) > max_number_of_user_nodes - 1:
             break
     print "Users in updated graph ", len(user_nodes), " components ", number_of_components
+
     return sub_sample_G
 
 if __name__ == "__main__":
