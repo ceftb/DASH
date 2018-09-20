@@ -22,37 +22,37 @@ class DashController:
 
         self.number_of_hosts = number_of_hosts
 
-    def run(self, experiment, run_data={}, start_right_away=True):
+    def run(self, experiment, run_data={}, start_right_away=True, continue_right_away=False):
         if start_right_away:
             print "ExperimentController: setting up the experiment ..."
             self.start_experiment(experiment, run_data)
             print "ExperimentController: experiment in progress"
-
-        while True:
-            cmd = raw_input("Press \n\tq to exit experiment controller, \n\tt to terminate all worker nodes (/experiment_assemble_status->terminated),"
-                            "\n\ta to change assemble status to active (/experiment_assemble_status->active),\n\ts to see experiment status, "
-                            "\n\tc to remove all data from zookeeper (clean up storage for new experiments)"
-                            "\n\tr to run experiment again.\n")
-            if cmd == "q":
-                print("Exiting experiment controller")
-                self.zk.stop()
-                return
-            elif cmd == "t":
-                self.zk.set("/experiment_assemble_status", "terminated")
-            elif cmd == "a":
-                self.zk.set("/experiment_assemble_status", "active")
-            elif cmd == "s":
-               self.show_status()
-            elif cmd == "c":
-                self.clean_storage()
-            elif cmd == "r":
-                if experiment is not None:
-                    print "Running experiment again ..."
-                    self.start_experiment(experiment, run_data)
+        if not continue_right_away:
+            while True:
+                cmd = raw_input("Press \n\tq to exit experiment controller, \n\tt to terminate all worker nodes (/experiment_assemble_status->terminated),"
+                                "\n\ta to change assemble status to active (/experiment_assemble_status->active),\n\ts to see experiment status, "
+                                "\n\tc to remove all data from zookeeper (clean up storage for new experiments)"
+                                "\n\tr to run experiment again.\n")
+                if cmd == "q":
+                    print("Exiting experiment controller")
+                    self.zk.stop()
+                    return
+                elif cmd == "t":
+                    self.zk.set("/experiment_assemble_status", "terminated")
+                elif cmd == "a":
+                    self.zk.set("/experiment_assemble_status", "active")
+                elif cmd == "s":
+                   self.show_status()
+                elif cmd == "c":
+                    self.clean_storage()
+                elif cmd == "r":
+                    if experiment is not None:
+                        print "Running experiment again ..."
+                        self.start_experiment(experiment, run_data)
+                    else:
+                        print "Experiment object not defined."
                 else:
-                    print "Experiment object not defined."
-            else:
-                print "Unrecognized command " + cmd + "\n"
+                    print "Unrecognized command " + cmd + "\n"
 
     def set_experiment_completion_watcher(self, exp_id):
         @self.zk.DataWatch("/experiments/" + str(exp_id) + "/status")

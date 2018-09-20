@@ -93,7 +93,7 @@ class ZkGithubStateWorkProcessor(WorkProcessor):
         return memory_use
 
     def get_dependent_vars(self):
-        return {"num_agents": len(self.agents),
+        return {"num_agents": len(self.agents_decision_data),
                 "num_repos": sum([len(a.name_to_repo_id) for a in self.agents_decision_data.viewvalues()]),
                 "total_agent_activity": sum([a.total_activity for a in self.agents_decision_data.viewvalues()]),
                 "number_of_cross_process_communications": self.hub.sync_event_counter,
@@ -170,13 +170,16 @@ class ZkGithubStateTrial(Trial):
             dep_vars_file.write("\n")
         dep_vars_file.close()
         #all_exp_dep_vars.csv
-        dep_vars_file = open(str(self.output_file_name)[:-3] + "_all_exp_dep_vars.csv", 'a')
+        path_str = "" if self.output_file_name[0] != "/" else "/"
+        dep_vars_file = open(path_str.join(a + "/" for a in str(self.output_file_name).split("/")[:-1]) + "all_exp_dep_vars.csv", 'a')
         dep_vars_file.write(str(self.exp_id))
+        dep_vars_file.write(",")
+        dep_vars_file.write(str(self.output_file_name).split("/")[-1])
         dep_vars_file.write(",")
         for measure in self.measures:
             dep_vars_file.write(str(self.results[measure.name]))
             dep_vars_file.write(",")
-        dep_vars_file.write("0\n")
+        dep_vars_file.write("-0\n")
         dep_vars_file.close()
 
 if __name__ == "__main__":
@@ -208,7 +211,6 @@ if __name__ == "__main__":
     # if state file is not present, then create it. State file is created from input event log.
     # Users in the initial state are partitioned (number of hosts is the number of partitions)
     initial_state_file_name = input_event_log + "_state.json"
-    graph_updater = None
     if not os.path.isfile(initial_state_file_name):
         print initial_state_file_name + " file is not present, creating one. May take a while, please wait ..."
         build_state_from_event_log(input_event_log, number_of_hosts, initial_state_file_name,
@@ -252,14 +254,10 @@ if __name__ == "__main__":
 
     # ExperimentController is a until class that provides command line interface to run the experiment on clusters
     controller = DashController(zk_hosts=zk_hosts, number_of_hosts=number_of_hosts)
-
-    if graph_updater is None:
-        exp = Experiment(trial_class=ZkGithubStateTrial,
-                         work_processor_class=ZkGithubStateWorkProcessor,
-                         number_of_hosts=number_of_hosts,
-                         independent=independent,
-                         exp_data=experiment_data,
-                         num_trials=num_trials)
-        results = controller.run(experiment=exp, run_data={}, start_right_away=False)
-    else:
-        print "Non None graph_updater is not supported here"
+    exp = Experiment(trial_class=ZkGithubStateTrial,
+                     work_processor_class=ZkGithubStateWorkProcessor,
+                     number_of_hosts=number_of_hosts,
+                     independent=independent,
+                     exp_data=experiment_data,
+                     num_trials=num_trials)
+    results = controller.run(experiment=exp, run_data={}, start_right_away=False)

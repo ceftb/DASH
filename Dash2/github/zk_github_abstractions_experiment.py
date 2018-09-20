@@ -41,12 +41,16 @@ if __name__ == "__main__":
 
     # if state file is not present, then create it. State file is created from input event log.
     # Users in the initial state are partitioned (number of hosts is the number of partitions)
-    graph_updater = GraphUpdater(max_depth=100, max_number_of_user_nodes=100000, number_of_neighborhoods=100, number_of_graph_samples=2)
+    graph_updaters = [GraphUpdater(max_depth=50, max_number_of_user_nodes=1000, number_of_neighborhoods=200,
+                                   number_of_graph_samples=2),
+                      GraphUpdater(max_depth=10, max_number_of_user_nodes=1000, number_of_neighborhoods=100,
+                                   number_of_graph_samples=3)
+                      ]
     print "Creating initial state files. May take a while, please wait ..."
     build_state_from_event_log(input_event_log, number_of_hosts, None,
                                training_data_weight=training_data_weight,
                                initial_condition_data_weight=initial_condition_data_weight,
-                               graph_updater=graph_updater)
+                               graph_updaters=graph_updaters)
     print "Initial state files created."
 
     # length of the simulation is determined by two parameters: max_iterations_per_worker and end max_time
@@ -87,28 +91,21 @@ if __name__ == "__main__":
     # ExperimentController is a until class that provides command line interface to run the experiment on clusters
     controller = DashController(zk_hosts=zk_hosts, number_of_hosts=number_of_hosts)
 
-    if graph_updater is None:
-        exp = Experiment(trial_class=ZkGithubStateTrial,
-                         work_processor_class=ZkGithubStateWorkProcessor,
-                         number_of_hosts=number_of_hosts,
-                         independent=independent,
-                         exp_data=experiment_data,
-                         num_trials=num_trials)
-        results = controller.run(experiment=exp, run_data={}, start_right_away=False)
-    else:
+    run_number = 0
+    for index, graph_updater in enumerate(graph_updaters):
         for sample in range(0, graph_updater.number_of_graph_samples):
-            experiment_data["initial_state_file"] = input_event_log + str(sample) + "_state.json"
-            ZkGithubStateTrial.parameters[7] = Parameter('output_file_name', default=output_file_name + str(sample))
-
+            experiment_data["initial_state_file"] = input_event_log + str(run_number) + "_state.json"
+            ZkGithubStateTrial.parameters[7] = Parameter('output_file_name', default=output_file_name + str(run_number))
+            run_number += 1
             exp = Experiment(trial_class=ZkGithubStateTrial,
                              work_processor_class=ZkGithubStateWorkProcessor,
                              number_of_hosts=number_of_hosts,
                              independent=independent,
                              exp_data=experiment_data,
                              num_trials=num_trials)
-            if sample != graph_updater.number_of_graph_samples - 1:
-                results = controller.run(experiment=exp, run_data={}, start_right_away=True, continue_right_away=True)
-            else:
+            if (sample == graph_updater.number_of_graph_samples - 1) and (index == len(graph_updaters) - 1):
                 results = controller.run(experiment=exp, run_data={}, start_right_away=True, continue_right_away=False)
+            else:
+                results = controller.run(experiment=exp, run_data={}, start_right_away=True, continue_right_away=True)
 
 
