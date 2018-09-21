@@ -34,7 +34,7 @@ profiles file structure (used for both users and repos - relationship is symmetr
 '''
 
 def build_state_from_event_log(input_event_log, number_of_user_partitions=1, state_file_name=None, embedding_files=None,
-                               training_data_weight=1.0, initial_condition_data_weight=1.0, graph_updaters=None):
+                               training_data_weight=1.0, initial_condition_data_weight=1.0, initial_state_generators=None):
     graph, number_of_users, number_of_repos = build_graph_from_csv(input_event_log,
                                                                    event_filter=None,
                                                                    training_data_weight=training_data_weight,
@@ -42,63 +42,83 @@ def build_state_from_event_log(input_event_log, number_of_user_partitions=1, sta
     original_input_event_log = input_event_log
     print "User-repo graph constructed. Users ", number_of_users, ", repos ", number_of_repos, ", nodes ", len(graph.nodes()), ", edges", len(graph.edges())
 
-    run_number = 0
-    number_of_graph_updaters = len(graph_updaters) if graph_updaters is not None else 1
-    for graph_updater_index in range(0, number_of_graph_updaters):
-        graph_updater = graph_updaters[graph_updater_index]
-        number_of_graph_samples = graph_updater.number_of_graph_samples if graph_updater is not None else 1
-        for sample in range(0, number_of_graph_samples):
-            if number_of_graph_samples > 1 or len(graph_updaters) > 1:
-                input_event_log = input_event_log + str(run_number)
-            run_number += 1
-            print "Updating graph ..."
-            if graph_updater is not None:
-                G = graph_updater.update(graph, number_of_users)
-                number_of_users = graph_updater.max_number_of_user_nodes
-                number_of_repos = len(G.nodes) - graph_updater.max_number_of_user_nodes
-            else:
-                G = graph
-            print "Updated graph has ", len(G.nodes), "nodes and ", len(G.edges), " edges."
+    if initial_state_generators is None:
+        G =graph
+        partition_graph(G, number_of_user_partitions)
+        print "printing graph..."
+        print_user_profiles(G, input_event_log + "_users.json", number_of_user_partitions)
+        graph_file_name = input_event_log + "_UR_graph.pickle"
+        print_graph(G, graph_file_name)
+        users_neighborhood_sizes_file = input_event_log + "_users_neighborhood_sizes.pickle"
+        print_users_neighborhood_sizes(G, users_neighborhood_sizes_file)
 
-            partition_graph(G, number_of_user_partitions)
-            #print "shared repos ", len(shared_repos), ", shared users ", len(shared_users)
+        users_file = input_event_log + "_users.json"
+        repos_file = input_event_log + "_repos.json"
+        users_ids = input_event_log + "_users_id_dict.csv"
+        repos_ids = input_event_log + "_repos_id_dict.csv"
 
-            print "printing graph..."
-            print_user_profiles(G, input_event_log + "_users.json", number_of_user_partitions)
-            graph_file_name = input_event_log + "_UR_graph.pickle"
-            print_graph(G, graph_file_name)
-            users_neighborhood_sizes_file = input_event_log + "_users_neighborhood_sizes.pickle"
-            print_users_neighborhood_sizes(G, users_neighborhood_sizes_file)
-
-            users_file = input_event_log + "_users.json"
-            repos_file = input_event_log + "_repos.json"
-            users_ids = original_input_event_log + "_users_id_dict.csv" if number_of_graph_samples > 1 or len(graph_updaters) > 1\
-                else input_event_log + "_users_id_dict.csv"
-            repos_ids = original_input_event_log + "_repos_id_dict.csv" if number_of_graph_samples > 1 or len(graph_updaters) > 1 \
-                else input_event_log + "_repos_id_dict.csv"
-
-            state_file_content = {"meta":
-                {
-                    "number_of_users": number_of_users,
-                    "number_of_repos": number_of_repos,
-                    "users_file": users_file,
-                    "repos_file": repos_file,
-                    "users_ids": users_ids,
-                    "repos_ids": repos_ids,
-                    "number_of_partitions": number_of_user_partitions,
-                    "event_rate_model_file": "",
-                    "UR_graph_path": graph_file_name,
-                    "users_neighborhood_sizes_file": users_neighborhood_sizes_file
-                }
+        state_file_content = {"meta":
+            {
+                "number_of_users": number_of_users,
+                "number_of_repos": number_of_repos,
+                "users_file": users_file,
+                "repos_file": repos_file,
+                "users_ids": users_ids,
+                "repos_ids": repos_ids,
+                "number_of_partitions": number_of_user_partitions,
+                "event_rate_model_file": "",
+                "UR_graph_path": graph_file_name,
+                "users_neighborhood_sizes_file": users_neighborhood_sizes_file
             }
-            state_file_name = input_event_log + "_state.json"
-            state_file = open(state_file_name, 'w')
-            state_file.write(json.dumps(state_file_content))
-            state_file.close()
+        }
+        state_file_name = input_event_log + "_state.json"
+        state_file = open(state_file_name, 'w')
+        state_file.write(json.dumps(state_file_content))
+        state_file.close()
+    else:
+        run_number = 0
+        for state_generator in initial_state_generators:
+            for sample in range(0, state_generator.number_of_graph_samples):
+                input_event_log = original_input_event_log + str(run_number)
+                run_number += 1
+                print "Updating graph ..."
+                G = state_generator.update(graph, number_of_users)
+                number_of_users = state_generator.max_number_of_user_nodes
+                number_of_repos = len(G.nodes) - state_generator.max_number_of_user_nodes
+                print "Updated graph has ", len(G.nodes), "nodes and ", len(G.edges), " edges."
 
-            input_event_log = original_input_event_log if number_of_graph_samples > 1 or len(graph_updaters) > 1 \
-                else input_event_log
+                partition_graph(G, number_of_user_partitions)
 
+                print "printing graph..."
+                print_user_profiles(G, input_event_log + "_users.json", number_of_user_partitions)
+                graph_file_name = input_event_log + "_UR_graph.pickle"
+                print_graph(G, graph_file_name)
+                users_neighborhood_sizes_file = input_event_log + "_users_neighborhood_sizes.pickle"
+                print_users_neighborhood_sizes(G, users_neighborhood_sizes_file)
+
+                users_file = input_event_log + "_users.json"
+                repos_file = input_event_log + "_repos.json"
+                users_ids = original_input_event_log + "_users_id_dict.csv"
+                repos_ids = original_input_event_log + "_repos_id_dict.csv"
+
+                state_file_content = {"meta":
+                    {
+                        "number_of_users": number_of_users,
+                        "number_of_repos": number_of_repos,
+                        "users_file": users_file,
+                        "repos_file": repos_file,
+                        "users_ids": users_ids,
+                        "repos_ids": repos_ids,
+                        "number_of_partitions": number_of_user_partitions,
+                        "event_rate_model_file": "",
+                        "UR_graph_path": graph_file_name,
+                        "users_neighborhood_sizes_file": users_neighborhood_sizes_file
+                    }
+                }
+                state_file_name = input_event_log + "_state.json"
+                state_file = open(state_file_name, 'w')
+                state_file.write(json.dumps(state_file_content))
+                state_file.close()
     return None
 
 def read_state_file(filename):
@@ -115,7 +135,7 @@ def load_profiles(filename, profile_handler):
                 break
         f.close()
 
-class GraphUpdater(object):
+class InitialStateSampleGenerator(object):
 
     def __init__(self, max_depth, max_number_of_user_nodes, number_of_neighborhoods, number_of_graph_samples):
         self.max_depth = max_depth if max_depth % 2 == 1 else max_depth + 1 # must be odd number

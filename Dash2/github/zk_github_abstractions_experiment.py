@@ -8,7 +8,7 @@ from Dash2.core.parameter import Parameter
 from Dash2.core.experiment import Experiment
 from Dash2.core.dash_controller import DashController
 from Dash2.github.initial_state_loader import build_state_from_event_log, read_state_file, load_profiles, \
-    populate_embedding_probabilities, populate_event_rate, GraphUpdater
+    populate_embedding_probabilities, populate_event_rate, InitialStateSampleGenerator
 
 from zk_github_state_experiment import ZkGithubStateTrial, ZkGithubStateWorkProcessor
 
@@ -41,16 +41,16 @@ if __name__ == "__main__":
 
     # if state file is not present, then create it. State file is created from input event log.
     # Users in the initial state are partitioned (number of hosts is the number of partitions)
-    graph_updaters = [GraphUpdater(max_depth=50, max_number_of_user_nodes=1000, number_of_neighborhoods=200,
-                                   number_of_graph_samples=2),
-                      GraphUpdater(max_depth=10, max_number_of_user_nodes=1000, number_of_neighborhoods=100,
-                                   number_of_graph_samples=3)
+    graph_updaters = [InitialStateSampleGenerator(max_depth=50, max_number_of_user_nodes=1000, number_of_neighborhoods=200,
+                                                  number_of_graph_samples=2),
+                      InitialStateSampleGenerator(max_depth=10, max_number_of_user_nodes=1000, number_of_neighborhoods=100,
+                                                  number_of_graph_samples=3)
                       ]
     print "Creating initial state files. May take a while, please wait ..."
     build_state_from_event_log(input_event_log, number_of_hosts, None,
                                training_data_weight=training_data_weight,
                                initial_condition_data_weight=initial_condition_data_weight,
-                               graph_updaters=graph_updaters)
+                               initial_state_generators=graph_updaters)
     print "Initial state files created."
 
     # length of the simulation is determined by two parameters: max_iterations_per_worker and end max_time
