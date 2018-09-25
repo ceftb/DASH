@@ -41,17 +41,30 @@ if __name__ == "__main__":
 
     # if state file is not present, then create it. State file is created from input event log.
     # Users in the initial state are partitioned (number of hosts is the number of partitions)
-    graph_updaters = [InitialStateSampleGenerator(max_depth=50, max_number_of_user_nodes=1000, number_of_neighborhoods=200,
-                                                  number_of_graph_samples=2),
-                      InitialStateSampleGenerator(max_depth=10, max_number_of_user_nodes=1000, number_of_neighborhoods=100,
-                                                  number_of_graph_samples=3)
-                      ]
-    print "Creating initial state files. May take a while, please wait ..."
-    build_state_from_event_log(input_event_log, number_of_hosts, None,
-                               training_data_weight=training_data_weight,
-                               initial_condition_data_weight=initial_condition_data_weight,
-                               initial_state_generators=graph_updaters)
-    print "Initial state files created."
+    graph_updaters = [InitialStateSampleGenerator(max_depth=25, max_number_of_user_nodes=100000, number_of_neighborhoods=200,
+                                                  number_of_graph_samples=1),
+                      InitialStateSampleGenerator(max_depth=25, max_number_of_user_nodes=200000, number_of_neighborhoods=200,
+                                                  number_of_graph_samples=1),
+                      InitialStateSampleGenerator(max_depth=25, max_number_of_user_nodes=400000, number_of_neighborhoods=200,
+                                                  number_of_graph_samples=1),
+                      InitialStateSampleGenerator(max_depth=25, max_number_of_user_nodes=800000, number_of_neighborhoods=200,
+                                                  number_of_graph_samples=1),
+                      InitialStateSampleGenerator(max_depth=25, max_number_of_user_nodes=1000000, number_of_neighborhoods=10000,
+                                                  number_of_graph_samples=1)]
+                     # InitialStateSampleGenerator(max_depth=25, max_number_of_user_nodes=1200000, number_of_neighborhoods=100000,
+                     #                             number_of_graph_samples=1),
+                     # InitialStateSampleGenerator(max_depth=25, max_number_of_user_nodes=1400000, number_of_neighborhoods=500000,
+                     #                              number_of_graph_samples=1),
+                     #InitialStateSampleGenerator(max_depth=25, max_number_of_user_nodes=1800000, number_of_neighborhoods=1000000,
+                     #                              number_of_graph_samples=1)
+                     # ]
+    
+    #print "Creating initial state files. May take a while, please wait ..."
+    #build_state_from_event_log(input_event_log, number_of_hosts, None,
+    #                           training_data_weight=training_data_weight,
+    #                           initial_condition_data_weight=initial_condition_data_weight,
+    #                           initial_state_generators=graph_updaters)
+    #print "Initial state files created."
 
     # length of the simulation is determined by two parameters: max_iterations_per_worker and end max_time
     # max_iterations_per_worker - defines maximum number of events each dash worker can do
