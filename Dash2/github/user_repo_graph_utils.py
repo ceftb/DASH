@@ -294,9 +294,23 @@ def subsample(G, max_depth, max_number_of_user_nodes, number_of_start_nodes, num
     sub_sample_G = nx.Graph()    #G = nx.Graph()
     user_nodes = set()
     number_of_components = 0
+    all_users = []
+    for node in G.nodes:
+        if G.nodes[node]["isU"] == 1:
+            all_users.append(int(node))
     for iter_index in range(0, number_of_start_nodes):
-        node_index = random.randint(0, number_of_users_in_G - 1)
-        for u, v in nx.dfs_edges(G, node_index, max_depth):
+        stop_immediatly = False
+        for attempt in range(0, 1000):
+            node_index = random.randint(0, len(all_users) - 1)
+            node = all_users.pop(int(node_index))
+            if node not in user_nodes:
+                break
+            if attempt == 999:
+                print "Faild to find start node"
+                stop_immediatly = True
+        if stop_immediatly:
+            break
+        for u, v in nx.dfs_edges(G, node, max_depth):
             edge_data = G.get_edge_data(u, v)
             sub_sample_G.add_edge(u, v, **edge_data)
             u_node_data = G.nodes[u]
@@ -305,8 +319,12 @@ def subsample(G, max_depth, max_number_of_user_nodes, number_of_start_nodes, num
             sub_sample_G.add_node(v, **v_node_data)
             if u_node_data["isU"] == 1:
                 user_nodes.add(int(u))
+                #if int(u) in all_users:
+                #    all_users.remove(int(u))
             if v_node_data["isU"] == 1:
                 user_nodes.add(int(v))
+                #if int(v) in all_users:
+                #    all_users.remove(int(v))
             if len(user_nodes) > max_number_of_user_nodes - 1:
                 break
         number_of_components += 1
