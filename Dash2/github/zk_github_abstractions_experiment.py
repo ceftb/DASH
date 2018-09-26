@@ -8,7 +8,8 @@ from Dash2.core.parameter import Parameter
 from Dash2.core.experiment import Experiment
 from Dash2.core.dash_controller import DashController
 from Dash2.github.initial_state_loader import build_state_from_event_log, read_state_file, load_profiles, \
-    populate_embedding_probabilities, populate_event_rate, InitialStateSampleGenerator
+    populate_embedding_probabilities, populate_event_rate, InitialStateSampleGenerator, \
+    InitialStateSimpleSampleGenerator
 
 from zk_github_state_experiment import ZkGithubStateTrial, ZkGithubStateWorkProcessor
 
@@ -49,22 +50,18 @@ if __name__ == "__main__":
                                                   number_of_graph_samples=1),
                       InitialStateSampleGenerator(max_depth=25, max_number_of_user_nodes=800000, number_of_neighborhoods=200,
                                                   number_of_graph_samples=1),
-                      InitialStateSampleGenerator(max_depth=25, max_number_of_user_nodes=1000000, number_of_neighborhoods=10000,
-                                                  number_of_graph_samples=1)]
-                     # InitialStateSampleGenerator(max_depth=25, max_number_of_user_nodes=1200000, number_of_neighborhoods=100000,
-                     #                             number_of_graph_samples=1),
-                     # InitialStateSampleGenerator(max_depth=25, max_number_of_user_nodes=1400000, number_of_neighborhoods=500000,
-                     #                              number_of_graph_samples=1),
-                     #InitialStateSampleGenerator(max_depth=25, max_number_of_user_nodes=1800000, number_of_neighborhoods=1000000,
-                     #                              number_of_graph_samples=1)
-                     # ]
-    
-    #print "Creating initial state files. May take a while, please wait ..."
-    #build_state_from_event_log(input_event_log, number_of_hosts, None,
-    #                           training_data_weight=training_data_weight,
-    #                           initial_condition_data_weight=initial_condition_data_weight,
-    #                           initial_state_generators=graph_updaters)
-    #print "Initial state files created."
+                      InitialStateSimpleSampleGenerator(1000000, 1),
+                      InitialStateSimpleSampleGenerator(1200000, 1),
+                      InitialStateSimpleSampleGenerator(1400000, 1),
+                      InitialStateSimpleSampleGenerator(1800000, 1)
+                      ]
+
+    print "Creating initial state files. May take a while, please wait ..."
+    build_state_from_event_log(input_event_log, number_of_hosts, None,
+                               training_data_weight=training_data_weight,
+                               initial_condition_data_weight=initial_condition_data_weight,
+                               initial_state_generators=graph_updaters)
+    print "Initial state files created."
 
     # length of the simulation is determined by two parameters: max_iterations_per_worker and end max_time
     # max_iterations_per_worker - defines maximum number of events each dash worker can do

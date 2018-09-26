@@ -252,8 +252,8 @@ def build_graph_from_csv(csv_event_log_file, event_filter=None, training_data_we
     with open(csv_event_log_file, "rb") as csvfile:
         datareader = csv.reader(csvfile)
         counter = 0
-        training_data_start_date = None
-        training_data_end_date = None
+        training_data_start_date = 1937955660
+        training_data_end_date = 0
         for row in datareader:
             if row[0] != "timestamp":
                 event_type = row[1]
@@ -264,9 +264,10 @@ def build_graph_from_csv(csv_event_log_file, event_filter=None, training_data_we
                 except:
                     event_time = datetime.strptime(row[0], "%Y-%m-%dT%H:%M:%SZ")
                 event_time = time.mktime(event_time.timetuple())
-                if training_data_start_date is None:
+                if training_data_start_date > event_time:
                     training_data_start_date = event_time
-                training_data_end_date = event_time
+                if training_data_end_date < event_time:
+                    training_data_end_date = event_time
                 if event_filter is None or event_type in event_filter:
                     user_id, repo_id = ids_dictionary_stream.update_dictionary(row[2], row[3])
                     user_repo_graph_builder.update_graph(repo_id, user_id, event_type, event_time,
@@ -331,6 +332,24 @@ def subsample(G, max_depth, max_number_of_user_nodes, number_of_start_nodes, num
         if len(user_nodes) > max_number_of_user_nodes - 1:
             break
     print "Users in updated graph ", len(user_nodes), " components ", number_of_components
+
+    return sub_sample_G
+
+def subsample2(G, max_number_of_user_nodes, number_of_users_in_G):
+    """
+    Returns a sub-graph of G with number_of_users_in_G - max_number_of_user_nodes users
+    """
+    sub_sample_G = nx.Graph(G)
+    all_users = []
+    for node in G.nodes:
+        if G.nodes[node]["isU"] == 1:
+            all_users.append(int(node))
+
+    for user_to_remove in range(0, number_of_users_in_G - max_number_of_user_nodes - 1):
+        node = all_users.pop(random.randint(0, len(all_users) - 1))
+        sub_sample_G.remove_node(node)
+
+    print "Users in updated graph ", max_number_of_user_nodes
 
     return sub_sample_G
 
