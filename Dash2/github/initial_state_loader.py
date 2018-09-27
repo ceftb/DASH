@@ -6,7 +6,7 @@ import numpy as np
 import cPickle as pickle
 from distributed_event_log_utils import load_id_dictionary, collect_unique_user_event_pairs
 from user_repo_graph_utils import build_graph_from_csv, partition_graph, print_user_profiles, print_graph,\
-print_users_neighborhood_sizes, subsample, subsample2, subsample_teams
+print_users_neighborhood_sizes, subsample, subsample2
 
 from distributed_event_log_utils import event_types
 
@@ -82,7 +82,7 @@ def build_state_from_event_log(input_event_log, number_of_user_partitions=1, sta
                 input_event_log = original_input_event_log + str(run_number)
                 run_number += 1
                 print "Updating graph ..."
-                G = state_generator.update(graph, number_of_users)
+                G = state_generator.update(graph)
                 number_of_users = state_generator.max_number_of_user_nodes
                 number_of_repos = len(G.nodes) - state_generator.max_number_of_user_nodes
                 print "Updated graph has ", len(G.nodes), "nodes and ", len(G.edges), " edges."
@@ -143,11 +143,9 @@ class InitialStateSampleGenerator(object):
         self.number_of_neighborhoods = number_of_neighborhoods
         self.number_of_graph_samples = number_of_graph_samples
 
-    def update(self, G, number_of_users_in_G):
-        #neighborhood_start_nodes = pick_random_seeds(G, self.number_of_neighborhoods, number_of_users)
+    def update(self, G):
         sub_sample_G = subsample(G, self.max_depth, self.max_number_of_user_nodes,
-                                 number_of_start_nodes=self.number_of_neighborhoods,
-                                 number_of_users_in_G=number_of_users_in_G)
+                                 number_of_start_nodes=self.number_of_neighborhoods)
         return sub_sample_G
 
 class InitialStateSimpleSampleGenerator(object):
@@ -156,19 +154,8 @@ class InitialStateSimpleSampleGenerator(object):
         self.max_number_of_user_nodes = max_number_of_user_node
         self.number_of_graph_samples = number_of_graph_sampless
 
-    def update(self, G, number_of_users_in_G):
-        sub_sample_G = subsample2(G, self.max_number_of_user_nodes, number_of_users_in_G)
-        return sub_sample_G
-
-class InitialStateGraphGenerator(object):
-
-    def __init__(self, max_number_of_teams, number_of_graph_sampless):
-        self.max_number_of_user_nodes = max_number_of_teams
-        self.max_number_of_teams = max_number_of_teams
-        self.number_of_graph_samples = number_of_graph_sampless
-
-    def update(self, G, number_of_users_in_G):
-        sub_sample_G = subsample_teams(G, self.max_number_of_teams, number_of_users_in_G)
+    def update(self, G):
+        sub_sample_G = subsample2(G, self.max_number_of_user_nodes)
         return sub_sample_G
 
 '''

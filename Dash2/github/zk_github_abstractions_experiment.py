@@ -42,14 +42,14 @@ if __name__ == "__main__":
 
     # if state file is not present, then create it. State file is created from input event log.
     # Users in the initial state are partitioned (number of hosts is the number of partitions)
-    graph_updaters = [InitialStateSampleGenerator(max_depth=25, max_number_of_user_nodes=100000, number_of_neighborhoods=200,
-                                                  number_of_graph_samples=1),
-                      InitialStateSampleGenerator(max_depth=25, max_number_of_user_nodes=200000, number_of_neighborhoods=200,
-                                                  number_of_graph_samples=1),
-                      InitialStateSampleGenerator(max_depth=25, max_number_of_user_nodes=400000, number_of_neighborhoods=200,
-                                                  number_of_graph_samples=1),
-                      InitialStateSampleGenerator(max_depth=25, max_number_of_user_nodes=800000, number_of_neighborhoods=200,
-                                                  number_of_graph_samples=1),
+    graph_updaters = [#InitialStateSampleGenerator(max_depth=25, max_number_of_user_nodes=100000, number_of_neighborhoods=200,
+                       #                           number_of_graph_samples=1),
+                      #InitialStateSampleGenerator(max_depth=25, max_number_of_user_nodes=200000, number_of_neighborhoods=200,
+                       #                           number_of_graph_samples=1),
+                      #InitialStateSampleGenerator(max_depth=25, max_number_of_user_nodes=400000, number_of_neighborhoods=200,
+                       #                           number_of_graph_samples=1),
+                      #InitialStateSampleGenerator(max_depth=25, max_number_of_user_nodes=800000, number_of_neighborhoods=200,
+                       #                           number_of_graph_samples=1),
                       InitialStateSimpleSampleGenerator(1000000, 1),
                       InitialStateSimpleSampleGenerator(1200000, 1),
                       InitialStateSimpleSampleGenerator(1400000, 1),

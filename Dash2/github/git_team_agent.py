@@ -18,6 +18,9 @@ class GitTeamDecisionData(GitUserDecisionData):
         self.id = profile.pop("id", None)
         self.event_rate = profile.pop("r", 5)  # number of events per month
 
+        # frequency of user activity within a team:
+        user_id_to_freq = {int(user_id): int(freq["f"]) for user_id, freq in profile["team"].iteritems()}
+
         # frequency of use of associated repos:
         repo_id_to_freq = {int(repo_id) : int(freq["f"]) for repo_id, freq in profile["all_repos"].iteritems()}
         self.all_known_repos = []
@@ -62,7 +65,9 @@ class GitTeamAgentMixin(GitUserMixin):
 
         if pair.event_index == 14: #selected_event == "CreateEvent/new":
             selected_event = "CreateEvent"
-        self.hub.log_event(self.decision_data.id, selected_repo, selected_event, None, self.hub.time)
+        # select user id
+        user_id = random_pick_sorted(self.decision_data.user_id_to_freq.keys(), self.decision_data.user_id_to_freq.imtems())
+        self.hub.log_event(user_id, selected_repo, selected_event, None, self.hub.time)
         self.decision_data.total_activity += 1
 
         return False

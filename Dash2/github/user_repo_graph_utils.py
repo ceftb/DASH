@@ -288,7 +288,7 @@ def build_graph_from_csv(csv_event_log_file, event_filter=None, training_data_we
 
     return user_repo_graph_builder.graph, len(ids_dictionary_stream.users), len(ids_dictionary_stream.repos)
 
-def subsample(G, max_depth, max_number_of_user_nodes, number_of_start_nodes, number_of_users_in_G):
+def subsample(G, max_depth, max_number_of_user_nodes, number_of_start_nodes):
     """
     Returns a sub-graph of G. Sub-graph is composed from neighborhoods. Each neighborhood is built as DFS path starting
     from a seed.
@@ -336,7 +336,7 @@ def subsample(G, max_depth, max_number_of_user_nodes, number_of_start_nodes, num
 
     return sub_sample_G
 
-def subsample2(G, max_number_of_user_nodes, number_of_users_in_G):
+def subsample2(G, max_number_of_user_nodes):
     """
     Returns a sub-graph of G with number_of_users_in_G - max_number_of_user_nodes users
     """
@@ -345,33 +345,13 @@ def subsample2(G, max_number_of_user_nodes, number_of_users_in_G):
     for node in G.nodes:
         if G.nodes[node]["isU"] == 1:
             all_users.append(int(node))
+    number_of_users_in_G = len(all_users)
 
     for user_to_remove in range(0, number_of_users_in_G - max_number_of_user_nodes - 1):
         node = all_users.pop(random.randint(0, len(all_users) - 1))
         sub_sample_G.remove_node(node)
 
     print "Users in updated graph ", max_number_of_user_nodes
-
-    return sub_sample_G
-
-
-def subsample_teams(G, max_number_of_teams, number_of_users_in_G):
-    """
-    Returns a sub-graph of G with teams (k-cliques) removed
-    """
-    sub_sample_G = nx.Graph(G)
-
-    communities = list(k_clique_communities(G, 3))
-    print "Total number of communities: ", len(communities)
-
-    users_removed = 0
-    for community in communities:
-        for node in community:
-            if sub_sample_G.nodes[node]["isU"] == 1:
-                sub_sample_G.remove_node(node)
-                users_removed += 1
-
-    print "Users in updated graph ", max_number_of_teams, "users removed: ", users_removed, "users left: ", (number_of_users_in_G - users_removed)
 
     return sub_sample_G
 
