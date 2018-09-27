@@ -6,7 +6,7 @@ import numpy as np
 import cPickle as pickle
 from distributed_event_log_utils import load_id_dictionary, collect_unique_user_event_pairs
 from user_repo_graph_utils import build_graph_from_csv, partition_graph, print_user_profiles, print_graph,\
-print_users_neighborhood_sizes, subsample, subsample2
+print_users_neighborhood_sizes, subsample, subsample2, subsample_teams
 
 from distributed_event_log_utils import event_types
 
@@ -158,6 +158,17 @@ class InitialStateSimpleSampleGenerator(object):
 
     def update(self, G, number_of_users_in_G):
         sub_sample_G = subsample2(G, self.max_number_of_user_nodes, number_of_users_in_G)
+        return sub_sample_G
+
+class InitialStateGraphGenerator(object):
+
+    def __init__(self, max_number_of_teams, number_of_graph_sampless):
+        self.max_number_of_user_nodes = max_number_of_teams
+        self.max_number_of_teams = max_number_of_teams
+        self.number_of_graph_samples = number_of_graph_sampless
+
+    def update(self, G, number_of_users_in_G):
+        sub_sample_G = subsample_teams(G, self.max_number_of_teams, number_of_users_in_G)
         return sub_sample_G
 
 '''

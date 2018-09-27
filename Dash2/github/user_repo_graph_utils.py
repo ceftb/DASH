@@ -8,6 +8,7 @@ import pickle
 from distributed_event_log_utils import event_types, event_types_indexes
 from datetime import datetime
 import random
+from networkx.algorithms.community import k_clique_communities
 
 
 class GraphBuilder:
@@ -353,6 +354,28 @@ def subsample2(G, max_number_of_user_nodes, number_of_users_in_G):
 
     return sub_sample_G
 
+
+def subsample_teams(G, max_number_of_teams, number_of_users_in_G):
+    """
+    Returns a sub-graph of G with teams (k-cliques) removed
+    """
+    sub_sample_G = nx.Graph(G)
+
+    communities = list(k_clique_communities(G, 3))
+    print "Total number of communities: ", len(communities)
+
+    users_removed = 0
+    for community in communities:
+        for node in community:
+            if sub_sample_G.nodes[node]["isU"] == 1:
+                sub_sample_G.remove_node(node)
+                users_removed += 1
+
+    print "Users in updated graph ", max_number_of_teams, "users removed: ", users_removed, "users left: ", (number_of_users_in_G - users_removed)
+
+    return sub_sample_G
+
+
 if __name__ == "__main__":
     if len(sys.argv) == 3:
         filename = sys.argv[1]
@@ -418,5 +441,6 @@ if __name__ == "__main__":
             print "Time ", end_time - start_time, " sec."
         else:
             print "Unrecognized command " + cmd + "\n"
+
 
 
