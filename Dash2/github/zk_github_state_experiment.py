@@ -94,8 +94,8 @@ class ZkGithubStateWorkProcessor(WorkProcessor):
 
     def get_dependent_vars(self):
         return {"num_agents": len(self.agents_decision_data),
-                "num_repos": sum([len(a.name_to_repo_id) for a in self.agents_decision_data.viewvalues()]),
-                "total_agent_activity": sum([a.total_activity for a in self.agents_decision_data.viewvalues()]),
+                #"num_repos": sum([len(a.name_to_repo_id) for a in self.agents_decision_data.viewvalues()]),
+                #"total_agent_activity": sum([a.total_activity for a in self.agents_decision_data.viewvalues()]),
                 "number_of_cross_process_communications": self.hub.sync_event_counter,
                 "memory_usage": self.hub.memory_usage,
                 "runtime": time.time() - self.task_start_time

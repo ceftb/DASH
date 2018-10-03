@@ -89,8 +89,6 @@ class GitUserMixin(object):
     perform basic actions. Can be inherited to perform other specific functions.
     """
 
-    decision_object_class_name = "GitUserDecisionData"
-
     def _new_empty_decision_object(self):
         return GitUserDecisionData()
 
