@@ -1,8 +1,7 @@
 from Dash2.core.dash import DASHAgent
 from git_user_agent import GitUserMixin, GitUserDecisionData
 import random
-import numpy
-from distributed_event_log_utils import event_types, event_types_indexes, random_pick_notsorted, random_pick_sorted
+from Dash2.socsim.distributed_event_log_utils import event_types, event_types_indexes, random_pick_notsorted, random_pick_sorted
 
 # Similar to GitUserDecisionData, encapsulates any agent-specific data to minimize creation of DASHAgent objects
 class IUDecisionData(GitUserDecisionData):

@@ -4,8 +4,7 @@ from Dash2.github.zk_repo import ZkRepo
 from Dash2.github.git_repo_hub import GitRepoHub
 import datetime
 import random
-from user_repo_graph_utils import IdDictionaryStream
-from distributed_event_log_utils import random_pick_sorted
+from Dash2.socsim.distributed_event_log_utils import random_pick_sorted
 
 # Zookeeper repository hub
 class ZkRepoHub(GitRepoHub):

@@ -1,6 +1,6 @@
 from Dash2.core.dash import DASHAgent
 from git_user_agent import GitUserMixin, GitUserDecisionData
-from distributed_event_log_utils import event_types, event_types_indexes, sort_data_and_prob_to_cumulative_array, random_pick_sorted
+from Dash2.socsim.distributed_event_log_utils import event_types, sort_data_and_prob_to_cumulative_array, random_pick_sorted
 
 class EventRepoPair:
     def __init__(self, event_index, repo_id):

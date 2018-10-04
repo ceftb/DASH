@@ -2,7 +2,7 @@
 # This scrip installs Apache Zookeeper and Kazoo python library (zookeeper client API for Python). 
 # Tested on Ubuntu 16.04 LTS
 
-CONFIG_FILE_PATH=./deter.conf # path is relative to $WEBDASH_CLONE/Dash2/github/
+CONFIG_FILE_PATH=./deter.conf # path is relative to $WEBDASH_CLONE/Dash2/socsim/
 
 function perform_action_on_all_nodes {
 	SCRIPT_NAME=$0
@@ -14,7 +14,7 @@ function perform_action_on_all_nodes {
 	for ID in `seq 1 $NUMBER_OF_NODES`;
 		do
 			echo $ACTION'ing Zookeeper on node ' ${ZK_NODES[$ID-1]}
-			ssh ${ZK_NODES[$ID-1]} "tmux new-session -d bash $WEBDASH_CLONE/Dash2/github/$SCRIPT_NAME $ID $WEBDASH_CLONE $ACTION"
+			ssh ${ZK_NODES[$ID-1]} "tmux new-session -d bash $WEBDASH_CLONE/Dash2/socsim/$SCRIPT_NAME $ID $WEBDASH_CLONE $ACTION"
 		done
 	
 	echo "Zookeeper action ($ACTION) completed on all nodes"
@@ -25,7 +25,7 @@ function perfom_action_on_single_node {
 	WEBDASH_CLONE=$2
 	ACTION=$3
 
-	cd $WEBDASH_CLONE/Dash2/github/
+	cd $WEBDASH_CLONE/Dash2/socsim/
 	source $CONFIG_FILE_PATH # defines $ZK_NODES
 
 	ZK_CONF=/etc/zookeeper/conf/zoo.cfg 
@@ -52,7 +52,7 @@ function perfom_action_on_single_node {
 		sudo chmod go+rw $ZK_ID
 		sudo echo $CURR_NODE_ID > $ZK_ID
 		sudo chmod go+rw $ZK_CONF
-		sudo cat $WEBDASH_CLONE/Dash2/github/zoo.conf > $ZK_CONF
+		sudo cat $WEBDASH_CLONE/Dash2/socsim/zoo.conf > $ZK_CONF
 
 		# appending other nodes to zookeeper config file
 		NUMBER_OF_NODES=${#ZK_NODES[@]}

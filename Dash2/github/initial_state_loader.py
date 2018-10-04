@@ -4,11 +4,11 @@ import os.path
 import time
 import numpy as np
 import cPickle as pickle
-from distributed_event_log_utils import load_id_dictionary, collect_unique_user_event_pairs
+from Dash2.socsim.distributed_event_log_utils import load_id_dictionary, collect_unique_user_event_pairs
 from user_repo_graph_utils import build_graph_from_csv, partition_graph, print_user_profiles, print_graph,\
 print_users_neighborhood_sizes, subsample, subsample2
 
-from distributed_event_log_utils import event_types
+from Dash2.socsim.distributed_event_log_utils import event_types
 
 '''
 state file structure:

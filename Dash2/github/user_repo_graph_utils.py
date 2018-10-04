@@ -5,10 +5,9 @@ import networkx as nx
 import json
 import metis
 import pickle
-from distributed_event_log_utils import event_types, event_types_indexes
+from Dash2.socsim.distributed_event_log_utils import event_types, event_types_indexes
 from datetime import datetime
 import random
-from networkx.algorithms.community import k_clique_communities
 
 
 class GraphBuilder:

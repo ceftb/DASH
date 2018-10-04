@@ -3,7 +3,7 @@ from Dash2.core.dash import DASHAgent
 from Dash2.core.system2 import isVar
 import random
 import numpy
-from distributed_event_log_utils import event_types, random_pick_notsorted
+from Dash2.socsim.distributed_event_log_utils import event_types, random_pick_notsorted
 
 
 class GitUserDecisionData(object):

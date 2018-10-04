@@ -2,7 +2,7 @@
 #### STANDALONE INSTALLATION  (with single dash worker)##
 #########################################################
 To install Zookeeper and other external dependencies on Ubuntu, you need to clone some repos first and update the
-following variables in webdash/Dash2/github/standalone_install.sh :
+following variables in webdash/Dash2/socsim/standalone_install.sh :
 
     ########## installation configuration ##########
     ################################################
@@ -31,7 +31,7 @@ following variables in webdash/Dash2/github/standalone_install.sh :
     TMP_DIR=.
 
 Then install software by calling (do it only once). It will require sudo
-bash webdash/Dash2/github/standalone_install.sh
+bash webdash/Dash2/socsim/standalone_install.sh
 
 To run an experiment to go webdash/Dash2/github/ directory and then:
 1. start worker in separate terminal by calling
