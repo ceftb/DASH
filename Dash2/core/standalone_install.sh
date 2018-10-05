@@ -51,7 +51,7 @@ function install_on_all_nodes {
 	for ID in `seq 1 $NUMBER_OF_NODES`;
 		do
 			echo 'Installing software packages on node ' ${DASH_NODES[$ID-1]}
-			#ssh ${DASH_NODES[$ID-1]} "tmux new-session -d bash $WEBDASH_CLONE/Dash2/socsim/software_install.sh $ID $KAZOO_CLONE $TMP_DIR $IJSON_CLONE $NETWORKX_CLONE $METIS_CLONE $NUMPY_CLONE $PSUTILS_CLONE"
+			#ssh ${DASH_NODES[$ID-1]} "tmux new-session -d bash $WEBDASH_CLONE/Dash2/core/software_install.sh $ID $KAZOO_CLONE $TMP_DIR $IJSON_CLONE $NETWORKX_CLONE $METIS_CLONE $NUMPY_CLONE $PSUTILS_CLONE"
 			install_on_single_instance $ID $KAZOO_CLONE $TMP_DIR $IJSON_CLONE $NETWORKX_CLONE $METIS_CLONE $NUMPY_CLONE $PSUTILS_CLONE
 		done
 	
@@ -142,7 +142,7 @@ function install_zookeeper {
 	WEBDASH_CLONE=$1
 	ACTION=$2
 
-	cd $WEBDASH_CLONE/Dash2/socsim/
+	cd $WEBDASH_CLONE/Dash2/core/
 	#source $CONFIG_FILE_PATH # defines $ZK_NODES
     # A list of physical nodes where dash workeres will be instantiated.
     DASH_NODES=( localhost )
@@ -175,7 +175,7 @@ function install_zookeeper {
 		sudo chmod go+rw $ZK_ID
 		sudo echo $CURR_NODE_ID > $ZK_ID
 		sudo chmod go+rw $ZK_CONF
-		sudo cat $WEBDASH_CLONE/Dash2/socsim/zoo.conf > $ZK_CONF
+		sudo cat $WEBDASH_CLONE/Dash2/core/zoo.conf > $ZK_CONF
 
 		# appending other nodes to zookeeper config file
 		NUMBER_OF_NODES=${#ZK_NODES[@]}
@@ -208,7 +208,7 @@ function install_zookeeper {
 }
 
 function run_external_script_on_all_nodes {
-	source ../socsim/deter.conf
+	source deter.conf
 	FULL_SCRIPT_PATH=$1
 
 	NUMBER_OF_NODES=${#DASH_NODES[@]}

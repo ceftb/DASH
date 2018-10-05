@@ -3,14 +3,14 @@
 # Tested on Ubuntu 16.04 LTS
 
 function install_on_all_nodes {
-	source ../socsim/deter.conf
+	source deter.conf
 
 	NUMBER_OF_NODES=${#DASH_NODES[@]}
 	echo 'Total ' $NUMBER_OF_NODES ' workers in assemble'
 	for ID in `seq 1 $NUMBER_OF_NODES`;
 		do
 			echo 'Installing software packages on node ' ${DASH_NODES[$ID-1]}
-			ssh ${DASH_NODES[$ID-1]} "tmux new-session -d bash $WEBDASH_CLONE/Dash2/socsim/software_install.sh $ID $KAZOO_CLONE $TMP_DIR $IJSON_CLONE $NETWORKX_CLONE $METIS_CLONE $NUMPY_CLONE $PSUTILS_CLONE"
+			ssh ${DASH_NODES[$ID-1]} "tmux new-session -d bash $WEBDASH_CLONE/Dash2/core/software_install.sh $ID $KAZOO_CLONE $TMP_DIR $IJSON_CLONE $NETWORKX_CLONE $METIS_CLONE $NUMPY_CLONE $PSUTILS_CLONE"
 		done
 	
 	echo "Software installation started on all nodes"
@@ -97,7 +97,7 @@ function install_on_single_instance {
 }
 
 function run_external_script_on_all_nodes {
-	source ../socsim/deter.conf
+	source deter.conf
 	FULL_SCRIPT_PATH=$1
 
 	NUMBER_OF_NODES=${#DASH_NODES[@]}
