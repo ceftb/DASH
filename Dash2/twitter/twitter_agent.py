@@ -1,6 +1,6 @@
 from Dash2.core.dash import DASHAgent
 from Dash2.socsim.socsim_agent import SocsimDecisionData, SocsimMixin
-from Dash2.socsim.distributed_event_log_utils import event_types, sort_data_and_prob_to_cumulative_array, random_pick_sorted
+from Dash2.socsim.output_event_log_utils import event_types, sort_data_and_prob_to_cumulative_array, random_pick_sorted
 
 class TweetActionPair:
     def __init__(self, event_index, repo_id):

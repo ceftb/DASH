@@ -6,7 +6,7 @@ import time
 import numpy as np
 import cPickle as pickle
 import ijson
-
+from datetime import datetime
 
 
 class IdDictionaryStream:
@@ -59,11 +59,11 @@ class GraphBuilder:
     A class that creates user&resource (e.g. user-repo graph for github, user graph for twitter and reddit) graph from events
     """
     def __init__(self, input_events):
-        self.input_events = input_events
+        self.input_events_file_name = input_events
         self.event_counter = 0
         self.graph = nx.Graph()
         self.user_id_dict = IdDictionaryStream(input_events + "_users_id_dict.csv")
-        self.resource_id_dict = IdDictionaryStream(input_events + "_resource_id_dict.csv")
+        self.resource_id_dict = IdDictionaryStream(input_events + "_resource_id_dict.csv", int_id_offset=2000000)
         self.input_events = open(input_events, "r")
 
     def update_graph(self, event):
@@ -78,49 +78,94 @@ class GraphBuilder:
         resource_id = self.resource_id_dict.update_dictionary(event["nodeID"])
         root_resource_id = self.resource_id_dict.update_dictionary(event["rootID"])
         parent_resource_id = self.resource_id_dict.update_dictionary(event["parentID"])
+        event_type = str(event["actionType"]).lower()
+        try:
+            event_time = int(self.resource_id_dict.update_dictionary(event["nodeTime"]))
+        except:
+            try:
+                event_time = datetime.strptime(self.resource_id_dict.update_dictionary(event["nodeTime"]), "%Y-%m-%d %H:%M:%S")
+            except:
+                event_time = datetime.strptime(self.resource_id_dict.update_dictionary(event["nodeTime"]), "%Y-%m-%dT%H:%M:%SZ")
+            event_time = time.mktime(event_time.timetuple())
 
         # add user node
+        self.update_nodes_and_edges(user_id, resource_id, root_resource_id, parent_resource_id, event_type, event_time)
+
+
+    def update_nodes_and_edges(self, user_id, resource_id, root_resource_id, parent_resource_id, event_type, event_time):
+        """
+        Override this method for domain specific social network
+        :param user_id:
+        :param resource_id:
+        :param root_resource_id:
+        :param parent_resource_id:
+        :param event_type:
+        :param event_time:
+        :return:
+        """
         if not self.graph.has_node(user_id):
             self.graph.add_node(user_id, pop=0, isU=1)
         else:
             pass
 
 
-
-
     def finalize_graph(self):
-        # finalize:
+        # finalize
         graph = self.graph
+        number_of_users = len(self.user_id_dict.entities)
+        number_of_resources = len(self.resource_id_dict.entities)
         self.input_events.close()
         self.user_id_dict.close()
-        # clear:
+        # pickle graph
+        graph_file = open(self.input_events_file_name + "_graph.pickle", "wb")
+        pickle.dump(graph, graph_file)
+        graph_file.close()
+        # clear
         self.event_counter = 0
         self.graph = None
         self.user_id_dict = None
         self.input_events = None
 
-        return graph
+        return graph, number_of_users, number_of_resources
 
     def build_graph(self):
         if self.graph is None:
-            self.__init__(self.input_events)
+            self.__init__(self.input_events_file_name)
         objects = ijson.items(self.input_events, 'data.item')
         for event in objects:
             self.update_graph(event)
-        graph = self.finalize_graph()
-        return graph
+        graph, number_of_users, number_of_resources = self.finalize_graph()
+        return graph, number_of_users, number_of_resources
 
 
-def get_action_type_and_index(event, type_dictionary):
-    """
-    :param event: a dictionary with key "actionType". Action type is converted to string and index of the event
-    :param type_dictionary: a dictionary with event types mapped to their indexes
-    :return:
-    """
-    return str(event["actionType"]), type_dictionary[str(event["actionType"])]
+
+def create_initial_state_files(input_json, graph_builder_class, initial_state_generators=None):
+    graph_builder = graph_builder_class(input_json)
+    graph, number_of_users, number_of_resources = graph_builder.build_graph()
+
+    print "User-repo graph constructed. Users ", number_of_users, ", repos ", number_of_resources, ", nodes ", len(graph.nodes()), ", edges", len(graph.edges())
+
+    if initial_state_generators is None:
+        users_ids = input_json + "_users_id_dict.csv"
+        repos_ids = input_json + "_repos_id_dict.csv"
+        graph_file_name = input_json + "_graph.pickle"
+
+        state_file_content = {"meta":
+            {
+                "number_of_users": number_of_users,
+                "number_of_resources": number_of_resources,
+                "users_ids": users_ids,
+                "repos_ids": repos_ids,
+                "UR_graph_path": graph_file_name
+            }
+        }
+        state_file_name = input_json + "_state.json"
+        state_file = open(state_file_name, 'w')
+        state_file.write(json.dumps(state_file_content))
+        state_file.close()
 
 
 if __name__ == "__main__":
     filename = "./data_sample.json" #sys.argv[1]
     graphBuilder = GraphBuilder(filename)
-    graph = graphBuilder.build_graph()
+    graph, number_of_users, number_of_resources = graphBuilder.build_graph()
