@@ -58,9 +58,13 @@ class GraphBuilder:
     """
     A class that creates user&resource (e.g. user-repo graph for github, user graph for twitter and reddit) graph from events
     """
-    def __init__(self, input_events):
+    def __init__(self, input_events, event_types, event_type_list):
+        self.event_types = event_types
+        self.event_type_list = event_type_list
         self.input_events_file_name = input_events
         self.event_counter = 0
+        self.training_data_start_date = 0
+        self.training_data_end_date = 1937955660
         self.graph = nx.Graph()
         self.user_id_dict = IdDictionaryStream(input_events + "_users_id_dict.csv")
         self.resource_id_dict = IdDictionaryStream(input_events + "_resource_id_dict.csv", int_id_offset=2000000)
@@ -87,27 +91,36 @@ class GraphBuilder:
             except:
                 event_time = datetime.strptime(self.resource_id_dict.update_dictionary(event["nodeTime"]), "%Y-%m-%dT%H:%M:%SZ")
             event_time = time.mktime(event_time.timetuple())
+        if self.training_data_start_date > event_time:
+            self.training_data_start_date = event_time
+        if self.training_data_end_date < event_time:
+            self.training_data_end_date = event_time
 
         # add user node
         self.update_nodes_and_edges(user_id, resource_id, root_resource_id, parent_resource_id, event_type, event_time)
 
 
     def update_nodes_and_edges(self, user_id, resource_id, root_resource_id, parent_resource_id, event_type, event_time):
-        """
-        Override this method for domain specific social network
-        :param user_id:
-        :param resource_id:
-        :param root_resource_id:
-        :param parent_resource_id:
-        :param event_type:
-        :param event_time:
-        :return:
-        """
-        if not self.graph.has_node(user_id):
-            self.graph.add_node(user_id, pop=0, isU=1)
-        else:
-            pass
+        if not self.graph.has_node(resource_id):
+            self.graph.add_node(resource_id, pop=0, isU=0)
 
+        event_index = self.event_types[event_type]
+        if self.graph.has_node(user_id):
+            self.graph.nodes[user_id]["r"] += 1.0
+            self.graph.nodes[user_id]["ef"][event_index] += 1.0
+        else:
+            self.graph.add_node(user_id, isU=1)
+            self.graph.nodes[user_id]["r"] = 1.0
+            self.graph.nodes[user_id]["ef"] = [0.0] * len(self.event_type_list)
+            self.graph.nodes[user_id]["ef"][event_index] += 1.0
+            self.graph.nodes[user_id]["pop"] = 0  # init popularity
+        if event_time < self.graph.nodes[user_id]["let"]:
+            self.graph.nodes[user_id]["let"] = event_time
+
+        if self.graph.has_edge(resource_id, user_id):
+            self.graph.get_edge_data(resource_id, user_id)["weight"] += 1 #self.graph.add_edge(resource_id, user_id, weight=self.graph.get_edge_data(resource_id, user_id)['weight'] + 1)
+        else:
+            self.graph.add_edge(resource_id, user_id, own=0, weight=1)
 
     def finalize_graph(self):
         # finalize
@@ -116,31 +129,43 @@ class GraphBuilder:
         number_of_resources = len(self.resource_id_dict.entities)
         self.input_events.close()
         self.user_id_dict.close()
+        number_of_months = float((self.training_data_end_date - self.training_data_start_date) / (3600.0 * 24.0 * 30.0))
+        for node_id in self.graph.nodes:
+            self.graph.nodes[node_id]["r"] /= number_of_months
+            self.graph.nodes[node_id]['ef'] = [ef / number_of_months for ef in self.graph.nodes[node_id]['ef']]
+
+        return graph, number_of_users, number_of_resources
+
+    def pickle_graph(self):
         # pickle graph
         graph_file = open(self.input_events_file_name + "_graph.pickle", "wb")
-        pickle.dump(graph, graph_file)
+        pickle.dump(self.graph, graph_file)
         graph_file.close()
+
+    def clear_graph(self):
         # clear
         self.event_counter = 0
         self.graph = None
         self.user_id_dict = None
         self.input_events = None
 
-        return graph, number_of_users, number_of_resources
-
     def build_graph(self):
         if self.graph is None:
-            self.__init__(self.input_events_file_name)
+            self.__init__(self.input_events_file_name, self.event_types, self.event_type_list)
         objects = ijson.items(self.input_events, 'data.item')
         for event in objects:
             self.update_graph(event)
+
         graph, number_of_users, number_of_resources = self.finalize_graph()
+        self.pickle_graph()
+        self.clear_graph()
+
         return graph, number_of_users, number_of_resources
 
 
 
-def create_initial_state_files(input_json, graph_builder_class, initial_state_generators=None):
-    graph_builder = graph_builder_class(input_json)
+def create_initial_state_files(input_json, graph_builder_class, event_types, event_type_list, initial_state_generators=None):
+    graph_builder = graph_builder_class(input_json, event_types, event_type_list)
     graph, number_of_users, number_of_resources = graph_builder.build_graph()
 
     print "User-repo graph constructed. Users ", number_of_users, ", repos ", number_of_resources, ", nodes ", len(graph.nodes()), ", edges", len(graph.edges())
@@ -167,5 +192,5 @@ def create_initial_state_files(input_json, graph_builder_class, initial_state_ge
 
 if __name__ == "__main__":
     filename = "./data_sample.json" #sys.argv[1]
-    graphBuilder = GraphBuilder(filename)
+    graphBuilder = GraphBuilder(filename, None, None)
     graph, number_of_users, number_of_resources = graphBuilder.build_graph()

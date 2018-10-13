@@ -7,42 +7,26 @@ class PostActionPair:
         self.event_index = event_index
         self.repo_id = repo_id
 
-class TwitterDecisionData(SocsimDecisionData):
+class RedditDecisionData(SocsimDecisionData):
 
     def initialize_using_user_profile(self, profile, hub):
+        self.id = profile
 
-        # initialize:
-        # id, event_rate, last_event_time, own_repos, not_own_repos, all_known_repos,
-        # probabilities of event-repo pairs, popularity
-        self.id = profile.pop("id", None)
-        self.event_rate = profile.pop("r", 5)  # number of events per month
 
-        # frequency of use of associated repos:
-        post_id_to_freq = {int(repo_id) : int(freq["f"]) for repo_id, freq in profile["all_repos"].iteritems()}
-        self.all_known_posts = []
-        self.all_known_posts.extend(post_id_to_freq.iterkeys())
-
-        self.last_event_time = profile["let"]
-
-        self.popularity = profile.pop("pop", 0)
-
-        self.post_action_pairs = [PostActionPair(ep[0], ep[1]) for ep in profile["erp"]]
-        self.post_action_probabilities = profile["erf"]
-        sum_ = sum(self.post_action_probabilities)
-        self.post_action_probabilities = [float(v) / float(sum_) for v in self.post_action_probabilities]
-        # sort:
-        self.post_action_pairs, self.post_action_probabilities = sort_data_and_prob_to_cumulative_array(self.post_action_pairs, self.post_action_probabilities)
-
-class TwitterMixin(SocsimMixin):
-
-    def _new_empty_decision_object(self):
-        return TwitterDecisionData()
+class RedditMixin(SocsimMixin):
 
     def __init__(self, **kwargs):
         SocsimMixin.__init__(self, **kwargs)
 
+    def _new_empty_decision_object(self):
+        return RedditDecisionData()
+
     def customAgentLoop(self):
-        # If control passes to here, the decision on choosing a user has already been made.
+        agent_id = self.decision_data.id
+        agent_event_rate = self.hub.graph.nodes[agent_id]["r"]
+        event_frequencies = self.hub.graph.nodes[agent_id]["ef"]
+        last_event_time = self.hub.graph.nodes[agent_id]["let"]
+
         pair = random_pick_sorted(self.decision_data.post_action_pairs, self.decision_data.post_action_probabilities)
         selected_event = event_types[pair.event_index]
         selected_post = pair.repo_id
@@ -53,9 +37,9 @@ class TwitterMixin(SocsimMixin):
         return False
 
 
-class TwitterAgent(TwitterMixin, DASHAgent):
+class RedditAgent(RedditMixin, DASHAgent):
     def __init__(self, **kwargs):
         DASHAgent.__init__(self)
-        TwitterMixin.__init__(self, **kwargs)
+        RedditMixin.__init__(self, **kwargs)
 
 
