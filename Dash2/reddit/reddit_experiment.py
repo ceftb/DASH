@@ -4,6 +4,7 @@ import os
 import psutil
 import time
 import cPickle as pickle
+import json
 from datetime import datetime
 from heapq import heappush, heappop
 from Dash2.core.parameter import Range
@@ -16,7 +17,7 @@ from Dash2.core.work_processor import WorkProcessor
 from Dash2.reddit.reddit_hub import RedditHub
 from Dash2.reddit.reddit_state_creator import RedditGraphBuilder
 from Dash2.socsim.network_utils import create_initial_state_files
-from Dash2.socsim.output_event_log_utils import merge_log_file, trnaslate_user_and_repo_ids_in_event_log
+from Dash2.socsim.output_event_log_utils import merge_log_file, trnaslate_ids_and_convert_to_json
 
 # Work processor performs simulation as individual process (it is a DashWorker)
 class RedditWorkProcessor(WorkProcessor):
@@ -47,7 +48,7 @@ class RedditWorkProcessor(WorkProcessor):
             first_event_time = self.agent.first_event_time(self.start_time)
             if first_event_time is not None:
                 heappush(self.events_heap, (self.agent.next_event_time(self.start_time), decision_data.id))
-            self.agents_decision_data[decision_data.id] = decision_data
+            self.agents_decision_data[decision_data.id] = decision_data # node_id == decision_data
 
         # closing and reopening log file due to delays in loading the state (netwok fils system sometimes interrupts the file otherwise)
         self.log_file = open(self.output_file_name + self.task_full_id + '_event_log_file.txt', 'w')
@@ -56,15 +57,6 @@ class RedditWorkProcessor(WorkProcessor):
         self.hub.finalize_statistics()
         self.hub.mamory_usage = self._get_current_memory_usage()
         print "Agents instantiated: ", len(self.agents_decision_data)
-
-    # Function takes a user profile and creates an agent decision data object.
-    def populate_agents_collection(self, profile):
-        decision_data = self.agent.create_new_decision_object(profile)
-        self.agent.decision_data = decision_data
-        first_event_time = self.agent.first_event_time(self.start_time)
-        if first_event_time is not None:
-            heappush(self.events_heap, (self.agent.next_event_time(self.start_time), decision_data.id))
-        self.agents_decision_data[decision_data.id] = decision_data
 
     def run_one_iteration(self):
         event_time, agent_id = heappop(self.events_heap)
@@ -114,13 +106,12 @@ class RedditTrial(Trial):
         # self.initial_state_file is defined via experiment_data
         if not os.path.isfile(self.initial_state_file):
             raise Exception("Initial state file was not found")
-        initial_state_meta_data = read_state_file(self.initial_state_file)
+        initial_state_meta_data = json.load(open(self.initial_state_file))
         print initial_state_meta_data
-        self.users_file = initial_state_meta_data["users_file"]
         self.users_ids = initial_state_meta_data["users_ids"]
-        self.repos_ids = initial_state_meta_data["repos_ids"]
+        self.resource_ids = initial_state_meta_data["resource_ids"]
         # set up max ids
-        self.set_max_repo_id(int(initial_state_meta_data["number_of_repos"]))
+        self.set_max_repo_id(int(initial_state_meta_data["number_of_resource"]))
         self.set_max_user_id(int(initial_state_meta_data["number_of_users"]))
         self.is_loaded = True
 
@@ -130,7 +121,7 @@ class RedditTrial(Trial):
         _, _, task_num = task_full_id.split("-")
         self.init_task_param("initial_state_file", self.initial_state_file, data)
         self.init_task_param("users_file", self.users_file + "_" + str(int(task_num) - 1), data)
-        self.init_task_param("UR_graph_path", read_state_file(self.initial_state_file)["UR_graph_path"], data)
+        self.init_task_param("UR_graph_path", json.load(open(self.initial_state_file))["UR_graph_path"], data)
 
     # partial_dependent is a dictionary of dependent vars
     def append_partial_results(self, partial_dependent):
@@ -151,15 +142,13 @@ class RedditTrial(Trial):
             os.rename(file_names[0], tmp_file_name)
             print "renamed ", file_names[0], " -> ", tmp_file_name
         else:
-            merge_log_file(file_names, tmp_file_name, sort_chronologically=True)
-            for log_file_name in file_names:
-                os.remove(log_file_name)
+            print "Multiprocess event lot not implemented."
 
         output_file_name = self.output_file_name + "_trial_" + str(self.trial_id) + ".csv"
-        trnaslate_user_and_repo_ids_in_event_log(even_log_file=tmp_file_name,
+        trnaslate_ids_and_convert_to_json(even_log_file=tmp_file_name,
                                                  output_file_name=output_file_name,
                                                  users_ids_file=self.users_ids,
-                                                 repos_ids_file=self.repos_ids)
+                                                 repos_ids_file=self.resource_ids)
         os.remove(tmp_file_name)
 
         # print dependent vars (e.g. runtime and memory)
