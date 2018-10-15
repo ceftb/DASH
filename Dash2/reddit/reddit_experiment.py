@@ -18,6 +18,7 @@ from Dash2.reddit.reddit_hub import RedditHub
 from Dash2.reddit.reddit_state_creator import RedditGraphBuilder
 from Dash2.socsim.network_utils import create_initial_state_files
 from Dash2.socsim.output_event_log_utils import merge_log_file, trnaslate_ids_and_convert_to_json
+from Dash2.socsim.event_types import reddit_events_list, reddit_events
 
 # Work processor performs simulation as individual process (it is a DashWorker)
 class RedditWorkProcessor(WorkProcessor):
@@ -191,7 +192,7 @@ if __name__ == "__main__":
     initial_state_file_name = input_event_log + "_state.json"
     if not os.path.isfile(initial_state_file_name):
         print initial_state_file_name + " file is not present, creating one. May take a while, please wait ..."
-        create_initial_state_files(initial_state_file_name , RedditGraphBuilder)
+        create_initial_state_files(initial_state_file_name , RedditGraphBuilder, reddit_events, reddit_events_list)
         print str(initial_state_file_name) + " file created."
 
     # length of the simulation is determined by two parameters: max_iterations_per_worker and end max_time
