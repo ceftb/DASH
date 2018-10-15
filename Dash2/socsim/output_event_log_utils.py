@@ -167,7 +167,7 @@ def trnaslate_ids_and_convert_to_json(even_log_file, output_file_name, users_ids
         output_json["data"].append({"nodeId" : repo_id, "userNodeId" : user_id, "time" : row[0], "eventType" : row[1]})
 
     output_file = open(output_file_name, 'w')
-    json.dump(output_file, output_file)
+    json.dump(output_json, output_file)
 
     input_file.close()
     output_file.close()

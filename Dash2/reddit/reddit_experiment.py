@@ -44,12 +44,13 @@ class RedditWorkProcessor(WorkProcessor):
         self.hub.graph = pickle.load(open(self.UR_graph_path, "rb"))
 
         for node_id in self.hub.graph:
-            decision_data = self.agent.create_new_decision_object(node_id, self.hub)
-            self.agent.decision_data = decision_data
-            first_event_time = self.agent.first_event_time(self.start_time)
-            if first_event_time is not None:
-                heappush(self.events_heap, (self.agent.next_event_time(self.start_time), decision_data.id))
-            self.agents_decision_data[decision_data.id] = decision_data # node_id == decision_data
+            if self.hub.graph.nodes[node_id]["isU"] == 1:
+                decision_data = self.agent.create_new_decision_object(node_id)
+                self.agent.decision_data = decision_data
+                first_event_time = self.agent.first_event_time(self.start_time)
+                if first_event_time is not None:
+                    heappush(self.events_heap, (self.agent.next_event_time(self.start_time), decision_data.id))
+                self.agents_decision_data[decision_data.id] = decision_data # node_id == decision_data
 
         # closing and reopening log file due to delays in loading the state (netwok fils system sometimes interrupts the file otherwise)
         self.log_file = open(self.output_file_name + self.task_full_id + '_event_log_file.txt', 'w')
@@ -89,7 +90,7 @@ class RedditWorkProcessor(WorkProcessor):
 
     def get_dependent_vars(self):
         return {"num_agents": len(self.agents_decision_data),
-                #"num_repos": sum([len(a.name_to_repo_id) for a in self.agents_decision_data.viewvalues()]),
+                "num_resources": -1,
                 #"total_agent_activity": sum([a.total_activity for a in self.agents_decision_data.viewvalues()]),
                 "number_of_cross_process_communications": self.hub.sync_event_counter,
                 "memory_usage": self.hub.memory_usage,
@@ -107,12 +108,12 @@ class RedditTrial(Trial):
         # self.initial_state_file is defined via experiment_data
         if not os.path.isfile(self.initial_state_file):
             raise Exception("Initial state file was not found")
-        initial_state_meta_data = json.load(open(self.initial_state_file))
+        initial_state_meta_data = json.load(open(self.initial_state_file))["meta"]
         print initial_state_meta_data
         self.users_ids = initial_state_meta_data["users_ids"]
         self.resource_ids = initial_state_meta_data["resource_ids"]
         # set up max ids
-        self.set_max_repo_id(int(initial_state_meta_data["number_of_resource"]))
+        self.set_max_repo_id(int(initial_state_meta_data["number_of_resources"]))
         self.set_max_user_id(int(initial_state_meta_data["number_of_users"]))
         self.is_loaded = True
 
@@ -121,8 +122,7 @@ class RedditTrial(Trial):
     def init_task_params(self, task_full_id, data):
         _, _, task_num = task_full_id.split("-")
         self.init_task_param("initial_state_file", self.initial_state_file, data)
-        self.init_task_param("users_file", self.users_file + "_" + str(int(task_num) - 1), data)
-        self.init_task_param("UR_graph_path", json.load(open(self.initial_state_file))["UR_graph_path"], data)
+        self.init_task_param("UR_graph_path", json.load(open(self.initial_state_file))["meta"]["UR_graph_path"], data)
 
     # partial_dependent is a dictionary of dependent vars
     def append_partial_results(self, partial_dependent):
@@ -145,7 +145,7 @@ class RedditTrial(Trial):
         else:
             print "Multiprocess event lot not implemented."
 
-        output_file_name = self.output_file_name + "_trial_" + str(self.trial_id) + ".csv"
+        output_file_name = self.output_file_name + "_trial_" + str(self.trial_id) + ".json"
         trnaslate_ids_and_convert_to_json(even_log_file=tmp_file_name,
                                                  output_file_name=output_file_name,
                                                  users_ids_file=self.users_ids,
@@ -192,7 +192,7 @@ if __name__ == "__main__":
     initial_state_file_name = input_event_log + "_state.json"
     if not os.path.isfile(initial_state_file_name):
         print initial_state_file_name + " file is not present, creating one. May take a while, please wait ..."
-        create_initial_state_files(initial_state_file_name , RedditGraphBuilder, reddit_events, reddit_events_list)
+        create_initial_state_files(input_event_log , RedditGraphBuilder, reddit_events, reddit_events_list)
         print str(initial_state_file_name) + " file created."
 
     # length of the simulation is determined by two parameters: max_iterations_per_worker and end max_time
@@ -220,8 +220,8 @@ if __name__ == "__main__":
     ]
     RedditTrial.measures = [
         Measure('num_agents'),
-        Measure('num_repos'),
-        Measure('total_agent_activity'),
+        Measure('num_resources'),
+        #Measure('total_agent_activity'),
         Measure('number_of_cross_process_communications'),
         Measure('memory_usage'),
         Measure('runtime')

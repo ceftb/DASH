@@ -101,15 +101,15 @@ class SocsimMixin(object):
         print "Primitive action taken."
 
     def first_event_time(self, start_time):
-        delta = float(30 * 24 * 3600) / float(self.hub.graph.nodes[self.decision_data]["r"])
-        next_event_time = self.hub.graph.nodes[self.decision_data]["let"] + delta if self.hub.graph.nodes[self.decision_data]["let"] is not None \
-            and self.hub.graph.nodes[self.decision_data]["let"] != -1 else start_time
+        delta = float(30 * 24 * 3600) / float(self.hub.graph.nodes[self.decision_data.id]["r"])
+        next_event_time = self.hub.graph.nodes[self.decision_data.id]["let"] + delta if self.hub.graph.nodes[self.decision_data.id]["let"] is not None \
+            and self.hub.graph.nodes[self.decision_data.id]["let"] != -1 else start_time
         while next_event_time < start_time:
             next_event_time += delta
         return next_event_time
 
     def next_event_time(self, curr_time):
-        delta = float(30 * 24 * 3600) / float(self.hub.graph.nodes[self.decision_data]["r"])
+        delta = float(30 * 24 * 3600) / float(self.hub.graph.nodes[self.decision_data.id]["r"])
         next_time = curr_time + delta
         return next_time
 

@@ -33,7 +33,6 @@ class RedditMixin(SocsimMixin):
         selected_post = -1
 
         self.hub.log_event(self.decision_data.id, selected_post, selected_event, None, self.hub.time)
-        self.decision_data.total_activity += 1
 
         return False
 

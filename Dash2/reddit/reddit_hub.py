@@ -15,6 +15,9 @@ class RedditHub(SocsimHub):
     def __init__(self, zk, task_full_id, start_time, log_file):
         SocsimHub.__init__(self, zk, task_full_id, start_time, log_file)
 
+    def event_counter_callback(self):
+        pass
+
     def finalize_statistics(self):
         if self.userIdAndPopularity is not None:
             random_pick_sorted(self.userIdAndPopularity["ids"], self.userIdAndPopularity["probability"])

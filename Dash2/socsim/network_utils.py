@@ -84,12 +84,12 @@ class GraphBuilder:
         parent_resource_id = self.resource_id_dict.update_dictionary(event["parentID"])
         event_type = str(event["actionType"]).lower()
         try:
-            event_time = int(self.resource_id_dict.update_dictionary(event["nodeTime"]))
+            event_time = int(event["nodeTime"])
         except:
             try:
-                event_time = datetime.strptime(self.resource_id_dict.update_dictionary(event["nodeTime"]), "%Y-%m-%d %H:%M:%S")
+                event_time = datetime.strptime(event["nodeTime"], "%Y-%m-%d %H:%M:%S")
             except:
-                event_time = datetime.strptime(self.resource_id_dict.update_dictionary(event["nodeTime"]), "%Y-%m-%dT%H:%M:%SZ")
+                event_time = datetime.strptime(event["nodeTime"], "%Y-%m-%dT%H:%M:%SZ")
             event_time = time.mktime(event_time.timetuple())
         if self.training_data_start_date > event_time:
             self.training_data_start_date = event_time
@@ -109,12 +109,12 @@ class GraphBuilder:
             self.graph.nodes[user_id]["r"] += 1.0
             self.graph.nodes[user_id]["ef"][event_index] += 1.0
         else:
-            self.graph.add_node(user_id, isU=1)
+            self.graph.add_node(user_id, isU=1, let=0)
             self.graph.nodes[user_id]["r"] = 1.0
             self.graph.nodes[user_id]["ef"] = [0.0] * len(self.event_type_list)
             self.graph.nodes[user_id]["ef"][event_index] += 1.0
             self.graph.nodes[user_id]["pop"] = 0  # init popularity
-        if event_time < self.graph.nodes[user_id]["let"]:
+        if event_time > self.graph.nodes[user_id]["let"]:
             self.graph.nodes[user_id]["let"] = event_time
 
         if self.graph.has_edge(resource_id, user_id):
@@ -131,8 +131,9 @@ class GraphBuilder:
         self.user_id_dict.close()
         number_of_months = float((self.training_data_end_date - self.training_data_start_date) / (3600.0 * 24.0 * 30.0))
         for node_id in self.graph.nodes:
-            self.graph.nodes[node_id]["r"] /= number_of_months
-            self.graph.nodes[node_id]['ef'] = [ef / number_of_months for ef in self.graph.nodes[node_id]['ef']]
+            if self.graph.nodes[node_id]["isU"] == 1:
+                self.graph.nodes[node_id]["r"] /= number_of_months
+                self.graph.nodes[node_id]['ef'] = [ef / number_of_months for ef in self.graph.nodes[node_id]['ef']]
 
         return graph, number_of_users, number_of_resources
 
@@ -172,7 +173,7 @@ def create_initial_state_files(input_json, graph_builder_class, event_types, eve
 
     if initial_state_generators is None:
         users_ids = input_json + "_users_id_dict.csv"
-        repos_ids = input_json + "_repos_id_dict.csv"
+        resource_ids = input_json + "_resource_id_dict.csv"
         graph_file_name = input_json + "_graph.pickle"
 
         state_file_content = {"meta":
@@ -180,7 +181,7 @@ def create_initial_state_files(input_json, graph_builder_class, event_types, eve
                 "number_of_users": number_of_users,
                 "number_of_resources": number_of_resources,
                 "users_ids": users_ids,
-                "repos_ids": repos_ids,
+                "resource_ids": resource_ids,
                 "UR_graph_path": graph_file_name
             }
         }
