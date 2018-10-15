@@ -1,5 +1,4 @@
 import sys; sys.path.extend(['../../'])
-import cPickle as pickle
 from Dash2.socsim.network_utils import GraphBuilder, create_initial_state_files
 from Dash2.socsim.event_types import reddit_events, reddit_events_list
 

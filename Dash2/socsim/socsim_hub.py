@@ -42,6 +42,9 @@ class SocsimHub(WorldHub):
     def set_curr_time(self, curr_time):
         self.time = curr_time
 
+    def event_counter_callback(self):
+        pass
+
     def log_event(self, user_id, repo_id, event_type, subevent_type, time):
         date = datetime.datetime.fromtimestamp(time)
         str_time = date.strftime("%Y-%m-%d %H:%M:%S")
