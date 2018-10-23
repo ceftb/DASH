@@ -12,5 +12,11 @@ class RedditHub(SocsimHub):
 
     sync_event_counter = 0
 
-    def __init__(self, zk, task_full_id, start_time, log_file):
-        SocsimHub.__init__(self, zk, task_full_id, start_time, log_file)
+    def __init__(self, zk, task_full_id, start_time, output_file_name):
+        SocsimHub.__init__(self, zk, task_full_id, start_time, output_file_name)
+
+    # this overrides default log method in SocsimHub
+    def log_event(self, user_id, resource_id, event_type, time, additional_attributes=None):
+        #self.print_to_csv_log(user_id, resource_id, event_type, self._convert_time(time), additional_attributes)
+        # add id convertion
+        self.print_to_json_log(user_id, resource_id, event_type, int(time), additional_attributes)

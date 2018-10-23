@@ -31,15 +31,11 @@ class RedditWorkProcessor(WorkProcessor):
         self.events_heap = []
         self.event_counter = 0
         self.task_start_time = time.time()
-        self.hub = RedditHub(self.zk, self.task_full_id, 0, log_file=self.log_file)
+        self.hub = RedditHub(self.zk, self.task_full_id, 0, self.output_file_name)
 
         mod = __import__(self.agent_module_name, fromlist=[self.agent_class_name])
         cls = getattr(mod, self.agent_class_name)
         self.agent =cls(useInternalHub=True, hub=self.hub, skipS12=True, trace_client=False, traceLoop=False, trace_github=False)
-
-        # close and remove event log file, which was create by __init__(), we need a different name and we need to open after state is loaded.
-        self.log_file.close()
-        os.remove(self.task_full_id + '_event_log_file.txt')
 
         self.hub.graph = pickle.load(open(self.UR_graph_path, "rb"))
 
@@ -52,9 +48,6 @@ class RedditWorkProcessor(WorkProcessor):
                     heappush(self.events_heap, (self.agent.next_event_time(self.start_time), decision_data.id))
                 self.agents_decision_data[decision_data.id] = decision_data # node_id == decision_data
 
-        # closing and reopening log file due to delays in loading the state (netwok fils system sometimes interrupts the file otherwise)
-        self.log_file = open(self.output_file_name + self.task_full_id + '_event_log_file.txt', 'w')
-        self.hub.log_file = self.log_file
         self.hub.agents_decision_data = self.agents_decision_data # will not work for distributed version
         self.hub.finalize_statistics()
         self.hub.mamory_usage = self._get_current_memory_usage()
@@ -96,6 +89,12 @@ class RedditWorkProcessor(WorkProcessor):
                 "memory_usage": self.hub.memory_usage,
                 "runtime": time.time() - self.task_start_time
                 }
+
+    def process_after_run(self):  # do any book-keeping needed after the trial ends and before agents are disconnected
+        self.hub.csv_log_file.close()
+        self.hub.json_log_file.close()
+        self.log_file.close()
+        os.remove(self.task_full_id + '_event_log_file.txt')
 
 
 # Dash Trial decomposes trial into tasks and allocates them to DashWorkers

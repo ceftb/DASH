@@ -12,5 +12,5 @@ class TwitterHub(SocsimHub):
 
     sync_event_counter = 0
 
-    def __init__(self, zk, task_full_id, start_time, log_file):
-        SocsimHub.__init__(self, zk, task_full_id, start_time, log_file)
+    def __init__(self, zk, task_full_id, start_time, output_file_name):
+        SocsimHub.__init__(self, zk, task_full_id, start_time, output_file_name)
