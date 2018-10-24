@@ -8,8 +8,8 @@ from Dash2.core.trial import Trial
 from Dash2.core.experiment import Experiment
 from Dash2.core.work_processor import WorkProcessor
 from Dash2.core.dash_controller import DashController
-from Dash2.github.git_user_agent import GitUserAgent
-from Dash2.github.zk_repo_hub import ZkRepoHub
+from Dash2.github_baseline.git_user_agent import GitUserAgent
+from Dash2.github_baseline.zk_repo_hub import ZkRepoHub
 
 # This is an example of experiment script
 

@@ -12,9 +12,9 @@ from Dash2.core.trial import Trial
 from Dash2.core.experiment import Experiment
 from Dash2.core.dash_controller import DashController
 from Dash2.core.work_processor import WorkProcessor
-from Dash2.github.initial_state_loader import build_state_from_event_log, read_state_file, load_profiles, \
+from Dash2.github_baseline.initial_state_loader import build_state_from_event_log, read_state_file, load_profiles, \
     populate_embedding_probabilities
-from Dash2.github.zk_repo_hub import ZkRepoHub
+from Dash2.github_baseline.zk_repo_hub import ZkRepoHub
 from Dash2.socsim.output_event_log_utils import merge_log_file, trnaslate_user_and_repo_ids_in_event_log
 
 # Work processor performs simulation as individual process (it is a DashWorker)

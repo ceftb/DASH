@@ -1,8 +1,8 @@
 import sys; sys.path.extend(['../../'])
 import time
 from heapq import heappush, heappop
-from Dash2.github.zk_repo import ZkRepo
-from Dash2.github.git_user_agent import GitUserAgent
+from Dash2.github_baseline.zk_repo import ZkRepo
+from Dash2.github_baseline.git_user_agent import GitUserAgent
 from zk_repo_hub import ZkRepoHub
 
 def create_repos(number_of_repos):

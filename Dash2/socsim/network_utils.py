@@ -100,7 +100,9 @@ class GraphBuilder:
     """
     A class that creates user&resource (e.g. user-repo graph for github, user graph for twitter and reddit) graph from events
     """
-    def __init__(self, input_events, event_types, event_type_list, dictionary_stream_cls=IdDictionaryStream):
+    def __init__(self, input_events, event_types, event_type_list, dictionary_stream_cls=IdDictionaryStream,
+                 is_distributed_mode_on=False):
+        self.is_distributed_mode_on = is_distributed_mode_on
         self.event_types = event_types
         self.event_type_list = event_type_list
         self.input_events_file_name = input_events
@@ -139,9 +141,33 @@ class GraphBuilder:
             self.training_data_end_date = event_time
 
         # add user node
-        self.update_nodes_and_edges(user_id, resource_id, root_resource_id, parent_resource_id, event_type, event_time, raw_json_event=event)
+        self.update_nodes_and_edges(user_id, resource_id, root_resource_id, parent_resource_id, event_type, event_time,
+                                    raw_json_event=event)
 
     def update_nodes_and_edges(self, user_id, resource_id, root_resource_id, parent_resource_id, event_type, event_time, raw_json_event=None):
+        """
+        The following graph node attributes are populated by this method ("key" - description):
+        - "r" - overall event rate/frequency of a user. Frequency her is number of events per months.
+        - "ef" - frequencies of each event type, table: event_type x frequency. Frequency her is number of events per months.
+        - "pop" - user popularity
+        - "isU" - is user or not. If "isU" == 1 then user, otherwise the node is resource
+        - "let" - latest event time. Time of the most recent event read from the input network.
+        - "prt" - partition number. Partition of the graph to which this node belongs. This is only used for distributed mode.
+        - "shrd" - if 1 means this node is shared across two or more compute nodes.  This is only used for distributed mode.
+
+        The following graph edge attributes are populated by this method ("key" - description):
+        - "erp" - event-resource pair frequencies. Frequency her is number of events per months.
+        - "weight" - total number of events between resource and user
+
+        :param user_id:
+        :param resource_id:
+        :param root_resource_id:
+        :param parent_resource_id:
+        :param event_type:
+        :param event_time:
+        :param raw_json_event:
+        :return:
+        """
         if not self.graph.has_node(resource_id):
             self.graph.add_node(resource_id, pop=0, isU=0)
 
@@ -159,7 +185,7 @@ class GraphBuilder:
             self.graph.nodes[user_id]["let"] = event_time
 
         if self.graph.has_edge(resource_id, user_id):
-            self.graph.get_edge_data(resource_id, user_id)["weight"] += 1 #self.graph.add_edge(resource_id, user_id, weight=self.graph.get_edge_data(resource_id, user_id)['weight'] + 1)
+            self.graph.get_edge_data(resource_id, user_id)["weight"] += 1
         else:
             self.graph.add_edge(resource_id, user_id, own=0, weight=1)
 

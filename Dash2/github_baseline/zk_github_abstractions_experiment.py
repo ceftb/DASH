@@ -1,5 +1,4 @@
 import sys; sys.path.extend(['../../'])
-import os.path
 import time
 from datetime import datetime
 from Dash2.core.parameter import Range
@@ -7,9 +6,7 @@ from Dash2.core.measure import Measure
 from Dash2.core.parameter import Parameter
 from Dash2.core.experiment import Experiment
 from Dash2.core.dash_controller import DashController
-from Dash2.github.initial_state_loader import build_state_from_event_log, read_state_file, load_profiles, \
-    populate_embedding_probabilities, populate_event_rate, InitialStateSampleGenerator, \
-    InitialStateSimpleSampleGenerator
+from Dash2.github_baseline.initial_state_loader import build_state_from_event_log, InitialStateSimpleSampleGenerator
 
 from zk_github_state_experiment import ZkGithubStateTrial, ZkGithubStateWorkProcessor
 

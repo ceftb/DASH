@@ -1,6 +1,6 @@
 import sys; sys.path.extend(['../../'])
 from Dash2.core.world_hub import WorldHub
-from Dash2.github.zk_repo import ZkRepo
+from Dash2.github_baseline.zk_repo import ZkRepo
 from Dash2.socsim.output_event_log_utils import random_pick_sorted
 import datetime
 import cPickle as pickle
