@@ -139,10 +139,9 @@ class GraphBuilder:
             self.training_data_end_date = event_time
 
         # add user node
-        self.update_nodes_and_edges(user_id, resource_id, root_resource_id, parent_resource_id, event_type, event_time)
+        self.update_nodes_and_edges(user_id, resource_id, root_resource_id, parent_resource_id, event_type, event_time, raw_json_event=event)
 
-
-    def update_nodes_and_edges(self, user_id, resource_id, root_resource_id, parent_resource_id, event_type, event_time):
+    def update_nodes_and_edges(self, user_id, resource_id, root_resource_id, parent_resource_id, event_type, event_time, raw_json_event=None):
         if not self.graph.has_node(resource_id):
             self.graph.add_node(resource_id, pop=0, isU=0)
 

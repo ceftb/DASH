@@ -13,8 +13,9 @@ class GithubGraphBuilder(GraphBuilder):
         return GraphBuilder.finalize_graph(self)
 
 
-    def update_nodes_and_edges(self, user_id, resource_id, root_resource_id, parent_resource_id, event_type, event_time):
+    def update_nodes_and_edges(self, user_id, resource_id, root_resource_id, parent_resource_id, event_type, event_time, raw_json_event=None):
         GraphBuilder.update_nodes_and_edges(self, user_id, resource_id, root_resource_id, parent_resource_id, event_type, event_time)
+
 
 
 if __name__ == "__main__":
