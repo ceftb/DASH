@@ -107,8 +107,8 @@ class GraphBuilder:
         self.event_type_list = event_type_list
         self.input_events_file_name = input_events
         self.event_counter = 0
-        self.training_data_start_date = 0
-        self.training_data_end_date = 1937955660
+        self.training_data_start_date = 1937955660.0
+        self.training_data_end_date = 0.0
         self.graph = nx.Graph()
         self.user_id_dict = dictionary_stream_cls(input_events + "_users_id_dict" + dictionary_stream_cls.get_extention())
         self.resource_id_dict = dictionary_stream_cls(input_events + "_resource_id_dict" + dictionary_stream_cls.get_extention(), int_id_offset=2000000)
@@ -126,7 +126,7 @@ class GraphBuilder:
         resource_id = self.resource_id_dict.update_dictionary(event["nodeID"])
         root_resource_id = self.resource_id_dict.update_dictionary(event["rootID"])
         parent_resource_id = self.resource_id_dict.update_dictionary(event["parentID"])
-        event_type = str(event["actionType"]).lower()
+        event_type = event["actionType"]
         try:
             event_time = int(event["nodeTime"])
         except:
@@ -158,6 +158,7 @@ class GraphBuilder:
         The following graph edge attributes are populated by this method ("key" - description):
         - "erp" - event-resource pair frequencies. Frequency her is number of events per months.
         - "weight" - total number of events between resource and user
+        - "<event_index>" frequency of the resource-event_type pair
 
         :param user_id:
         :param resource_id:
@@ -170,24 +171,39 @@ class GraphBuilder:
         """
         if not self.graph.has_node(resource_id):
             self.graph.add_node(resource_id, pop=0, isU=0)
-
         event_index = self.event_types[event_type]
-        if self.graph.has_node(user_id):
-            self.graph.nodes[user_id]["r"] += 1.0
-            self.graph.nodes[user_id]["ef"][event_index] += 1.0
-        else:
-            self.graph.add_node(user_id, isU=1, let=0)
+
+        # user node
+        if not self.graph.has_node(user_id):  # new node
+            self.graph.add_node(user_id, let=0)
+            self.graph.nodes[user_id]["isU"] = 1
             self.graph.nodes[user_id]["r"] = 1.0
             self.graph.nodes[user_id]["ef"] = [0.0] * len(self.event_type_list)
             self.graph.nodes[user_id]["ef"][event_index] += 1.0
-            self.graph.nodes[user_id]["pop"] = 0  # init popularity
-        if event_time > self.graph.nodes[user_id]["let"]:
             self.graph.nodes[user_id]["let"] = event_time
+            self.graph.nodes[user_id]["pop"] = 0
+            if self.is_distributed_mode_on:
+                self.graph.nodes[user_id]["prt"] = 1
+                self.graph.nodes[user_id]["shrd"] = 0
+        else:                                 # existing node
+            self.graph.nodes[user_id]["r"] += 1.0
+            self.graph.nodes[user_id]["ef"][event_index] += 1.0
+            self.graph.nodes[user_id]["let"] = event_time if event_time > self.graph.nodes[user_id]["let"] else self.graph.nodes[user_id]["let"]
+            if self.is_distributed_mode_on:
+                self.graph.nodes[user_id]["prt"] = 1
+                self.graph.nodes[user_id]["shrd"] = 0
 
-        if self.graph.has_edge(resource_id, user_id):
-            self.graph.get_edge_data(resource_id, user_id)["weight"] += 1
-        else:
-            self.graph.add_edge(resource_id, user_id, own=0, weight=1)
+        # edge
+        if not self.graph.has_edge(resource_id, user_id):  # new edge
+            self.graph.add_edge(resource_id, user_id)
+            if self.is_distributed_mode_on:
+                self.graph.get_edge_data(resource_id, user_id)["weight"] = 1
+        else:                                              # existing edge
+            if self.is_distributed_mode_on:
+                self.graph.get_edge_data(resource_id, user_id)["weight"] += 1
+        # U x R x EventType : frequency/rate
+        edge_data = self.graph.get_edge_data(resource_id, user_id)
+        edge_data[self.event_types[event_type]] = edge_data[self.event_types[event_type]] + 1.0 if self.event_types[event_type] in edge_data else 1.0
 
     def finalize_graph(self):
         # finalize
@@ -202,6 +218,15 @@ class GraphBuilder:
             if self.graph.nodes[node_id]["isU"] == 1:
                 self.graph.nodes[node_id]["r"] /= number_of_months
                 self.graph.nodes[node_id]['ef'] = [ef / number_of_months for ef in self.graph.nodes[node_id]['ef']]
+
+        # U x R x EventType : frequency/rate
+        for u, v in self.graph.edges:
+            edge_data = self.graph.get_edge_data(u, v)
+            # print "edge ", u, ", ", v, ", data: ", str(edge_data), ", number_of_months", number_of_months
+            for event_index in self.event_types.itervalues():
+                if event_index in edge_data:
+                    edge_data[event_index] /= number_of_months
+                    # print "(", u, ",", v, ",", event_index, ") : ", edge_data[event_index]
 
         return graph, number_of_users, number_of_resources
 

@@ -70,7 +70,7 @@ class SocsimHub(WorldHub):
 
     def print_to_json_log(self, user_id, resource_id, event_type, time, additional_attributes):
         json_object = {"nodeID": self._try_to_convert_resource_id_to_original_id(resource_id),
-                       "nodeUserId": self._try_to_convert_user_id_to_original_id(user_id),
+                       "nodeUserID": self._try_to_convert_user_id_to_original_id(user_id),
                        "actionType": str(event_type),
                        "nodeTime": str(time)}
         if additional_attributes is not None:
@@ -84,17 +84,17 @@ class SocsimHub(WorldHub):
 
     def _try_to_convert_user_id_to_original_id(self, user_id):
         if self.users_ids is not None:
-            return self._convert_to_int_id(user_id, self.users_ids)
+            return self._convert_from_int_id(user_id, self.users_ids)
         else:
             return str(user_id)
 
     def _try_to_convert_resource_id_to_original_id(self, resource_id):
         if self.resource_ids is not None:
-            return self._convert_to_int_id(resource_id, self.users_ids)
+            return self._convert_from_int_id(resource_id, self.resource_ids)
         else:
             return str(resource_id)
 
-    def _convert_to_int_id(self, entity_id, dictionary):
+    def _convert_from_int_id(self, entity_id, dictionary):
         if entity_id is not None and entity_id in dictionary:
             return dictionary[entity_id]
         else:

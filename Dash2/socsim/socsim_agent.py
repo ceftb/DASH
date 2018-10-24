@@ -1,8 +1,17 @@
 import sys; sys.path.extend(['../../'])
+from Dash2.socsim.output_event_log_utils import sort_data_and_prob_to_cumulative_array, random_pick_sorted
 from Dash2.core.dash import DASHAgent
+
+class ResourceEventTypePair(object):
+    def __init__(self, event_index, res_id):
+        self.event_index = event_index
+        self.res_id = res_id
 
 
 class SocsimDecisionData(object):
+
+    platform_events_map = {}
+    platform_events = []
 
     def __init__(self, **kwargs):
         """
@@ -33,10 +42,40 @@ class SocsimDecisionData(object):
         :param hub: hub is needed to register repos.
         :return: None
         """
+        # id
+        self.id = profile
+
+        # hub
         self.hub = hub
-        self.id = profile.pop("id", None)
-        self.event_rate = profile.pop("r", 5)  # number of events per month
-        self.last_event_time = profile["let"]
+
+        # the following attributes are copied from networkX graph object for performance optimization
+        # however, it duplicated memory use for each attribute,
+        # attributes can be accessed directly from the self.hub.graph.nodes[self.id]["attribute_name"]
+
+        # resource event pairs
+        self.event_res_pairs = []
+        self.event_res_pairs_prob = []
+        for res_id in hub.graph.neighbors(self.id):
+            edge_data = hub.graph.get_edge_data(res_id, self.id)
+            for event_index in self.platform_events_map.itervalues():
+                if event_index in edge_data:
+                    self.event_res_pairs.append(ResourceEventTypePair(event_index, res_id))
+                    self.event_res_pairs_prob.append(edge_data[event_index])
+        # normalize
+        sum_ = sum(self.event_res_pairs_prob)
+        self.event_res_pairs_prob = [float(v) / float(sum_) for v in self.event_res_pairs_prob]
+        # rearrange in sorted lists
+        self.event_res_pairs, self.event_res_pairs_prob = sort_data_and_prob_to_cumulative_array(self.event_res_pairs, self.event_res_pairs_prob)
+
+        # event rate
+        self.event_rate = hub.graph.nodes[self.id]["r"] # number of events per month
+
+        # event rate
+        self.event_freqs = hub.graph.nodes[self.id]["ef"] # number of events per month
+
+        # latest event time
+        self.last_event_time = hub.graph.nodes[self.id]["r"]
+
 
 class SocsimMixin(object):
     """
@@ -87,18 +126,24 @@ class SocsimMixin(object):
 
         # Actions
         self.primitiveActions([
-            ('take_action', self.socsim_action)])
+            ('take_action', self.socsim_resource_event_pair_probabilistic_action)])
 
     def customAgentLoop(self):
-        self.socsim_action()
+        self.socsim_resource_event_pair_probabilistic_action()
         return False
 
-    def socsim_action(self):
+    def socsim_resource_event_pair_probabilistic_action(self):
         """
-        This is an empty action. For demo purpose only.
+        For demo purpose only.
         :return:
         """
-        print "Primitive action taken."
+        pair = random_pick_sorted(self.decision_data.event_res_pairs, self.decision_data.event_res_pairs_prob)
+        selected_event = self.decision_data.platform_events[pair.event_index]
+        selected_res = pair.res_id
+
+        self.hub.log_event(self.decision_data.id, selected_res, selected_event, self.hub.time)
+
+        print "Primitive resource-repo pair action taken."
 
     def first_event_time(self, start_time):
         delta = float(30 * 24 * 3600) / float(self.hub.graph.nodes[self.decision_data.id]["r"])

@@ -1,17 +1,15 @@
 from Dash2.core.dash import DASHAgent
-from Dash2.socsim.socsim_agent import SocsimDecisionData, SocsimMixin
-from Dash2.socsim.output_event_log_utils import random_pick_notsorted
+from Dash2.socsim.socsim_agent import SocsimDecisionData, SocsimMixin, ResourceEventTypePair
+from Dash2.socsim.output_event_log_utils import random_pick_sorted
 from Dash2.socsim.event_types import reddit_events, reddit_events_list
 
-class PostActionPair:
-    def __init__(self, event_index, repo_id):
-        self.event_index = event_index
-        self.repo_id = repo_id
 
 class RedditDecisionData(SocsimDecisionData):
 
+    platform_events_map = reddit_events
+
     def initialize_using_user_profile(self, profile, hub):
-        self.id = profile
+        SocsimDecisionData.initialize_using_user_profile(self, profile, hub)
 
 
 class RedditMixin(SocsimMixin):
@@ -23,15 +21,14 @@ class RedditMixin(SocsimMixin):
         return RedditDecisionData()
 
     def customAgentLoop(self):
-        agent_id = self.decision_data.id
-        agent_event_rate = self.hub.graph.nodes[agent_id]["r"]
-        event_frequencies = self.hub.graph.nodes[agent_id]["ef"]
-        last_event_time = self.hub.graph.nodes[agent_id]["let"]
+        pair = random_pick_sorted(self.decision_data.event_res_pairs, self.decision_data.event_res_pairs_prob)
+        selected_event = reddit_events_list[pair.event_index]
+        selected_res = pair.res_id
 
-        selected_event = random_pick_notsorted(reddit_events_list, event_frequencies)
-        selected_post = -1
+        # TBD: additional_attributes
 
-        self.hub.log_event(self.decision_data.id, selected_post, selected_event, self.hub.time)
+        self.hub.log_event(self.decision_data.id, selected_res, selected_event, self.hub.time)
+        print "User id", self.decision_data.id
 
         return False
 
