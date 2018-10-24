@@ -1,4 +1,5 @@
 import sys; sys.path.extend(['../../'])
+import os
 from Dash2.socsim.socsim_hub import SocsimHub
 from Dash2.socsim.output_event_log_utils import random_pick_sorted
 import datetime
@@ -14,6 +15,7 @@ class RedditHub(SocsimHub):
 
     def __init__(self, zk, task_full_id, start_time, output_file_name):
         SocsimHub.__init__(self, zk, task_full_id, start_time, output_file_name)
+        os.remove(output_file_name + task_full_id + '_event_log_file.csv')
 
     # this overrides default log method in SocsimHub
     def log_event(self, user_id, resource_id, event_type, time, additional_attributes=None):

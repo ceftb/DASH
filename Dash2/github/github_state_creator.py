@@ -1,9 +1,9 @@
 import sys; sys.path.extend(['../../'])
 from Dash2.socsim.network_utils import GraphBuilder, create_initial_state_files, IdDictionaryInMemoryStream
-from Dash2.socsim.event_types import reddit_events, reddit_events_list
+from Dash2.socsim.event_types import github_events, github_events_list
 
 
-class RedditGraphBuilder(GraphBuilder):
+class GithubGraphBuilder(GraphBuilder):
     """
     A class that creates user graph from Reddit events
     """
@@ -19,6 +19,6 @@ class RedditGraphBuilder(GraphBuilder):
 
 if __name__ == "__main__":
     filename = "../socsim/data_sample.json" #sys.argv[1]
-    create_initial_state_files(filename, RedditGraphBuilder, reddit_events, reddit_events_list,
+    create_initial_state_files(filename, GithubGraphBuilder, github_events, github_events_list,
                                dictionary_stream_cls=IdDictionaryInMemoryStream,
                                initial_state_generators=None)

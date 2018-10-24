@@ -3,7 +3,7 @@ import os.path
 import os
 import json
 from Dash2.core.trial import Trial
-from Dash2.socsim.output_event_log_utils import trnaslate_ids_and_convert_to_json
+from Dash2.socsim.output_event_log_utils import create_final_output_file
 
 
 # Socsim Trial decomposes trial into tasks and allocates them to DashWorkers
@@ -43,21 +43,25 @@ class SocsimTrial(Trial):
         file_names = []
         number_of_files = self.number_of_hosts
         for task_index in range(0, number_of_files, 1):
-            log_file_name = self.output_file_name + str(self.exp_id) + "-" + str(self.trial_id) + "-" + str(task_index + 1) + "_event_log_file.txt"
+            log_file_name = self.output_file_name + str(self.exp_id) + "-" + str(self.trial_id) + "-" + str(task_index + 1) + "_event_log_file.json"
             file_names.append(log_file_name)
-        tmp_file_name = self.output_file_name + "tmp_output.csv"
+        tmp_file_name = self.output_file_name + "tmp_output.json"
 
         if number_of_files == 1:
+            print "renaming .. ", file_names[0], " -> ", tmp_file_name
             os.rename(file_names[0], tmp_file_name)
             print "renamed ", file_names[0], " -> ", tmp_file_name
         else:
             print "Multiprocess event lot not implemented."
+            exit(-1)
 
         output_file_name = self.output_file_name + "_trial_" + str(self.trial_id) + ".json"
-        trnaslate_ids_and_convert_to_json(even_log_file=tmp_file_name,
-                                                 output_file_name=output_file_name,
-                                                 users_ids_file=self.users_ids,
-                                                 repos_ids_file=self.resource_ids)
+        create_final_output_file(events_file=tmp_file_name,
+                                 output_file_name=output_file_name,
+                                 team_name=self.team_name,
+                                 scenario=self.scenario,
+                                 domain=self.domain,
+                                 platform=self.platform)
         os.remove(tmp_file_name)
 
         # print dependent vars (e.g. runtime and memory)

@@ -6,6 +6,7 @@ import numpy
 import time
 import bisect
 import json
+import cPickle as pickle
 
 event_types = ["CreateEvent", "DeleteEvent", "PullRequestEvent", "PullRequestReviewCommentEvent", "IssuesEvent",
                "IssueCommentEvent", "PushEvent", "CommitCommentEvent","WatchEvent", "ForkEvent", "GollumEvent",
@@ -145,30 +146,18 @@ def trnaslate_user_and_repo_ids_in_event_log(even_log_file, output_file_name, us
     output_file.close()
 
 
-def trnaslate_ids_and_convert_to_json(even_log_file, output_file_name, users_ids_file, repos_ids_file):
-    input_file = open(even_log_file, 'r')
-    users_map = load_id_dictionary(users_ids_file)
-    repos_map = load_id_dictionary(repos_ids_file)
+def create_final_output_file(events_file, output_file_name, team_name, scenario, domain, platform):
+    input_file = open(events_file, 'r')
+    output_json = {"team": team_name, "scenario": scenario, "domain": domain, "platform": platform, "data": []}
 
-    output_json = {"team" : "pnnl", "scenario" : 1, "domain" : 2, "platform" : "github", "data" : []}
-    datareader = csv.reader(input_file)
-    for row in datareader:
-        user_id = int(row[2])
-        repo_id = int(row[3])
-        if users_map.has_key(user_id):
-            src_user_id = users_map[user_id]
-        else:
-            src_user_id = user_id
-        if repos_map.has_key(repo_id):
-            src_repo_id = repos_map[repo_id]
-        else:
-            src_repo_id = repo_id
-        # update json
-        output_json["data"].append({"nodeId" : repo_id, "userNodeId" : user_id, "time" : row[0], "eventType" : row[1]})
+    while True:
+        try:
+            output_json["data"].append(pickle.load(input_file))
+        except EOFError:
+            break
 
     output_file = open(output_file_name, 'w')
     json.dump(output_json, output_file)
-
     input_file.close()
     output_file.close()
 

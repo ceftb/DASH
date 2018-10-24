@@ -4,6 +4,7 @@ import os
 import psutil
 import time
 import cPickle as pickle
+import json
 from heapq import heappush, heappop
 from Dash2.core.work_processor import WorkProcessor
 
@@ -33,7 +34,9 @@ class SocsimWorkProcessor(WorkProcessor):
         self.hub.graph = pickle.load(open(self.UR_graph_path, "rb"))
 
         # id dictionaries
-        # TBD
+        initial_state_meta_data = json.load(open(self.initial_state_file))["meta"]
+        self.hub.users_ids = pickle.load(open(initial_state_meta_data["users_ids"]))
+        self.hub.resource_ids = pickle.load(open(initial_state_meta_data["resource_ids"]))
 
         for node_id in self.hub.graph:
             if self.hub.graph.nodes[node_id]["isU"] == 1:
@@ -87,8 +90,7 @@ class SocsimWorkProcessor(WorkProcessor):
                 }
 
     def process_after_run(self):  # do any book-keeping needed after the trial ends and before agents are disconnected
-        self.hub.csv_log_file.close()
-        self.hub.json_log_file.close()
+        self.hub.close_event_log()
         self.log_file.close()
         os.remove(self.task_full_id + '_event_log_file.txt')
 

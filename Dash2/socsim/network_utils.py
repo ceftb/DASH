@@ -1,9 +1,7 @@
 import sys; sys.path.extend(['../../'])
 import networkx as nx
 import json
-import os.path
 import time
-import numpy as np
 import cPickle as pickle
 import ijson
 from datetime import datetime
@@ -48,17 +46,61 @@ class IdDictionaryStream:
         file_stream = open(dictionary_filename, "w")
         return file_stream
 
+    @staticmethod
+    def get_extention():
+        return ".csv"
+
+    def get_size(self):
+        return len(self.entities)
+
     def close(self):
         self.file_stream.close()
         self.is_stream_open = False
 
+
+class IdDictionaryInMemoryStream:
+    """
+    A stream that creates user or resource dictionary files
+    """
+    def __init__(self, dictionary_filename, int_id_offset=0):
+        self.str_id_2_int_id = {}
+        self.int_id_2_str_id = {}
+        self.offset = int_id_offset
+        self.dictionary_filename = dictionary_filename
+        self.is_stream_open = True
+
+    def update_dictionary(self, original_entity_id):
+        if original_entity_id is not None and original_entity_id != "" and original_entity_id != "None":
+            if original_entity_id not in self.str_id_2_int_id:
+                int_entity_id = len(self.str_id_2_int_id) + self.offset
+                self.str_id_2_int_id[original_entity_id] = int_entity_id
+                self.int_id_2_str_id[int_entity_id] = original_entity_id
+            else:
+                int_entity_id = self.str_id_2_int_id[original_entity_id]
+
+            return int_entity_id
+        else:
+            return None
+
+    @staticmethod
+    def get_extention():
+        return ".pickle"
+
+    def get_size(self):
+        return len(self.str_id_2_int_id)
+
+    def close(self):
+        file_stream = open(self.dictionary_filename, "w")
+        pickle.dump(self.int_id_2_str_id, file_stream)
+        file_stream.close()
+        self.is_stream_open = False
 
 
 class GraphBuilder:
     """
     A class that creates user&resource (e.g. user-repo graph for github, user graph for twitter and reddit) graph from events
     """
-    def __init__(self, input_events, event_types, event_type_list):
+    def __init__(self, input_events, event_types, event_type_list, dictionary_stream_cls=IdDictionaryStream):
         self.event_types = event_types
         self.event_type_list = event_type_list
         self.input_events_file_name = input_events
@@ -66,8 +108,8 @@ class GraphBuilder:
         self.training_data_start_date = 0
         self.training_data_end_date = 1937955660
         self.graph = nx.Graph()
-        self.user_id_dict = IdDictionaryStream(input_events + "_users_id_dict.csv")
-        self.resource_id_dict = IdDictionaryStream(input_events + "_resource_id_dict.csv", int_id_offset=2000000)
+        self.user_id_dict = dictionary_stream_cls(input_events + "_users_id_dict" + dictionary_stream_cls.get_extention())
+        self.resource_id_dict = dictionary_stream_cls(input_events + "_resource_id_dict" + dictionary_stream_cls.get_extention(), int_id_offset=2000000)
         self.input_events = open(input_events, "r")
 
     def update_graph(self, event):
@@ -125,10 +167,11 @@ class GraphBuilder:
     def finalize_graph(self):
         # finalize
         graph = self.graph
-        number_of_users = len(self.user_id_dict.entities)
-        number_of_resources = len(self.resource_id_dict.entities)
+        number_of_users = self.user_id_dict.get_size()
+        number_of_resources = self.resource_id_dict.get_size()
         self.input_events.close()
         self.user_id_dict.close()
+        self.resource_id_dict.close()
         number_of_months = float((self.training_data_end_date - self.training_data_start_date) / (3600.0 * 24.0 * 30.0))
         for node_id in self.graph.nodes:
             if self.graph.nodes[node_id]["isU"] == 1:
@@ -164,16 +207,17 @@ class GraphBuilder:
         return graph, number_of_users, number_of_resources
 
 
-
-def create_initial_state_files(input_json, graph_builder_class, event_types, event_type_list, initial_state_generators=None):
-    graph_builder = graph_builder_class(input_json, event_types, event_type_list)
+def create_initial_state_files(input_json, graph_builder_class, event_types, event_type_list,
+                               dictionary_stream_cls=IdDictionaryStream, initial_state_generators=None):
+    print "Dictionary stream class: ", dictionary_stream_cls
+    graph_builder = graph_builder_class(input_json, event_types, event_type_list, dictionary_stream_cls)
     graph, number_of_users, number_of_resources = graph_builder.build_graph()
 
     print "User-repo graph constructed. Users ", number_of_users, ", repos ", number_of_resources, ", nodes ", len(graph.nodes()), ", edges", len(graph.edges())
 
     if initial_state_generators is None:
-        users_ids = input_json + "_users_id_dict.csv"
-        resource_ids = input_json + "_resource_id_dict.csv"
+        users_ids = input_json + "_users_id_dict" + dictionary_stream_cls.get_extention()
+        resource_ids = input_json + "_resource_id_dict" + dictionary_stream_cls.get_extention()
         graph_file_name = input_json + "_graph.pickle"
 
         state_file_content = {"meta":
@@ -185,7 +229,7 @@ def create_initial_state_files(input_json, graph_builder_class, event_types, eve
                 "UR_graph_path": graph_file_name
             }
         }
-        state_file_name = input_json + "_state.json"
+        state_file_name = str(input_json).split(".json")[0] + "_state.json"
         state_file = open(state_file_name, 'w')
         state_file.write(json.dumps(state_file_content))
         state_file.close()
