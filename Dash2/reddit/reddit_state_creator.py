@@ -22,6 +22,7 @@ class RedditGraphBuilder(GraphBuilder):
 
         return graph, number_of_users, number_of_resources
 
+
 if __name__ == "__main__":
     filename = "../socsim/data_sample.json" #sys.argv[1]
     create_initial_state_files(filename, RedditGraphBuilder, reddit_events, reddit_events_list,
