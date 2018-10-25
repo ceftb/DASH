@@ -11,11 +11,13 @@ class RedditGraphBuilder(GraphBuilder):
     def update_nodes_and_edges(self, user_id, resource_id, root_resource_id, parent_resource_id, event_type, event_time, raw_json_event=None):
         GraphBuilder.update_nodes_and_edges(self, user_id, resource_id, root_resource_id, parent_resource_id, event_type, event_time)
         # update node attributes: communityID": "t5_3bqj4"
-        self.graph.nodes[user_id]["cmtID"] = raw_json_event["communityID"]
+        if "cmt" not in self.graph.nodes[user_id]:
+            self.graph.nodes[user_id]["cmt"] = {}
+        self.graph.nodes[user_id]["cmt"][raw_json_event["communityID"]] = self.graph.nodes[user_id]["cmt"][raw_json_event["communityID"]] + 1.0 \
+            if raw_json_event["communityID"] in self.graph.nodes[user_id]["cmt"] else 0.0
 
     def finalize_graph(self):
         graph, number_of_users, number_of_resources = GraphBuilder.finalize_graph(self)
-
         # do something Reddit-specific here
 
         return graph, number_of_users, number_of_resources

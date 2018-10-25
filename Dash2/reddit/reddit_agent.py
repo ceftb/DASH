@@ -1,3 +1,4 @@
+import random
 from Dash2.core.dash import DASHAgent
 from Dash2.socsim.socsim_agent import SocsimDecisionData, SocsimMixin, ResourceEventTypePair
 from Dash2.socsim.output_event_log_utils import random_pick_sorted
@@ -25,9 +26,22 @@ class RedditMixin(SocsimMixin):
         selected_event = reddit_events_list[pair.event_index]
         selected_res = pair.res_id
 
-        # TBD: additional_attributes
+        # additional_attributes
+        if selected_event == "post":
+            parent_id = selected_res
+            root_id = selected_res
+        else:
+            parent_id = 2000000 + random.randint(1, 1000) # TBD need to fix
+            root_id = parent_id
 
-        self.hub.log_event(self.decision_data.id, selected_res, selected_event, self.hub.time)
+        parent_id = self.hub._try_to_convert_resource_id_to_original_id(parent_id)
+        root_id = self.hub._try_to_convert_resource_id_to_original_id(root_id)
+        community = random.choice(self.hub.graph.nodes[self.decision_data.id]["cmt"].keys())
+
+        additional_attributes = {"communityID": community, "parentID": parent_id, "rootID": root_id}
+
+        self.hub.log_event(self.decision_data.id, selected_res, selected_event, self.hub.time,
+                           additional_attributes=additional_attributes)
 
         return False
 

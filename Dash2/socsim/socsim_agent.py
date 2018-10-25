@@ -68,13 +68,13 @@ class SocsimDecisionData(object):
         self.event_res_pairs, self.event_res_pairs_prob = sort_data_and_prob_to_cumulative_array(self.event_res_pairs, self.event_res_pairs_prob)
 
         # event rate
-        self.event_rate = hub.graph.nodes[self.id]["r"] # number of events per month
+        #self.event_rate = hub.graph.nodes[self.id]["r"] # number of events per month
 
         # event rate
-        self.event_freqs = hub.graph.nodes[self.id]["ef"] # number of events per month
+        #self.event_freqs = hub.graph.nodes[self.id]["ef"] # number of events per month
 
         # latest event time
-        self.last_event_time = hub.graph.nodes[self.id]["r"]
+        #self.last_event_time = hub.graph.nodes[self.id]["let"]
 
 
 class SocsimMixin(object):
