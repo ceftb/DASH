@@ -43,7 +43,6 @@ class SocsimHub(WorldHub):
             if aggregation_function is not None:
                 aggregation_function(var_data, self.aggregated_statistic, isFinalUpdate=True)
 
-            # global event clock
     def set_curr_time(self, curr_time):
         self.time = curr_time
 
@@ -96,9 +95,10 @@ class SocsimHub(WorldHub):
 
     def _convert_from_int_id(self, entity_id, dictionary):
         if entity_id is not None and entity_id in dictionary:
-            return dictionary[entity_id]
+            str_id = dictionary[entity_id]
         else:
-            return entity_id
+            str_id = entity_id
+        return str_id
 
     def processRegisterRequest(self, agent_id, aux_data):
         creation_time = self.time

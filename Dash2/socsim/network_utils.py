@@ -78,6 +78,8 @@ class IdDictionaryInMemoryStream:
             else:
                 int_entity_id = self.str_id_2_int_id[original_entity_id]
 
+            if int_entity_id == 17:
+                print "original id for 17", original_entity_id
             return int_entity_id
         else:
             return None

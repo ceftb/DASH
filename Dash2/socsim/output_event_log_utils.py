@@ -155,7 +155,6 @@ def create_final_output_file(events_file, output_file_name, team_name, scenario,
         try:
             event_json = pickle.load(input_file)
             output_json["data"].append(event_json)
-            print "user id::::", event_json["nodeUserID"]
         except EOFError:
             break
 

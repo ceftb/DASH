@@ -28,7 +28,6 @@ class RedditMixin(SocsimMixin):
         # TBD: additional_attributes
 
         self.hub.log_event(self.decision_data.id, selected_res, selected_event, self.hub.time)
-        print "User id", self.decision_data.id
 
         return False
 
