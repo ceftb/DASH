@@ -2,7 +2,6 @@ import sys; sys.path.extend(['../../'])
 import os
 import time
 from datetime import datetime
-from Dash2.core.parameter import Range
 from Dash2.core.measure import Measure
 from Dash2.core.parameter import Parameter
 from Dash2.core.experiment import Experiment
@@ -32,8 +31,6 @@ if __name__ == "__main__":
     # Trial parameters and measures
     class RedditTrial(SocsimTrial):
         parameters = [
-                    Parameter('prob_create_new_agent', default=0.5),
-                    Parameter('prob_agent_creates_new_repo', default=0.5),
                     Parameter('start_time', default=time.mktime(datetime.strptime(str(start_date) + ' 00:00:00', "%Y-%m-%d %H:%M:%S").timetuple())),
                     Parameter('max_time', default=time.mktime(datetime.strptime(str(end_date) + ' 23:59:59', "%Y-%m-%d %H:%M:%S").timetuple())),
                     Parameter('hub_class_name', default="RedditHub"),
@@ -67,7 +64,6 @@ if __name__ == "__main__":
 
     # experiment setup
     num_trials = 1
-    independent = ['prob_create_new_agent', Range(0.0, 0.1, 0.1)]
     experiment_data = {
         'max_iterations': number_of_days_in_simulation * 1110000 / number_of_hosts, # max_iterations_per_worker
         'initial_state_file': initial_state_file_name}

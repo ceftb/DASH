@@ -123,8 +123,10 @@ class GraphBuilder:
         # update ids
         user_id = self.user_id_dict.update_dictionary(event["nodeUserID"])
         resource_id = self.resource_id_dict.update_dictionary(event["nodeID"])
-        root_resource_id = self.resource_id_dict.update_dictionary(event["rootID"])
-        parent_resource_id = self.resource_id_dict.update_dictionary(event["parentID"])
+        if "rootID" in event:
+            self.resource_id_dict.update_dictionary(event["rootID"])
+        if "parentID" in event:
+            self.resource_id_dict.update_dictionary(event["parentID"])
         event_type = event["actionType"]
         try:
             event_time = int(event["nodeTime"])
@@ -140,10 +142,9 @@ class GraphBuilder:
             self.training_data_end_date = event_time
 
         # add user node
-        self.update_nodes_and_edges(user_id, resource_id, root_resource_id, parent_resource_id, event_type, event_time,
-                                    raw_json_event=event)
+        self.update_nodes_and_edges(user_id, resource_id, event_type, event_time, raw_json_event=event)
 
-    def update_nodes_and_edges(self, user_id, resource_id, root_resource_id, parent_resource_id, event_type, event_time, raw_json_event=None):
+    def update_nodes_and_edges(self, user_id, resource_id, event_type, event_time, raw_json_event=None):
         """
         The following graph node attributes are populated by this method ("key" - description):
         - "r" - overall event rate/frequency of a user. Frequency her is number of events per months.
@@ -161,8 +162,6 @@ class GraphBuilder:
 
         :param user_id:
         :param resource_id:
-        :param root_resource_id:
-        :param parent_resource_id:
         :param event_type:
         :param event_time:
         :param raw_json_event:
@@ -258,7 +257,6 @@ class GraphBuilder:
 
 def create_initial_state_files(input_json, graph_builder_class, event_types, event_type_list,
                                dictionary_stream_cls=IdDictionaryStream, initial_state_generators=None):
-    print "Dictionary stream class: ", dictionary_stream_cls
     graph_builder = graph_builder_class(input_json, event_types, event_type_list, dictionary_stream_cls)
     graph, number_of_users, number_of_resources = graph_builder.build_graph()
 

@@ -8,8 +8,8 @@ class GithubGraphBuilder(GraphBuilder):
     A class that creates user graph from Reddit events
     """
 
-    def update_nodes_and_edges(self, user_id, resource_id, root_resource_id, parent_resource_id, event_type, event_time, raw_json_event=None):
-        GraphBuilder.update_nodes_and_edges(self, user_id, resource_id, root_resource_id, parent_resource_id, event_type, event_time)
+    def update_nodes_and_edges(self, user_id, resource_id, event_type, event_time, raw_json_event=None):
+        GraphBuilder.update_nodes_and_edges(self, user_id, resource_id, event_type, event_time)
         # update node attributes: actionSubType and status
         #self.graph.edges[user_id, resource_id]["actionSubType"] = raw_json_event["actionSubType"]
 
