@@ -3,7 +3,7 @@ import os.path
 import os
 import json
 from Dash2.core.trial import Trial
-from Dash2.socsim.output_event_log_utils import create_final_output_file
+from Dash2.socsim.output_event_log_utils import conver_pickle_to_json
 
 
 # Socsim Trial decomposes trial into tasks and allocates them to DashWorkers
@@ -45,7 +45,7 @@ class SocsimTrial(Trial):
         for task_index in range(0, number_of_files, 1):
             log_file_name = self.output_file_name + str(self.exp_id) + "-" + str(self.trial_id) + "-" + str(task_index + 1) + "_event_log_file.json"
             file_names.append(log_file_name)
-        tmp_file_name = self.output_file_name + "tmp_output.json"
+        tmp_file_name = self.output_file_name + "tmp_output.pickle"
 
         if number_of_files == 1:
             print "renaming .. ", file_names[0], " -> ", tmp_file_name
@@ -56,12 +56,12 @@ class SocsimTrial(Trial):
             exit(-1)
 
         output_file_name = self.output_file_name + "_trial_" + str(self.trial_id) + ".json"
-        create_final_output_file(events_file=tmp_file_name,
-                                 output_file_name=output_file_name,
-                                 team_name=self.team_name,
-                                 scenario=self.scenario,
-                                 domain=self.domain,
-                                 platform=self.platform)
+        conver_pickle_to_json(events_file=tmp_file_name,
+                              output_file_name=output_file_name,
+                              team_name=self.team_name,
+                              scenario=self.scenario,
+                              domain=self.domain,
+                              platform=self.platform)
         os.remove(tmp_file_name)
 
         # print dependent vars (e.g. runtime and memory)

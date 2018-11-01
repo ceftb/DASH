@@ -147,19 +147,27 @@ def trnaslate_user_and_repo_ids_in_event_log(even_log_file, output_file_name, us
     output_file.close()
 
 
-def create_final_output_file(events_file, output_file_name, team_name, scenario, domain, platform):
+def conver_pickle_to_json(events_file, output_file_name, team_name, scenario, domain, platform):
     input_file = open(events_file, 'r')
-    output_json = {"team": team_name, "scenario": scenario, "domain": domain, "platform": platform, "data": []}
+    output_file = open(output_file_name, 'w')
 
+    output_file.write("{\"team\" : \"" + str(team_name) + "\", \"scenario\" : " + str(scenario) +
+                ", \"domain\" : \"" + str(domain) + "\", \"platform\" : \"" + str(platform) + "\", \"data\" : " + "[")
+    first_item = True
+    event_counter = 0
     while True:
         try:
             event_json = pickle.load(input_file)
-            output_json["data"].append(event_json)
+            json.dump(event_json, output_file)
+            if not first_item:
+                output_file.write(", ")
+            first_item = False
+            if event_counter % 100000 == 0:
+                print "Processed event ", event_counter
         except EOFError:
             break
+    output_file.write("]}")
 
-    output_file = open(output_file_name, 'w')
-    json.dump(output_json, output_file)
     input_file.close()
     output_file.close()
 
