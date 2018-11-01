@@ -1,6 +1,7 @@
 import sys; sys.path.extend(['../../'])
 import networkx as nx
 import json
+import os
 import time
 import cPickle as pickle
 import ijson
@@ -111,7 +112,8 @@ class GraphBuilder:
         self.graph = nx.Graph()
         self.user_id_dict = dictionary_stream_cls(input_events + "_users_id_dict" + dictionary_stream_cls.get_extention())
         self.resource_id_dict = dictionary_stream_cls(input_events + "_resource_id_dict" + dictionary_stream_cls.get_extention(), int_id_offset=2000000)
-        self.input_events = open(input_events, "r")
+        if os.path.isfile(input_events):
+            self.input_events = open(input_events, "r")
 
     def update_graph(self, event):
         """
@@ -208,7 +210,8 @@ class GraphBuilder:
         graph = self.graph
         number_of_users = self.user_id_dict.get_size()
         number_of_resources = self.resource_id_dict.get_size()
-        self.input_events.close()
+        if os.path.isfile(self.input_events_file_name):
+            self.input_events.close()
         self.user_id_dict.close()
         self.resource_id_dict.close()
         number_of_months = float((self.training_data_end_date - self.training_data_start_date) / (3600.0 * 24.0 * 30.0))
@@ -277,6 +280,33 @@ def create_initial_state_files(input_json, graph_builder_class, event_types, eve
             }
         }
         state_file_name = str(input_json).split(".json")[0] + "_state.json"
+        state_file = open(state_file_name, 'w')
+        state_file.write(json.dumps(state_file_content))
+        state_file.close()
+
+
+def create_initial_state_files_from_raw_json(state_file_name, events_path, start_date, end_date, graph_builder_class, event_types, event_type_list,
+                               dictionary_stream_cls=IdDictionaryStream, initial_state_generators=None):
+    graph_builder = graph_builder_class(state_file_name, event_types, event_type_list, dictionary_stream_cls)
+    graph, number_of_users, number_of_resources = graph_builder.build_graph_from_raw_json(events_path, start_date, end_date)
+
+    print "User-repo graph constructed. Users ", number_of_users, ", repos ", number_of_resources, ", nodes ", len(graph.nodes()), ", edges", len(graph.edges())
+
+    if initial_state_generators is None:
+        users_ids = state_file_name + "_users_id_dict" + dictionary_stream_cls.get_extention()
+        resource_ids = state_file_name + "_resource_id_dict" + dictionary_stream_cls.get_extention()
+        graph_file_name = state_file_name + "_graph.pickle"
+
+        state_file_content = {"meta":
+            {
+                "number_of_users": number_of_users,
+                "number_of_resources": number_of_resources,
+                "users_ids": users_ids,
+                "resource_ids": resource_ids,
+                "UR_graph_path": graph_file_name
+            }
+        }
+        state_file_name = str(state_file_name).split(".json")[0] + "_state.json"
         state_file = open(state_file_name, 'w')
         state_file.write(json.dumps(state_file_content))
         state_file.close()
