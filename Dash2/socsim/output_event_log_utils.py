@@ -154,7 +154,6 @@ def conver_pickle_to_json(events_file, output_file_name, team_name, scenario, do
     output_file.write("{\"team\" : \"" + str(team_name) + "\", \"scenario\" : " + str(scenario) +
                 ", \"domain\" : \"" + str(domain) + "\", \"platform\" : \"" + str(platform) + "\", \"data\" : " + "[")
     first_item = True
-    event_counter = 0
     while True:
         try:
             event_json = pickle.load(input_file)
@@ -162,8 +161,6 @@ def conver_pickle_to_json(events_file, output_file_name, team_name, scenario, do
             if not first_item:
                 output_file.write(", ")
             first_item = False
-            if event_counter % 100000 == 0:
-                print "Processed event ", event_counter
         except EOFError:
             break
     output_file.write("]}")
