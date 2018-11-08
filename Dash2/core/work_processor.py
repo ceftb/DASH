@@ -17,7 +17,7 @@ class WorkProcessor:
             else:
                 setattr(self, param, str(data[param]))
 
-        self.log_file = open(task_full_id + '_event_log_file.txt', 'w')
+        #self.log_file = open(task_full_id + '_event_log_file.txt', 'w')
         self.iteration = 0
         # init agents and their relationships with repos
 
@@ -82,7 +82,7 @@ class WorkProcessor:
         pass
 
     def process_after_run(self):  # do any book-keeping needed after the trial ends and before agents are disconnected
-        self.log_file.close()
+        pass # self.log_file.close()
 
 
 def is_number(s):

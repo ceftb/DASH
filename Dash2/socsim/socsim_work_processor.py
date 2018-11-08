@@ -91,6 +91,6 @@ class SocsimWorkProcessor(WorkProcessor):
 
     def process_after_run(self):  # do any book-keeping needed after the trial ends and before agents are disconnected
         self.hub.close_event_log()
-        self.log_file.close()
-        os.remove(self.task_full_id + '_event_log_file.txt')
+        #self.log_file.close()
+        #os.remove(self.task_full_id + '_event_log_file.txt')
 
