@@ -37,7 +37,7 @@ function install_on_all_nodes {
     NUMPY_CLONE=/users/tregubov/projects/numpy
 
     # A local path where webdash is cloned (git clone https://github.com/cuts/webdash.git  )
-    PSUTILS_CLONE=/users/tregubov/projects/psutils
+    PSUTILS_CLONE=/users/tregubov/projects/psutil
 
     # A local path where webdash is cloned (git clone https://github.com/cuts/webdash.git  )
     WEBDASH_CLONE=/users/tregubov/projects/webdash
@@ -98,7 +98,7 @@ function install_on_single_instance {
 	sudo python setup.py install  2>> $TMP_DIR/networkx_report_$CURR_NODE_ID.txt 1>> $TMP_DIR/networkx_report_$CURR_NODE_ID.txt
 	sudo rm -Rf $TMP_DIR/networkx_clone_$CURR_NODE_ID
 
-	# install psutils from $NETWORKX_CLONE ( https://github.com/networkx/networkx.git )
+	# install psutil from $PSUTILS_CLONE ( https://github.com/networkx/networkx.git )
     cp -R $PSUTILS_CLONE $TMP_DIR/psutils_clone_$CURR_NODE_ID
 	cd $TMP_DIR/psutils_clone_$CURR_NODE_ID
 	sudo python setup.py install  2>> $TMP_DIR/psutils_report_$CURR_NODE_ID.txt 1>> $TMP_DIR/psutils_report_$CURR_NODE_ID.txt
