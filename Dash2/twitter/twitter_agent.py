@@ -4,12 +4,10 @@ from Dash2.socsim.socsim_agent import SocsimDecisionData, SocsimMixin
 from Dash2.socsim.event_types import twitter_events, twitter_events_list
 from Dash2.socsim.output_event_log_utils import sort_data_and_prob_to_cumulative_array, random_pick_sorted
 
-class TweetActionPair:
-    def __init__(self, event_index, repo_id):
-        self.event_index = event_index
-        self.repo_id = repo_id
 
 class TwitterDecisionData(SocsimDecisionData):
+
+    platform_events_map = twitter_events
 
     def initialize_using_user_profile(self, profile, hub):
         SocsimDecisionData.initialize_using_user_profile(self, profile, hub)
@@ -17,11 +15,11 @@ class TwitterDecisionData(SocsimDecisionData):
 
 class TwitterMixin(SocsimMixin):
 
-    def _new_empty_decision_object(self):
-        return TwitterDecisionData()
-
     def __init__(self, **kwargs):
         SocsimMixin.__init__(self, **kwargs)
+
+    def _new_empty_decision_object(self):
+        return TwitterDecisionData()
 
     def customAgentLoop(self):
         pair = random_pick_sorted(self.decision_data.event_res_pairs, self.decision_data.event_res_pairs_prob)

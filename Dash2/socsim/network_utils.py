@@ -136,7 +136,10 @@ class GraphBuilder:
             try:
                 event_time = datetime.strptime(event["nodeTime"], "%Y-%m-%d %H:%M:%S")
             except:
-                event_time = datetime.strptime(event["nodeTime"], "%Y-%m-%dT%H:%M:%SZ")
+                try:
+                    event_time = datetime.strptime(event["nodeTime"], "%Y-%m-%dT%H:%M:%SZ")
+                except:
+                    event_time = datetime.strptime(event["nodeTime"][0:-6], "%Y-%m-%dT%H:%M:%S")
             event_time = time.mktime(event_time.timetuple())
         if self.training_data_start_date > event_time:
             self.training_data_start_date = event_time
