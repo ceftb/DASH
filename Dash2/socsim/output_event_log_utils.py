@@ -157,9 +157,9 @@ def conver_pickle_to_json(events_file, output_file_name, team_name, scenario, do
     while True:
         try:
             event_json = pickle.load(input_file)
-            json.dump(event_json, output_file)
             if not first_item:
                 output_file.write(", ")
+            json.dump(event_json, output_file)
             first_item = False
         except EOFError:
             break
