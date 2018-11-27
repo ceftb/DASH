@@ -27,11 +27,11 @@
 		<artifactId>log4j</artifactId>
 		<version>1.2.16</version>
 	</dependency>
-    <dependency>
+    <!-- dependency>
     	<groupId>org.eclipse.jetty</groupId>
     	<artifactId>jetty-server</artifactId>
     	<version>${jettyVersion}</version>
-    </dependency>
+    </dependency -->
     <dependency>
     	<groupId>org.json</groupId>
     	<artifactId>json</artifactId>
